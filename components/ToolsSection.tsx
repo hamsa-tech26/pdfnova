@@ -1,50 +1,62 @@
+import {
+  Combine,
+  Scissors,
+  Archive,
+  FileText,
+  FileOutput,
+  Image,
+  ScanText,
+  Sparkles,
+  ArrowRight,
+} from "lucide-react";
+
 const tools = [
   {
     title: "Merge PDF",
     description: "Combine multiple PDF files into one document.",
-    icon: "M",
+    icon: Combine,
     accent: "bg-red-50 text-red-600",
   },
   {
     title: "Split PDF",
     description: "Separate pages or extract selected sections.",
-    icon: "S",
+    icon: Scissors,
     accent: "bg-orange-50 text-orange-600",
   },
   {
     title: "Compress PDF",
     description: "Reduce file size while keeping good quality.",
-    icon: "C",
+    icon: Archive,
     accent: "bg-amber-50 text-amber-600",
   },
   {
     title: "PDF to Word",
     description: "Convert PDFs into editable Word documents.",
-    icon: "W",
+    icon: FileText,
     accent: "bg-blue-50 text-blue-600",
   },
   {
     title: "Word to PDF",
     description: "Turn Word documents into secure PDF files.",
-    icon: "P",
+    icon: FileOutput,
     accent: "bg-indigo-50 text-indigo-600",
   },
   {
     title: "JPG to PDF",
     description: "Convert images into a clean PDF document.",
-    icon: "J",
+    icon: Image,
     accent: "bg-emerald-50 text-emerald-600",
   },
   {
     title: "OCR PDF",
     description: "Extract editable text from scanned documents.",
-    icon: "O",
+    icon: ScanText,
     accent: "bg-violet-50 text-violet-600",
   },
   {
     title: "AI Chat",
     description: "Ask questions and understand your PDF faster.",
-    icon: "AI",
+    icon: Sparkles,
     accent: "bg-cyan-50 text-cyan-600",
   },
 ];
@@ -68,34 +80,39 @@ export default function ToolsSection() {
         </div>
 
         <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {tools.map((tool) => (
-            <button
-              key={tool.title}
-              type="button"
-              className="group rounded-3xl border border-gray-200 bg-white p-6 text-left shadow-sm transition duration-200 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
-            >
-              <div
-                className={`flex h-12 w-12 items-center justify-center rounded-2xl text-sm font-extrabold ${tool.accent}`}
+          {tools.map((tool) => {
+            const Icon = tool.icon;
+
+            return (
+              <button
+                key={tool.title}
+                type="button"
+                className="group rounded-3xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-blue-200 hover:shadow-2xl"
               >
-                {tool.icon}
-              </div>
+                <div
+                  className={`flex h-14 w-14 items-center justify-center rounded-2xl ${tool.accent}`}
+                >
+                  <Icon size={28} strokeWidth={2.2} />
+                </div>
 
-              <h3 className="mt-6 text-xl font-bold text-gray-900">
-                {tool.title}
-              </h3>
+                <h3 className="mt-6 text-xl font-bold text-gray-900">
+                  {tool.title}
+                </h3>
 
-              <p className="mt-3 text-sm leading-6 text-gray-600">
-                {tool.description}
-              </p>
+                <p className="mt-3 text-sm leading-6 text-gray-600">
+                  {tool.description}
+                </p>
 
-              <span className="mt-6 inline-flex items-center text-sm font-semibold text-blue-600">
-                Use tool
-                <span className="ml-2 transition group-hover:translate-x-1">
-                  →
+                <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
+                  Use tool
+                  <ArrowRight
+                    size={16}
+                    className="transition-transform group-hover:translate-x-1"
+                  />
                 </span>
-              </span>
-            </button>
-          ))}
+              </button>
+            );
+          })}
         </div>
 
         <div className="mt-12 text-center">
