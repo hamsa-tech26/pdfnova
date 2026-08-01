@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import ToolsSection from "@/components/ToolsSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import AISection from "@/components/AISection";
+import StatsSection from "@/components/StatsSection";
 import PricingSection from "@/components/PricingSection";
 
 export default function Home() {
@@ -10,6 +11,7 @@ export default function Home() {
       <Navbar />
 
       <main>
+        {/* Hero */}
         <section className="bg-gradient-to-b from-blue-50 to-white px-6 py-24">
           <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2">
             <div>
@@ -66,6 +68,8 @@ export default function Home() {
             </div>
           </div>
         </section>
+
+        <StatsSection />
 
         <ToolsSection />
 
