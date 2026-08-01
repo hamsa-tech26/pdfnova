@@ -51,6 +51,7 @@ export default function MergePdfPage() {
       for (const file of files) {
         const fileBytes = await file.arrayBuffer();
         const sourcePdf = await PDFDocument.load(fileBytes);
+
         const copiedPages = await mergedPdf.copyPages(
           sourcePdf,
           sourcePdf.getPageIndices(),
@@ -60,7 +61,11 @@ export default function MergePdfPage() {
       }
 
       const mergedPdfBytes = await mergedPdf.save();
-      const blob = new Blob([mergedPdfBytes], {
+
+      const mergedPdfBuffer = new ArrayBuffer(mergedPdfBytes.byteLength);
+      new Uint8Array(mergedPdfBuffer).set(mergedPdfBytes);
+
+      const blob = new Blob([mergedPdfBuffer], {
         type: "application/pdf",
       });
 
@@ -69,6 +74,7 @@ export default function MergePdfPage() {
 
       link.href = downloadUrl;
       link.download = "pdfnova-merged.pdf";
+
       document.body.appendChild(link);
       link.click();
       link.remove();
@@ -76,6 +82,7 @@ export default function MergePdfPage() {
       URL.revokeObjectURL(downloadUrl);
     } catch (mergeError) {
       console.error(mergeError);
+
       setError(
         "The PDF files could not be merged. One of the files may be damaged or password-protected.",
       );
