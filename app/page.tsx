@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import ToolsSection from "@/components/ToolsSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import AISection from "@/components/AISection";
+import PricingSection from "@/components/PricingSection";
 
 export default function Home() {
   return (
@@ -71,6 +72,8 @@ export default function Home() {
         <FeaturesSection />
 
         <AISection />
+
+        <PricingSection />
       </main>
     </>
   );
