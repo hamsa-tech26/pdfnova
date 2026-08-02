@@ -1,4 +1,4 @@
-import Navbar from "@/components/Navbar";
+import WorkspaceLayout from "@/app/workspace-layout";
 import {
   Archive,
   FileImage,
@@ -55,10 +55,8 @@ const tools = [
 
 export default function DashboardPage() {
   return (
-    <>
-      <Navbar />
-
-      <main className="min-h-screen bg-slate-50 px-6 py-16">
+    <WorkspaceLayout>
+      <main className="min-h-screen px-6 py-16">
         <div className="mx-auto max-w-7xl">
           <div className="flex flex-col justify-between gap-6 md:flex-row md:items-end">
             <div>
@@ -85,7 +83,7 @@ export default function DashboardPage() {
           <section className="mt-12">
             <h2 className="text-2xl font-bold text-gray-950">Quick tools</h2>
 
-            <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
               {tools.map((tool) => {
                 const Icon = tool.icon;
 
@@ -118,7 +116,7 @@ export default function DashboardPage() {
             </div>
           </section>
 
-          <section className="mt-12 grid gap-6 lg:grid-cols-2">
+          <section className="mt-12 grid gap-6 xl:grid-cols-2">
             <div className="rounded-3xl border border-gray-200 bg-white p-8 shadow-sm">
               <h2 className="text-xl font-bold text-gray-950">Recent files</h2>
 
@@ -156,6 +154,6 @@ export default function DashboardPage() {
           </section>
         </div>
       </main>
-    </>
+    </WorkspaceLayout>
   );
 }
