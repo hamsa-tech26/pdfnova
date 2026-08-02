@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import ActionButton from "@/components/pdf/ActionButton";
 import FileUploader from "@/components/pdf/FileUploader";
 import ToolHeader from "@/components/pdf/ToolHeader";
+import { addRecentFile } from "@/lib/storage/recentFiles";
 import { FileText, ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
@@ -133,17 +134,23 @@ export default function SplitPdfPage() {
         type: "application/pdf",
       });
 
+      const outputFileName = "pdfnova-split.pdf";
       const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
 
       link.href = downloadUrl;
-      link.download = "pdfnova-split.pdf";
+      link.download = outputFileName;
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
       URL.revokeObjectURL(downloadUrl);
+
+      addRecentFile({
+        fileName: outputFileName,
+        toolName: "Split PDF",
+      });
 
       toast.success("PDF split successfully!");
 

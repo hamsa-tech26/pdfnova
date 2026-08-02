@@ -6,6 +6,7 @@ import FileList from "@/components/pdf/FileList";
 import FileUploader from "@/components/pdf/FileUploader";
 import type { PdfFileInfo } from "@/components/pdf/PdfFileInfo";
 import ToolHeader from "@/components/pdf/ToolHeader";
+import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
@@ -25,8 +26,10 @@ export default function MergePdfPage() {
     );
 
     if (selectedFiles.length === 0) {
-      setError("Please select valid PDF files.");
-      toast.error("Please select valid PDF files.");
+      const message = "Please select valid PDF files.";
+
+      setError(message);
+      toast.error(message);
       event.target.value = "";
       return;
     }
@@ -154,17 +157,23 @@ export default function MergePdfPage() {
         type: "application/pdf",
       });
 
+      const outputFileName = "pdfnova-merged.pdf";
       const downloadUrl = URL.createObjectURL(blob);
       const link = document.createElement("a");
 
       link.href = downloadUrl;
-      link.download = "pdfnova-merged.pdf";
+      link.download = outputFileName;
 
       document.body.appendChild(link);
       link.click();
       link.remove();
 
       URL.revokeObjectURL(downloadUrl);
+
+      addRecentFile({
+        fileName: outputFileName,
+        toolName: "Merge PDF",
+      });
 
       toast.success("PDF merged successfully!");
 
