@@ -6,6 +6,7 @@ import FileList from "@/components/pdf/FileList";
 import FileUploader from "@/components/pdf/FileUploader";
 import type { PdfFileInfo } from "@/components/pdf/PdfFileInfo";
 import ToolHeader from "@/components/pdf/ToolHeader";
+import { downloadFile } from "@/lib/downloadFile";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -146,29 +147,13 @@ export default function MergePdfPage() {
       }
 
       const mergedPdfBytes = await mergedPdf.save();
-
-      const mergedPdfBuffer = new ArrayBuffer(
-        mergedPdfBytes.byteLength,
-      );
-
-      new Uint8Array(mergedPdfBuffer).set(mergedPdfBytes);
-
-      const blob = new Blob([mergedPdfBuffer], {
-        type: "application/pdf",
-      });
-
       const outputFileName = "pdfnova-merged.pdf";
-      const downloadUrl = URL.createObjectURL(blob);
-      const link = document.createElement("a");
 
-      link.href = downloadUrl;
-      link.download = outputFileName;
-
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-
-      URL.revokeObjectURL(downloadUrl);
+      downloadFile(
+        mergedPdfBytes,
+        outputFileName,
+        "application/pdf",
+      );
 
       addRecentFile({
         fileName: outputFileName,
