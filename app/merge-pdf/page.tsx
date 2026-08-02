@@ -9,6 +9,7 @@ import ToolHeader from "@/components/pdf/ToolHeader";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
+import { toast } from "sonner";
 
 export default function MergePdfPage() {
   const [files, setFiles] = useState<PdfFileInfo[]>([]);
@@ -25,6 +26,7 @@ export default function MergePdfPage() {
 
     if (selectedFiles.length === 0) {
       setError("Please select valid PDF files.");
+      toast.error("Please select valid PDF files.");
       event.target.value = "";
       return;
     }
@@ -48,23 +50,37 @@ export default function MergePdfPage() {
       ]);
 
       setError("");
+
+      toast.success(
+        `${selectedFileInfo.length} PDF ${
+          selectedFileInfo.length === 1 ? "file" : "files"
+        } added successfully.`,
+      );
     } catch (selectionError) {
       console.error(selectionError);
 
-      setError(
-        "One of the selected PDF files is damaged or password-protected.",
-      );
+      const message =
+        "One of the selected PDF files is damaged or password-protected.";
+
+      setError(message);
+      toast.error(message);
     } finally {
       event.target.value = "";
     }
   }
 
   function removeFile(indexToRemove: number) {
+    const removedFileName = files[indexToRemove]?.file.name;
+
     setFiles((currentFiles) =>
       currentFiles.filter((_, index) => index !== indexToRemove),
     );
 
     setError("");
+
+    if (removedFileName) {
+      toast.success(`${removedFileName} removed.`);
+    }
   }
 
   function moveFileUp(index: number) {
@@ -101,7 +117,10 @@ export default function MergePdfPage() {
 
   async function mergePdfFiles() {
     if (files.length < 2) {
-      setError("Please select at least two PDF files.");
+      const message = "Please select at least two PDF files.";
+
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -146,12 +165,20 @@ export default function MergePdfPage() {
       link.remove();
 
       URL.revokeObjectURL(downloadUrl);
+
+      toast.success("PDF merged successfully!");
+
+      toast("Download started", {
+        description: "Your merged PDF is being downloaded.",
+      });
     } catch (mergeError) {
       console.error(mergeError);
 
-      setError(
-        "The PDF files could not be merged. One of the files may be damaged or password-protected.",
-      );
+      const message =
+        "The PDF files could not be merged. One of the files may be damaged or password-protected.";
+
+      setError(message);
+      toast.error("Failed to merge PDF files.");
     } finally {
       setIsMerging(false);
     }
