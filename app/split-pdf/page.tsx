@@ -7,6 +7,7 @@ import ToolHeader from "@/components/pdf/ToolHeader";
 import { FileText, ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
+import { toast } from "sonner";
 
 export default function SplitPdfPage() {
   const [file, setFile] = useState<File | null>(null);
@@ -19,7 +20,11 @@ export default function SplitPdfPage() {
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile || selectedFile.type !== "application/pdf") {
-      setError("Please select a valid PDF file.");
+      const message = "Please select a valid PDF file.";
+
+      setError(message);
+      toast.error(message);
+      event.target.value = "";
       return;
     }
 
@@ -27,6 +32,8 @@ export default function SplitPdfPage() {
     setPageRange("");
     setError("");
     event.target.value = "";
+
+    toast.success("PDF file added successfully.");
   }
 
   function parsePageRange(range: string, totalPages: number) {
@@ -37,7 +44,10 @@ export default function SplitPdfPage() {
       if (!part) continue;
 
       if (part.includes("-")) {
-        const [startText, endText] = part.split("-").map((value) => value.trim());
+        const [startText, endText] = part
+          .split("-")
+          .map((value) => value.trim());
+
         const start = Number(startText);
         const end = Number(endText);
 
@@ -70,12 +80,18 @@ export default function SplitPdfPage() {
 
   async function splitPdfFile() {
     if (!file) {
-      setError("Please select a PDF file.");
+      const message = "Please select a PDF file.";
+
+      setError(message);
+      toast.error(message);
       return;
     }
 
     if (!pageRange.trim()) {
-      setError("Please enter the pages you want to extract.");
+      const message = "Please enter the pages you want to extract.";
+
+      setError(message);
+      toast.error(message);
       return;
     }
 
@@ -85,17 +101,22 @@ export default function SplitPdfPage() {
     try {
       const sourceBytes = await file.arrayBuffer();
       const sourcePdf = await PDFDocument.load(sourceBytes);
+
       const selectedPageIndexes = parsePageRange(
         pageRange,
         sourcePdf.getPageCount(),
       );
 
       if (selectedPageIndexes.length === 0) {
-        setError("Please select at least one page.");
+        const message = "Please select at least one page.";
+
+        setError(message);
+        toast.error(message);
         return;
       }
 
       const splitPdf = await PDFDocument.create();
+
       const copiedPages = await splitPdf.copyPages(
         sourcePdf,
         selectedPageIndexes,
@@ -104,6 +125,7 @@ export default function SplitPdfPage() {
       copiedPages.forEach((page) => splitPdf.addPage(page));
 
       const splitPdfBytes = await splitPdf.save();
+
       const splitPdfBuffer = new ArrayBuffer(splitPdfBytes.byteLength);
       new Uint8Array(splitPdfBuffer).set(splitPdfBytes);
 
@@ -116,16 +138,26 @@ export default function SplitPdfPage() {
 
       link.href = downloadUrl;
       link.download = "pdfnova-split.pdf";
+
       document.body.appendChild(link);
       link.click();
       link.remove();
 
       URL.revokeObjectURL(downloadUrl);
+
+      toast.success("PDF split successfully!");
+
+      toast("Download started", {
+        description: "Your extracted PDF is being downloaded.",
+      });
     } catch (splitError) {
       console.error(splitError);
-      setError(
-        "The PDF could not be split. Check the page range and make sure the file is not password-protected.",
-      );
+
+      const message =
+        "The PDF could not be split. Check the page range and make sure the file is not password-protected.";
+
+      setError(message);
+      toast.error("Failed to split the PDF.");
     } finally {
       setIsSplitting(false);
     }
