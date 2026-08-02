@@ -32,6 +32,38 @@ export default function MergePdfPage() {
     setError("");
   }
 
+  function moveFileUp(index: number) {
+    if (index === 0) return;
+
+    setFiles((currentFiles) => {
+      const updatedFiles = [...currentFiles];
+
+      [updatedFiles[index - 1], updatedFiles[index]] = [
+        updatedFiles[index],
+        updatedFiles[index - 1],
+      ];
+
+      return updatedFiles;
+    });
+  }
+
+  function moveFileDown(index: number) {
+    setFiles((currentFiles) => {
+      if (index === currentFiles.length - 1) {
+        return currentFiles;
+      }
+
+      const updatedFiles = [...currentFiles];
+
+      [updatedFiles[index], updatedFiles[index + 1]] = [
+        updatedFiles[index + 1],
+        updatedFiles[index],
+      ];
+
+      return updatedFiles;
+    });
+  }
+
   async function mergePdfFiles() {
     if (files.length < 2) {
       setError("Please select at least two PDF files.");
@@ -109,7 +141,12 @@ export default function MergePdfPage() {
               helperText="Maximum file size: 25 MB per file"
             />
 
-            <FileList files={files} onRemove={removeFile} />
+            <FileList
+              files={files}
+              onRemove={removeFile}
+              onMoveUp={moveFileUp}
+              onMoveDown={moveFileDown}
+            />
 
             {files.length > 0 && (
               <ActionButton
