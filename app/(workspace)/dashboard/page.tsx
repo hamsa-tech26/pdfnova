@@ -14,6 +14,7 @@ import {
   Sparkles,
   Trash2,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 const tools = [
@@ -23,6 +24,7 @@ const tools = [
     href: "/merge-pdf",
     icon: FileText,
     accent: "bg-red-50 text-red-600",
+    available: true,
   },
   {
     title: "Split PDF",
@@ -30,20 +32,23 @@ const tools = [
     href: "/split-pdf",
     icon: Scissors,
     accent: "bg-orange-50 text-orange-600",
+    available: true,
   },
   {
     title: "Compress PDF",
     description: "Reduce PDF file size while keeping good quality.",
-    href: "#",
+    href: "/compress-pdf",
     icon: Archive,
     accent: "bg-amber-50 text-amber-600",
+    available: true,
   },
   {
     title: "JPG to PDF",
-    description: "Turn images into a clean PDF document.",
-    href: "#",
+    description: "Turn JPG or PNG images into one PDF document.",
+    href: "/jpg-to-pdf",
     icon: FileImage,
     accent: "bg-emerald-50 text-emerald-600",
+    available: true,
   },
   {
     title: "PDF to Word",
@@ -51,6 +56,7 @@ const tools = [
     href: "#",
     icon: FileText,
     accent: "bg-blue-50 text-blue-600",
+    available: false,
   },
   {
     title: "AI Chat",
@@ -58,6 +64,7 @@ const tools = [
     href: "#",
     icon: MessageSquareText,
     accent: "bg-cyan-50 text-cyan-600",
+    available: false,
   },
 ];
 
@@ -114,8 +121,39 @@ export default function DashboardPage() {
             {tools.map((tool) => {
               const Icon = tool.icon;
 
+              if (!tool.available) {
+                return (
+                  <div
+                    key={tool.title}
+                    className="relative rounded-3xl border border-gray-200 bg-white p-6 opacity-70 shadow-sm"
+                  >
+                    <div className="absolute right-5 top-5 rounded-full bg-gray-100 px-3 py-1 text-xs font-semibold text-gray-500">
+                      Coming soon
+                    </div>
+
+                    <div
+                      className={`flex h-12 w-12 items-center justify-center rounded-2xl ${tool.accent}`}
+                    >
+                      <Icon size={24} />
+                    </div>
+
+                    <h3 className="mt-6 text-xl font-bold text-gray-950">
+                      {tool.title}
+                    </h3>
+
+                    <p className="mt-3 text-sm leading-6 text-gray-600">
+                      {tool.description}
+                    </p>
+
+                    <span className="mt-6 inline-flex text-sm font-semibold text-gray-400">
+                      Not available yet
+                    </span>
+                  </div>
+                );
+              }
+
               return (
-                <a
+                <Link
                   key={tool.title}
                   href={tool.href}
                   className="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
@@ -135,9 +173,12 @@ export default function DashboardPage() {
                   </p>
 
                   <span className="mt-6 inline-flex text-sm font-semibold text-blue-600">
-                    Open tool →
+                    Open tool
+                    <span className="ml-2 transition group-hover:translate-x-1">
+                      →
+                    </span>
                   </span>
-                </a>
+                </Link>
               );
             })}
           </div>
@@ -212,8 +253,12 @@ export default function DashboardPage() {
               AI-powered tools.
             </p>
 
-            <button className="mt-8 rounded-xl bg-white px-6 py-3 font-semibold text-blue-700 transition hover:bg-blue-50">
-              Explore Nova AI
+            <button
+              type="button"
+              disabled
+              className="mt-8 cursor-not-allowed rounded-xl bg-white/80 px-6 py-3 font-semibold text-blue-700 opacity-80"
+            >
+              Coming Soon
             </button>
           </div>
         </section>
