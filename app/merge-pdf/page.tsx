@@ -4,31 +4,66 @@ import Navbar from "@/components/Navbar";
 import ActionButton from "@/components/pdf/ActionButton";
 import FileList from "@/components/pdf/FileList";
 import FileUploader from "@/components/pdf/FileUploader";
+import type { PdfFileInfo } from "@/components/pdf/PdfFileInfo";
 import ToolHeader from "@/components/pdf/ToolHeader";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 
 export default function MergePdfPage() {
-  const [files, setFiles] = useState<File[]>([]);
+  const [files, setFiles] = useState<PdfFileInfo[]>([]);
   const [isMerging, setIsMerging] = useState(false);
   const [error, setError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+  async function handleFileSelection(
+    event: ChangeEvent<HTMLInputElement>,
+  ) {
     const selectedFiles = Array.from(event.target.files ?? []).filter(
       (file) => file.type === "application/pdf",
     );
 
-    setFiles((currentFiles) => [...currentFiles, ...selectedFiles]);
-    setError("");
-    event.target.value = "";
+    if (selectedFiles.length === 0) {
+      setError("Please select valid PDF files.");
+      event.target.value = "";
+      return;
+    }
+
+    try {
+      const selectedFileInfo = await Promise.all(
+        selectedFiles.map(async (file) => {
+          const fileBytes = await file.arrayBuffer();
+          const pdf = await PDFDocument.load(fileBytes);
+
+          return {
+            file,
+            pageCount: pdf.getPageCount(),
+          };
+        }),
+      );
+
+      setFiles((currentFiles) => [
+        ...currentFiles,
+        ...selectedFileInfo,
+      ]);
+
+      setError("");
+    } catch (selectionError) {
+      console.error(selectionError);
+
+      setError(
+        "One of the selected PDF files is damaged or password-protected.",
+      );
+    } finally {
+      event.target.value = "";
+    }
   }
 
   function removeFile(indexToRemove: number) {
     setFiles((currentFiles) =>
       currentFiles.filter((_, index) => index !== indexToRemove),
     );
+
     setError("");
   }
 
@@ -76,8 +111,8 @@ export default function MergePdfPage() {
     try {
       const mergedPdf = await PDFDocument.create();
 
-      for (const file of files) {
-        const fileBytes = await file.arrayBuffer();
+      for (const fileInfo of files) {
+        const fileBytes = await fileInfo.file.arrayBuffer();
         const sourcePdf = await PDFDocument.load(fileBytes);
 
         const copiedPages = await mergedPdf.copyPages(
@@ -90,7 +125,10 @@ export default function MergePdfPage() {
 
       const mergedPdfBytes = await mergedPdf.save();
 
-      const mergedPdfBuffer = new ArrayBuffer(mergedPdfBytes.byteLength);
+      const mergedPdfBuffer = new ArrayBuffer(
+        mergedPdfBytes.byteLength,
+      );
+
       new Uint8Array(mergedPdfBuffer).set(mergedPdfBytes);
 
       const blob = new Blob([mergedPdfBuffer], {
