@@ -14,13 +14,14 @@ import {
   Layers3,
   MessageSquareText,
   Scissors,
+  Search,
   Sparkles,
   Trash2,
   WandSparkles,
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 const availableTools = [
   {
@@ -65,13 +66,20 @@ const availableTools = [
     icon: Layers3,
     accent: "bg-cyan-50 text-cyan-600",
   },
+  {
+    title: "Watermark PDF",
+    description: "Add text, logos, stamps, or signatures to PDF pages.",
+    href: "/watermark-pdf",
+    icon: WandSparkles,
+    accent: "bg-pink-50 text-pink-600",
+  },
 ];
 
 const comingSoonTools = [
   {
-    title: "Watermark PDF",
-    description: "Add text or image watermarks to PDF pages.",
-    icon: WandSparkles,
+    title: "Protect PDF",
+    description: "Add password protection and document permissions.",
+    icon: FileText,
   },
   {
     title: "PDF to Word",
@@ -96,10 +104,26 @@ function formatRecentDate(createdAt: string) {
 
 export default function DashboardPage() {
   const [recentFiles, setRecentFiles] = useState<RecentFileItem[]>([]);
+  const [searchTerm, setSearchTerm] = useState("");
 
   useEffect(() => {
     setRecentFiles(getRecentFiles());
   }, []);
+
+  const filteredTools = useMemo(() => {
+    const normalizedSearch = searchTerm.trim().toLowerCase();
+
+    if (!normalizedSearch) {
+      return availableTools;
+    }
+
+    return availableTools.filter((tool) => {
+      return (
+        tool.title.toLowerCase().includes(normalizedSearch) ||
+        tool.description.toLowerCase().includes(normalizedSearch)
+      );
+    });
+  }, [searchTerm]);
 
   function handleClearHistory() {
     clearRecentFiles();
@@ -122,8 +146,8 @@ export default function DashboardPage() {
               </h1>
 
               <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">
-                Merge, split, compress, convert, organize, and manage your
-                documents in one private browser-based workspace.
+                Merge, split, compress, convert, organize, watermark, and
+                manage documents in one private browser-based workspace.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -149,6 +173,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-blue-100">
                   Working tools
                 </p>
+
                 <p className="mt-3 text-4xl font-extrabold">
                   {availableTools.length}
                 </p>
@@ -158,6 +183,7 @@ export default function DashboardPage() {
                 <p className="text-sm font-medium text-blue-100">
                   Recent tasks
                 </p>
+
                 <p className="mt-3 text-4xl font-extrabold">
                   {recentFiles.length}
                 </p>
@@ -170,7 +196,10 @@ export default function DashboardPage() {
                   </div>
 
                   <div>
-                    <p className="font-bold">Private browser processing</p>
+                    <p className="font-bold">
+                      Private browser processing
+                    </p>
+
                     <p className="mt-1 text-sm text-blue-100">
                       Your files stay on your device for supported tools.
                     </p>
@@ -182,7 +211,7 @@ export default function DashboardPage() {
         </section>
 
         <section className="mt-12">
-          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-end">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
             <div>
               <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
                 Quick actions
@@ -193,54 +222,115 @@ export default function DashboardPage() {
               </h2>
 
               <p className="mt-3 text-gray-600">
-                Open any completed tool and start working immediately.
+                Search for a tool or choose one from the available workspace.
               </p>
             </div>
 
-            <div className="rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
-              {availableTools.length} tools available
+            <div className="w-full lg:max-w-md">
+              <label htmlFor="tool-search" className="sr-only">
+                Search PDF tools
+              </label>
+
+              <div className="relative">
+                <Search
+                  size={20}
+                  className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gray-400"
+                />
+
+                <input
+                  id="tool-search"
+                  type="search"
+                  value={searchTerm}
+                  onChange={(event) => setSearchTerm(event.target.value)}
+                  placeholder="Search tools, for example Merge PDF"
+                  className="w-full rounded-2xl border border-gray-300 bg-white py-3.5 pl-12 pr-4 text-gray-900 outline-none transition placeholder:text-gray-400 focus:border-blue-500 focus:ring-4 focus:ring-blue-100"
+                />
+              </div>
             </div>
           </div>
 
-          <div className="mt-7 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
-            {availableTools.map((tool) => {
-              const Icon = tool.icon;
+          <div className="mt-5 flex items-center justify-between gap-4">
+            <p className="text-sm text-gray-500">
+              {searchTerm.trim()
+                ? `${filteredTools.length} matching ${
+                    filteredTools.length === 1 ? "tool" : "tools"
+                  }`
+                : `${availableTools.length} tools available`}
+            </p>
 
-              return (
-                <Link
-                  key={tool.title}
-                  href={tool.href}
-                  className="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div
-                      className={`flex h-13 w-13 items-center justify-center rounded-2xl ${tool.accent}`}
-                    >
-                      <Icon size={25} />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="text-sm font-semibold text-blue-600 transition hover:text-blue-700"
+              >
+                Clear search
+              </button>
+            )}
+          </div>
+
+          {filteredTools.length > 0 ? (
+            <div className="mt-6 grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+              {filteredTools.map((tool) => {
+                const Icon = tool.icon;
+
+                return (
+                  <Link
+                    key={tool.title}
+                    href={tool.href}
+                    className="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl"
+                  >
+                    <div className="flex items-start justify-between gap-4">
+                      <div
+                        className={`flex h-14 w-14 items-center justify-center rounded-2xl ${tool.accent}`}
+                      >
+                        <Icon size={25} />
+                      </div>
+
+                      <ArrowRight
+                        size={20}
+                        className="text-gray-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
+                      />
                     </div>
 
-                    <ArrowRight
-                      size={20}
-                      className="text-gray-300 transition group-hover:translate-x-1 group-hover:text-blue-600"
-                    />
-                  </div>
+                    <h3 className="mt-6 text-xl font-bold text-gray-950">
+                      {tool.title}
+                    </h3>
 
-                  <h3 className="mt-6 text-xl font-bold text-gray-950">
-                    {tool.title}
-                  </h3>
+                    <p className="mt-3 text-sm leading-6 text-gray-600">
+                      {tool.description}
+                    </p>
 
-                  <p className="mt-3 text-sm leading-6 text-gray-600">
-                    {tool.description}
-                  </p>
+                    <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
+                      Open tool
+                      <ArrowRight size={16} />
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          ) : (
+            <div className="mt-6 rounded-3xl border border-dashed border-gray-300 bg-white px-6 py-14 text-center">
+              <Search className="mx-auto text-gray-400" size={36} />
 
-                  <span className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-blue-600">
-                    Open tool
-                    <ArrowRight size={16} />
-                  </span>
-                </Link>
-              );
-            })}
-          </div>
+              <h3 className="mt-4 text-lg font-bold text-gray-900">
+                No tools found
+              </h3>
+
+              <p className="mt-2 text-sm text-gray-500">
+                Try searching for Merge, Split, Compress, JPG, Organize, or
+                Watermark.
+              </p>
+
+              <button
+                type="button"
+                onClick={() => setSearchTerm("")}
+                className="mt-5 rounded-xl bg-blue-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                Show all tools
+              </button>
+            </div>
+          )}
         </section>
 
         <section className="mt-12 grid gap-6 xl:grid-cols-[1.2fr_0.8fr]">
