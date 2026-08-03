@@ -1,3 +1,4 @@
+import ThemeProvider from "@/components/providers/ThemeProvider";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -26,17 +27,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        {children}
+      <body className="min-h-full bg-white text-gray-900 dark:bg-slate-950 dark:text-white">
+        <ThemeProvider>
+          {children}
 
-        <Toaster
-          position="top-right"
-          richColors
-          closeButton
-          duration={3000}
-        />
+          <Toaster
+            position="top-right"
+            richColors
+            closeButton
+            duration={3000}
+          />
+        </ThemeProvider>
       </body>
     </html>
   );
