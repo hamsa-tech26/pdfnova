@@ -23,9 +23,24 @@ type WatermarkPosition =
   | "bottom-left"
   | "bottom-right";
 
+function hexToRgb(hexColor: string) {
+  const cleanHex = hexColor.replace("#", "");
+
+  const red = Number.parseInt(cleanHex.slice(0, 2), 16) / 255;
+  const green = Number.parseInt(cleanHex.slice(2, 4), 16) / 255;
+  const blue = Number.parseInt(cleanHex.slice(4, 6), 16) / 255;
+
+  return {
+    red,
+    green,
+    blue,
+  };
+}
+
 export default function WatermarkPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [watermarkText, setWatermarkText] = useState("PDFNova");
+  const [watermarkColor, setWatermarkColor] = useState("#595959");
   const [fontSize, setFontSize] = useState(42);
   const [opacity, setOpacity] = useState(0.25);
   const [rotation, setRotation] = useState(45);
@@ -122,12 +137,16 @@ export default function WatermarkPdfPage() {
       const pdf = await PDFDocument.load(sourceBytes);
       const font = await pdf.embedFont(StandardFonts.HelveticaBold);
 
+      const watermarkRgb = hexToRgb(watermarkColor);
+
       for (const page of pdf.getPages()) {
         const { width, height } = page.getSize();
+
         const textWidth = font.widthOfTextAtSize(
           watermarkText,
           fontSize,
         );
+
         const textHeight = font.heightAtSize(fontSize);
 
         const { x, y } = getWatermarkPosition(
@@ -142,7 +161,11 @@ export default function WatermarkPdfPage() {
           y,
           size: fontSize,
           font,
-          color: rgb(0.35, 0.35, 0.35),
+          color: rgb(
+            watermarkRgb.red,
+            watermarkRgb.green,
+            watermarkRgb.blue,
+          ),
           opacity,
           rotate: degrees(rotation),
         });
@@ -187,7 +210,7 @@ export default function WatermarkPdfPage() {
           <ToolHeader
             label="Watermark PDF"
             title="Add a text watermark to your PDF"
-            description="Upload a PDF, customize the watermark text, position, size, opacity, and rotation, then download the updated document."
+            description="Upload a PDF, customize the watermark text, color, position, size, opacity, and rotation, then download the updated document."
           />
 
           <section className="mt-12 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl md:p-10">
@@ -229,7 +252,7 @@ export default function WatermarkPdfPage() {
                   </button>
                 </div>
 
-                <div className="grid gap-6 lg:grid-cols-2">
+                <div className="grid gap-6 lg:grid-cols-3">
                   <div>
                     <label
                       htmlFor="watermark-text"
@@ -276,6 +299,42 @@ export default function WatermarkPdfPage() {
                         Bottom right
                       </option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label
+                      htmlFor="watermark-color"
+                      className="text-sm font-semibold text-gray-900"
+                    >
+                      Text color
+                    </label>
+
+                    <div className="mt-2 flex items-center gap-3 rounded-xl border border-gray-300 bg-white px-3 py-2">
+                      <input
+                        id="watermark-color"
+                        type="color"
+                        value={watermarkColor}
+                        onChange={(event) =>
+                          setWatermarkColor(event.target.value)
+                        }
+                        className="h-10 w-12 cursor-pointer rounded-lg border-0 bg-transparent p-0"
+                      />
+
+                      <input
+                        type="text"
+                        value={watermarkColor.toUpperCase()}
+                        onChange={(event) => {
+                          const value = event.target.value;
+
+                          if (/^#[0-9A-Fa-f]{0,6}$/.test(value)) {
+                            setWatermarkColor(value);
+                          }
+                        }}
+                        maxLength={7}
+                        className="min-w-0 flex-1 bg-transparent text-sm font-semibold text-gray-700 outline-none"
+                        aria-label="Watermark color hexadecimal value"
+                      />
+                    </div>
                   </div>
                 </div>
 
@@ -372,8 +431,9 @@ export default function WatermarkPdfPage() {
 
                   <div className="mt-5 flex min-h-52 items-center justify-center overflow-hidden rounded-2xl border border-blue-200 bg-white p-6">
                     <p
-                      className="break-all text-center font-bold text-gray-500"
+                      className="break-all text-center font-bold"
                       style={{
+                        color: watermarkColor,
                         fontSize: `${Math.min(fontSize, 64)}px`,
                         opacity,
                         transform: `rotate(${rotation}deg)`,
