@@ -5,8 +5,18 @@ import FileUploader from "@/components/pdf/FileUploader";
 import PdfPageCard from "@/components/pdf/PdfPageCard";
 import ToolHeader from "@/components/pdf/ToolHeader";
 import { downloadFile } from "@/lib/downloadFile";
-import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
-import { FileText, ShieldCheck } from "lucide-react";
+import {
+  renderPdfPages,
+  type RenderedPdfPage,
+} from "@/lib/pdf/render";
+import { addRecentFile } from "@/lib/storage/recentFiles";
+import JSZip from "jszip";
+import {
+  Archive,
+  FileText,
+  LoaderCircle,
+  ShieldCheck,
+} from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -29,6 +39,7 @@ export default function PdfToJpgPage() {
   const [pages, setPages] = useState<RenderedPdfPage[]>([]);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
+  const [isCreatingZip, setIsCreatingZip] = useState(false);
 
   async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
@@ -36,7 +47,13 @@ export default function PdfToJpgPage() {
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile || selectedFile.type !== "application/pdf") {
-      toast.error("Please select a PDF file.");
+      toast.error("Please select a valid PDF file.");
+      event.target.value = "";
+      return;
+    }
+
+    if (selectedFile.size > 25 * 1024 * 1024) {
+      toast.error("The PDF file must not be larger than 25 MB.");
       event.target.value = "";
       return;
     }
@@ -83,6 +100,11 @@ export default function PdfToJpgPage() {
 
     downloadFile(imageBytes, fileName, "image/jpeg");
 
+    addRecentFile({
+      fileName,
+      toolName: "PDF to JPG",
+    });
+
     toast.success(`Page ${page.pageNumber} downloaded.`);
   }
 
@@ -94,6 +116,80 @@ export default function PdfToJpgPage() {
     setSelectedPages([]);
   }
 
+  async function downloadPagesAsZip(
+    pageNumbers: number[],
+    zipFileName: string,
+  ) {
+    if (pageNumbers.length === 0) {
+      toast.error("Please select at least one page.");
+      return;
+    }
+
+    setIsCreatingZip(true);
+
+    try {
+      const zip = new JSZip();
+
+      const pagesToDownload = pages.filter((page) =>
+        pageNumbers.includes(page.pageNumber),
+      );
+
+      for (const page of pagesToDownload) {
+        const imageBytes = dataUrlToBytes(page.dataUrl);
+        const imageFileName = `pdfnova-page-${page.pageNumber}.jpg`;
+
+        zip.file(imageFileName, imageBytes);
+      }
+
+      const zipBytes = await zip.generateAsync({
+        type: "uint8array",
+        compression: "DEFLATE",
+        compressionOptions: {
+          level: 6,
+        },
+      });
+
+      downloadFile(zipBytes, zipFileName, "application/zip");
+
+      addRecentFile({
+        fileName: zipFileName,
+        toolName: "PDF to JPG",
+      });
+
+      toast.success(
+        `${pagesToDownload.length} ${
+          pagesToDownload.length === 1 ? "page" : "pages"
+        } added to ZIP successfully.`,
+      );
+
+      toast("Download started", {
+        description: "Your JPG images are being downloaded as a ZIP file.",
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error("The ZIP file could not be created.");
+    } finally {
+      setIsCreatingZip(false);
+    }
+  }
+
+  async function downloadSelectedPages() {
+    await downloadPagesAsZip(
+      selectedPages,
+      "pdfnova-selected-jpg-pages.zip",
+    );
+  }
+
+  async function downloadAllPages() {
+    const allPageNumbers = pages.map((page) => page.pageNumber);
+
+    await downloadPagesAsZip(
+      allPageNumbers,
+      "pdfnova-all-jpg-pages.zip",
+    );
+  }
+
   return (
     <>
       <Navbar />
@@ -103,7 +199,7 @@ export default function PdfToJpgPage() {
           <ToolHeader
             label="PDF to JPG"
             title="Convert PDF pages into JPG images"
-            description="Upload a PDF, preview every page, select the pages you need, and download them as JPG images."
+            description="Upload a PDF, preview every page, select the pages you need, and download them individually or together as a ZIP file."
           />
 
           <section className="mt-12 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl md:p-8">
@@ -137,7 +233,12 @@ export default function PdfToJpgPage() {
 
             {isLoading && (
               <div className="mt-8 rounded-2xl border border-blue-200 bg-blue-50 px-6 py-8 text-center">
-                <p className="font-semibold text-blue-700">
+                <LoaderCircle
+                  size={28}
+                  className="mx-auto animate-spin text-blue-600"
+                />
+
+                <p className="mt-4 font-semibold text-blue-700">
                   Rendering PDF pages...
                 </p>
 
@@ -149,7 +250,7 @@ export default function PdfToJpgPage() {
 
             {pages.length > 0 && (
               <div className="mt-10">
-                <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
+                <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
                       PDF Pages ({pages.length})
@@ -164,7 +265,10 @@ export default function PdfToJpgPage() {
                     <button
                       type="button"
                       onClick={selectAllPages}
-                      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700"
+                      disabled={
+                        selectedPages.length === pages.length
+                      }
+                      className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Select All
                     </button>
@@ -180,6 +284,46 @@ export default function PdfToJpgPage() {
                   </div>
                 </div>
 
+                <div className="mt-6 grid gap-3 sm:grid-cols-2">
+                  <button
+                    type="button"
+                    onClick={downloadSelectedPages}
+                    disabled={
+                      selectedPages.length === 0 || isCreatingZip
+                    }
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isCreatingZip ? (
+                      <LoaderCircle
+                        size={19}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Archive size={19} />
+                    )}
+
+                    Download Selected as ZIP
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={downloadAllPages}
+                    disabled={isCreatingZip}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-5 py-3 font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    {isCreatingZip ? (
+                      <LoaderCircle
+                        size={19}
+                        className="animate-spin"
+                      />
+                    ) : (
+                      <Archive size={19} />
+                    )}
+
+                    Download All as ZIP
+                  </button>
+                </div>
+
                 <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {pages.map((page) => (
                     <PdfPageCard
@@ -188,7 +332,9 @@ export default function PdfToJpgPage() {
                       dataUrl={page.dataUrl}
                       width={page.width}
                       height={page.height}
-                      isSelected={selectedPages.includes(page.pageNumber)}
+                      isSelected={selectedPages.includes(
+                        page.pageNumber,
+                      )}
                       onToggleSelect={() =>
                         togglePageSelection(page.pageNumber)
                       }
