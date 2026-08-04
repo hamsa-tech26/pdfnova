@@ -9,7 +9,7 @@ export default function WorkspaceLayout({
   children,
 }: WorkspaceLayoutProps) {
   return (
-    <div className="min-h-screen bg-slate-50 lg:flex">
+    <div className="min-h-screen bg-slate-50 transition-colors dark:bg-slate-950 lg:flex">
       <WorkspaceSidebar />
 
       <div className="min-w-0 flex-1">
