@@ -1,12 +1,10 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import ActionButton from "@/components/pdf/ActionButton";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
 import PasswordInput from "@/components/pdf/PasswordInput";
-import ToolContainer from "@/components/pdf/ToolContainer";
-import ToolHeader from "@/components/pdf/ToolHeader";
+import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { unlockPdf } from "@/lib/pdf/qpdf";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -14,25 +12,67 @@ import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+const unlockPdfTips = [
+  {
+    title: "Use the correct password",
+    description:
+      "The PDF cannot be unlocked unless the password entered matches the document password.",
+  },
+  {
+    title: "Use a valid protected PDF",
+    description:
+      "Damaged files or documents using unsupported encryption may not be processed.",
+  },
+  {
+    title: "Keep the original file",
+    description:
+      "PDFNova creates a separate unlocked copy and does not modify your original document.",
+  },
+];
+
+const unlockPdfFaqs = [
+  {
+    question: "Does PDFNova store my PDF password?",
+    answer:
+      "No. The password is used only inside your browser while processing the selected PDF.",
+  },
+  {
+    question: "Why does unlocking fail with the correct password?",
+    answer:
+      "The PDF may be damaged, use unsupported encryption, or contain restrictions that the current browser engine cannot process.",
+  },
+  {
+    question: "Can I unlock any PDF?",
+    answer:
+      "Only unlock documents you own or are authorized to modify.",
+  },
+];
+
 export default function UnlockPdfPage() {
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
-
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const selectedFile = event.target.files?.[0];
 
-    if (!selectedFile || selectedFile.type !== "application/pdf") {
+    if (
+      !selectedFile ||
+      (selectedFile.type !== "application/pdf" &&
+        !selectedFile.name.toLowerCase().endsWith(".pdf"))
+    ) {
       toast.error("Please select a valid PDF file.");
       event.target.value = "";
       return;
     }
 
-    if (selectedFile.size > 25 * 1024 * 1024) {
+    if (selectedFile.size > MAX_FILE_SIZE) {
       toast.error("The PDF file must not be larger than 25 MB.");
       event.target.value = "";
       return;
@@ -67,7 +107,8 @@ export default function UnlockPdfPage() {
 
     try {
       const unlockedBytes = await unlockPdf(file, password);
-      const outputFileName = "pdfnova-unlocked.pdf";
+      const originalName = file.name.replace(/\.pdf$/i, "");
+      const outputFileName = `${originalName || "pdfnova"}-unlocked.pdf`;
 
       downloadFile(
         unlockedBytes,
@@ -89,7 +130,7 @@ export default function UnlockPdfPage() {
       console.error(error);
 
       toast.error(
-        "The PDF could not be unlocked. Check the password and make sure the file is password-protected.",
+        "The PDF could not be unlocked. Check the password and make sure the file is a valid password-protected PDF.",
       );
     } finally {
       setIsUnlocking(false);
@@ -97,63 +138,60 @@ export default function UnlockPdfPage() {
   }
 
   return (
-    <>
-      <Navbar />
+    <ToolLayout
+      label="Unlock PDF"
+      title="Remove password protection from a PDF"
+      description="Upload a protected PDF, enter the correct password, and download an unlocked copy directly from your private PDFNova workspace."
+      tips={unlockPdfTips}
+      faqs={unlockPdfFaqs}
+      maxWidthClassName="max-w-6xl"
+    >
+      <FileUploader
+        fileInputRef={fileInputRef}
+        onFileSelection={handleFileSelection}
+        accept=".pdf,application/pdf"
+        multiple={false}
+        title="Select one protected PDF"
+        description="Choose or drag the password-protected PDF you want to unlock."
+        buttonText="Choose Protected PDF"
+        helperText="Supported format: PDF · Maximum file size: 25 MB"
+      />
 
-      <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white px-6 py-20">
-        <div className="mx-auto max-w-5xl">
-          <ToolHeader
-            label="Unlock PDF"
-            title="Remove password protection from a PDF"
-            description="Upload a password-protected PDF, enter the correct password, and download an unlocked copy."
+      {file && (
+        <div className="mt-8 space-y-6">
+          <FileCard
+            file={file}
+            onRemove={removeFile}
+            removeLabel="Remove protected PDF"
+            statusText="Ready for password removal"
           />
 
-          <ToolContainer>
-            <FileUploader
-              fileInputRef={fileInputRef}
-              onFileSelection={handleFileSelection}
-              multiple={false}
-              title="Select one protected PDF"
-              description="Choose the password-protected PDF you want to unlock."
-              buttonText="Choose PDF"
-              helperText="Maximum file size: 25 MB"
-            />
+          <PasswordInput
+            id="pdf-password"
+            label="PDF password"
+            value={password}
+            onChange={setPassword}
+            placeholder="Enter the PDF password"
+          />
 
-            {file && (
-              <div className="mt-8 space-y-6">
-                <FileCard
-                  file={file}
-                  onRemove={removeFile}
-                  removeLabel="Remove protected PDF"
-                />
-
-                <PasswordInput
-                  id="pdf-password"
-                  label="PDF password"
-                  value={password}
-                  onChange={setPassword}
-                  placeholder="Enter the password"
-                />
-
-                <ActionButton
-                  isLoading={isUnlocking}
-                  loadingText="Unlocking PDF..."
-                  buttonText="Unlock and Download PDF"
-                  onClick={handleUnlockPdf}
-                />
-              </div>
-            )}
-
-            <div className="mt-8 flex items-center justify-center gap-2 text-center text-sm text-gray-500">
-              <ShieldCheck
-                size={18}
-                className="shrink-0 text-emerald-600"
-              />
-              Only unlock PDFs you own or are authorized to modify.
-            </div>
-          </ToolContainer>
+          <ActionButton
+            isLoading={isUnlocking}
+            loadingText="Unlocking PDF..."
+            loadingSubtitle="Removing password protection and preparing your file."
+            buttonText="Unlock and Download PDF"
+            subtitle="Create an unlocked copy directly inside your browser."
+            onClick={handleUnlockPdf}
+          />
         </div>
-      </main>
-    </>
+      )}
+
+      <div className="mt-8 flex items-center justify-center gap-2 text-center text-sm text-gray-500 dark:text-slate-400">
+        <ShieldCheck
+          size={18}
+          className="shrink-0 text-emerald-600"
+        />
+        Only unlock PDFs you own or are authorized to modify.
+      </div>
+    </ToolLayout>
   );
 }

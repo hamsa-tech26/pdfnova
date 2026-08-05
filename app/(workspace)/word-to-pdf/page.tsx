@@ -1,8 +1,11 @@
 "use client";
 
 import ActionButton from "@/components/pdf/ActionButton";
+import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import ProgressCard from "@/components/pdf/ProgressCard";
+import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { convertWordToPdf } from "@/lib/converters/wordToPdf";
 import { downloadFile } from "@/lib/downloadFile";
@@ -57,11 +60,41 @@ const wordToPdfFaqs = [
   },
 ];
 
+const processingSteps = [
+  {
+    label: "Reading Word document",
+    description: "Extracting readable content from the selected DOCX file.",
+  },
+  {
+    label: "Creating PDF pages",
+    description: "Formatting paragraphs and generating the PDF document.",
+  },
+  {
+    label: "Preparing download",
+    description: "Finalizing your PDF and preparing it for download.",
+  },
+];
+
 export default function WordToPdfPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [isConverting, setIsConverting] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [currentStep, setCurrentStep] = useState(1);
+
+  const [outputBytes, setOutputBytes] =
+    useState<Uint8Array | null>(null);
+  const [outputFileName, setOutputFileName] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  function resetResultState() {
+    setOutputBytes(null);
+    setOutputFileName("");
+    setErrorMessage("");
+    setProgress(0);
+    setCurrentStep(1);
+  }
 
   function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
@@ -81,6 +114,7 @@ export default function WordToPdfPage() {
     }
 
     setFile(selectedFile);
+    resetResultState();
     event.target.value = "";
 
     toast.success("Word document selected.");
@@ -88,7 +122,35 @@ export default function WordToPdfPage() {
 
   function removeFile() {
     setFile(null);
+    resetResultState();
+
     toast.success("Word document removed.");
+  }
+
+  function startAgain() {
+    setFile(null);
+    resetResultState();
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
+  function downloadResultAgain() {
+    if (!outputBytes || !outputFileName) {
+      toast.error("The converted PDF is no longer available.");
+      return;
+    }
+
+    downloadFile(
+      outputBytes,
+      outputFileName,
+      "application/pdf",
+    );
+
+    toast("Download started", {
+      description: "Your converted PDF is being downloaded again.",
+    });
   }
 
   async function handleConvert() {
@@ -98,20 +160,42 @@ export default function WordToPdfPage() {
     }
 
     setIsConverting(true);
+    setErrorMessage("");
+    setOutputBytes(null);
+    setOutputFileName("");
+    setProgress(15);
+    setCurrentStep(1);
 
     try {
+      await new Promise((resolve) => setTimeout(resolve, 250));
+
+      setProgress(38);
+      setCurrentStep(2);
+
       const pdfBytes = await convertWordToPdf(file);
+
+      setProgress(82);
+      setCurrentStep(3);
+
       const originalName = file.name.replace(/\.docx$/i, "");
-      const outputFileName = `${originalName || "pdfnova-document"}.pdf`;
+      const generatedFileName = `${
+        originalName || "pdfnova-document"
+      }.pdf`;
+
+      await new Promise((resolve) => setTimeout(resolve, 200));
 
       downloadFile(
         pdfBytes,
-        outputFileName,
+        generatedFileName,
         "application/pdf",
       );
 
+      setOutputBytes(pdfBytes);
+      setOutputFileName(generatedFileName);
+      setProgress(100);
+
       addRecentFile({
-        fileName: outputFileName,
+        fileName: generatedFileName,
         toolName: "Word to PDF",
       });
 
@@ -128,6 +212,7 @@ export default function WordToPdfPage() {
           ? error.message
           : "The Word document could not be converted.";
 
+      setErrorMessage(message);
       toast.error(message);
     } finally {
       setIsConverting(false);
@@ -152,15 +237,25 @@ export default function WordToPdfPage() {
         description="Choose or drag the DOCX file you want to convert."
         buttonText="Choose DOCX File"
         helperText="Supported format: DOCX · Maximum file size: 25 MB"
+        disabled={isConverting}
       />
 
       {file && (
         <div className="mt-8 space-y-6">
           <FileCard
             file={file}
-            onRemove={removeFile}
+            onRemove={isConverting ? undefined : removeFile}
             removeLabel="Remove Word document"
-            statusText="Ready for Word to PDF conversion"
+            statusText={
+              isConverting
+                ? "Word to PDF conversion in progress"
+                : outputBytes
+                  ? "Conversion completed successfully"
+                  : errorMessage
+                    ? "Conversion needs attention"
+                    : "Ready for Word to PDF conversion"
+            }
+            progress={isConverting ? progress : undefined}
           />
 
           <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5 dark:border-amber-900 dark:bg-amber-950/30">
@@ -175,14 +270,55 @@ export default function WordToPdfPage() {
             </p>
           </div>
 
-          <ActionButton
-            isLoading={isConverting}
-            loadingText="Converting Word to PDF..."
-            loadingSubtitle="Extracting document text and preparing the PDF."
-            buttonText="Convert and Download PDF"
-            subtitle="Create and download a PDF directly in your browser."
-            onClick={handleConvert}
-          />
+          {isConverting && (
+            <ProgressCard
+              title="Converting Word to PDF"
+              description="PDFNova is reading your document and creating the downloadable PDF."
+              progress={progress}
+              currentStep={currentStep}
+              steps={processingSteps}
+              estimatedTime="A few seconds"
+            />
+          )}
+
+          {!isConverting && outputBytes && (
+            <SuccessCard
+              title="Your PDF is ready"
+              description="The Word document was converted successfully and downloaded to your device."
+              fileName={outputFileName}
+              onDownloadAgain={downloadResultAgain}
+              onStartAgain={startAgain}
+              downloadLabel="Download PDF Again"
+              resetLabel="Convert Another Document"
+            />
+          )}
+
+          {!isConverting && errorMessage && (
+            <ErrorCard
+              title="Word to PDF conversion failed"
+              description={errorMessage}
+              reasons={[
+                "The DOCX file may contain no readable text.",
+                "The file may be damaged or may not be a genuine DOCX document.",
+                "The document may contain only scanned images or unsupported objects.",
+              ]}
+              onRetry={handleConvert}
+              onReset={startAgain}
+              retryLabel="Retry Conversion"
+              resetLabel="Choose Another Document"
+            />
+          )}
+
+          {!isConverting && !outputBytes && !errorMessage && (
+            <ActionButton
+              isLoading={false}
+              loadingText="Converting Word to PDF..."
+              loadingSubtitle="Extracting document text and preparing the PDF."
+              buttonText="Convert and Download PDF"
+              subtitle="Create and download a PDF directly in your browser."
+              onClick={handleConvert}
+            />
+          )}
         </div>
       )}
 
