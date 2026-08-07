@@ -2,8 +2,17 @@ import {
   Document,
   Packer,
   Paragraph,
+  Table,
+  TableCell,
+  TableRow,
   TextRun,
+  WidthType,
 } from "docx";
+
+import {
+  detectPdfTable,
+  type PdfPositionedTextItem,
+} from "./pdfTableDetection";
 
 type PdfTextItem = {
   str: string;
@@ -186,7 +195,7 @@ export async function convertPdfToWord(
 
   const pdf = await loadingTask.promise;
 
-  const documentChildren: Paragraph[] = [];
+  const documentChildren: Array<Paragraph | Table> = [];
   let extractedCharacterCount = 0;
 
   try {
@@ -201,61 +210,139 @@ export async function convertPdfToWord(
             const textContent =
         await page.getTextContent();
 
-      const textItems: PdfTextItem[] =
-        textContent.items.reduce<PdfTextItem[]>(
-          (items, item) => {
-            if (
-              !("str" in item) ||
-              typeof item.str !== "string" ||
-              !Array.isArray(item.transform)
-            ) {
-              return items;
-            }
+      const extractedItems = textContent.items.reduce<
+        {
+          textItems: PdfTextItem[];
+          positionedItems: PdfPositionedTextItem[];
+        }
+      >(
+        (result, item) => {
+          if (
+            !("str" in item) ||
+            typeof item.str !== "string" ||
+            !Array.isArray(item.transform)
+          ) {
+            return result;
+          }
 
-            items.push({
-              str: item.str,
-              transform: Array.from(item.transform),
-              width:
-                typeof item.width === "number"
-                  ? item.width
-                  : 0,
-              height:
-                typeof item.height === "number"
-                  ? item.height
-                  : 0,
-            });
+          const width =
+            typeof item.width === "number"
+              ? item.width
+              : 0;
 
-            return items;
-          },
-          [],
+          const height =
+            typeof item.height === "number"
+              ? item.height
+              : 0;
+
+          const transform =
+            Array.from(item.transform);
+
+          result.textItems.push({
+            str: item.str,
+            transform,
+            width,
+            height,
+          });
+
+          result.positionedItems.push({
+            text: item.str,
+            x: transform[4] ?? 0,
+            y: transform[5] ?? 0,
+            width,
+            height,
+          });
+
+          return result;
+        },
+        {
+          textItems: [],
+          positionedItems: [],
+        },
+      );
+
+      const textItems =
+        extractedItems.textItems;
+
+      const positionedItems =
+        extractedItems.positionedItems;
+
+           const detectedTable =
+        detectPdfTable(positionedItems);
+
+      if (detectedTable) {
+        const tableRows = detectedTable.rows.map(
+          (row) =>
+            new TableRow({
+              children: row.cells.map(
+                (cell) =>
+                  new TableCell({
+                    children: [
+                      new Paragraph({
+                        children: [
+                          new TextRun({
+                            text: cell.text || "",
+                            size: 20,
+                          }),
+                        ],
+                        spacing: {
+                          after: 40,
+                        },
+                      }),
+                    ],
+                  }),
+              ),
+            }),
         );
 
-      const lines =
-        groupItemsIntoLines(textItems);
-      for (const line of lines) {
-        const lineText =
-          buildLineText(line.items);
-
-        if (!lineText) {
-          continue;
-        }
+        const tableText =
+          detectedTable.rows
+            .flatMap((row) =>
+              row.cells.map((cell) => cell.text),
+            )
+            .join("");
 
         extractedCharacterCount +=
-          lineText.length;
+          tableText.length;
 
         documentChildren.push(
-          new Paragraph({
-            children: [
-              new TextRun({
-                text: lineText,
-                size: 22,
-              }),
-            ],
-            spacing: {
-              after: 120,
+          new Table({
+            rows: tableRows,
+            width: {
+              size: 100,
+              type: WidthType.PERCENTAGE,
             },
           }),
         );
+      } else {
+        const lines =
+          groupItemsIntoLines(textItems);
+
+        for (const line of lines) {
+          const lineText =
+            buildLineText(line.items);
+
+          if (!lineText) {
+            continue;
+          }
+
+          extractedCharacterCount +=
+            lineText.length;
+
+          documentChildren.push(
+            new Paragraph({
+              children: [
+                new TextRun({
+                  text: lineText,
+                  size: 22,
+                }),
+              ],
+              spacing: {
+                after: 120,
+              },
+            }),
+          );
+        }
       }
 
       if (pageNumber < pdf.numPages) {
