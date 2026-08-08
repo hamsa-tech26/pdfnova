@@ -79,6 +79,19 @@ function createId(index: number) {
   return `logical-row-${index}`;
 }
 
+function isPageNumberNoise(
+  line: PdfLine,
+) {
+  const text =
+    line.text
+      .trim()
+      .replace(/\s+/g, " ");
+
+  return /^page\s+\d+\s*(?:of|\/)\s*\d+$/i.test(
+    text,
+  );
+}
+
 function getBlockLines(
   block: PdfVisualBlock,
 ): PdfLine[] {
@@ -86,11 +99,16 @@ function getBlockLines(
     block.type === "paragraph" ||
     block.type === "heading"
   ) {
-    return [...block.lines].sort(
-      (first, second) =>
-        second.bounds.y -
-        first.bounds.y,
-    );
+    return [...block.lines]
+      .filter(
+        (line) =>
+          !isPageNumberNoise(line),
+      )
+      .sort(
+        (first, second) =>
+          second.bounds.y -
+          first.bounds.y,
+      );
   }
 
   return [];
