@@ -306,11 +306,11 @@ export async function analyzePdfV4(
         );
 
       if (
-        columnDetection.columns.length <
-        2
-      ) {
-        continue;
-      }
+  columnDetection.columns.length <
+  2
+) {
+  continue;
+}
 
       const rowDetection =
         detectAdaptiveRowsV4(
@@ -319,10 +319,10 @@ export async function analyzePdfV4(
         );
 
       if (
-        rowDetection.rows.length === 0
-      ) {
-        continue;
-      }
+  rowDetection.rows.length === 0
+) {
+  continue;
+}
 
       const cellBuild =
         buildSmartTableV4(

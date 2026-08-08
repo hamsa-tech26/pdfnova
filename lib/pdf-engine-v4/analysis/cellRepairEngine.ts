@@ -802,25 +802,38 @@ const nextScore =
         )
     : 0;
 
-      const bestDirection =
-        nextScore > previousScore
-          ? "next"
-          : "previous";
+      const isBorderlineNextTie =
+  Boolean(lineToMove) &&
+  physicalLines.length >= 2 &&
+  Math.abs(
+    nextScore - previousScore,
+  ) <= 0.01 &&
+  nextScore >= 0.3 &&
+  Boolean(nextRow) &&
+  Boolean(nextTarget);
 
-      const bestScore =
-        Math.max(
-          previousScore,
-          nextScore,
-        );
+const bestDirection =
+  nextScore > previousScore ||
+  isBorderlineNextTie
+    ? "next"
+    : "previous";
 
-      const requiredConfidence =
-  lineToMove &&
-  nextScore > previousScore &&
-  nextScore >= 0.33
-    ? 0.33
-    : lineToMove
-      ? DEFAULT_MINIMUM_FRAGMENT_MOVE_CONFIDENCE
-      : minimumMoveConfidence;  
+const bestScore =
+  Math.max(
+    previousScore,
+    nextScore,
+  );
+
+const requiredConfidence =
+  isBorderlineNextTie
+    ? 0.3
+    : lineToMove &&
+        nextScore > previousScore &&
+        nextScore >= 0.33
+      ? 0.33
+      : lineToMove
+        ? DEFAULT_MINIMUM_FRAGMENT_MOVE_CONFIDENCE
+        : minimumMoveConfidence; 
 
         debugCandidates.push({
   rowIndex,

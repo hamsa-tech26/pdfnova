@@ -119,7 +119,9 @@ function shouldStartNewGroup(
   const previousLine =
     currentGroup[currentGroup.length - 1];
 
-  if (!previousLine) return false;
+  if (!previousLine) {
+    return false;
+  }
 
   const verticalGap =
     getVerticalGap(
@@ -132,14 +134,75 @@ function shouldStartNewGroup(
       currentGroup,
     );
 
-  const threshold =
+  const normalThreshold =
     Math.max(
       averageLineHeight *
         verticalGapMultiplier,
       8,
     );
 
-  return verticalGap > threshold;
+  if (
+    verticalGap <=
+    normalThreshold
+  ) {
+    return false;
+  }
+
+  const groupBounds =
+    getGroupBounds(
+      currentGroup,
+    );
+
+  const nextLineLeft =
+    nextLine.bounds.x;
+
+  const nextLineRight =
+    nextLine.bounds.x +
+    nextLine.bounds.width;
+
+  const groupRight =
+    groupBounds.x +
+    groupBounds.width;
+
+  const horizontalOverlap =
+    Math.max(
+      0,
+      Math.min(
+        groupRight,
+        nextLineRight,
+      ) -
+        Math.max(
+          groupBounds.x,
+          nextLineLeft,
+        ),
+    );
+
+  const nextLineOverlapRatio =
+    nextLine.bounds.width <= 0
+      ? 0
+      : horizontalOverlap /
+        nextLine.bounds.width;
+
+  const looksLikeSameWideStructure =
+    currentGroup.length >= 3 &&
+    groupBounds.width >= 250 &&
+    nextLineOverlapRatio >= 0.75;
+
+  const extendedTableThreshold =
+    Math.max(
+      averageLineHeight * 4.5,
+      36,
+    );
+
+  if (
+    looksLikeSameWideStructure &&
+    verticalGap <=
+      extendedTableThreshold
+  ) {
+    return false;
+  }
+
+  return true;
 }
 
 function groupLinesByWhitespace(

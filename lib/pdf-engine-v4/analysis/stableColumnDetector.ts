@@ -542,11 +542,31 @@ function consolidateNearbyColumns(
         first.x - second.x,
     );
 
+  // Normal merge distance for ordinary
+  // alignment variations.
   const consolidationDistance =
     clamp(
       tolerance * 2.8,
       12,
       18,
+    );
+
+  // A slightly wider distance is allowed
+  // only when one candidate has very weak
+  // line support compared with its neighbour.
+  //
+  // This catches secondary alignments created
+  // by wrapped cell text such as:
+  //
+  // "Khedacherra Doganga S.B"
+  // "School"
+  //
+  // without globally widening column merging.
+  const sparseAlignmentDistance =
+    clamp(
+      tolerance * 6,
+      28,
+      36,
     );
 
   const consolidated:
@@ -583,8 +603,42 @@ function consolidateNearbyColumns(
         consolidationDistance,
       );
 
+    const weakerSupport =
+      Math.min(
+        previous.distinctLineCount,
+        column.distinctLineCount,
+      );
+
+    const strongerSupport =
+      Math.max(
+        previous.distinctLineCount,
+        column.distinctLineCount,
+      );
+
+    const supportRatio =
+      weakerSupport /
+      Math.max(
+        strongerSupport,
+        1,
+      );
+
+    const isSparseSecondaryAlignment =
+      weakerSupport <= 4 &&
+      strongerSupport >= 8 &&
+      supportRatio <= 0.4;
+
+    const shouldMergeNormally =
+      gap <= consolidationDistance;
+
+    const shouldMergeSparseAlignment =
+      gap <= sparseAlignmentDistance &&
+      isSparseSecondaryAlignment;
+
     if (
-      gap <= consolidationDistance &&
+      (
+        shouldMergeNormally ||
+        shouldMergeSparseAlignment
+      ) &&
       !previousIsSerial &&
       !currentIsSerial
     ) {
