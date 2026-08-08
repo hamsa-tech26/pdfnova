@@ -300,23 +300,150 @@ export async function analyzePdfV4(
         continue;
       }
 
-      const columnDetection =
-        detectStableColumnsV4(
-          region.block,
-        );
+      let columnDetection =
+  detectStableColumnsV4(
+    region.block,
+  );
 
-      if (
+const previousAnalysis =
+  tableAnalyses[
+    tableAnalyses.length - 1
+  ];
+
+if (
+  previousAnalysis &&
+  previousAnalysis.pageNumber ===
+    page.pageNumber - 1 &&
+  previousAnalysis.columnDetection
+    .columns.length ===
+    columnDetection.columns.length + 1
+) {
+  const previousColumns =
+    previousAnalysis.columnDetection
+      .columns;
+
+  const currentColumns =
+    columnDetection.columns;
+
+  const recoveryTolerance =
+    Math.max(
+      columnDetection.adaptiveTolerance *
+        2.5,
+      10,
+    );
+
+  const sharedColumnCount =
+    currentColumns.filter(
+      (currentColumn) =>
+        previousColumns.some(
+          (previousColumn) =>
+            Math.abs(
+              currentColumn.x -
+                previousColumn.x,
+            ) <= recoveryTolerance,
+        ),
+    ).length;
+
+  const recoveryCandidate =
+    columnDetection.rejectedCandidates
+      .filter(
+        (candidate) =>
+          candidate.confidence >= 0.7,
+      )
+      .filter((candidate) =>
+        previousColumns.some(
+          (previousColumn) =>
+            Math.abs(
+              candidate.x -
+                previousColumn.x,
+            ) <= recoveryTolerance,
+        ),
+      )
+      .filter(
+        (candidate) =>
+          !currentColumns.some(
+            (currentColumn) =>
+              Math.abs(
+                candidate.x -
+                  currentColumn.x,
+              ) <= recoveryTolerance,
+          ),
+      )
+      .sort(
+        (first, second) =>
+          second.confidence -
+          first.confidence,
+      )[0];
+
+  if (
+    sharedColumnCount >= 3 &&
+    recoveryCandidate
+  ) {
+    const recoveredColumns = [
+      ...currentColumns,
+      {
+        ...recoveryCandidate,
+        accepted: true,
+        reason:
+          "Recovered from a rejected candidate because the previous page supports the same logical column.",
+      },
+    ]
+      .sort(
+        (first, second) =>
+          first.x - second.x,
+      )
+      .map(
+        (
+          column,
+          index,
+          columns,
+        ) => ({
+          ...column,
+          id: `column-candidate-${index}`,
+          leftBoundary:
+            index === 0
+              ? region.block.bounds.x
+              : (
+                    columns[index - 1].x +
+                    column.x
+                  ) / 2,
+          rightBoundary:
+            index ===
+            columns.length - 1
+              ? region.block.bounds.x +
+                region.block.bounds.width
+              : (
+                    column.x +
+                    columns[index + 1].x
+                  ) / 2,
+        }),
+      );
+
+    columnDetection = {
+      ...columnDetection,
+      columns: recoveredColumns,
+      rejectedCandidates:
+        columnDetection.rejectedCandidates.filter(
+          (candidate) =>
+            candidate.id !==
+            recoveryCandidate.id,
+        ),
+    };
+  }
+}
+
+if (
   columnDetection.columns.length <
   2
 ) {
   continue;
 }
 
-      const rowDetection =
-        detectAdaptiveRowsV4(
-          region.block,
-          columnDetection.columns,
-        );
+const rowDetection =
+  detectAdaptiveRowsV4(
+    region.block,
+    columnDetection.columns,
+  );
 
       if (
   rowDetection.rows.length === 0
