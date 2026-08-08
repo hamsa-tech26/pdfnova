@@ -183,6 +183,32 @@ function shouldStartNewGroup(
       : horizontalOverlap /
         nextLine.bounds.width;
 
+  const groupCenter =
+  groupBounds.x +
+  groupBounds.width / 2;
+
+const nextLineCenter =
+  nextLine.bounds.x +
+  nextLine.bounds.width / 2;
+
+const centerDifference =
+  Math.abs(
+    groupCenter -
+    nextLineCenter,
+  );
+
+const looksLikeStandaloneTitle =
+  currentGroup.length >= 3 &&
+  nextLine.bounds.width >= 120 &&
+  nextLine.bounds.width <=
+    groupBounds.width * 0.7 &&
+  centerDifference <=
+    groupBounds.width * 0.12;
+
+if (looksLikeStandaloneTitle) {
+  return true;
+}     
+
   const looksLikeSameWideStructure =
     currentGroup.length >= 3 &&
     groupBounds.width >= 250 &&
