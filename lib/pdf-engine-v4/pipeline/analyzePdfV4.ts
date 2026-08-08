@@ -362,7 +362,7 @@ function mergeContinuedTablesV4(
             )
         : false;
 
-    const isContinuation =
+      const isContinuation =
       Boolean(
         previousAnalysis &&
           previousTable &&
@@ -697,8 +697,8 @@ if (
   previousAnalysis.pageNumber ===
     page.pageNumber - 1 &&
   previousAnalysis.columnDetection
-    .columns.length ===
-    columnDetection.columns.length + 1
+    .columns.length >
+    columnDetection.columns.length
 ) {
   const previousColumns =
     previousAnalysis.columnDetection
@@ -726,90 +726,156 @@ if (
         ),
     ).length;
 
-  const recoveryCandidate =
-    columnDetection.rejectedCandidates
+  const usedCandidateIds =
+    new Set<string>();
+
+  const recoveredCandidates =
+    previousColumns
       .filter(
-        (candidate) =>
-          candidate.confidence >= 0.7,
-      )
-      .filter((candidate) =>
-        previousColumns.some(
-          (previousColumn) =>
-            Math.abs(
-              candidate.x -
-                previousColumn.x,
-            ) <= recoveryTolerance,
-        ),
-      )
-      .filter(
-        (candidate) =>
+        (previousColumn) =>
           !currentColumns.some(
             (currentColumn) =>
               Math.abs(
-                candidate.x -
-                  currentColumn.x,
+                currentColumn.x -
+                  previousColumn.x,
               ) <= recoveryTolerance,
           ),
       )
-      .sort(
-        (first, second) =>
-          second.confidence -
-          first.confidence,
-      )[0];
+      .map((previousColumn) => {
+        const candidate =
+          columnDetection
+            .rejectedCandidates
+            .filter(
+              (item) =>
+                item.confidence >=
+                  0.7 &&
+                !usedCandidateIds.has(
+                  item.id,
+                ),
+            )
+            .filter(
+              (item) =>
+                Math.abs(
+                  item.x -
+                    previousColumn.x,
+                ) <=
+                recoveryTolerance,
+            )
+            .sort(
+              (first, second) => {
+                const firstDistance =
+                  Math.abs(
+                    first.x -
+                      previousColumn.x,
+                  );
+
+                const secondDistance =
+                  Math.abs(
+                    second.x -
+                      previousColumn.x,
+                  );
+
+                if (
+                  firstDistance !==
+                  secondDistance
+                ) {
+                  return (
+                    firstDistance -
+                    secondDistance
+                  );
+                }
+
+                return (
+                  second.confidence -
+                  first.confidence
+                );
+              },
+            )[0];
+
+        if (!candidate) {
+          return null;
+        }
+
+        usedCandidateIds.add(
+          candidate.id,
+        );
+
+        return {
+          ...candidate,
+          accepted: true,
+          reason:
+            "Recovered from a rejected candidate because the previous page supports the same logical column.",
+        };
+      })
+      .filter(
+  (
+    candidate,
+  ): candidate is NonNullable<
+    typeof candidate
+  > =>
+    candidate !== null,
+);
+
+  const recoveredColumns = [
+    ...currentColumns,
+    ...recoveredCandidates,
+  ];
 
   if (
-    sharedColumnCount >= 3 &&
-    recoveryCandidate
+    sharedColumnCount >= 2 &&
+    recoveredColumns.length ===
+      previousColumns.length
   ) {
-    const recoveredColumns = [
-      ...currentColumns,
-      {
-        ...recoveryCandidate,
-        accepted: true,
-        reason:
-          "Recovered from a rejected candidate because the previous page supports the same logical column.",
-      },
-    ]
-      .sort(
-        (first, second) =>
-          first.x - second.x,
-      )
-      .map(
-        (
-          column,
-          index,
-          columns,
-        ) => ({
-          ...column,
-          id: `column-candidate-${index}`,
-          leftBoundary:
-            index === 0
-              ? region.block.bounds.x
-              : (
-                    columns[index - 1].x +
+    const normalizedColumns =
+      recoveredColumns
+        .sort(
+          (first, second) =>
+            first.x - second.x,
+        )
+        .map(
+          (
+            column,
+            index,
+            columns,
+          ) => ({
+            ...column,
+            id:
+              `column-candidate-${index}`,
+            leftBoundary:
+              index === 0
+                ? region.block.bounds.x
+                : (
+                    columns[index - 1]
+                      .x +
                     column.x
                   ) / 2,
-          rightBoundary:
-            index ===
-            columns.length - 1
-              ? region.block.bounds.x +
-                region.block.bounds.width
-              : (
+            rightBoundary:
+              index ===
+              columns.length - 1
+                ? region.block.bounds.x +
+                  region.block.bounds
+                    .width
+                : (
                     column.x +
-                    columns[index + 1].x
+                    columns[index + 1]
+                      .x
                   ) / 2,
-        }),
-      );
+          }),
+        );
 
     columnDetection = {
       ...columnDetection,
-      columns: recoveredColumns,
+      columns:
+        normalizedColumns,
       rejectedCandidates:
-        columnDetection.rejectedCandidates.filter(
-          (candidate) =>
-            candidate.id !==
-            recoveryCandidate.id,
-        ),
+        columnDetection
+          .rejectedCandidates
+          .filter(
+            (candidate) =>
+              !usedCandidateIds.has(
+                candidate.id,
+              ),
+          ),
     };
   }
 }
@@ -840,16 +906,23 @@ const rowDetection =
           columnDetection.columns,
         );
 
-      const cellRepair =
-        cellBuild.table
-          ? repairLogicalTableV1(
-              cellBuild.table,
-            )
-          : null;
+      const builtTable =
+  cellBuild.table;
 
-      const finalTable =
-        cellRepair?.table ??
-        cellBuild.table;
+let cellRepair:
+  CellRepairResult | null =
+  null;
+
+if (builtTable !== null) {
+  cellRepair =
+    repairLogicalTableV1(
+      builtTable!,
+    );
+}
+
+const finalTable =
+  cellRepair?.table ??
+  builtTable;
 
       const tableAnalysis:
         PdfV4TableAnalysis = {
@@ -873,7 +946,7 @@ const rowDetection =
 
       if (finalTable) {
         tables.push(
-          finalTable,
+          finalTable!,
         );
       }
     }
