@@ -68,6 +68,388 @@ export type PdfEngineV4Result = {
   processingTimes: PdfV4ProcessingTimes;
   confidence: number;
 };
+function getRowSerialNumber(
+  row: LogicalTable["rows"][number],
+) {
+  const text =
+    row.cells[0]?.text.trim() ?? "";
+
+  const match =
+    text.match(/^(\d+)[.)]?$/);
+
+  if (!match) {
+    return null;
+  }
+
+  const value =
+    Number.parseInt(
+      match[1],
+      10,
+    );
+
+  return Number.isFinite(value)
+    ? value
+    : null;
+}
+
+function getFirstSerialRow(
+  table: LogicalTable,
+) {
+  const limit =
+    Math.min(
+      table.rows.length,
+      4,
+    );
+
+  for (
+    let index = 0;
+    index < limit;
+    index += 1
+  ) {
+    const serialNumber =
+      getRowSerialNumber(
+        table.rows[index],
+      );
+
+    if (serialNumber !== null) {
+      return {
+        rowIndex: index,
+        serialNumber,
+      };
+    }
+  }
+
+  return null;
+}
+
+function getLastSerialNumber(
+  table: LogicalTable,
+) {
+  for (
+    let index =
+      table.rows.length - 1;
+    index >= 0;
+    index -= 1
+  ) {
+    const serialNumber =
+      getRowSerialNumber(
+        table.rows[index],
+      );
+
+    if (serialNumber !== null) {
+      return serialNumber;
+    }
+  }
+
+  return null;
+}
+
+function isLikelyHeaderRow(
+  row: LogicalTable["rows"][number],
+) {
+  const text =
+    row.cells
+      .map((cell) =>
+        cell.text.toLowerCase(),
+      )
+      .join(" ");
+
+  const headerTerms = [
+    "sl no",
+    "serial",
+    "name of",
+    "status",
+    "scheme",
+    "remarks",
+    "description",
+    "quantity",
+    "amount",
+    "unit",
+  ];
+
+  const matches =
+    headerTerms.filter((term) =>
+      text.includes(term),
+    ).length;
+
+  return (
+    text.includes("sl no") ||
+    matches >= 2
+  );
+}
+
+function getSharedColumnCount(
+  previous:
+    PdfV4TableAnalysis,
+  current:
+    PdfV4TableAnalysis,
+) {
+  const previousColumns =
+    previous.columnDetection.columns;
+
+  const currentColumns =
+    current.columnDetection.columns;
+
+  const tolerance =
+    Math.max(
+      previous.columnDetection
+        .adaptiveTolerance * 2.5,
+      current.columnDetection
+        .adaptiveTolerance * 2.5,
+      10,
+    );
+
+  const usedPreviousIndexes =
+    new Set<number>();
+
+  let sharedCount = 0;
+
+  for (
+    const currentColumn
+    of currentColumns
+  ) {
+    let bestIndex = -1;
+    let bestDistance =
+      Number.POSITIVE_INFINITY;
+
+    previousColumns.forEach(
+      (
+        previousColumn,
+        index,
+      ) => {
+        if (
+          usedPreviousIndexes.has(
+            index,
+          )
+        ) {
+          return;
+        }
+
+        const distance =
+          Math.abs(
+            currentColumn.x -
+              previousColumn.x,
+          );
+
+        if (
+          distance <
+          bestDistance
+        ) {
+          bestDistance =
+            distance;
+          bestIndex = index;
+        }
+      },
+    );
+
+    if (
+      bestIndex >= 0 &&
+      bestDistance <= tolerance
+    ) {
+      usedPreviousIndexes.add(
+        bestIndex,
+      );
+
+      sharedCount += 1;
+    }
+  }
+
+  return sharedCount;
+}
+
+function reindexLogicalRows(
+  rows: LogicalTable["rows"],
+  startIndex: number,
+) {
+  return rows.map(
+    (row, offset) => {
+      const rowIndex =
+        startIndex + offset;
+
+      return {
+        ...row,
+        id:
+          `logical-row-${rowIndex}`,
+        rowIndex,
+        cells:
+          row.cells.map(
+            (cell) => ({
+              ...cell,
+              id:
+                `logical-cell-${rowIndex}-${cell.columnIndex}`,
+              rowIndex,
+            }),
+          ),
+      };
+    },
+  );
+}
+
+function mergeContinuedTablesV4(
+  tableAnalyses:
+    PdfV4TableAnalysis[],
+) {
+  const mergedTables:
+    LogicalTable[] = [];
+
+  let previousAnalysis:
+    PdfV4TableAnalysis |
+    null = null;
+
+  for (
+    const analysis
+    of tableAnalyses
+  ) {
+    const currentTable =
+      analysis.table;
+
+    if (!currentTable) {
+      continue;
+    }
+
+    const previousTable =
+      mergedTables[
+        mergedTables.length - 1
+      ];
+
+    const firstSerial =
+      getFirstSerialRow(
+        currentTable,
+      );
+
+    const previousLastSerial =
+      previousTable
+        ? getLastSerialNumber(
+            previousTable,
+          )
+        : null;
+
+    const sameColumnCount =
+      Boolean(
+        previousAnalysis &&
+          previousAnalysis
+            .columnDetection
+            .columns.length ===
+            analysis
+              .columnDetection
+              .columns.length,
+      );
+
+    const sharedColumns =
+      previousAnalysis
+        ? getSharedColumnCount(
+            previousAnalysis,
+            analysis,
+          )
+        : 0;
+
+    const requiredSharedColumns =
+      Math.max(
+        3,
+        analysis.columnDetection
+          .columns.length - 1,
+      );
+
+    const leadingRowsAreHeaders =
+      firstSerial
+        ? currentTable.rows
+            .slice(
+              0,
+              firstSerial.rowIndex,
+            )
+            .every(
+              isLikelyHeaderRow,
+            )
+        : false;
+
+    const isContinuation =
+      Boolean(
+        previousAnalysis &&
+          previousTable &&
+          previousAnalysis
+            .pageNumber ===
+            analysis.pageNumber - 1 &&
+          sameColumnCount &&
+          sharedColumns >=
+            requiredSharedColumns &&
+          firstSerial &&
+          previousLastSerial !==
+            null &&
+          firstSerial.serialNumber ===
+            previousLastSerial + 1 &&
+          leadingRowsAreHeaders,
+      );
+
+    if (
+      !isContinuation ||
+      !previousTable ||
+      !firstSerial
+    ) {
+      mergedTables.push({
+        ...currentTable,
+        rows:
+          reindexLogicalRows(
+            currentTable.rows,
+            0,
+          ),
+      });
+
+      previousAnalysis =
+        analysis;
+
+      continue;
+    }
+
+    const rowsToAppend =
+      currentTable.rows.slice(
+        firstSerial.rowIndex,
+      );
+
+    const reindexedRows =
+      reindexLogicalRows(
+        rowsToAppend,
+        previousTable.rows.length,
+      );
+
+    const previousRowCount =
+      previousTable.rows.length;
+
+    const newRowCount =
+      reindexedRows.length;
+
+    const totalRowCount =
+      previousRowCount +
+      newRowCount;
+
+    const mergedConfidence =
+      totalRowCount === 0
+        ? 0
+        : (
+            previousTable.confidence *
+              previousRowCount +
+            currentTable.confidence *
+              newRowCount
+          ) /
+          totalRowCount;
+
+    mergedTables[
+      mergedTables.length - 1
+    ] = {
+      ...previousTable,
+      rows: [
+        ...previousTable.rows,
+        ...reindexedRows,
+      ],
+      confidence:
+        mergedConfidence,
+    };
+
+    previousAnalysis =
+      analysis;
+  }
+
+  return mergedTables;
+}
 
 export type AnalyzePdfV4Options = {
   includePossibleTableRegions?: boolean;
@@ -497,30 +879,35 @@ const rowDetection =
     }
   }
 
+  const mergedTables =
+  mergeContinuedTablesV4(
+    tableAnalyses,
+  );
+
   const tableAnalysisMs =
     now() - tableStart;
 
   const statistics =
-    createStatistics(
-      document,
-      tableAnalyses,
-      tables,
-      candidateTableRegionCount,
-    );
+  createStatistics(
+    document,
+    tableAnalyses,
+    mergedTables,
+    candidateTableRegionCount,
+  );
 
-  const confidence =
-    calculateEngineConfidence(
-      document,
-      tableAnalyses,
-      tables,
-    );
+const confidence =
+  calculateEngineConfidence(
+    document,
+    tableAnalyses,
+    mergedTables,
+  );
 
   const totalMs =
     now() - totalStart;
 
   return {
     document,
-    tables,
+    tables: mergedTables,
     tableAnalyses,
     statistics,
     processingTimes: {
