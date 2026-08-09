@@ -131,7 +131,7 @@ function getFirstText(line: PdfLine) {
 function startsWithSerialNumber(
   line: PdfLine,
 ) {
-  return /^\d+[.)]?$/.test(
+  return /^\d+[.)]?(?:\s|$)/.test(
     getFirstText(line),
   );
 }
