@@ -763,6 +763,118 @@ function assignColumnBoundaries(
   );
 }
 
+function recoverSparseTrailingCandidates(
+  candidates: ColumnCandidate[],
+  acceptedColumns: ColumnCandidate[],
+  lines: PdfLine[],
+  tolerance: number,
+): ColumnCandidate[] {
+  if (
+    acceptedColumns.length === 0 ||
+    lines.length === 0
+  ) {
+    return [];
+  }
+
+  const sortedAccepted =
+    [...acceptedColumns].sort(
+      (first, second) =>
+        first.x - second.x,
+    );
+
+  const lastAccepted =
+    sortedAccepted[
+      sortedAccepted.length - 1
+    ];
+
+  if (!lastAccepted) {
+    return [];
+  }
+
+  const topLineCount =
+    Math.min(
+      4,
+      Math.max(
+        2,
+        Math.ceil(
+          lines.length * 0.2,
+        ),
+      ),
+    );
+
+  const topLines =
+    [...lines]
+      .sort(
+        (first, second) =>
+          second.bounds.y -
+          first.bounds.y,
+      )
+      .slice(
+        0,
+        topLineCount,
+      );
+
+  const minimumTrailingGap =
+    Math.max(
+      20,
+      tolerance * 2.5,
+    );
+
+  const headerMatchTolerance =
+    Math.max(
+      8,
+      tolerance * 1.5,
+    );
+
+  return candidates
+    .filter(
+      (candidate) =>
+        !candidate.accepted,
+    )
+    .filter(
+      (candidate) =>
+        candidate.x >
+        lastAccepted.x +
+          minimumTrailingGap,
+    )
+    .filter(
+      (candidate) =>
+        candidate.confidence >= 0.6,
+    )
+    .filter(
+      (candidate) =>
+        candidate.stability >= 0.8,
+    )
+    .filter((candidate) => {
+      const supportRatio =
+        candidate.distinctLineCount /
+        Math.max(
+          lines.length,
+          1,
+        );
+
+      return supportRatio <= 0.2;
+    })
+    .filter((candidate) =>
+      topLines.some((line) =>
+        line.words.some(
+          (word) =>
+            Math.abs(
+              word.bounds.x -
+                candidate.x,
+            ) <=
+            headerMatchTolerance,
+        ),
+      ),
+    )
+    .map((candidate) => ({
+      ...candidate,
+      accepted: true,
+      reason:
+        "Recovered as a sparse trailing column supported by the table header.",
+    }));
+}
+
 export function detectStableColumnsV4(
   block: PdfVisualBlock,
   options?: StableColumnDetectorOptions,
@@ -833,17 +945,31 @@ export function detectStableColumnsV4(
     );
 
   const initiallyAccepted =
-    candidates.filter(
-      (candidate) =>
-        candidate.accepted,
-    );
+  candidates.filter(
+    (candidate) =>
+      candidate.accepted,
+  );
 
-  const consolidatedColumns =
-    consolidateNearbyColumns(
-      initiallyAccepted,
-      adaptiveTolerance,
-      lines,
-    );
+const recoveredSparseTrailingCandidates =
+  recoverSparseTrailingCandidates(
+    candidates,
+    initiallyAccepted,
+    lines,
+    adaptiveTolerance,
+  );
+
+const acceptedWithRecovered =
+  [
+    ...initiallyAccepted,
+    ...recoveredSparseTrailingCandidates,
+  ];
+
+const consolidatedColumns =
+  consolidateNearbyColumns(
+    acceptedWithRecovered,
+    adaptiveTolerance,
+    lines,
+  );
 
   const columns =
     assignColumnBoundaries(
@@ -851,16 +977,27 @@ export function detectStableColumnsV4(
       block,
     );
 
-  const rejectedCandidates =
-    candidates
-      .filter(
-        (candidate) =>
-          !candidate.accepted,
-      )
-      .sort(
-        (first, second) =>
-          first.x - second.x,
-      );
+  const recoveredCandidateIds =
+  new Set(
+    recoveredSparseTrailingCandidates.map(
+      (candidate) =>
+        candidate.id,
+    ),
+  );
+
+const rejectedCandidates =
+  candidates
+    .filter(
+      (candidate) =>
+        !candidate.accepted &&
+        !recoveredCandidateIds.has(
+          candidate.id,
+        ),
+    )
+    .sort(
+      (first, second) =>
+        first.x - second.x,
+    );
 
   const confidence =
     columns.length === 0
