@@ -9,6 +9,9 @@ import type {
 } from "../model/logicalTable";
 import type { LogicalRowCandidate } from "./adaptiveRowDetector";
 import type { ColumnCandidate } from "./stableColumnDetector";
+import {
+  createAnalysisWordsV4,
+} from "./analysisTextFragments";
 
 export type SmartCellBuilderResult = {
   table: LogicalTable | null;
@@ -276,7 +279,13 @@ function assignWordsToCells(
       columns,
     );
 
-  for (const word of row.words) {
+  const analysisWords =
+  row.lines.flatMap(
+    (line) =>
+      createAnalysisWordsV4(line),
+  );
+
+for (const word of analysisWords) {
     const nearestColumn =
       findNearestColumn(
         word,

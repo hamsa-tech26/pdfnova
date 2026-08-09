@@ -4,6 +4,13 @@ import type {
   PdfWord,
 } from "../model/types";
 
+import {
+  createAnalysisWordsV4,
+  isAnalysisContentFragmentV4,
+  isAnalysisSerialBoundaryV4,
+  isAnalysisSerialFragmentV4,
+} from "./analysisTextFragments";
+
 export type ColumnCandidate = {
   id: string;
   x: number;
@@ -135,7 +142,8 @@ function splitLineIntoSegments(
   line: PdfLine,
   averageCharacterWidth: number,
 ): LineSegment[] {
-  const sortedWords = [...line.words].sort(
+  const sortedWords =
+  createAnalysisWordsV4(line).sort(
     (first, second) =>
       first.bounds.x -
       second.bounds.x,
@@ -181,7 +189,16 @@ function splitLineIntoSegments(
       10,
     );
 
-    if (gap > gapThreshold) {
+    const isIntentionalAnalysisBoundary =
+  isAnalysisSerialBoundaryV4(
+    previousWord,
+    currentWord,
+  );
+
+    if (
+  isIntentionalAnalysisBoundary ||
+  gap > gapThreshold
+) {
       segments.push({
         x:
           currentWords[0]?.bounds.x ??
@@ -245,7 +262,40 @@ function clusterSegmentStarts(
     let bestDistance =
       Number.POSITIVE_INFINITY;
 
+        const segmentHasSerialFragment =
+    segment.words.some(
+      isAnalysisSerialFragmentV4,
+    );
+
+  const segmentHasContentFragment =
+    segment.words.some(
+      isAnalysisContentFragmentV4,
+    );
+
     for (const cluster of clusters) {
+          const clusterHasSerialFragment =
+      cluster.words.some(
+        isAnalysisSerialFragmentV4,
+      );
+
+    const clusterHasContentFragment =
+      cluster.words.some(
+        isAnalysisContentFragmentV4,
+      );
+
+    const crossesSerialContentBoundary =
+      (
+        segmentHasSerialFragment &&
+        clusterHasContentFragment
+      ) ||
+      (
+        segmentHasContentFragment &&
+        clusterHasSerialFragment
+      );
+
+    if (crossesSerialContentBoundary) {
+      continue;
+    }
       const center =
         average(cluster.values);
 
@@ -509,16 +559,25 @@ function isSerialNumberColumn(
 ) {
   let numericMatches = 0;
 
+  const serialTolerance =
+    Math.min(
+      tolerance * 0.4,
+      6,
+    );
+
   for (const line of lines) {
-    const firstWord = [...line.words].sort(
-      (first, second) =>
-        first.bounds.x - second.bounds.x,
-    )[0];
+    const firstWord =
+      createAnalysisWordsV4(line)[0];
 
     if (
       firstWord &&
-      /^\d+[.)]?$/.test(firstWord.text.trim()) &&
-      Math.abs(firstWord.bounds.x - column.x) <= tolerance
+      /^\d+[.)]?$/.test(
+        firstWord.text.trim(),
+      ) &&
+      Math.abs(
+        firstWord.bounds.x -
+          column.x,
+      ) <= serialTolerance
     ) {
       numericMatches += 1;
     }
