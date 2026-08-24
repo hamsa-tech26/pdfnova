@@ -5,6 +5,7 @@ import type {
 import type {
   LogicalCell,
   LogicalRow,
+  LogicalRowProvenance,
   LogicalTable,
 } from "../model/logicalTable";
 
@@ -18,10 +19,17 @@ export type CellRepairAction = {
   fromColumnIndex: number;
   toRowIndex: number;
   toColumnIndex: number;
+  fromProvenance?: LogicalRowProvenance;
+  toProvenance?: LogicalRowProvenance;
   text: string;
   confidence: number;
   reason: string;
 };
+
+export type CellRepairDebugOutcome =
+  | "accepted"
+  | "rejected-threshold"
+  | "rejected-safety";
 
 export type CellRepairDebugCandidate = {
   rowIndex: number;
@@ -32,7 +40,10 @@ export type CellRepairDebugCandidate = {
   nextScore: number;
   bestScore: number;
   threshold: number;
+  thresholdPassed: boolean;
   accepted: boolean;
+  outcome: CellRepairDebugOutcome;
+  decisionReason?: string;
 };
 
 export type CellRepairResult = {
@@ -576,6 +587,41 @@ const targetIsWeakScore =
 );
 }
 
+function normalizeRepairText(
+  text: string,
+) {
+  return text
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+}
+
+function wouldDuplicateTargetContent(
+  movingText: string,
+  targetCell: LogicalCell,
+) {
+  const normalizedMovingText =
+    normalizeRepairText(
+      movingText,
+    );
+
+  const normalizedTargetText =
+    normalizeRepairText(
+      targetCell.text,
+    );
+
+  if (
+    !normalizedMovingText ||
+    !normalizedTargetText
+  ) {
+    return false;
+  }
+
+  return normalizedTargetText.includes(
+    normalizedMovingText,
+  );
+}
+
 function movePhysicalLine(
   source: LogicalCell,
   target: LogicalCell,
@@ -824,7 +870,17 @@ const bestScore =
     nextScore,
   );
 
-const requiredConfidence =
+const bestTarget =
+  bestDirection === "next"
+    ? nextTarget
+    : previousTarget;
+
+const bestTargetHasContent =
+  Boolean(
+    bestTarget?.text.trim(),
+  );
+
+const baseRequiredConfidence =
   isBorderlineNextTie
     ? 0.3
     : lineToMove &&
@@ -833,23 +889,49 @@ const requiredConfidence =
       ? 0.33
       : lineToMove
         ? DEFAULT_MINIMUM_FRAGMENT_MOVE_CONFIDENCE
-        : minimumMoveConfidence; 
+        : minimumMoveConfidence;
 
-        debugCandidates.push({
-  rowIndex,
-  columnIndex,
-  text: cell.text,
-  physicalLineCount:
-    physicalLines.length,
-  previousScore,
-  nextScore,
-  bestScore,
-  threshold:
-  requiredConfidence,
-accepted:
+const requiredConfidence =
+  lineToMove &&
+  bestTargetHasContent
+    ? Math.max(
+        baseRequiredConfidence,
+        0.55,
+      )
+    : baseRequiredConfidence;
+
+        const thresholdPassed =
   bestScore >=
-    requiredConfidence,
-});
+  requiredConfidence;
+
+const debugCandidate:
+  CellRepairDebugCandidate = {
+    rowIndex,
+    columnIndex,
+    text: cell.text,
+    physicalLineCount:
+      physicalLines.length,
+    previousScore,
+    nextScore,
+    bestScore,
+    threshold:
+      requiredConfidence,
+    thresholdPassed,
+    accepted:
+      thresholdPassed,
+    outcome:
+      thresholdPassed
+        ? "accepted"
+        : "rejected-threshold",
+    decisionReason:
+      thresholdPassed
+        ? "Repair score passed the required confidence threshold."
+        : "Repair score did not meet the required confidence threshold.",
+  };
+
+debugCandidates.push(
+  debugCandidate,
+);
 
 
 if (
@@ -899,6 +981,32 @@ const editableTargetCell =
     columnIndex
   ];
 
+const movingText =
+  lineToMove
+    ? joinWords(
+        lineToMove.words,
+      )
+    : cell.text;
+
+const duplicateTargetContent =
+  wouldDuplicateTargetContent(
+    movingText,
+    editableTargetCell,
+  );
+
+if (duplicateTargetContent) {
+  debugCandidate.accepted =
+    false;
+
+  debugCandidate.outcome =
+    "rejected-safety";
+
+  debugCandidate.decisionReason =
+    `Target already contains the moving fragment "${movingText}".`;
+
+  continue;
+}
+
 const moved =
   lineToMove
     ? movePhysicalLine(
@@ -945,6 +1053,12 @@ repairedTable.rows[
           targetRowIndex,
         toColumnIndex:
           columnIndex,
+          fromProvenance:
+  editableSourceRow.provenance,
+
+toProvenance:
+  editableTargetRow.provenance,
+  
         text:
   lineToMove
     ? joinWords(

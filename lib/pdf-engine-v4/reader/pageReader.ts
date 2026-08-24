@@ -5,8 +5,14 @@ import type {
   PdfFontInfo,
   PdfLine,
   PdfPageModel,
+  PdfPageTextExtractionStatus,
   PdfWord,
 } from "../model/types";
+
+import {
+  loadPdfJs,
+  type PdfJsModule,
+} from "./pdfJsLoader";
 
 type PdfJsTextItem = {
   str: string;
@@ -15,10 +21,6 @@ type PdfJsTextItem = {
   height: number;
   fontName?: string;
 };
-
-type PdfJsModule = typeof import(
-  "pdfjs-dist/legacy/build/pdf.mjs"
-);
 
 const LINE_TOLERANCE = 3;
 
@@ -47,22 +49,6 @@ function isPdfJsTextItem(
     typeof candidate.width === "number" &&
     typeof candidate.height === "number"
   );
-}
-
-async function loadPdfJs(): Promise<PdfJsModule> {
-  const pdfjsLib = await import(
-    "pdfjs-dist/legacy/build/pdf.mjs"
-  );
-
-  if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-    pdfjsLib.GlobalWorkerOptions.workerSrc =
-      new URL(
-        "pdfjs-dist/legacy/build/pdf.worker.mjs",
-        import.meta.url,
-      ).toString();
-  }
-
-  return pdfjsLib;
 }
 
 function createId(
@@ -317,6 +303,59 @@ async function readMetadata(
   }
 }
 
+export function classifyPageTextExtractionStatus(
+  wordCount: number,
+  lineCount: number,
+  characterCount: number,
+): PdfPageTextExtractionStatus {
+  if (
+    wordCount === 0 ||
+    characterCount === 0
+  ) {
+    return "none";
+  }
+
+  const lowTextSignals = [
+    wordCount < 20,
+    lineCount < 3,
+    characterCount < 80,
+  ].filter(Boolean).length;
+
+  if (lowTextSignals >= 2) {
+    return "low";
+  }
+
+  return "sufficient";
+}
+
+export function calculatePageTextExtractionQualityScore(
+  wordCount: number,
+  lineCount: number,
+  characterCount: number,
+) {
+  if (
+    wordCount === 0 ||
+    characterCount === 0
+  ) {
+    return 0;
+  }
+
+  const wordScore =
+    Math.min(wordCount / 20, 1);
+
+  const lineScore =
+    Math.min(lineCount / 3, 1);
+
+  const characterScore =
+    Math.min(characterCount / 80, 1);
+
+  return (
+    wordScore +
+    lineScore +
+    characterScore
+  ) / 3;
+}
+
 export async function readPdfDocumentV4(
   file: File,
 ): Promise<PdfDocumentModel> {
@@ -407,13 +446,42 @@ export async function readPdfDocumentV4(
         );
 
       pages.push({
-        pageNumber,
-        width: viewport.width,
-        height: viewport.height,
-        words,
-        lines,
-        blocks: [],
-      });
+  pageNumber,
+  width: viewport.width,
+  height: viewport.height,
+  words,
+  lines,
+  blocks: [],
+  textExtraction: {
+  wordCount: words.length,
+  lineCount: lines.length,
+  characterCount: words.reduce(
+    (sum, word) =>
+      sum + word.text.length,
+    0,
+  ),
+  status:
+    classifyPageTextExtractionStatus(
+      words.length,
+      lines.length,
+      words.reduce(
+        (sum, word) =>
+          sum + word.text.length,
+        0,
+      ),
+    ),
+    qualityScore:
+  calculatePageTextExtractionQualityScore(
+    words.length,
+    lines.length,
+    words.reduce(
+      (sum, word) =>
+        sum + word.text.length,
+      0,
+    ),
+  ),
+},
+});
 
       page.cleanup();
     }

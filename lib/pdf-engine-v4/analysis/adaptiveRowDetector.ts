@@ -330,6 +330,126 @@ function isLikelyWrappedText(
   );
 }
 
+function isSerialBridgePattern(
+  leadingLine: PdfLine,
+  serialLine: PdfLine | undefined,
+  trailingLine: PdfLine | undefined,
+  columns: ColumnCandidate[],
+) {
+  if (
+    !serialLine ||
+    !trailingLine ||
+    columns.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    startsWithSerialNumber(
+      leadingLine,
+    ) ||
+    !startsWithSerialNumber(
+      serialLine,
+    ) ||
+    startsWithSerialNumber(
+      trailingLine,
+    )
+  ) {
+    return false;
+  }
+
+  const leadingIndexes =
+    getPopulatedColumnIndexes(
+      leadingLine,
+      columns,
+    );
+
+  const serialIndexes =
+    getPopulatedColumnIndexes(
+      serialLine,
+      columns,
+    );
+
+  const trailingIndexes =
+    getPopulatedColumnIndexes(
+      trailingLine,
+      columns,
+    );
+
+  if (
+    leadingIndexes.length === 0 ||
+    serialIndexes.length === 0 ||
+    trailingIndexes.length === 0
+  ) {
+    return false;
+  }
+
+  const leadingUsesSerialColumn =
+    leadingIndexes.includes(0);
+
+  const trailingUsesSerialColumn =
+    trailingIndexes.includes(0);
+
+  if (
+    leadingUsesSerialColumn ||
+    trailingUsesSerialColumn
+  ) {
+    return false;
+  }
+
+  const leadingNonSerialIndexes =
+    new Set(
+      leadingIndexes.filter(
+        (index) => index > 0,
+      ),
+    );
+
+  const hasSharedContentColumn =
+    trailingIndexes.some(
+      (index) =>
+        index > 0 &&
+        leadingNonSerialIndexes.has(
+          index,
+        ),
+    );
+
+  if (!hasSharedContentColumn) {
+    return false;
+  }
+
+  const averageHeight =
+    getAverageLineHeight([
+      leadingLine,
+      serialLine,
+      trailingLine,
+    ]);
+
+  const gapBeforeSerial =
+    getVerticalGap(
+      leadingLine,
+      serialLine,
+    );
+
+  const gapAfterSerial =
+    getVerticalGap(
+      serialLine,
+      trailingLine,
+    );
+
+  const closeBefore =
+    gapBeforeSerial <=
+    averageHeight * 0.9;
+
+  const closeAfter =
+    gapAfterSerial <=
+    averageHeight * 0.9;
+
+  return (
+    closeBefore &&
+    closeAfter
+  );
+}
+
 function calculateDecision(
   previousLogicalLines: PdfLine[],
   currentLine: PdfLine,
@@ -514,6 +634,25 @@ function appendLineToRow(
   };
 }
 
+function prependLineToRow(
+  row: LogicalRowCandidate,
+  line: PdfLine,
+) {
+  return {
+    ...row,
+    lines: [
+      line,
+      ...row.lines,
+    ],
+    words: [
+      ...line.words,
+      ...row.words,
+    ],
+    startY:
+      getLineCenterY(line),
+  };
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -553,54 +692,172 @@ export function detectAdaptiveRowsV4(
     };
   }
 
-  const logicalRows:
-    LogicalRowCandidate[] = [];
+const logicalRows:
+  LogicalRowCandidate[] = [];
 
-  for (
-    let index = 0;
-    index < lines.length;
-    index += 1
+let pendingLeadingLine:
+  PdfLine | undefined;
+
+for (
+  let index = 0;
+  index < lines.length;
+  index += 1
+) {
+  const line = lines[index];
+
+  const nextLine =
+    lines[index + 1];
+
+  const lineAfterNext =
+    lines[index + 2];
+
+  const previousRow =
+    logicalRows[
+      logicalRows.length - 1
+    ];
+    
+    if (
+  line.pageNumber === 2 &&
+  nextLine &&
+  lineAfterNext &&
+  startsWithSerialNumber(nextLine)
+) {
+  console.log(
+    "SERIAL-BRIDGE-DEBUG",
+    {
+      leading:
+        getFirstText(line),
+
+      serial:
+        getFirstText(nextLine),
+
+      trailing:
+        getFirstText(
+          lineAfterNext,
+        ),
+
+      leadingIndexes:
+        getPopulatedColumnIndexes(
+          line,
+          columns,
+        ),
+
+      serialIndexes:
+        getPopulatedColumnIndexes(
+          nextLine,
+          columns,
+        ),
+
+      trailingIndexes:
+        getPopulatedColumnIndexes(
+          lineAfterNext,
+          columns,
+        ),
+
+      gapBefore:
+        getVerticalGap(
+          line,
+          nextLine,
+        ),
+
+      gapAfter:
+        getVerticalGap(
+          nextLine,
+          lineAfterNext,
+        ),
+
+      averageHeight:
+        getAverageLineHeight([
+          line,
+          nextLine,
+          lineAfterNext,
+        ]),
+
+      bridgeResult:
+        isSerialBridgePattern(
+          line,
+          nextLine,
+          lineAfterNext,
+          columns,
+        ),
+    },
+  );
+}
+
+  if (
+    previousRow &&
+    isSerialBridgePattern(
+      line,
+      nextLine,
+      lineAfterNext,
+      columns,
+    )
   ) {
-    const line = lines[index];
+    pendingLeadingLine =
+      line;
 
-    const previousRow =
-      logicalRows[
-        logicalRows.length - 1
-      ];
+    continue;
+  }
 
-    const previousLines =
-      previousRow?.lines ?? [];
+  const previousLines =
+    previousRow?.lines ?? [];
 
-    const decision =
-      calculateDecision(
-        previousLines,
+  const decision =
+    calculateDecision(
+      previousLines,
+      line,
+      columns,
+      resolvedOptions,
+    );
+
+  const hasPendingSerialBridge =
+  pendingLeadingLine !== undefined &&
+  startsWithSerialNumber(
+    line,
+  );
+
+if (
+  !previousRow ||
+  decision.isNewRecord ||
+  hasPendingSerialBridge
+) {
+    let newRow =
+      createLogicalRow(
         line,
-        columns,
-        resolvedOptions,
+        logicalRows.length,
+        decision,
       );
 
     if (
-      !previousRow ||
-      decision.isNewRecord
+      pendingLeadingLine &&
+      startsWithSerialNumber(
+        line,
+      )
     ) {
-      logicalRows.push(
-        createLogicalRow(
-          line,
-          logicalRows.length,
-          decision,
-        ),
-      );
+      newRow =
+        prependLineToRow(
+          newRow,
+          pendingLeadingLine,
+        );
 
-      continue;
+      pendingLeadingLine =
+        undefined;
     }
 
-    logicalRows[
-      logicalRows.length - 1
-    ] = appendLineToRow(
-      previousRow,
-      line,
+    logicalRows.push(
+      newRow,
     );
+
+    continue;
   }
+
+  logicalRows[
+    logicalRows.length - 1
+  ] = appendLineToRow(
+    previousRow,
+    line,
+  );
+}
 
   const confidence =
     logicalRows.length === 0

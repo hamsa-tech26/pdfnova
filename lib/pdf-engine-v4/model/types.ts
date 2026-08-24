@@ -114,6 +114,19 @@ export type PdfVisualBlock =
   | PdfImageBlock
   | PdfUnknownBlock;
 
+export type PdfPageTextExtractionStatus =
+  | "none"
+  | "low"
+  | "sufficient";
+
+export type PdfPageTextExtractionMetrics = {
+  wordCount: number;
+  lineCount: number;
+  characterCount: number;
+  status: PdfPageTextExtractionStatus;
+  qualityScore: number;
+};
+
 export type PdfPageModel = {
   pageNumber: number;
   width: number;
@@ -121,6 +134,7 @@ export type PdfPageModel = {
   words: PdfWord[];
   lines: PdfLine[];
   blocks: PdfVisualBlock[];
+  textExtraction: PdfPageTextExtractionMetrics;
 };
 
 export type PdfDocumentModel = {

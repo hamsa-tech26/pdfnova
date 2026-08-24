@@ -10,6 +10,10 @@ import {
   detectRows,
   type RowDetectionResult,
 } from "./rowDetector";
+import {
+  normalizeDetectedRows,
+  type RowNormalizationResult,
+} from "./rowNormalizer";
 import type {
   PdfPageLayout,
   PdfTable,
@@ -20,6 +24,7 @@ export type PageLayoutAnalysis = {
   columnDetection: ColumnDetectionResult;
   rowDetection: RowDetectionResult;
   cellBuild: CellBuildResult;
+  normalization: RowNormalizationResult;
   table: PdfTable | null;
   confidence: number;
 };
@@ -87,8 +92,20 @@ export function analyzePdfPageLayout(
       columnDetection.columns,
     );
 
+    const normalization =
+    normalizeDetectedRows(
+      cellBuild.rows,
+    );
+
+  const normalizedCellBuild: CellBuildResult = {
+    ...cellBuild,
+    rows: normalization.rows,
+  };
+
   const table =
-    createPdfTable(cellBuild);
+    createPdfTable(
+      normalizedCellBuild,
+    );
 
   const confidence =
     combineConfidence(
@@ -101,7 +118,8 @@ export function analyzePdfPageLayout(
     pageNumber: page.pageNumber,
     columnDetection,
     rowDetection,
-    cellBuild,
+    cellBuild: normalizedCellBuild,
+    normalization,
     table,
     confidence,
   };

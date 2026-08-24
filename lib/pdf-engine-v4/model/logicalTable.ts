@@ -13,11 +13,18 @@ export type LogicalCell = {
   confidence: number;
 };
 
+export type LogicalRowProvenance = {
+  pageNumber: number;
+  blockId: string;
+  originalRowIndex: number;
+};
+
 export type LogicalRow = {
   id: string;
   rowIndex: number;
   cells: LogicalCell[];
   confidence: number;
+  provenance?: LogicalRowProvenance;
 };
 
 export type LogicalTable = {

@@ -28,6 +28,13 @@ import {
   repairLogicalTableV1,
   type CellRepairResult,
 } from "../analysis/cellRepairEngine";
+import {
+  analyzeRowReliabilityV1,
+  type RowReliabilityResult,
+} from "../analysis/rowReliabilityAnalyzer";
+import {
+  selectRegionsForAnalysis,
+} from "../analysis/continuationRegionSelector";
 
 export type PdfV4TableAnalysis = {
   pageNumber: number;
@@ -37,7 +44,28 @@ export type PdfV4TableAnalysis = {
   rowDetection: AdaptiveRowDetectionResult;
   cellBuild: SmartCellBuilderResult;
   cellRepair: CellRepairResult | null;
+  rowReliability:
+  RowReliabilityResult | null;
   table: LogicalTable | null;
+};
+
+export type PdfV4CandidateRegionDiagnostic = {
+  pageNumber: number;
+  blockId: string;
+  blockType: string;
+  lineCount: number;
+  analysis: TableRegionAnalysis;
+  admittedAsContinuation: boolean;
+
+  outcome:
+    | "below-threshold"
+    | "pending"
+    | "rejected-insufficient-columns"
+    | "rejected-no-rows"
+    | "rejected-table-build"
+    | "confirmed";
+
+  acceptedColumnCount: number | null;
 };
 
 export type PdfV4ProcessingStatistics = {
@@ -46,7 +74,21 @@ export type PdfV4ProcessingStatistics = {
   lineCount: number;
   blockCount: number;
   candidateTableRegionCount: number;
-  confirmedTableRegionCount: number;
+continuationAdmissionCount: number;
+analyzedTableRegionCount: number;
+confirmedTableRegionCount: number;
+
+  rejectedForInsufficientColumns: number;
+  rejectedForNoRows: number;
+  rejectedForTableBuildFailure: number;
+
+  rejectedWithZeroColumns: number;
+  rejectedWithOneColumn: number;
+
+  rejectedColumnTooFewLines: number;
+  rejectedColumnLowSupport: number;
+  rejectedColumnUnstableAlignment: number;
+
   logicalTableCount: number;
   detectedColumnCount: number;
   detectedRowCount: number;
@@ -60,12 +102,178 @@ export type PdfV4ProcessingTimes = {
   totalMs: number;
 };
 
+export type PdfV4TextExtractionProfileStatus =
+  | "empty"
+  | "low-text"
+  | "mixed"
+  | "sufficient";
+
+export type PdfV4TextExtractionProfile = {
+  status: PdfV4TextExtractionProfileStatus;
+  pageCount: number;
+  noTextPageCount: number;
+  lowTextPageCount: number;
+  sufficientTextPageCount: number;
+};
+
+export type PdfV4OcrDecisionStatus =
+  | "not-required"
+  | "page-selective"
+  | "required"
+  | "review";
+
+export type PdfV4OcrDecision = {
+  status: PdfV4OcrDecisionStatus;
+  requiredPageNumbers: number[];
+  reviewPageNumbers: number[];
+  nativeTextPageNumbers: number[];
+};
+
+export function createPdfV4OcrDecision(
+  document: Pick<
+    PdfDocumentModel,
+    "pages"
+  >,
+): PdfV4OcrDecision {
+  const requiredPageNumbers =
+    document.pages
+      .filter(
+        (page) =>
+          page.textExtraction.status ===
+          "none",
+      )
+      .map(
+        (page) =>
+          page.pageNumber,
+      );
+
+  const reviewPageNumbers =
+    document.pages
+      .filter(
+        (page) =>
+          page.textExtraction.status ===
+          "low",
+      )
+      .map(
+        (page) =>
+          page.pageNumber,
+      );
+
+  const nativeTextPageNumbers =
+    document.pages
+      .filter(
+        (page) =>
+          page.textExtraction.status ===
+          "sufficient",
+      )
+      .map(
+        (page) =>
+          page.pageNumber,
+      );
+
+  let status:
+    PdfV4OcrDecisionStatus;
+
+  if (
+    requiredPageNumbers.length ===
+    document.pages.length &&
+    document.pages.length > 0
+  ) {
+    status = "required";
+  } else if (
+    requiredPageNumbers.length > 0
+  ) {
+    status = "page-selective";
+  } else if (
+    reviewPageNumbers.length > 0
+  ) {
+    status = "review";
+  } else {
+    status = "not-required";
+  }
+
+  return {
+    status,
+    requiredPageNumbers,
+    reviewPageNumbers,
+    nativeTextPageNumbers,
+  };
+}
+
+export function createPdfV4TextExtractionProfile(
+  document: Pick<
+    PdfDocumentModel,
+    "pages"
+  >,
+): PdfV4TextExtractionProfile {
+  const pageCount =
+    document.pages.length;
+
+  const noTextPageCount =
+    document.pages.filter(
+      (page) =>
+        page.textExtraction.status ===
+        "none",
+    ).length;
+
+  const lowTextPageCount =
+    document.pages.filter(
+      (page) =>
+        page.textExtraction.status ===
+        "low",
+    ).length;
+
+  const sufficientTextPageCount =
+    document.pages.filter(
+      (page) =>
+        page.textExtraction.status ===
+        "sufficient",
+    ).length;
+
+  let status:
+    PdfV4TextExtractionProfileStatus;
+
+  if (
+    pageCount === 0 ||
+    noTextPageCount === pageCount
+  ) {
+    status = "empty";
+  } else if (
+    sufficientTextPageCount === pageCount
+  ) {
+    status = "sufficient";
+  } else if (
+    sufficientTextPageCount > 0
+  ) {
+    status = "mixed";
+  } else {
+    status = "low-text";
+  }
+
+  return {
+    status,
+    pageCount,
+    noTextPageCount,
+    lowTextPageCount,
+    sufficientTextPageCount,
+  };
+}
+
 export type PdfEngineV4Result = {
   document: PdfDocumentModel;
   tables: LogicalTable[];
   tableAnalyses: PdfV4TableAnalysis[];
+
+  candidateRegionDiagnostics:
+  PdfV4CandidateRegionDiagnostic[];
+
+  mergedTableReliability:
+  RowReliabilityResult[];
   statistics: PdfV4ProcessingStatistics;
   processingTimes: PdfV4ProcessingTimes;
+  analysisOutcome: PdfV4AnalysisOutcome;
+  textExtractionProfile: PdfV4TextExtractionProfile;
+  ocrDecision: PdfV4OcrDecision;
   confidence: number;
 };
 function getRowSerialNumber(
@@ -255,6 +463,27 @@ function getSharedColumnCount(
   }
 
   return sharedCount;
+}
+
+function attachRowProvenance(
+  table: LogicalTable,
+  pageNumber: number,
+  blockId: string,
+): LogicalTable {
+  return {
+    ...table,
+    rows: table.rows.map(
+      (row) => ({
+        ...row,
+        provenance: {
+          pageNumber,
+          blockId,
+          originalRowIndex:
+            row.rowIndex,
+        },
+      }),
+    ),
+  };
 }
 
 function reindexLogicalRows(
@@ -501,11 +730,33 @@ function countPopulatedCells(
   );
 }
 
+export function countConfirmedTableRegions(
+  analyses: Pick<
+    PdfV4TableAnalysis,
+    "table"
+  >[],
+) {
+  return analyses.filter(
+    (analysis) =>
+      analysis.table !== null,
+  ).length;
+}
+
 function createStatistics(
   document: PdfDocumentModel,
   tableAnalyses: PdfV4TableAnalysis[],
   tables: LogicalTable[],
   candidateTableRegionCount: number,
+  continuationAdmissionCount: number,
+analyzedTableRegionCount: number,
+  rejectedForInsufficientColumns: number,
+  rejectedWithZeroColumns: number,
+  rejectedWithOneColumn: number,
+  rejectedForNoRows: number,
+  rejectedForTableBuildFailure: number,
+  rejectedColumnTooFewLines: number,
+  rejectedColumnLowSupport: number,
+  rejectedColumnUnstableAlignment: number,
 ) {
   const wordCount =
     document.pages.reduce(
@@ -553,10 +804,25 @@ function createStatistics(
     lineCount,
     blockCount,
     candidateTableRegionCount,
-    confirmedTableRegionCount:
-      tableAnalyses.length,
-    logicalTableCount:
-      tables.length,
+continuationAdmissionCount,
+analyzedTableRegionCount,
+confirmedTableRegionCount:
+  countConfirmedTableRegions(
+    tableAnalyses,
+  ),
+
+rejectedForInsufficientColumns,
+rejectedWithZeroColumns,
+rejectedWithOneColumn,
+rejectedForNoRows,
+rejectedForTableBuildFailure,
+
+rejectedColumnTooFewLines,
+rejectedColumnLowSupport,
+rejectedColumnUnstableAlignment,
+
+logicalTableCount:
+  tables.length,
     detectedColumnCount,
     detectedRowCount,
     populatedCellCount:
@@ -564,17 +830,139 @@ function createStatistics(
   };
 }
 
+export type PdfV4AnalysisOutcome =
+  | "no-extractable-text"
+  | "no-table-candidates"
+  | "resolved-no-table"
+  | "confirmed-table"
+  | "incomplete-analysis"
+  | "table-build-failure";
+
+  export function classifyPdfV4AnalysisOutcome(
+  diagnostics: Pick<
+    PdfV4CandidateRegionDiagnostic,
+    "outcome"
+  >[],
+  hasExtractableText = true,
+): PdfV4AnalysisOutcome {
+  if (!hasExtractableText) {
+  return "no-extractable-text";
+}
+
+  const analyzedDiagnostics =
+    diagnostics.filter(
+      (diagnostic) =>
+        diagnostic.outcome !==
+        "below-threshold",
+    );
+
+  if (analyzedDiagnostics.length === 0) {
+    return "no-table-candidates";
+  }
+
+  if (
+    analyzedDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.outcome ===
+        "pending",
+    )
+  ) {
+    return "incomplete-analysis";
+  }
+
+  if (
+    analyzedDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.outcome ===
+        "rejected-table-build",
+    )
+  ) {
+    return "table-build-failure";
+  }
+
+  if (
+    analyzedDiagnostics.some(
+      (diagnostic) =>
+        diagnostic.outcome ===
+        "confirmed",
+    )
+  ) {
+    return "confirmed-table";
+  }
+
+  return "resolved-no-table";
+}
+
+export function getPdfV4OutcomeConfidenceMultiplier(
+  outcome: PdfV4AnalysisOutcome,
+) {
+  if (
+  outcome ===
+  "no-extractable-text"
+) {
+  return 0;
+}
+  if (
+    outcome ===
+    "no-table-candidates"
+  ) {
+    return 0.85;
+  }
+
+  if (
+    outcome ===
+    "resolved-no-table"
+  ) {
+    return 0.9;
+  }
+
+  if (
+    outcome ===
+    "incomplete-analysis"
+  ) {
+    return 0.5;
+  }
+
+  if (
+    outcome ===
+    "table-build-failure"
+  ) {
+    return 0.35;
+  }
+
+  return null;
+}
+
 function calculateEngineConfidence(
   document: PdfDocumentModel,
   analyses: PdfV4TableAnalysis[],
   tables: LogicalTable[],
+  diagnostics:
+    PdfV4CandidateRegionDiagnostic[],
 ) {
   const documentConfidence =
     document.confidence;
 
-  if (analyses.length === 0) {
-    return documentConfidence * 0.5;
-  }
+  const analysisOutcome =
+  classifyPdfV4AnalysisOutcome(
+    diagnostics,
+    document.confidence > 0,
+  );
+
+  const outcomeConfidenceMultiplier =
+  getPdfV4OutcomeConfidenceMultiplier(
+    analysisOutcome,
+  );
+
+if (
+  outcomeConfidenceMultiplier !==
+  null
+) {
+  return (
+    documentConfidence *
+    outcomeConfidenceMultiplier
+  );
+}
 
   const tableRegionConfidence =
     average(
@@ -659,9 +1047,41 @@ export async function analyzePdfV4(
   const tableAnalyses:
     PdfV4TableAnalysis[] = [];
 
+    const candidateRegionDiagnostics:
+  PdfV4CandidateRegionDiagnostic[] =
+  [];
+
   const tables: LogicalTable[] = [];
 
   let candidateTableRegionCount = 0;
+
+  let continuationAdmissionCount = 0;
+
+let analyzedTableRegionCount = 0;
+  
+  let rejectedForInsufficientColumns =
+  0;
+
+  let rejectedWithZeroColumns =
+  0;
+
+let rejectedWithOneColumn =
+  0;
+
+  let rejectedForNoRows =
+  0;
+
+  let rejectedForTableBuildFailure =
+  0;
+
+  let rejectedColumnTooFewLines =
+  0;
+
+let rejectedColumnLowSupport =
+  0;
+
+let rejectedColumnUnstableAlignment =
+  0;
 
   for (const page of document.pages) {
     const detection =
@@ -669,14 +1089,75 @@ export async function analyzePdfV4(
         page.blocks,
       );
 
-    candidateTableRegionCount +=
-      detection.tableRegions.length;
+    const hasPreviousPageTableAnalysis =
+  tableAnalyses.some(
+    (analysis) =>
+      analysis.pageNumber ===
+      page.pageNumber - 1,
+  );
 
-    for (const region of detection.tableRegions) {
-      const shouldAnalyze =
-        region.analysis.isTable ||
-        options?.includePossibleTableRegions ===
-          true;
+const {
+  regionsToAnalyze,
+  continuationRegionIds,
+} = selectRegionsForAnalysis(
+  detection.regions,
+  detection.tableRegions,
+  hasPreviousPageTableAnalysis,
+);
+
+candidateTableRegionCount +=
+  detection.tableRegions.length;
+
+continuationAdmissionCount +=
+  continuationRegionIds.size;
+
+analyzedTableRegionCount +=
+  regionsToAnalyze.length;
+
+for (const region of detection.regions) {
+  candidateRegionDiagnostics.push({
+    pageNumber:
+      page.pageNumber,
+    blockId:
+      region.block.id,
+    blockType:
+      region.block.type,
+    lineCount:
+      region.block.type ===
+        "paragraph" ||
+      region.block.type ===
+        "heading"
+        ? region.block.lines.length
+        : 0,
+    analysis:
+  region.analysis,
+admittedAsContinuation:
+  continuationRegionIds.has(
+    region.block.id,
+  ),
+outcome:
+  regionsToAnalyze.some(
+    (analyzedRegion) =>
+      analyzedRegion.block.id ===
+      region.block.id,
+  )
+    ? "pending"
+    : "below-threshold",
+acceptedColumnCount: null,
+});
+}
+
+for (const region of regionsToAnalyze) {
+  const isContinuationAdmission =
+    continuationRegionIds.has(
+      region.block.id,
+    );
+
+  const shouldAnalyze =
+    isContinuationAdmission ||
+    region.analysis.isTable ||
+    options?.includePossibleTableRegions ===
+      true;
 
       if (!shouldAnalyze) {
         continue;
@@ -880,10 +1361,69 @@ if (
   }
 }
 
+const regionDiagnostic =
+  candidateRegionDiagnostics.find(
+    (diagnostic) =>
+      diagnostic.pageNumber ===
+        page.pageNumber &&
+      diagnostic.blockId ===
+        region.block.id,
+  );
+
+if (regionDiagnostic) {
+  regionDiagnostic.acceptedColumnCount =
+    columnDetection.columns.length;
+}
+
 if (
   columnDetection.columns.length <
   2
 ) {
+  rejectedForInsufficientColumns +=
+    1;
+
+    if (regionDiagnostic) {
+  regionDiagnostic.outcome =
+    "rejected-insufficient-columns";
+}
+    
+    if (
+  columnDetection.columns.length ===
+  0
+) {
+  rejectedWithZeroColumns += 1;
+} else if (
+  columnDetection.columns.length ===
+  1
+) {
+  rejectedWithOneColumn += 1;
+}
+
+  for (
+    const candidate of
+    columnDetection.rejectedCandidates
+  ) {
+    if (
+      candidate.reason ===
+      "Rejected because too few distinct lines support this position."
+    ) {
+      rejectedColumnTooFewLines +=
+        1;
+    } else if (
+      candidate.reason ===
+      "Rejected because the support ratio is too low."
+    ) {
+      rejectedColumnLowSupport +=
+        1;
+    } else if (
+      candidate.reason ===
+      "Rejected because the alignment varies too much."
+    ) {
+      rejectedColumnUnstableAlignment +=
+        1;
+    }
+  }
+
   continue;
 }
 
@@ -896,6 +1436,13 @@ const rowDetection =
       if (
   rowDetection.rows.length === 0
 ) {
+  rejectedForNoRows += 1;
+
+  if (regionDiagnostic) {
+    regionDiagnostic.outcome =
+      "rejected-no-rows";
+  }
+
   continue;
 }
 
@@ -907,7 +1454,13 @@ const rowDetection =
         );
 
       const builtTable =
-  cellBuild.table;
+  cellBuild.table
+    ? attachRowProvenance(
+        cellBuild.table,
+        page.pageNumber,
+        region.block.id,
+      )
+    : null;
 
 let cellRepair:
   CellRepairResult | null =
@@ -916,13 +1469,29 @@ let cellRepair:
 if (builtTable !== null) {
   cellRepair =
     repairLogicalTableV1(
-      builtTable!,
+      builtTable,
     );
 }
 
 const finalTable =
   cellRepair?.table ??
   builtTable;
+
+  if (finalTable === null) {
+  rejectedForTableBuildFailure +=
+    1;
+
+  if (regionDiagnostic) {
+    regionDiagnostic.outcome =
+      "rejected-table-build";
+  }
+}
+  const rowReliability =
+  finalTable
+    ? analyzeRowReliabilityV1(
+        finalTable,
+      )
+    : null;
 
       const tableAnalysis:
         PdfV4TableAnalysis = {
@@ -936,6 +1505,7 @@ const finalTable =
           rowDetection,
           cellBuild,
           cellRepair,
+          rowReliability,
           table:
             finalTable,
         };
@@ -945,16 +1515,29 @@ const finalTable =
       );
 
       if (finalTable) {
-        tables.push(
-          finalTable!,
-        );
-      }
+  if (regionDiagnostic) {
+    regionDiagnostic.outcome =
+      "confirmed";
+  }
+
+  tables.push(
+    finalTable,
+  );
+}
     }
   }
 
   const mergedTables =
   mergeContinuedTablesV4(
     tableAnalyses,
+  );
+
+  const mergedTableReliability =
+  mergedTables.map(
+    (table) =>
+      analyzeRowReliabilityV1(
+        table,
+      ),
   );
 
   const tableAnalysisMs =
@@ -966,6 +1549,32 @@ const finalTable =
     tableAnalyses,
     mergedTables,
     candidateTableRegionCount,
+    continuationAdmissionCount,
+analyzedTableRegionCount,
+    rejectedForInsufficientColumns,
+    rejectedWithZeroColumns,
+    rejectedWithOneColumn,
+    rejectedForNoRows,
+    rejectedForTableBuildFailure,
+    rejectedColumnTooFewLines,
+    rejectedColumnLowSupport,
+    rejectedColumnUnstableAlignment,
+  );
+
+const textExtractionProfile =
+  createPdfV4TextExtractionProfile(
+    document,
+  );
+
+const ocrDecision =
+  createPdfV4OcrDecision(
+    document,
+  );  
+
+const analysisOutcome =
+  classifyPdfV4AnalysisOutcome(
+    candidateRegionDiagnostics,
+    document.confidence > 0,
   );
 
 const confidence =
@@ -973,6 +1582,7 @@ const confidence =
     document,
     tableAnalyses,
     mergedTables,
+    candidateRegionDiagnostics,
   );
 
   const totalMs =
@@ -982,13 +1592,18 @@ const confidence =
     document,
     tables: mergedTables,
     tableAnalyses,
+    candidateRegionDiagnostics,
+    mergedTableReliability,
     statistics,
     processingTimes: {
-      readingMs,
-      visualBlockDetectionMs,
-      tableAnalysisMs,
-      totalMs,
-    },
-    confidence,
+    readingMs,
+    visualBlockDetectionMs,
+    tableAnalysisMs,
+    totalMs,
+},
+analysisOutcome,
+textExtractionProfile,
+ocrDecision,
+confidence,
   };
 }

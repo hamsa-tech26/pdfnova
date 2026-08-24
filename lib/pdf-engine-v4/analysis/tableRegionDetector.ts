@@ -317,6 +317,19 @@ function isLikelyHeaderLine(line: PdfLine) {
       lowerText.includes(term),
     ).length;
 
+    const wordCount =
+  text
+    .split(/\s+/)
+    .filter(Boolean).length;
+
+const headerTermDensity =
+  matchingTerms /
+  Math.max(wordCount, 1);
+
+const hasHeaderLikeShape =
+  wordCount <= 8 ||
+  headerTermDensity >= 0.25;
+
   const mostlyText =
     text.replace(
       /[^a-zA-Z]/g,
@@ -329,10 +342,11 @@ function isLikelyHeaderLine(line: PdfLine) {
     /[.!?]$/.test(text);
 
   return (
-    matchingTerms > 0 &&
-    mostlyText &&
-    !looksLikeSentence
-  );
+  matchingTerms > 0 &&
+  mostlyText &&
+  !looksLikeSentence &&
+  hasHeaderLikeShape
+);
 }
 
 function scoreHeader(lines: PdfLine[]) {

@@ -5,11 +5,17 @@ import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
 import ProgressCard from "@/components/pdf/ProgressCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import SuspiciousCellPreview from "@/components/pdf/SuspiciousCellPreview";
 import {
   analyzePdfV4,
   type PdfEngineV4Result,
   type PdfV4TableAnalysis,
 } from "@/lib/pdf-engine-v4/pipeline/analyzePdfV4";
+
+import type {
+  PdfBoundingBox,
+} from "@/lib/pdf-engine-v4/model/types";
+
 import {
   Braces,
   Clock3,
@@ -32,6 +38,17 @@ import {
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
+
+type SelectedSource = {
+  pageNumber: number;
+  bounds: PdfBoundingBox;
+  cellText: string;
+  tableNumber: number;
+  rowNumber: number;
+  logicalRowIndex: number;
+  columnNumber: number;
+  reasons: string[];
+};
 
 const inspectorTips = [
   {
@@ -91,6 +108,21 @@ function formatConfidence(value: number) {
   return `${Math.round(value * 100)}%`;
 }
 
+function formatAnalysisOutcome(
+  value: string,
+) {
+  return value
+    .split("-")
+    .map(
+      (part, index) =>
+        index === 0
+          ? part.charAt(0).toUpperCase() +
+            part.slice(1)
+          : part,
+    )
+    .join(" ");
+}
+
 function formatMilliseconds(value: number) {
   return `${value.toFixed(1)} ms`;
 }
@@ -98,6 +130,9 @@ function formatMilliseconds(value: number) {
 export default function EngineInspectorPage() {
   const fileInputRef =
     useRef<HTMLInputElement>(null);
+
+  const sourcePreviewRef =
+  useRef<HTMLDivElement>(null);  
 
   const [file, setFile] =
     useState<File | null>(null);
@@ -107,6 +142,14 @@ export default function EngineInspectorPage() {
 
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] =
     useState(0);
+
+  const [selectedSource, setSelectedSource] =
+  useState<SelectedSource | null>(null);  
+
+  const [
+  selectedSourceIndex,
+  setSelectedSourceIndex,
+] = useState<number | null>(null);
 
   const [isAnalyzing, setIsAnalyzing] =
     useState(false);
@@ -124,6 +167,62 @@ export default function EngineInspectorPage() {
     result?.tableAnalyses[
       selectedAnalysisIndex
     ] ?? null;
+
+  function jumpToSource(
+  source: SelectedSource,
+  sourceIndex?: number,
+) {
+  const resolvedIndex =
+  sourceIndex ??
+  getSourceIssueIndex(source);
+
+const resolvedSource =
+  resolvedIndex >= 0
+    ? sourceIssues[resolvedIndex] ??
+      source
+    : source;
+
+setSelectedSource(resolvedSource);
+
+setSelectedSourceIndex(
+  resolvedIndex >= 0
+    ? resolvedIndex
+    : null,
+);
+
+  requestAnimationFrame(() => {
+    sourcePreviewRef.current?.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  });
+}
+
+function navigateSourceIssue(
+  direction: -1 | 1,
+) {
+  if (
+    selectedSourceIndex === null ||
+    sourceIssues.length === 0
+  ) {
+    return;
+  }
+
+  const nextIndex =
+    selectedSourceIndex + direction;
+
+  if (
+    nextIndex < 0 ||
+    nextIndex >= sourceIssues.length
+  ) {
+    return;
+  }
+
+  jumpToSource(
+    sourceIssues[nextIndex],
+    nextIndex,
+  );
+}
 
   const totalRejectedColumns =
     useMemo(() => {
@@ -150,9 +249,173 @@ export default function EngineInspectorPage() {
       );
     }, [result]);
 
+   const extractionQuality =
+  useMemo(() => {
+    if (!result) {
+      return {
+        totalRows: 0,
+        reliableRows: 0,
+        reviewRows: 0,
+        reliabilityRatio: 0,
+        reviewItems: [],
+      };
+    }
+
+    const assessments =
+  result.mergedTableReliability.flatMap(
+    (
+      reliability,
+      analysisIndex,
+    ) =>
+      reliability.rows.map(
+        (row) => ({
+          analysisIndex,
+          row,
+        }),
+      ),
+  );
+
+    const reliableRows =
+      assessments.filter(
+        ({ row }) =>
+          row.status === "reliable",
+      ).length;
+
+    const reviewItems =
+      assessments.filter(
+        ({ row }) =>
+          row.status ===
+          "needs-review",
+      );
+
+    const totalRows =
+      assessments.length;
+
+    return {
+      totalRows,
+      reliableRows,
+      reviewRows:
+        reviewItems.length,
+      reliabilityRatio:
+        totalRows === 0
+          ? 0
+          : reliableRows /
+            totalRows,
+      reviewItems,
+    };
+  }, [result]); 
+
+  const sourceIssues =
+  useMemo<SelectedSource[]>(() => {
+    const issues: SelectedSource[] = [];
+    const seenCells =
+  new Map<string, number>();
+
+    extractionQuality.reviewItems.forEach(
+      ({
+        analysisIndex,
+        row,
+      }) => {
+        const provenance =
+  row.provenance;
+
+if (!provenance) {
+  return;
+}
+
+        row.reasons.forEach(
+          (reason) => {
+            if (
+              reason.columnIndex === undefined ||
+              reason.cellText === undefined ||
+              !reason.cellBounds
+            ) {
+              return;
+            }
+            const cellKey = [
+  analysisIndex + 1,
+  row.serialNumber ?? row.rowIndex,
+  provenance.pageNumber,
+  reason.columnIndex + 1,
+  reason.cellBounds.x,
+  reason.cellBounds.y,
+  reason.cellBounds.width,
+  reason.cellBounds.height,
+].join(":");
+
+const existingIssueIndex =
+  seenCells.get(cellKey);
+
+if (existingIssueIndex !== undefined) {
+  const existingIssue =
+    issues[existingIssueIndex];
+
+  if (
+    existingIssue &&
+    !existingIssue.reasons.includes(
+      reason.message,
+    )
+  ) {
+    existingIssue.reasons.push(
+      reason.message,
+    );
+  }
+
+  return;
+}
+
+seenCells.set(
+  cellKey,
+  issues.length,
+);
+
+            issues.push({
+              pageNumber:
+  provenance.pageNumber,
+              bounds: reason.cellBounds,
+              cellText: reason.cellText,
+              tableNumber:
+                analysisIndex + 1,
+              rowNumber:
+                row.serialNumber ??
+                row.rowIndex,
+                logicalRowIndex:
+  row.rowIndex,
+              columnNumber:
+                reason.columnIndex + 1,
+                reasons: [reason.message],
+            });
+          },
+        );
+      },
+    );
+
+    return issues;
+  }, [extractionQuality.reviewItems]);
+
+  function getSourceIssueIndex(
+  source: SelectedSource,
+) {
+  return sourceIssues.findIndex(
+    (issue) =>
+      issue.pageNumber ===
+        source.pageNumber &&
+      issue.tableNumber ===
+        source.tableNumber &&
+      issue.rowNumber ===
+        source.rowNumber &&
+      issue.columnNumber ===
+        source.columnNumber &&
+      issue.cellText ===
+        source.cellText,
+  );
+}
+
   function resetInspector() {
     setResult(null);
     setSelectedAnalysisIndex(0);
+    setSelectedSource(null);
+    setSelectedSourceIndex(null);
     setProgress(0);
     setCurrentStep(1);
     setErrorMessage("");
@@ -206,11 +469,11 @@ export default function EngineInspectorPage() {
 
       const analysisResult =
         await analyzePdfV4(
-          selectedFile,
-          {
-            includePossibleTableRegions: true,
-          },
-        );
+  selectedFile,
+  {
+    includePossibleTableRegions: true,
+  },
+  );
 
       setProgress(82);
       setCurrentStep(3);
@@ -369,6 +632,75 @@ export default function EngineInspectorPage() {
             />
           </section>
 
+          <div className="rounded-2xl border border-gray-200 bg-white px-5 py-4 text-sm shadow-sm dark:border-slate-800 dark:bg-slate-900">
+  <div>
+    <span className="font-semibold text-gray-500 dark:text-slate-400">
+      Analysis outcome:{" "}
+    </span>
+
+    <span className="font-bold text-gray-950 dark:text-white">
+      {formatAnalysisOutcome(
+        result.analysisOutcome,
+      )}
+    </span>
+  </div>
+
+  <div className="mt-2">
+    <span className="font-semibold text-gray-500 dark:text-slate-400">
+      Text extraction profile:{" "}
+    </span>
+
+    <span className="font-bold text-gray-950 dark:text-white">
+      {formatAnalysisOutcome(
+        result.textExtractionProfile.status,
+      )}
+    </span>
+
+    <span className="ml-2 text-gray-500 dark:text-slate-400">
+      (
+      {result.textExtractionProfile.sufficientTextPageCount} sufficient,{" "}
+      {result.textExtractionProfile.lowTextPageCount} low,{" "}
+      {result.textExtractionProfile.noTextPageCount} no text
+      )
+    </span>
+  </div>
+  <div className="mt-2">
+  <span className="font-semibold text-gray-500 dark:text-slate-400">
+    OCR decision:{" "}
+  </span>
+
+  <span className="font-bold text-gray-950 dark:text-white">
+    {formatAnalysisOutcome(
+      result.ocrDecision.status,
+    )}
+  </span>
+
+  {result.ocrDecision.requiredPageNumbers.length >
+    0 && (
+    <span className="ml-2 text-gray-500 dark:text-slate-400">
+      (
+      OCR pages:{" "}
+      {result.ocrDecision.requiredPageNumbers.join(
+        ", ",
+      )}
+      )
+    </span>
+  )}
+
+  {result.ocrDecision.reviewPageNumbers.length >
+    0 && (
+    <span className="ml-2 text-gray-500 dark:text-slate-400">
+      (
+      Review pages:{" "}
+      {result.ocrDecision.reviewPageNumbers.join(
+        ", ",
+      )}
+      )
+    </span>
+  )}
+</div>
+</div>
+
           <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center gap-3">
               <ScanSearch
@@ -418,12 +750,92 @@ export default function EngineInspectorPage() {
               />
 
               <MiniStat
+  label="Continuation admissions"
+  value={
+    result.statistics
+      .continuationAdmissionCount
+  }
+/>
+
+<MiniStat
+  label="Regions analyzed"
+  value={
+    result.statistics
+      .analyzedTableRegionCount
+  }
+/>
+
+              <MiniStat
                 label="Confirmed regions"
                 value={
                   result.statistics
                     .confirmedTableRegionCount
                 }
               />
+
+              <MiniStat
+  label="Rejected: insufficient columns"
+  value={
+    result.statistics
+      .rejectedForInsufficientColumns
+  }
+/>
+
+<MiniStat
+  label="Rejected with 0 columns"
+  value={
+    result.statistics
+      .rejectedWithZeroColumns
+  }
+/>
+
+<MiniStat
+  label="Rejected with 1 column"
+  value={
+    result.statistics
+      .rejectedWithOneColumn
+  }
+/>
+
+<MiniStat
+  label="Rejected: no rows"
+  value={
+    result.statistics
+      .rejectedForNoRows
+  }
+/>
+
+<MiniStat
+  label="Rejected: table build"
+  value={
+    result.statistics
+      .rejectedForTableBuildFailure
+  }
+/>
+
+<MiniStat
+  label="Column reject: too few lines"
+  value={
+    result.statistics
+      .rejectedColumnTooFewLines
+  }
+/>
+
+<MiniStat
+  label="Column reject: low support"
+  value={
+    result.statistics
+      .rejectedColumnLowSupport
+  }
+/>
+
+<MiniStat
+  label="Column reject: unstable alignment"
+  value={
+    result.statistics
+      .rejectedColumnUnstableAlignment
+  }
+/>
 
               <MiniStat
                 label="Columns"
@@ -460,7 +872,393 @@ export default function EngineInspectorPage() {
               />
             </div>
           </section>
+<section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+  <div className="flex items-center gap-3">
+    <ShieldCheck
+      size={23}
+      className="text-blue-600"
+    />
 
+    <div>
+      <h2 className="text-xl font-extrabold text-gray-950 dark:text-white">
+        Extraction Quality
+      </h2>
+
+      <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">
+        Document-level reliability summary based on rows assessed by Row Reliability V1.
+      </p>
+    </div>
+  </div>
+  <div className="mt-6 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+  <MiniStat
+    label="Rows analyzed"
+    value={
+      extractionQuality.totalRows
+    }
+  />
+
+  <MiniStat
+    label="Reliable rows"
+    value={
+      extractionQuality.reliableRows
+    }
+  />
+
+  <MiniStat
+    label="Needs review"
+    value={
+      extractionQuality.reviewRows
+    }
+  />
+
+  <MiniStat
+    label="Reliable rate"
+    value={formatConfidence(
+      extractionQuality.reliabilityRatio,
+    )}
+  />
+</div>
+{extractionQuality.reviewItems.length >
+  0 && (
+  <div className="mt-6 rounded-2xl border border-gray-200 p-4 dark:border-slate-700">
+    <h3 className="text-sm font-bold text-gray-950 dark:text-white">
+      Needs attention
+    </h3>
+
+    <div className="mt-3 space-y-3">
+      {extractionQuality.reviewItems.map(
+        ({
+          analysisIndex,
+          row,
+        }) => (
+          <div
+            key={`${analysisIndex}-${row.rowIndex}`}
+            className={`rounded-xl border p-3 transition ${
+  selectedSource &&
+selectedSource.tableNumber ===
+  analysisIndex + 1 &&
+selectedSource.logicalRowIndex ===
+  row.rowIndex
+    ? "border-blue-500 bg-blue-50 dark:border-blue-400 dark:bg-blue-950/30"
+    : "border-transparent bg-gray-50 dark:bg-slate-800"
+}`}
+          >
+            <p className="text-sm font-semibold text-gray-950 dark:text-white">
+              Merged Table{" "}
+              {analysisIndex + 1}
+              {" - "}
+              Row{" "}
+              {row.serialNumber ??
+                row.rowIndex}
+            </p>
+
+            <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+              Reliability:{" "}
+              {formatConfidence(
+                row.score,
+              )}
+            </p>
+
+            {row.provenance && (
+  <div className="mt-2 text-xs text-gray-600 dark:text-slate-300">
+    <p>
+      Source page:{" "}
+      {row.provenance.pageNumber}
+    </p>
+
+    <p>
+      Original row index:{" "}
+      {row.provenance.originalRowIndex}
+    </p>
+
+    <p>
+      Source region:{" "}
+      {row.provenance.blockId}
+    </p>
+  </div>
+)}
+
+            {row.reasons.length > 0 && (
+              <div className="mt-2 space-y-1">
+                {row.reasons.map(
+                  (
+                    reason,
+                    reasonIndex,
+                  ) => (
+                    <div
+  key={`${reason.code}-${reasonIndex}`}
+  className="space-y-1"
+>
+  <p className="text-xs text-gray-600 dark:text-slate-300">
+    • {reason.message}
+  </p>
+
+  {reason.columnIndex !== undefined &&
+  reason.cellText !== undefined && (
+    <div className="rounded-lg bg-gray-100 px-3 py-2 text-xs text-gray-700 dark:bg-slate-800 dark:text-slate-200">
+      <p className="font-semibold">
+        Suspicious cell - Column{" "}
+        {reason.columnIndex + 1}
+      </p>
+
+      <p className="mt-1">
+        {reason.cellText.trim()
+          ? `"${reason.cellText}"`
+          : "(empty cell)"}
+      </p>
+      {reason.sourceFragmentCount !==
+  undefined && (
+  <p className="mt-2 text-gray-500 dark:text-slate-400">
+    Extracted source fragments:{" "}
+    {reason.sourceFragmentCount}
+  </p>
+)}
+
+{reason.sourceFragmentCount !==
+  undefined &&
+  reason.sourceFragmentCount <= 1 && (
+    <p className="mt-1 text-gray-500 dark:text-slate-400">
+      Source evidence is limited. No additional extracted
+      source fragment is available for this cell. Manual
+      verification is recommended.
+    </p>
+  )}
+
+    </div>
+  )}
+
+ {row.provenance &&
+  reason.cellBounds &&
+  reason.columnIndex !== undefined &&
+  reason.cellText !== undefined && (
+    <button
+      type="button"
+      onClick={() =>
+        jumpToSource({
+          pageNumber:
+            row.provenance!.pageNumber,
+          bounds: reason.cellBounds!,
+          cellText: reason.cellText!,
+          tableNumber:
+            analysisIndex + 1,
+          rowNumber:
+            row.serialNumber ??
+            row.rowIndex,
+            logicalRowIndex:
+  row.rowIndex,
+          columnNumber:
+            reason.columnIndex! + 1,
+            reasons: [reason.message],
+        })
+      }
+      className="mt-2 text-xs font-semibold text-blue-600 hover:underline dark:text-blue-400"
+    >
+      Jump to source
+    </button>
+  )} 
+
+</div>
+                  ),
+                )}
+              </div>
+            )}
+          </div>
+        ),
+      )}
+    </div>
+  </div>
+)}
+{file && selectedSource && (
+  <div
+    ref={sourcePreviewRef}
+    className="mt-6 scroll-mt-6 rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
+  >
+    <h3 className="text-sm font-bold text-gray-950 dark:text-white">
+      Focused source preview
+    </h3>
+
+    <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+      Merged Table {selectedSource.tableNumber}
+      {" - "}
+      Row {selectedSource.rowNumber}
+      {" - "}
+      Column {selectedSource.columnNumber}
+      {" - "}
+      Page {selectedSource.pageNumber}
+    </p>
+    {selectedSource.reasons.length > 0 && (
+  <div className="mt-3 rounded-xl bg-gray-50 p-3 dark:bg-slate-800">
+    <p className="text-xs font-semibold text-gray-950 dark:text-white">
+      Why this needs review
+    </p>
+
+    <div className="mt-2 space-y-1">
+      {selectedSource.reasons.map(
+        (reason, reasonIndex) => (
+          <p
+            key={reasonIndex}
+            className="text-xs text-gray-600 dark:text-slate-300"
+          >
+            • {reason}
+          </p>
+        ),
+      )}
+    </div>
+  </div>
+)}
+    {selectedSourceIndex !== null && (
+  <div className="mt-3 flex items-center gap-3">
+    <button
+      type="button"
+      onClick={() =>
+        navigateSourceIssue(-1)
+      }
+      disabled={
+        selectedSourceIndex === 0
+      }
+      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700"
+    >
+      Previous issue
+    </button>
+
+    <span className="text-xs text-gray-500 dark:text-slate-400">
+      {selectedSourceIndex + 1} of{" "}
+      {sourceIssues.length}
+    </span>
+
+    <button
+      type="button"
+      onClick={() =>
+        navigateSourceIssue(1)
+      }
+      disabled={
+        selectedSourceIndex ===
+        sourceIssues.length - 1
+      }
+      className="rounded-lg border border-gray-200 px-3 py-1.5 text-xs font-semibold disabled:cursor-not-allowed disabled:opacity-40 dark:border-slate-700"
+    >
+      Next issue
+    </button>
+  </div>
+)}
+
+    <div className="mt-4">
+      <SuspiciousCellPreview
+        file={file}
+        pageNumber={selectedSource.pageNumber}
+        pageWidth={
+          result.document.pages[
+            selectedSource.pageNumber - 1
+          ]?.width ?? 0
+        }
+        pageHeight={
+          result.document.pages[
+            selectedSource.pageNumber - 1
+          ]?.height ?? 0
+        }
+        bounds={selectedSource.bounds}
+        cellText={selectedSource.cellText}
+      />
+    </div>
+  </div>
+)}
+<div className="mt-6 rounded-2xl border border-gray-200 p-4 dark:border-slate-700">
+  <h3 className="text-sm font-bold text-gray-950 dark:text-white">
+    Final merged tables
+  </h3>
+
+  <div className="mt-3 grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+    {result.mergedTableReliability.map(
+      (reliability, tableIndex) => (
+        <div
+          key={tableIndex}
+          className="rounded-xl bg-gray-50 p-3 dark:bg-slate-800"
+        >
+          <p className="text-sm font-semibold text-gray-950 dark:text-white">
+            Merged Table {tableIndex + 1}
+          </p>
+
+          <p className="mt-1 text-xs text-gray-600 dark:text-slate-300">
+            Rows assessed:{" "}
+            {reliability.rows.length}
+          </p>
+          <p className="text-xs text-gray-600 dark:text-slate-300">
+  Analysis mode:{" "}
+  {reliability.analysisMode ===
+  "serial"
+    ? "Serial"
+    : "Structural"}
+</p>
+
+          <p className="text-xs text-gray-600 dark:text-slate-300">
+  Detected serial column:{" "}
+  {reliability.serialColumnDiagnostics
+    .detectedColumnIndex !== null
+    ? `Column ${
+        reliability.serialColumnDiagnostics
+          .detectedColumnIndex + 1
+      }`
+    : "Not detected"}
+</p>
+<p className="text-xs text-gray-600 dark:text-slate-300">
+  Sequence confidence:{" "}
+  {formatConfidence(
+    reliability.serialColumnDiagnostics
+      .sequenceConfidence,
+  )}
+</p>
+{reliability.serialColumnDiagnostics
+  .candidates.length > 0 && (
+  <div className="mt-2 space-y-1">
+    {reliability.serialColumnDiagnostics
+      .candidates.map(
+        (candidate) => (
+          <p
+            key={candidate.columnIndex}
+            className="text-xs text-gray-500 dark:text-slate-400"
+          >
+            Column{" "}
+            {candidate.columnIndex + 1}
+            {" - "}
+            Numeric values:{" "}
+            {candidate.numericValueCount}
+            {" - "}
+            Sequential pairs:{" "}
+            {candidate.sequentialPairCount}
+            {" - "}
+            Score:{" "}
+            {formatConfidence(
+              candidate.sequenceConfidence,
+            )}
+            {" - "}
+{reliability.serialColumnDiagnostics
+  .detectedColumnIndex ===
+candidate.columnIndex
+  ? "Selected"
+  : "Rejected"}
+          </p>
+        ),
+      )}
+  </div>
+)}
+
+          <p className="text-xs text-gray-600 dark:text-slate-300">
+            Average reliability:{" "}
+            {formatConfidence(
+              reliability.confidence,
+            )}
+          </p>
+
+          <p className="text-xs text-gray-600 dark:text-slate-300">
+            Needs review:{" "}
+            {reliability.reviewRowCount}
+          </p>
+        </div>
+      ),
+    )}
+  </div>
+</div>
+</section>
           <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center gap-3">
               <Clock3
@@ -505,6 +1303,251 @@ export default function EngineInspectorPage() {
                     .totalMs,
                 )}
               />
+            </div>
+          </section>
+
+                    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-xl font-extrabold text-gray-950 dark:text-white">
+              Visual Block Diagnostics
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
+              Shows how the PDF reader grouped page lines before table detection.
+            </p>
+
+            <div className="mt-5 space-y-5">
+              {result.document.pages.map(
+                (page) => (
+                  <div
+                    key={page.pageNumber}
+                    className="rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
+                  >
+                    <p className="text-sm font-bold text-gray-950 dark:text-white">
+                      Page {page.pageNumber}
+                    </p>
+
+                    <div className="mt-2 text-xs text-gray-600 dark:text-slate-400">
+  Text extraction:{" "}
+  <span className="font-semibold text-gray-950 dark:text-white">
+    {formatAnalysisOutcome(
+      page.textExtraction.status,
+    )}
+  </span>
+  {" • "}
+  Quality:{" "}
+  <span className="font-semibold text-gray-950 dark:text-white">
+    {Math.round(
+      page.textExtraction.qualityScore *
+        100,
+    )}
+    %
+  </span>
+  {" • "}
+  {page.textExtraction.wordCount} words
+  {" • "}
+  {page.textExtraction.lineCount} lines
+  {" • "}
+  {page.textExtraction.characterCount} characters
+</div>
+
+                    <div className="mt-3 space-y-3">
+                      {page.blocks.map(
+                        (block, blockIndex) => {
+                          const lineCount =
+                            block.type ===
+                              "paragraph" ||
+                            block.type ===
+                              "heading"
+                              ? block.lines.length
+                              : 0;
+
+                          const blockText =
+                            block.type ===
+                              "paragraph" ||
+                            block.type ===
+                              "heading"
+                              ? block.text
+                              : block.type ===
+                                  "unknown"
+                                ? block.words
+                                    .map(
+                                      (word) =>
+                                        word.text,
+                                    )
+                                    .join(" ")
+                                : "";
+
+                          return (
+                            <div
+                              key={block.id}
+                              className="rounded-xl bg-gray-50 p-3 dark:bg-slate-800"
+                            >
+                              <p className="text-sm font-semibold text-gray-950 dark:text-white">
+                                Block{" "}
+                                {blockIndex + 1}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-600 dark:text-slate-300">
+                                Type:{" "}
+                                {block.type}
+                              </p>
+
+                              <p className="text-xs text-gray-600 dark:text-slate-300">
+                                Lines:{" "}
+                                {lineCount}
+                              </p>
+
+                              <p className="text-xs text-gray-600 dark:text-slate-300">
+                                Bounds: x{" "}
+                                {block.bounds.x.toFixed(
+                                  1,
+                                )}
+                                , y{" "}
+                                {block.bounds.y.toFixed(
+                                  1,
+                                )}
+                                , width{" "}
+                                {block.bounds.width.toFixed(
+                                  1,
+                                )}
+                                , height{" "}
+                                {block.bounds.height.toFixed(
+                                  1,
+                                )}
+                              </p>
+
+                              <p className="mt-2 break-words text-xs text-gray-500 dark:text-slate-400">
+                                {blockText ||
+                                  "(No text preview)"}
+                              </p>
+                            </div>
+                          );
+                        },
+                      )}
+                    </div>
+                  </div>
+                ),
+              )}
+            </div>
+          </section>
+
+                    <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <h2 className="text-xl font-extrabold text-gray-950 dark:text-white">
+              Table Region Diagnostics
+            </h2>
+
+            <p className="mt-2 text-sm text-gray-600 dark:text-slate-400">
+              Shows the table-detection score for every analyzed visual region.
+            </p>
+
+            <div className="mt-5 space-y-3">
+              {result.candidateRegionDiagnostics.length >
+              0 ? (
+                result.candidateRegionDiagnostics.map(
+                  (region, index) => (
+                    <div
+                      key={`${region.pageNumber}-${region.blockId}`}
+                      className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
+                    >
+                      <p className="text-sm font-semibold text-gray-950 dark:text-white">
+                        Table Region{" "}
+                        {index + 1}
+                      </p>
+
+                      <p className="mt-1 text-xs text-gray-600 dark:text-slate-300">
+                        Page:{" "}
+                        {region.pageNumber}
+                        {" - "}
+                        Type:{" "}
+                        {region.blockType}
+                        {" - "}
+                        Lines:{" "}
+                        {region.lineCount}
+                      </p>
+
+                      <p className="mt-2 text-xs font-semibold text-gray-700 dark:text-slate-200">
+                        Total score:{" "}
+                        {region.analysis.totalScore.toFixed(
+                          1,
+                        )}
+                        {" - "}
+                        {region.analysis.isTable
+  ? "Confirmed table"
+  : region.admittedAsContinuation
+    ? "Admitted as previous-page continuation"
+    : region.analysis.totalScore >= 42
+      ? "Possible table"
+      : "Below candidate threshold"}
+                      </p>
+
+                      <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
+  Outcome:{" "}
+  {region.outcome ===
+  "below-threshold"
+    ? "Below candidate threshold"
+    : region.outcome ===
+        "pending"
+      ? "Pending analysis"
+      : region.outcome ===
+          "rejected-insufficient-columns"
+        ? "Rejected - insufficient columns"
+        : region.outcome ===
+            "rejected-no-rows"
+          ? "Rejected - no logical rows"
+          : region.outcome ===
+              "rejected-table-build"
+            ? "Rejected - table build failed"
+            : "Confirmed"}
+</p>
+
+<p className="text-xs text-gray-600 dark:text-slate-300">
+  Accepted columns:{" "}
+  {region.acceptedColumnCount ??
+    "Not analyzed"}
+</p>
+
+                      <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
+                        Alignment:{" "}
+                        {region.analysis.breakdown.alignment.score.toFixed(
+                          1,
+                        )}
+                      </p>
+
+                      <p className="text-xs text-gray-600 dark:text-slate-300">
+                        Spacing:{" "}
+                        {region.analysis.breakdown.spacing.score.toFixed(
+                          1,
+                        )}
+                      </p>
+
+                      <p className="text-xs text-gray-600 dark:text-slate-300">
+                        Density:{" "}
+                        {region.analysis.breakdown.density.score.toFixed(
+                          1,
+                        )}
+                      </p>
+
+                      <p className="text-xs text-gray-600 dark:text-slate-300">
+                        Header:{" "}
+                        {region.analysis.breakdown.header.score.toFixed(
+                          1,
+                        )}
+                      </p>
+
+                      <p className="text-xs text-gray-600 dark:text-slate-300">
+                        Numeric:{" "}
+                        {region.analysis.breakdown.numericColumn.score.toFixed(
+                          1,
+                        )}
+                      </p>
+                    </div>
+                  ),
+                )
+              ) : (
+                <p className="text-sm text-gray-500 dark:text-slate-400">
+                  No candidate table regions were detected.
+                </p>
+              )}
             </div>
           </section>
 
@@ -605,8 +1648,12 @@ function TableAnalysisPanel({
   analysis: PdfV4TableAnalysis;
 }) {
   const table = analysis.table;
+
   const repairActions =
     analysis.cellRepair?.actions ?? [];
+
+  const rowReliability =
+  analysis.rowReliability;  
 
   return (
     <section className="space-y-6">
@@ -655,6 +1702,116 @@ function TableAnalysisPanel({
           value={repairActions.length}
         />
       </div>
+      {rowReliability && (
+  <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <h3 className="text-lg font-extrabold text-gray-950 dark:text-white">
+      Row Reliability V1
+    </h3>
+
+    <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">
+      Average reliability:{" "}
+      {formatConfidence(
+        rowReliability.confidence,
+      )}
+    </p>
+
+    <div className="mt-4 flex flex-wrap gap-3">
+      <span className="rounded-full bg-emerald-100 px-3 py-1 text-sm font-bold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200">
+        Reliable:{" "}
+        {
+          rowReliability.reliableRowCount
+        }
+      </span>
+
+      <span className="rounded-full bg-amber-100 px-3 py-1 text-sm font-bold text-amber-800 dark:bg-amber-900/40 dark:text-amber-200">
+        Needs review:{" "}
+        {
+          rowReliability.reviewRowCount
+        }
+      </span>
+    </div>
+
+    <div className="mt-5 space-y-3">
+      {rowReliability.rows.map(
+        (row) => (
+          <div
+            key={row.rowIndex}
+            className="rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
+          >
+            <div className="flex items-center justify-between gap-4">
+              <p className="font-bold text-gray-950 dark:text-white">
+                Row{" "}
+                {row.serialNumber ??
+                  row.rowIndex + 1}
+              </p>
+
+              <div className="flex items-center gap-3">
+                <span className="font-bold text-gray-950 dark:text-white">
+                  {formatConfidence(
+                    row.score,
+                  )}
+                </span>
+
+                <span
+                  className={`rounded-full px-3 py-1 text-xs font-bold ${
+                    row.status ===
+                    "reliable"
+                      ? "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-200"
+                      : "bg-amber-100 text-amber-800 dark:bg-amber-900/40 dark:text-amber-200"
+                  }`}
+                >
+                  {row.status ===
+                  "reliable"
+                    ? "Reliable"
+                    : "Needs review"}
+                </span>
+              </div>
+            </div>
+
+            {row.reasons.length >
+              0 && (
+              <div className="mt-3 space-y-1">
+               {row.reasons.map(
+  (
+    reason,
+    index,
+  ) => (
+    <div
+      key={`${reason.code}-${index}`}
+      className="space-y-1"
+    >
+      <p className="text-sm text-gray-600 dark:text-slate-300">
+        • {reason.message}
+      </p>
+
+      {reason.sourceFragmentCount !==
+        undefined && (
+        <p className="text-xs text-gray-500 dark:text-slate-400">
+          Extracted source fragments:{" "}
+          {reason.sourceFragmentCount}
+        </p>
+      )}
+
+      {reason.sourceFragmentCount !==
+        undefined &&
+        reason.sourceFragmentCount <= 1 && (
+          <p className="text-xs text-gray-500 dark:text-slate-400">
+            Source evidence is limited. No additional
+            extracted source fragment is available for this
+            cell. Manual verification is recommended.
+          </p>
+        )}
+    </div>
+  ),
+)}
+              </div>
+            )}
+          </div>
+        ),
+      )}
+    </div>
+  </section>
+)}
 
       <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
         <div className="flex items-center gap-2">
@@ -830,7 +1987,51 @@ function TableAnalysisPanel({
                   Row {action.toRowIndex + 1},
                   Column {action.toColumnIndex + 1}
                 </p>
+{(
+  action.fromProvenance ||
+  action.toProvenance
+) && (
+  <div className="mt-3 rounded-xl border border-blue-200 bg-white/60 p-3 text-xs text-blue-800 dark:border-blue-900 dark:bg-slate-900/40 dark:text-blue-200">
+    {action.fromProvenance && (
+      <p>
+        From source: Page{" "}
+        {action.fromProvenance.pageNumber}
+        {" - "}
+        Original row{" "}
+        {
+          action.fromProvenance
+            .originalRowIndex
+        }
+        {" - "}
+        Column{" "}
+        {action.fromColumnIndex + 1}
+      </p>
+    )}
 
+    {action.toProvenance && (
+      <p className="mt-1">
+        To source: Page{" "}
+        {action.toProvenance.pageNumber}
+        {" - "}
+        Original row{" "}
+        {
+          action.toProvenance
+            .originalRowIndex
+        }
+        {" - "}
+        Column{" "}
+        {action.toColumnIndex + 1}
+      </p>
+    )}
+
+    {action.fromProvenance && (
+      <p className="mt-1 text-blue-600 dark:text-blue-300">
+        Source region:{" "}
+        {action.fromProvenance.blockId}
+      </p>
+    )}
+  </div>
+)}
                 <p className="mt-2 text-sm leading-6 text-blue-700 dark:text-blue-300">
                   {action.reason}
                 </p>
@@ -892,11 +2093,31 @@ function TableAnalysisPanel({
                 </span>
               </div>
 
-              <p className="mt-2 text-sm font-semibold">
-                {candidate.accepted
-                  ? "Accepted for repair"
-                  : "Rejected for repair"}
-              </p>
+              <div className="mt-2 space-y-1">
+  <p className="text-sm font-semibold">
+    {candidate.outcome === "accepted"
+      ? "Accepted for repair"
+      : candidate.outcome ===
+          "rejected-safety"
+        ? "Rejected by safety guard"
+        : "Rejected - score below threshold"}
+  </p>
+
+  {candidate.outcome ===
+    "rejected-safety" && (
+    <p className="text-xs text-gray-600 dark:text-slate-400">
+      Score threshold passed, but the
+      repair was blocked by a safety
+      rule.
+    </p>
+  )}
+
+  {candidate.decisionReason && (
+    <p className="text-xs text-gray-600 dark:text-slate-400">
+      {candidate.decisionReason}
+    </p>
+  )}
+</div>
             </div>
           ),
         )}
