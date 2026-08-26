@@ -13,6 +13,14 @@ import {
 } from "@/lib/pdf-engine-v4/pipeline/analyzePdfV4";
 
 import type {
+  PdfV4ControlledOcrResult,
+} from "@/lib/pdf-engine-v4/ocr/controlledOcrFallback";
+
+import {
+  adaptPdfV4OcrWordToPdfWord,
+} from "@/lib/pdf-engine-v4/ocr/ocrWordAdapter";
+
+import type {
   PdfBoundingBox,
 } from "@/lib/pdf-engine-v4/model/types";
 
@@ -139,6 +147,11 @@ export default function EngineInspectorPage() {
 
   const [result, setResult] =
     useState<PdfEngineV4Result | null>(null);
+
+  const [ocrResult, setOcrResult] =
+    useState<PdfV4ControlledOcrResult | null>(
+    null,
+  );
 
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] =
     useState(0);
@@ -413,6 +426,7 @@ seenCells.set(
 
   function resetInspector() {
     setResult(null);
+    setOcrResult(null);
     setSelectedAnalysisIndex(0);
     setSelectedSource(null);
     setSelectedSourceIndex(null);
@@ -468,11 +482,12 @@ seenCells.set(
       setCurrentStep(2);
 
       const analysisResult =
-        await analyzePdfV4(
-  selectedFile,
-  {
-    includePossibleTableRegions: true,
-  },
+  await analyzePdfV4(
+    selectedFile,
+    {
+      includePossibleTableRegions: true,
+      enableControlledOcr: true,
+    },
   );
 
       setProgress(82);
@@ -483,6 +498,9 @@ seenCells.set(
       );
 
       setResult(analysisResult);
+      setOcrResult(
+  analysisResult.controlledOcrResult ?? null,
+);
       setProgress(100);
 
       toast.success(
@@ -700,6 +718,199 @@ seenCells.set(
   )}
 </div>
 </div>
+
+{ocrResult && (
+  <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+    <h2 className="text-xl font-extrabold text-gray-950 dark:text-white">
+      Controlled OCR Diagnostics
+    </h2>
+
+    <div className="mt-4 space-y-3 text-sm">
+      <div>
+        <span className="font-semibold text-gray-500 dark:text-slate-400">
+          OCR attempted:{" "}
+        </span>
+
+        <span className="font-bold text-gray-950 dark:text-white">
+          {ocrResult.attempted
+            ? "Yes"
+            : "No"}
+        </span>
+      </div>
+
+      <div>
+        <span className="font-semibold text-gray-500 dark:text-slate-400">
+          Decision:{" "}
+        </span>
+
+        <span className="font-bold text-gray-950 dark:text-white">
+          {formatAnalysisOutcome(
+            ocrResult.decisionStatus,
+          )}
+        </span>
+      </div>
+
+      <div>
+        <span className="font-semibold text-gray-500 dark:text-slate-400">
+          Processed pages:{" "}
+        </span>
+
+        <span className="font-bold text-gray-950 dark:text-white">
+          {ocrResult.processedPageNumbers.length >
+          0
+            ? ocrResult.processedPageNumbers.join(
+                ", ",
+              )
+            : "None"}
+        </span>
+      </div>
+
+            <div>
+        <span className="font-semibold text-gray-500 dark:text-slate-400">
+          Retry regions:{" "}
+        </span>
+
+        <span className="font-bold text-gray-950 dark:text-white">
+          {ocrResult.retryRegions.length}
+        </span>
+      </div>
+
+      {ocrResult.pages.map((page) => (
+        <div
+          key={page.pageNumber}
+          className="rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
+        >
+          <div className="font-bold text-gray-950 dark:text-white">
+            Page {page.pageNumber}
+          </div>
+
+          <div className="mt-1 text-gray-600 dark:text-slate-400">
+            OCR confidence:{" "}
+            {Math.round(page.confidence)}%
+          </div>
+
+          <div className="mt-1 text-gray-600 dark:text-slate-400">
+  OCR words:{" "}
+  {page.words.length}
+</div>
+
+{page.words.length > 0 && (
+  <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs dark:bg-slate-800">
+    <div className="font-bold text-gray-950 dark:text-white">
+      OCR word geometry sample
+    </div>
+
+    <div className="mt-2 space-y-1 text-gray-600 dark:text-slate-300">
+      {page.words
+        .slice(0, 5)
+        .map(
+          (word, wordIndex) => (
+            <div key={wordIndex}>
+              "{word.text}" —{" "}
+              {Math.round(
+                word.confidence,
+              )}
+              % — [
+              {word.bounds.x0},{" "}
+              {word.bounds.y0},{" "}
+              {word.bounds.x1},{" "}
+              {word.bounds.y1}]
+            </div>
+          ),
+        )}
+    </div>
+  </div>
+)}
+
+{page.words.length > 0 &&
+  result.document.pages[
+    page.pageNumber - 1
+  ] && (
+    <div className="mt-3 rounded-xl border border-gray-200 p-3 text-xs dark:border-slate-700">
+      {(() => {
+        const pdfPage =
+          result.document.pages[
+            page.pageNumber - 1
+          ];
+
+        const pdfWord =
+          adaptPdfV4OcrWordToPdfWord(
+            page.words[0],
+            page.pageNumber,
+            0,
+            page.renderedWidth,
+            page.renderedHeight,
+            pdfPage.width,
+            pdfPage.height,
+          );
+
+        return (
+          <div className="text-gray-600 dark:text-slate-300">
+            PDF-space first word:{" "}
+            <span className="font-bold text-gray-950 dark:text-white">
+              "{pdfWord.text}"
+            </span>
+            {" — "}
+            [
+            {pdfWord.bounds.x.toFixed(1)},{" "}
+            {pdfWord.bounds.y.toFixed(1)},{" "}
+            {pdfWord.bounds.width.toFixed(1)},{" "}
+            {pdfWord.bounds.height.toFixed(1)}
+            ]
+          </div>
+        );
+      })()}
+    </div>
+  )}
+
+          <div className="mt-3 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 text-gray-800 dark:bg-slate-800 dark:text-slate-200">
+            {page.text ||
+              "No OCR text recognized."}
+          </div>
+        </div>
+      ))}
+            {ocrResult.retryRegions.map(
+        (region, regionIndex) => (
+          <div
+            key={`${region.pageNumber}-${regionIndex}`}
+            className="rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
+          >
+            <div className="font-bold text-gray-950 dark:text-white">
+              Retry region — Page{" "}
+              {region.pageNumber}
+            </div>
+
+            <div className="mt-1 text-gray-600 dark:text-slate-400">
+              OCR confidence:{" "}
+              {Math.round(
+                region.confidence,
+              )}
+              %
+            </div>
+
+            <div className="mt-1 text-gray-600 dark:text-slate-400">
+              OCR words:{" "}
+              {region.words.length}
+            </div>
+
+            <div className="mt-1 text-gray-600 dark:text-slate-400">
+              Rectangle: [
+              {region.rectangle.left},{" "}
+              {region.rectangle.top},{" "}
+              {region.rectangle.width},{" "}
+              {region.rectangle.height}]
+            </div>
+
+            <div className="mt-3 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 text-gray-800 dark:bg-slate-800 dark:text-slate-200">
+              {region.text ||
+                "No retry OCR text recognized."}
+            </div>
+          </div>
+        ),
+      )}
+    </div>
+  </section>
+)}
 
           <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
             <div className="flex items-center gap-3">

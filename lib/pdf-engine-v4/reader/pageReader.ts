@@ -193,7 +193,7 @@ function joinLineWords(
     .trim();
 }
 
-function groupWordsIntoLines(
+export function groupWordsIntoLines(
   words: PdfWord[],
   pageNumber: number,
 ): PdfLine[] {
@@ -435,6 +435,9 @@ export async function readPdfDocumentV4(
               transform,
             ),
             rotation: 0,
+            extractionProvenance: {
+  source: "native-pdf",
+},
           });
         },
       );

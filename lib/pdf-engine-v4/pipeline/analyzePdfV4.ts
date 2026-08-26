@@ -35,6 +35,18 @@ import {
 import {
   selectRegionsForAnalysis,
 } from "../analysis/continuationRegionSelector";
+import {
+  createPdfV4OcrDecision as createPdfV4OcrDecisionFromModule,
+  type PdfV4OcrDecision as PdfV4OcrDecisionFromModule,
+} from "../ocr/ocrDecision";
+import {
+  runPdfV4ControlledOcr,
+  type PdfV4ControlledOcrResult,
+} from "../ocr/controlledOcrFallback";
+
+import {
+  applyPdfV4OcrPagesToDocument,
+} from "../ocr/ocrDocumentAdapter";
 
 export type PdfV4TableAnalysis = {
   pageNumber: number;
@@ -116,18 +128,11 @@ export type PdfV4TextExtractionProfile = {
   sufficientTextPageCount: number;
 };
 
-export type PdfV4OcrDecisionStatus =
-  | "not-required"
-  | "page-selective"
-  | "required"
-  | "review";
+export type PdfV4OcrDecision =
+  PdfV4OcrDecisionFromModule;
 
-export type PdfV4OcrDecision = {
-  status: PdfV4OcrDecisionStatus;
-  requiredPageNumbers: number[];
-  reviewPageNumbers: number[];
-  nativeTextPageNumbers: number[];
-};
+export type PdfV4OcrDecisionStatus =
+  PdfV4OcrDecision["status"];
 
 export function createPdfV4OcrDecision(
   document: Pick<
@@ -135,69 +140,9 @@ export function createPdfV4OcrDecision(
     "pages"
   >,
 ): PdfV4OcrDecision {
-  const requiredPageNumbers =
-    document.pages
-      .filter(
-        (page) =>
-          page.textExtraction.status ===
-          "none",
-      )
-      .map(
-        (page) =>
-          page.pageNumber,
-      );
-
-  const reviewPageNumbers =
-    document.pages
-      .filter(
-        (page) =>
-          page.textExtraction.status ===
-          "low",
-      )
-      .map(
-        (page) =>
-          page.pageNumber,
-      );
-
-  const nativeTextPageNumbers =
-    document.pages
-      .filter(
-        (page) =>
-          page.textExtraction.status ===
-          "sufficient",
-      )
-      .map(
-        (page) =>
-          page.pageNumber,
-      );
-
-  let status:
-    PdfV4OcrDecisionStatus;
-
-  if (
-    requiredPageNumbers.length ===
-    document.pages.length &&
-    document.pages.length > 0
-  ) {
-    status = "required";
-  } else if (
-    requiredPageNumbers.length > 0
-  ) {
-    status = "page-selective";
-  } else if (
-    reviewPageNumbers.length > 0
-  ) {
-    status = "review";
-  } else {
-    status = "not-required";
-  }
-
-  return {
-    status,
-    requiredPageNumbers,
-    reviewPageNumbers,
-    nativeTextPageNumbers,
-  };
+  return createPdfV4OcrDecisionFromModule(
+    document,
+  );
 }
 
 export function createPdfV4TextExtractionProfile(
@@ -273,8 +218,9 @@ export type PdfEngineV4Result = {
   processingTimes: PdfV4ProcessingTimes;
   analysisOutcome: PdfV4AnalysisOutcome;
   textExtractionProfile: PdfV4TextExtractionProfile;
-  ocrDecision: PdfV4OcrDecision;
-  confidence: number;
+ocrDecision: PdfV4OcrDecision;
+controlledOcrResult?: PdfV4ControlledOcrResult;
+confidence: number;
 };
 function getRowSerialNumber(
   row: LogicalTable["rows"][number],
@@ -682,6 +628,7 @@ function mergeContinuedTablesV4(
 
 export type AnalyzePdfV4Options = {
   includePossibleTableRegions?: boolean;
+  enableControlledOcr?: boolean;
 };
 
 function now() {
@@ -1027,17 +974,43 @@ export async function analyzePdfV4(
   const readingStart = now();
 
   const rawDocument =
-    await readPdfDocumentV4(file);
+  await readPdfDocumentV4(file);
+
+const nativeOcrDecision =
+  createPdfV4OcrDecision(
+    rawDocument,
+  );
 
   const readingMs =
-    now() - readingStart;
+  now() - readingStart;
+
+  const nativeTextExtractionProfile =
+  createPdfV4TextExtractionProfile(
+    rawDocument,
+  );
+
+  const controlledOcrResult =
+  options?.enableControlledOcr
+    ? await runPdfV4ControlledOcr(
+        file,
+        nativeOcrDecision,
+      )
+    : undefined;
+
+    const analysisSourceDocument =
+  controlledOcrResult?.pages.length
+    ? applyPdfV4OcrPagesToDocument(
+        rawDocument,
+        controlledOcrResult.pages,
+      )
+    : rawDocument;
 
   const blockStart = now();
 
   const document =
-    detectVisualBlocks(
-      rawDocument,
-    );
+  detectVisualBlocks(
+    analysisSourceDocument,
+  );
 
   const visualBlockDetectionMs =
     now() - blockStart;
@@ -1562,14 +1535,10 @@ analyzedTableRegionCount,
   );
 
 const textExtractionProfile =
-  createPdfV4TextExtractionProfile(
-    document,
-  );
+  nativeTextExtractionProfile;
 
 const ocrDecision =
-  createPdfV4OcrDecision(
-    document,
-  );  
+  nativeOcrDecision; 
 
 const analysisOutcome =
   classifyPdfV4AnalysisOutcome(
@@ -1604,6 +1573,7 @@ const confidence =
 analysisOutcome,
 textExtractionProfile,
 ocrDecision,
+controlledOcrResult,
 confidence,
   };
 }

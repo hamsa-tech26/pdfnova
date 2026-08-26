@@ -21,6 +21,13 @@ export type PdfFontInfo = {
   italic?: boolean;
 };
 
+export type PdfWordExtractionProvenance = {
+  source:
+    | "native-pdf"
+    | "ocr-tesseract";
+  confidence?: number;
+};
+
 export type PdfWord = {
   id: string;
   text: string;
@@ -28,6 +35,8 @@ export type PdfWord = {
   bounds: PdfBoundingBox;
   font: PdfFontInfo;
   rotation: number;
+  extractionProvenance?:
+  PdfWordExtractionProvenance;
 };
 
 export type PdfLine = {

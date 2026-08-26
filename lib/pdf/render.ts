@@ -9,6 +9,7 @@ type RenderPdfPagesOptions = {
   scale?: number;
   quality?: number;
   pageNumbers?: number[];
+  format?: "jpeg" | "png";
 };
 
 export async function renderPdfPages(
@@ -29,10 +30,11 @@ export async function renderPdfPages(
   ).toString();
 
   const {
-    scale = 1.5,
-    quality = 0.9,
-    pageNumbers,
-  } = options;
+  scale = 1.5,
+  quality = 0.9,
+  pageNumbers,
+  format = "jpeg",
+} = options;
 
   const fileBytes = await file.arrayBuffer();
 
@@ -79,7 +81,12 @@ export async function renderPdfPages(
         viewport,
       }).promise;
 
-      const dataUrl = canvas.toDataURL(
+      const dataUrl =
+  format === "png"
+    ? canvas.toDataURL(
+        "image/png",
+      )
+    : canvas.toDataURL(
         "image/jpeg",
         quality,
       );
