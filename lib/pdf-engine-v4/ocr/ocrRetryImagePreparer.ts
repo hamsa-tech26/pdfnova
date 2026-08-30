@@ -1,3 +1,7 @@
+import {
+  detectPdfV4OcrRetryVerticalContentBounds,
+} from "./ocrRetryContentBounds";
+
 export type PdfV4PreparedOcrRetryImage = {
   pageNumber: number;
 
@@ -119,6 +123,67 @@ if (
   );
 }
 
+const measurementCanvas =
+  document.createElement(
+    "canvas",
+  );
+
+measurementCanvas.width =
+  cropWidth;
+
+measurementCanvas.height =
+  cropHeight;
+
+const measurementContext =
+  measurementCanvas.getContext(
+    "2d",
+  );
+
+if (!measurementContext) {
+  throw new Error(
+    "Canvas is not supported in this browser.",
+  );
+}
+
+measurementContext.drawImage(
+  image,
+  cropLeft,
+  cropTop,
+  cropWidth,
+  cropHeight,
+  0,
+  0,
+  cropWidth,
+  cropHeight,
+);
+
+const measurementImageData =
+  measurementContext.getImageData(
+    0,
+    0,
+    cropWidth,
+    cropHeight,
+  );
+
+const contentBounds =
+  detectPdfV4OcrRetryVerticalContentBounds(
+    {
+      data:
+        measurementImageData.data,
+      width:
+        measurementImageData.width,
+      height:
+        measurementImageData.height,
+    },
+  );
+
+  const trimmedCropTop =
+  cropTop +
+  contentBounds.top;
+
+const trimmedCropHeight =
+  contentBounds.height;
+
 const canvas =
   document.createElement(
     "canvas",
@@ -131,7 +196,8 @@ canvas.width =
 
 canvas.height =
   Math.ceil(
-    cropHeight * retryScale,
+    trimmedCropHeight *
+      retryScale,
   );
 
 const context =
@@ -146,9 +212,9 @@ if (!context) {
 context.drawImage(
   image,
   cropLeft,
-  cropTop,
-  cropWidth,
-  cropHeight,
+  trimmedCropTop,
+cropWidth,
+trimmedCropHeight,
   0,
   0,
   canvas.width,
@@ -172,7 +238,7 @@ return {
     image.height,
   sourceRectangle: {
     left: cropLeft,
-    top: cropTop,
+    top: trimmedCropTop,
     width: cropWidth,
     height: cropHeight,
   },

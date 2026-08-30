@@ -893,13 +893,29 @@ seenCells.set(
               {region.words.length}
             </div>
 
-            <div className="mt-1 text-gray-600 dark:text-slate-400">
+                        <div className="mt-1 text-gray-600 dark:text-slate-400">
               Rectangle: [
               {region.rectangle.left},{" "}
               {region.rectangle.top},{" "}
               {region.rectangle.width},{" "}
               {region.rectangle.height}]
             </div>
+
+            {region.debugImageDataUrl && (
+              <div className="mt-3">
+                <div className="mb-2 font-semibold text-gray-700 dark:text-slate-300">
+                  Retry crop preview
+                </div>
+
+                <img
+                  src={
+                    region.debugImageDataUrl
+                  }
+                  alt={`OCR retry crop for page ${region.pageNumber}`}
+                  className="max-h-[500px] w-full rounded-xl border border-gray-200 object-contain dark:border-slate-700"
+                />
+              </div>
+            )}
 
             <div className="mt-3 whitespace-pre-wrap rounded-xl bg-gray-50 p-3 text-gray-800 dark:bg-slate-800 dark:text-slate-200">
               {region.text ||

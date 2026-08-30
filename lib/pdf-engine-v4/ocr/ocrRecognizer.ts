@@ -1,5 +1,6 @@
 import {
   createWorker,
+  PSM,
 } from "tesseract.js";
 
 import type {
@@ -212,7 +213,57 @@ export async function recognizePdfV4OcrRegions(
 export async function recognizePdfV4PreparedOcrPages(
   pages: PdfV4PreparedOcrPage[],
 ): Promise<PdfV4OcrPageResult[]> {
-  return recognizePdfV4OcrPages(
-    pages,
-  );
+  if (pages.length === 0) {
+    return [];
+  }
+
+  const worker =
+    await createWorker("eng");
+
+  await worker.setParameters({
+    tessedit_pageseg_mode:
+      PSM.SINGLE_BLOCK
+  });
+
+  try {
+    const results:
+      PdfV4OcrPageResult[] = [];
+
+    for (const page of pages) {
+      const recognition =
+        await worker.recognize(
+          page.imageDataUrl,
+          {},
+          {
+            text: true,
+            blocks: true,
+          },
+        );
+
+      const words =
+        extractPdfV4OcrWords(
+          recognition.data.blocks,
+        );
+
+      results.push({
+        pageNumber:
+          page.pageNumber,
+        text:
+          recognition.data.text.trim(),
+        confidence:
+          recognition.data.confidence,
+        renderedWidth:
+          page.width,
+        renderedHeight:
+          page.height,
+        words,
+        language: "eng",
+        source: "ocr-tesseract",
+      });
+    }
+
+    return results;
+  } finally {
+    await worker.terminate();
+  }
 }

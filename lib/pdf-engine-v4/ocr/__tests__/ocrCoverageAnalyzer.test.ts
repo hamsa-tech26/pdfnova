@@ -215,7 +215,7 @@ it(
       left: 0,
       top: 800,
       width: 1200,
-      height: 800,
+      height: 560,
       gapRatio: 0.5,
     });
   },

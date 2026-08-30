@@ -120,6 +120,7 @@ export function calculatePdfV4OcrVerticalEdgeGaps(
 export function selectPdfV4OcrRetryRegion(
   page: PdfV4OcrPageResult,
   minimumGapRatio = 0.2,
+  maximumRegionRatio = 0.35,
 ): PdfV4OcrRetryRegion | null {
   if (
     page.renderedWidth <= 0 ||
@@ -147,17 +148,27 @@ export function selectPdfV4OcrRetryRegion(
     gaps.bottomGapRatio >=
     gaps.topGapRatio
   ) {
-    return {
-      edge: "bottom",
-      left: 0,
-      top:
-        page.renderedHeight -
-        gaps.bottomGap,
-      width: page.renderedWidth,
-      height: gaps.bottomGap,
-      gapRatio:
-        gaps.bottomGapRatio,
-    };
+    const maximumRegionHeight =
+  page.renderedHeight *
+  maximumRegionRatio;
+
+const regionHeight =
+  Math.min(
+    gaps.bottomGap,
+    maximumRegionHeight,
+  );
+
+return {
+  edge: "bottom",
+  left: 0,
+  top:
+    page.renderedHeight -
+    gaps.bottomGap,
+  width: page.renderedWidth,
+  height: regionHeight,
+  gapRatio:
+    gaps.bottomGapRatio,
+};
   }
 
   return {
