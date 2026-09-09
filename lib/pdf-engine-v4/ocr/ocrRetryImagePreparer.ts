@@ -34,6 +34,31 @@ export type PdfV4PreparedOcrRetryImage = {
     "ocr-retry-crop";
 };
 
+export function isPdfV4OcrRetryRegionMeaningful(
+  sourceHeight: number,
+  originalPageHeight: number,
+  minimumAbsoluteHeight = 16,
+  minimumHeightRatio = 0.01,
+): boolean {
+  if (
+    sourceHeight <= 0 ||
+    originalPageHeight <= 0
+  ) {
+    return false;
+  }
+
+  const minimumHeight =
+    Math.max(
+      minimumAbsoluteHeight,
+      originalPageHeight *
+        minimumHeightRatio,
+    );
+
+  return (
+    sourceHeight >= minimumHeight
+  );
+}
+
 function loadPdfV4OcrRetryImage(
   imageDataUrl: string,
 ): Promise<HTMLImageElement> {

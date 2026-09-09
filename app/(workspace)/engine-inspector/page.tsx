@@ -794,6 +794,147 @@ seenCells.set(
   {page.words.length}
 </div>
 
+{(() => {
+  const reliability =
+    ocrResult.reliability.find(
+      (item) =>
+        item.pageNumber ===
+        page.pageNumber,
+    );
+
+  if (!reliability) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-700 dark:bg-slate-800">
+      <div className="font-bold text-gray-950 dark:text-white">
+        OCR Reliability
+      </div>
+
+      <div className="mt-2 grid gap-2 sm:grid-cols-2">
+        <div className="text-gray-600 dark:text-slate-400">
+          Level:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {formatAnalysisOutcome(
+              reliability.level,
+            )}
+          </span>
+        </div>
+
+        <div className="text-gray-600 dark:text-slate-400">
+          Score:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {reliability.score}%
+          </span>
+        </div>
+
+        <div className="text-gray-600 dark:text-slate-400">
+          Primary confidence:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {Math.round(
+              reliability.primaryConfidence,
+            )}
+            %
+          </span>
+        </div>
+
+        <div className="text-gray-600 dark:text-slate-400">
+          Primary words:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {reliability.primaryWordCount}
+          </span>
+        </div>
+
+        <div className="text-gray-600 dark:text-slate-400">
+          Coverage:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {Math.round(
+              reliability.coverageRatio *
+                100,
+            )}
+            %
+          </span>
+        </div>
+
+        <div className="text-gray-600 dark:text-slate-400">
+          Retry attempted:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {reliability.retryAttempted
+              ? "Yes"
+              : "No"}
+          </span>
+        </div>
+
+        {reliability.retryAttempted && (
+          <>
+            <div className="text-gray-600 dark:text-slate-400">
+              Retry approved:{" "}
+              <span className="font-bold text-gray-950 dark:text-white">
+                {reliability.retryApproved
+                  ? "Yes"
+                  : "No"}
+              </span>
+            </div>
+
+            <div className="text-gray-600 dark:text-slate-400">
+              Retry added words:{" "}
+              <span className="font-bold text-gray-950 dark:text-white">
+                {reliability.retryAddedWordCount ??
+                  0}
+              </span>
+            </div>
+
+            {reliability.retryConfidence !==
+              undefined && (
+              <div className="text-gray-600 dark:text-slate-400">
+                Retry confidence:{" "}
+                <span className="font-bold text-gray-950 dark:text-white">
+                  {Math.round(
+                    reliability.retryConfidence,
+                  )}
+                  %
+                </span>
+              </div>
+            )}
+
+            {reliability.retryWordCount !==
+              undefined && (
+              <div className="text-gray-600 dark:text-slate-400">
+                Retry words:{" "}
+                <span className="font-bold text-gray-950 dark:text-white">
+                  {
+                    reliability.retryWordCount
+                  }
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+
+      {reliability.reasons.length >
+        0 && (
+        <div className="mt-3">
+          <div className="font-semibold text-gray-700 dark:text-slate-300">
+            Reasons
+          </div>
+
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-gray-600 dark:text-slate-400">
+            {reliability.reasons.map(
+              (reason) => (
+                <li key={reason}>
+                  {reason}
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+})()}
+
 {page.words.length > 0 && (
   <div className="mt-3 rounded-xl bg-gray-50 p-3 text-xs dark:bg-slate-800">
     <div className="font-bold text-gray-950 dark:text-white">

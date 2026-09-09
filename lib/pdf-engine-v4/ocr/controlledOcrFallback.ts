@@ -8,7 +8,6 @@ import {
 
 import {
   recognizePdfV4OcrPages,
-  recognizePdfV4OcrRegions,
   recognizePdfV4PreparedOcrPages,
   type PdfV4OcrPageResult,
   type PdfV4OcrRegionResult,
@@ -19,6 +18,7 @@ import {
 } from "./ocrRetryPlanner";
 
 import {
+  isPdfV4OcrRetryRegionMeaningful,
   preparePdfV4OcrRetryImage,
 } from "./ocrRetryImagePreparer";
 
@@ -34,6 +34,15 @@ import {
   mergePdfV4OcrRetryWords,
 } from "./ocrRetryWordMerge";
 
+import {
+  calculatePdfV4OcrVerticalCoverage,
+} from "./ocrCoverageAnalyzer";
+
+import {
+  analyzePdfV4OcrReliability,
+  type PdfV4OcrPageReliability,
+} from "./ocrReliabilityAnalyzer";
+
 export type PdfV4ControlledOcrResult = {
   attempted: boolean;
   decisionStatus:
@@ -41,6 +50,8 @@ export type PdfV4ControlledOcrResult = {
   processedPageNumbers: number[];
   pages: PdfV4OcrPageResult[];
   retryRegions: PdfV4OcrRegionResult[];
+  reliability:
+    PdfV4OcrPageReliability[];
 };
 
 export async function runPdfV4ControlledOcr(
@@ -57,6 +68,7 @@ export async function runPdfV4ControlledOcr(
       processedPageNumbers: [],
       pages: [],
       retryRegions: [],
+      reliability: [],
     };
   }
 
@@ -70,6 +82,7 @@ export async function runPdfV4ControlledOcr(
       processedPageNumbers: [],
       pages: [],
       retryRegions: [],
+      reliability: [],
     };
   }
 
@@ -84,149 +97,253 @@ export async function runPdfV4ControlledOcr(
       preparedPages,
     );
 
-    const retryRequests =
-  pages.flatMap(
-    (page) => {
-      const preparedPage =
-        preparedPages.find(
-          (candidate) =>
-            candidate.pageNumber ===
-            page.pageNumber,
-        );
+  const retryRequests =
+    pages.flatMap(
+      (page) => {
+        const preparedPage =
+          preparedPages.find(
+            (candidate) =>
+              candidate.pageNumber ===
+              page.pageNumber,
+          );
 
-      if (!preparedPage) {
-        return [];
-      }
+        if (!preparedPage) {
+          return [];
+        }
 
-      const request =
-        createPdfV4OcrRetryRequest(
-          preparedPage,
-          page,
-        );
+        const request =
+          createPdfV4OcrRetryRequest(
+            preparedPage,
+            page,
+          );
 
-      return request
-        ? [request]
-        : [];
-    },
-  );
+        return request
+          ? [request]
+          : [];
+      },
+    );
 
   const preparedRetryImages =
-  await Promise.all(
-    retryRequests.map(
-      (request) =>
-        preparePdfV4OcrRetryImage(
-          request.page.pageNumber,
-          request.page.imageDataUrl,
-          request.rectangle,
-          2,
+    await Promise.all(
+      retryRequests.map(
+        (request) =>
+          preparePdfV4OcrRetryImage(
+            request.page.pageNumber,
+            request.page.imageDataUrl,
+            request.rectangle,
+            2,
+          ),
+      ),
+    );
+
+  const usablePreparedRetryImages =
+    preparedRetryImages.filter(
+      (retryImage) =>
+        isPdfV4OcrRetryRegionMeaningful(
+          retryImage.sourceRectangle
+            .height,
+          retryImage.originalPageHeight,
         ),
-    ),
-  );
+    );
 
   const retryCropPages =
-  preparedRetryImages.length > 0
-    ? await recognizePdfV4PreparedOcrPages(
-        preparedRetryImages,
-      )
-    : [];
+    usablePreparedRetryImages.length > 0
+      ? await recognizePdfV4PreparedOcrPages(
+          usablePreparedRetryImages,
+        )
+      : [];
 
-const retryRegions:
-  PdfV4OcrRegionResult[] =
-  retryCropPages.flatMap(
-    (retryPage, index) => {
-      const retryImage =
-        preparedRetryImages[index];
+  const retryRegions:
+    PdfV4OcrRegionResult[] =
+    retryCropPages.flatMap(
+      (retryPage, index) => {
+                const retryImage =
+          usablePreparedRetryImages[
+            index
+          ];
 
-      if (
-        !retryImage ||
-        retryImage.pageNumber !==
-          retryPage.pageNumber
-      ) {
-        return [];
-      }
+        if (
+          !retryImage ||
+          retryImage.pageNumber !==
+            retryPage.pageNumber
+        ) {
+          return [];
+        }
 
-      return [
-        {
-          pageNumber:
-            retryPage.pageNumber,
-          rectangle:
-            retryImage.sourceRectangle,
-          text:
-            retryPage.text,
-          confidence:
-            retryPage.confidence,
-          renderedWidth:
-            retryImage.originalPageWidth,
-          renderedHeight:
-            retryImage.originalPageHeight,
-          words:
-  remapPdfV4OcrRetryWords(
-    retryPage.words,
-    retryImage,
-  ),
+        return [
+          {
+            pageNumber:
+              retryPage.pageNumber,
+            rectangle:
+              retryImage.sourceRectangle,
+            text:
+              retryPage.text,
+            confidence:
+              retryPage.confidence,
+            renderedWidth:
+              retryImage.originalPageWidth,
+            renderedHeight:
+              retryImage.originalPageHeight,
+            words:
+              remapPdfV4OcrRetryWords(
+                retryPage.words,
+                retryImage,
+              ),
+            debugImageDataUrl:
+              retryImage.imageDataUrl,
+            language: "eng",
+            source: "ocr-tesseract",
+          },
+        ];
+      },
+    );
 
-debugImageDataUrl:
-  retryImage.imageDataUrl,
+  const pageMergeResults =
+    pages.map(
+      (page) => {
+        const pageRetryRegions =
+          retryRegions.filter(
+            (region) =>
+              region.pageNumber ===
+              page.pageNumber,
+          );
 
-language: "eng",
-source: "ocr-tesseract",
-        },
-      ];
-    },
-  );
+        const approvedRetryRegions =
+          pageRetryRegions.filter(
+            (region) =>
+              shouldApprovePdfV4OcrRetry(
+                {
+                  confidence:
+                    region.confidence,
+                  wordCount:
+                    region.words.length,
+                },
+              ),
+          );
+
+        const mergedWords =
+          approvedRetryRegions.reduce(
+            (
+              currentWords,
+              region,
+            ) =>
+              mergePdfV4OcrRetryWords(
+                currentWords,
+                region.words,
+              ),
+            page.words,
+          );
+
+        return {
+          page,
+          pageRetryRegions,
+          approvedRetryRegions,
+          mergedWords,
+        };
+      },
+    );
 
   const pagesWithApprovedRetries =
-  pages.map(
-    (page) => {
-      const approvedRetryRegions =
-        retryRegions.filter(
-          (region) =>
-            region.pageNumber ===
-              page.pageNumber &&
-            shouldApprovePdfV4OcrRetry(
-              {
-                confidence:
-                  region.confidence,
-                wordCount:
+    pageMergeResults.map(
+      ({
+        page,
+        approvedRetryRegions,
+        mergedWords,
+      }) => {
+        if (
+          approvedRetryRegions.length ===
+          0
+        ) {
+          return page;
+        }
+
+        return {
+          ...page,
+          words: mergedWords,
+        };
+      },
+    );
+
+  const reliability =
+    pageMergeResults.map(
+      ({
+        page,
+        pageRetryRegions,
+        approvedRetryRegions,
+        mergedWords,
+      }) => {
+        const coverage =
+          calculatePdfV4OcrVerticalCoverage(
+            page,
+          );
+
+        const retryConfidence =
+          pageRetryRegions.length > 0
+            ? Math.max(
+                ...pageRetryRegions.map(
+                  (region) =>
+                    region.confidence,
+                ),
+              )
+            : undefined;
+
+        const retryWordCount =
+          pageRetryRegions.length > 0
+            ? pageRetryRegions.reduce(
+                (
+                  total,
+                  region,
+                ) =>
+                  total +
                   region.words.length,
-              },
-            ),
+                0,
+              )
+            : undefined;
+
+        const retryAddedWordCount =
+          Math.max(
+            0,
+            mergedWords.length -
+              page.words.length,
+          );
+
+        return analyzePdfV4OcrReliability(
+          {
+            pageNumber:
+              page.pageNumber,
+
+            primaryConfidence:
+              page.confidence,
+            primaryWordCount:
+              page.words.length,
+
+            retryAttempted:
+              pageRetryRegions.length > 0,
+            retryApproved:
+              approvedRetryRegions.length >
+              0,
+            retryConfidence,
+            retryWordCount,
+            retryAddedWordCount,
+
+            coverageRatio:
+              coverage.coverageRatio,
+          },
         );
-
-      if (
-        approvedRetryRegions.length === 0
-      ) {
-        return page;
-      }
-
-      const mergedWords =
-        approvedRetryRegions.reduce(
-          (
-            currentWords,
-            region,
-          ) =>
-            mergePdfV4OcrRetryWords(
-              currentWords,
-              region.words,
-            ),
-          page.words,
-        );
-
-      return {
-        ...page,
-        words: mergedWords,
-      };
-    },
-  );
+      },
+    );
 
   return {
     attempted: true,
     decisionStatus: decision.status,
     processedPageNumbers:
       pages.map(
-        (page) => page.pageNumber,
+        (page) =>
+          page.pageNumber,
       ),
-    pages: pagesWithApprovedRetries,
-retryRegions,
+    pages:
+      pagesWithApprovedRetries,
+    retryRegions,
+    reliability,
   };
 }
