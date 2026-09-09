@@ -26,6 +26,14 @@ import {
   remapPdfV4OcrRetryWords,
 } from "./ocrRetryWordAdapter";
 
+import {
+  shouldApprovePdfV4OcrRetry,
+} from "./ocrRetryApproval";
+
+import {
+  mergePdfV4OcrRetryWords,
+} from "./ocrRetryWordMerge";
+
 export type PdfV4ControlledOcrResult = {
   attempted: boolean;
   decisionStatus:
@@ -167,6 +175,50 @@ source: "ocr-tesseract",
     },
   );
 
+  const pagesWithApprovedRetries =
+  pages.map(
+    (page) => {
+      const approvedRetryRegions =
+        retryRegions.filter(
+          (region) =>
+            region.pageNumber ===
+              page.pageNumber &&
+            shouldApprovePdfV4OcrRetry(
+              {
+                confidence:
+                  region.confidence,
+                wordCount:
+                  region.words.length,
+              },
+            ),
+        );
+
+      if (
+        approvedRetryRegions.length === 0
+      ) {
+        return page;
+      }
+
+      const mergedWords =
+        approvedRetryRegions.reduce(
+          (
+            currentWords,
+            region,
+          ) =>
+            mergePdfV4OcrRetryWords(
+              currentWords,
+              region.words,
+            ),
+          page.words,
+        );
+
+      return {
+        ...page,
+        words: mergedWords,
+      };
+    },
+  );
+
   return {
     attempted: true,
     decisionStatus: decision.status,
@@ -174,7 +226,7 @@ source: "ocr-tesseract",
       pages.map(
         (page) => page.pageNumber,
       ),
-    pages,
+    pages: pagesWithApprovedRetries,
 retryRegions,
   };
 }

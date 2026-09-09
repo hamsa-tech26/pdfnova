@@ -209,6 +209,33 @@ if (looksLikeStandaloneTitle) {
   return true;
 }     
 
+const currentGroupIsOcr =
+  currentGroup.every(
+    (line) =>
+      line.words.length > 0 &&
+      line.words.every(
+        (word) =>
+          word.extractionProvenance
+            ?.source ===
+          "ocr-tesseract",
+      ),
+  );
+
+const nextLineIsOcr =
+  nextLine.words.length > 0 &&
+  nextLine.words.every(
+    (word) =>
+      word.extractionProvenance
+        ?.source ===
+      "ocr-tesseract",
+  );
+
+const looksLikeOcrWideStructure =
+  currentGroupIsOcr &&
+  nextLineIsOcr &&
+  groupBounds.width >= 250 &&
+  nextLineOverlapRatio >= 0.75;
+
   const looksLikeSameWideStructure =
     currentGroup.length >= 3 &&
     groupBounds.width >= 250 &&
@@ -221,12 +248,15 @@ if (looksLikeStandaloneTitle) {
     );
 
   if (
-    looksLikeSameWideStructure &&
-    verticalGap <=
-      extendedTableThreshold
-  ) {
-    return false;
-  }
+  (
+    looksLikeSameWideStructure ||
+    looksLikeOcrWideStructure
+  ) &&
+  verticalGap <=
+    extendedTableThreshold
+) {
+  return false;
+}
 
   return true;
 }

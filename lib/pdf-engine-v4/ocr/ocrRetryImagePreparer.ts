@@ -2,6 +2,14 @@ import {
   detectPdfV4OcrRetryVerticalContentBounds,
 } from "./ocrRetryContentBounds";
 
+import {
+  preprocessPdfV4OcrRetryPixels,
+} from "./ocrRetryImagePreprocessor";
+
+import {
+  removePdfV4OcrRetryGridLines,
+} from "./ocrRetryGridLineRemover";
+
 export type PdfV4PreparedOcrRetryImage = {
   pageNumber: number;
 
@@ -221,6 +229,49 @@ trimmedCropHeight,
   canvas.height,
 );
 
+const retryCanvasImageData =
+  context.getImageData(
+    0,
+    0,
+    canvas.width,
+    canvas.height,
+  );
+
+const preprocessedPixels =
+  preprocessPdfV4OcrRetryPixels(
+    {
+      data:
+        retryCanvasImageData.data,
+      width:
+        retryCanvasImageData.width,
+      height:
+        retryCanvasImageData.height,
+    },
+    210,
+  );
+
+const gridLineRemovedPixels =
+  removePdfV4OcrRetryGridLines(
+    {
+      data:
+        preprocessedPixels,
+      width:
+        retryCanvasImageData.width,
+      height:
+        retryCanvasImageData.height,
+    },
+  );
+
+retryCanvasImageData.data.set(
+  gridLineRemovedPixels,
+);
+
+context.putImageData(
+  retryCanvasImageData,
+  0,
+  0,
+);
+
 const retryImageDataUrl =
   canvas.toDataURL(
     "image/png",
@@ -240,7 +291,7 @@ return {
     left: cropLeft,
     top: trimmedCropTop,
     width: cropWidth,
-    height: cropHeight,
+    height: trimmedCropHeight,
   },
   retryScale,
   source:
