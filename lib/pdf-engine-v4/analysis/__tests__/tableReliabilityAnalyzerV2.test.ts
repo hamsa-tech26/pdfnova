@@ -260,6 +260,76 @@ describe(
     );
 
     it(
+  "ignores a sparse optional column when evaluating row shape",
+  () => {
+    const rows = [
+      createRow(
+        0,
+        [
+          "Alpha",
+          "Ready",
+          "",
+        ],
+      ),
+      createRow(
+        1,
+        [
+          "Beta",
+          "Ready",
+          "",
+        ],
+      ),
+      createRow(
+        2,
+        [
+          "Gamma",
+          "Ready",
+          "",
+        ],
+      ),
+      createRow(
+        3,
+        [
+          "Delta",
+          "Ready",
+          "Optional note",
+        ],
+      ),
+    ];
+
+    const table =
+      createTable(rows);
+
+    const rowReliability =
+      createRowReliability(
+        rows,
+        {
+          analysisMode:
+            "structural",
+        },
+      );
+
+    const result =
+      analyzeTableReliabilityV2(
+        table,
+        rowReliability,
+      );
+
+    expect(
+      result.level,
+    ).toBe("high");
+
+    expect(
+      result.columnConsistencyScore,
+    ).toBe(1);
+
+    expect(
+      result.rowShapeConsistencyScore,
+    ).toBe(1);
+  },
+);
+
+    it(
       "classifies a structurally weak table as low reliability",
       () => {
         const rows = [

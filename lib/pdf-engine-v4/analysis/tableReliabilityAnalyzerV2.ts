@@ -125,7 +125,7 @@ function getAssessedRows(
     );
 }
 
-function getColumnConsistencyScore(
+function getCoreColumnProfiles(
   table: LogicalTable,
   rowReliability:
     RowReliabilityResult,
@@ -142,11 +142,22 @@ function getColumnConsistencyScore(
       serialColumnIndex,
     );
 
+  return profiles.filter(
+    (profile) =>
+      profile.populationRatio >=
+      0.6,
+  );
+}
+
+function getColumnConsistencyScore(
+  table: LogicalTable,
+  rowReliability:
+    RowReliabilityResult,
+) {
   const coreColumns =
-    profiles.filter(
-      (profile) =>
-        profile.populationRatio >=
-        0.6,
+    getCoreColumnProfiles(
+      table,
+      rowReliability,
     );
 
   if (
@@ -167,7 +178,22 @@ function getColumnConsistencyScore(
 
 function getPopulatedCellCount(
   row: LogicalRow,
+  columnIndexes?: number[],
 ) {
+  if (
+    columnIndexes &&
+    columnIndexes.length > 0
+  ) {
+    return columnIndexes.filter(
+      (columnIndex) =>
+        Boolean(
+          row.cells[
+            columnIndex
+          ]?.text.trim(),
+        ),
+    ).length;
+  }
+
   return row.cells.filter(
     (cell) =>
       Boolean(
@@ -191,9 +217,25 @@ function getRowShapeConsistencyScore(
     return 0;
   }
 
+  const coreColumnIndexes =
+    getCoreColumnProfiles(
+      table,
+      rowReliability,
+    ).map(
+      (profile) =>
+        profile.columnIndex,
+    );
+
   const populatedCellCounts =
     rows.map(
-      getPopulatedCellCount,
+      (row) =>
+        getPopulatedCellCount(
+          row,
+          coreColumnIndexes.length >
+            0
+            ? coreColumnIndexes
+            : undefined,
+        ),
     );
 
   const medianCellCount =
