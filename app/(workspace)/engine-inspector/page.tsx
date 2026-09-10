@@ -1621,6 +1621,112 @@ candidate.columnIndex
             Needs review:{" "}
             {reliability.reviewRowCount}
           </p>
+          {(() => {
+  const tableReliabilityV2 =
+    result.mergedTableReliabilityV2[
+      tableIndex
+    ];
+
+  if (!tableReliabilityV2) {
+    return null;
+  }
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <p className="text-sm font-bold text-gray-950 dark:text-white">
+        Table Reliability V2
+      </p>
+
+      <div className="mt-2 grid gap-1 text-xs text-gray-600 dark:text-slate-300">
+        <p>
+          Level:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {formatAnalysisOutcome(
+              tableReliabilityV2.level,
+            )}
+          </span>
+        </p>
+
+        <p>
+          Overall score:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {formatConfidence(
+              tableReliabilityV2.score,
+            )}
+          </span>
+        </p>
+
+        <p>
+          Row reliability:{" "}
+          {formatConfidence(
+            tableReliabilityV2
+              .rowReliabilityScore,
+          )}
+        </p>
+
+        <p>
+          Column consistency:{" "}
+          {formatConfidence(
+            tableReliabilityV2
+              .columnConsistencyScore,
+          )}
+        </p>
+
+        <p>
+          Construction confidence:{" "}
+          {formatConfidence(
+            tableReliabilityV2
+              .constructionScore,
+          )}
+        </p>
+
+        <p>
+          Row-shape consistency:{" "}
+          {formatConfidence(
+            tableReliabilityV2
+              .rowShapeConsistencyScore,
+          )}
+        </p>
+
+        <p>
+          Structural consistency:{" "}
+          {formatConfidence(
+            tableReliabilityV2
+              .structuralConsistencyScore,
+          )}
+        </p>
+      </div>
+
+      {tableReliabilityV2.reasons.length >
+        0 ? (
+        <div className="mt-3">
+          <p className="text-xs font-semibold text-gray-700 dark:text-slate-300">
+            V2 reasons
+          </p>
+
+          <ul className="mt-1 list-disc space-y-1 pl-5 text-xs text-gray-500 dark:text-slate-400">
+            {tableReliabilityV2.reasons.map(
+              (reason) => (
+                <li key={reason.code}>
+                  {reason.message}
+                  {" "}
+                  (
+                  {reason.severity}
+                  )
+                </li>
+              ),
+            )}
+          </ul>
+        </div>
+      ) : (
+        <p className="mt-3 text-xs text-gray-500 dark:text-slate-400">
+          No table-level reliability
+          issues detected.
+        </p>
+      )}
+    </div>
+  );
+})()}
         </div>
       ),
     )}

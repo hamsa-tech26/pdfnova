@@ -2,6 +2,10 @@ import type {
   PdfDocumentModel,
   TableRegionAnalysis,
 } from "../model/types";
+import {
+  analyzeTableReliabilityV2,
+  type TableReliabilityV2Result,
+} from "../analysis/tableReliabilityAnalyzerV2";
 import type { LogicalTable } from "../model/logicalTable";
 import {
   readPdfDocumentV4,
@@ -214,6 +218,8 @@ export type PdfEngineV4Result = {
 
   mergedTableReliability:
   RowReliabilityResult[];
+  mergedTableReliabilityV2:
+  TableReliabilityV2Result[];
   statistics: PdfV4ProcessingStatistics;
   processingTimes: PdfV4ProcessingTimes;
   analysisOutcome: PdfV4AnalysisOutcome;
@@ -1513,6 +1519,30 @@ const finalTable =
       ),
   );
 
+    const mergedTableReliabilityV2 =
+    mergedTables.map(
+      (table, index) => {
+        const rowReliability =
+          mergedTableReliability[
+            index
+          ];
+
+        if (!rowReliability) {
+          return analyzeTableReliabilityV2(
+            table,
+            analyzeRowReliabilityV1(
+              table,
+            ),
+          );
+        }
+
+        return analyzeTableReliabilityV2(
+          table,
+          rowReliability,
+        );
+      },
+    );
+
   const tableAnalysisMs =
     now() - tableStart;
 
@@ -1563,6 +1593,7 @@ const confidence =
     tableAnalyses,
     candidateRegionDiagnostics,
     mergedTableReliability,
+    mergedTableReliabilityV2,
     statistics,
     processingTimes: {
     readingMs,
