@@ -1621,6 +1621,85 @@ candidate.columnIndex
             Needs review:{" "}
             {reliability.reviewRowCount}
           </p>
+{(() => {
+  const extractionProvenance =
+    result.tables[
+      tableIndex
+    ]?.extractionProvenance;
+
+  if (!extractionProvenance) {
+    return null;
+  }
+
+  const sourceLabel =
+    extractionProvenance.source ===
+    "native-pdf"
+      ? "Native PDF"
+      : extractionProvenance.source ===
+          "ocr-tesseract"
+        ? "OCR (Tesseract)"
+        : extractionProvenance.source ===
+            "mixed"
+          ? "Mixed"
+          : "Unknown";
+
+  return (
+    <div className="mt-4 rounded-xl border border-gray-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-900">
+      <p className="text-sm font-bold text-gray-950 dark:text-white">
+        Extraction Provenance
+      </p>
+
+      <div className="mt-2 grid gap-1 text-xs text-gray-600 dark:text-slate-300">
+        <p>
+          Source:{" "}
+          <span className="font-bold text-gray-950 dark:text-white">
+            {sourceLabel}
+          </span>
+        </p>
+
+        <p>
+          Words:{" "}
+          {extractionProvenance.wordCount}
+        </p>
+
+        <p>
+          Native PDF words:{" "}
+          {
+            extractionProvenance
+              .nativeWordCount
+          }
+        </p>
+
+        <p>
+          OCR words:{" "}
+          {
+            extractionProvenance
+              .ocrWordCount
+          }
+        </p>
+
+        <p>
+          Unknown source words:{" "}
+          {
+            extractionProvenance
+              .unknownWordCount
+          }
+        </p>
+
+        <p>
+          Pages:{" "}
+          {extractionProvenance
+            .pageNumbers.length > 0
+            ? extractionProvenance
+                .pageNumbers
+                .join(", ")
+            : "None"}
+        </p>
+      </div>
+    </div>
+  );
+})()}
+
           {(() => {
   const tableReliabilityV2 =
     result.mergedTableReliabilityV2[

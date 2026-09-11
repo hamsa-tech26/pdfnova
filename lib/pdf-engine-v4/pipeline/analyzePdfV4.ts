@@ -3,6 +3,9 @@ import type {
   TableRegionAnalysis,
 } from "../model/types";
 import {
+  attachTableExtractionProvenance,
+} from "../analysis/extractionProvenanceAnalyzer";
+import {
   analyzeTableReliabilityV2,
   type TableReliabilityV2ContinuationContext,
   type TableReliabilityV2Result,
@@ -1590,7 +1593,12 @@ const mergedTableResult =
   );
 
 const mergedTables =
-  mergedTableResult.tables;
+  mergedTableResult.tables.map(
+    (table) =>
+      attachTableExtractionProvenance(
+        table,
+      ),
+  );
 
 const mergedTableContinuationContexts =
   mergedTableResult

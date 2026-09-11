@@ -3,6 +3,22 @@ import type {
   PdfWord,
 } from "./types";
 
+export type LogicalExtractionSource =
+  | "native-pdf"
+  | "ocr-tesseract"
+  | "mixed"
+  | "unknown";
+
+export type LogicalExtractionProvenance = {
+  source: LogicalExtractionSource;
+  wordCount: number;
+  nativeWordCount: number;
+  ocrWordCount: number;
+  unknownWordCount: number;
+  pageNumbers: number[];
+  confidence?: number;
+};
+
 export type LogicalCell = {
   id: string;
   rowIndex: number;
@@ -11,6 +27,8 @@ export type LogicalCell = {
   words: PdfWord[];
   bounds: PdfBoundingBox;
   confidence: number;
+  extractionProvenance?:
+    LogicalExtractionProvenance;
 };
 
 export type LogicalRowProvenance = {
@@ -25,6 +43,8 @@ export type LogicalRow = {
   cells: LogicalCell[];
   confidence: number;
   provenance?: LogicalRowProvenance;
+  extractionProvenance?:
+    LogicalExtractionProvenance;
 };
 
 export type LogicalTable = {
@@ -34,6 +54,8 @@ export type LogicalTable = {
   columnCount: number;
   bounds: PdfBoundingBox;
   confidence: number;
+  extractionProvenance?:
+    LogicalExtractionProvenance;
 };
 
 export type LogicalTableCollection = {
