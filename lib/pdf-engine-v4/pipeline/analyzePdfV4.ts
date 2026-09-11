@@ -4,8 +4,9 @@ import type {
 } from "../model/types";
 import {
   analyzeTableReliabilityV2,
+  type TableReliabilityV2ContinuationContext,
   type TableReliabilityV2Result,
-} from "../analysis/tableReliabilityAnalyzerV2";
+} from "../analysis/tableReliabilityAnalyzerV2";;
 import type { LogicalTable } from "../model/logicalTable";
 import {
   readPdfDocumentV4,
@@ -473,6 +474,10 @@ function mergeContinuedTablesV4(
   const mergedTables:
     LogicalTable[] = [];
 
+  const continuationContexts:
+    TableReliabilityV2ContinuationContext[] =
+      [];
+
   let previousAnalysis:
     PdfV4TableAnalysis |
     null = null;
@@ -543,7 +548,16 @@ function mergeContinuedTablesV4(
             )
         : false;
 
-      const isContinuation =
+    const serialContinuous =
+      Boolean(
+        firstSerial &&
+          previousLastSerial !==
+            null &&
+          firstSerial.serialNumber ===
+            previousLastSerial + 1,
+      );
+
+    const isContinuation =
       Boolean(
         previousAnalysis &&
           previousTable &&
@@ -553,18 +567,15 @@ function mergeContinuedTablesV4(
           sameColumnCount &&
           sharedColumns >=
             requiredSharedColumns &&
-          firstSerial &&
-          previousLastSerial !==
-            null &&
-          firstSerial.serialNumber ===
-            previousLastSerial + 1 &&
+          serialContinuous &&
           leadingRowsAreHeaders,
       );
 
     if (
       !isContinuation ||
       !previousTable ||
-      !firstSerial
+      !firstSerial ||
+      !previousAnalysis
     ) {
       mergedTables.push({
         ...currentTable,
@@ -573,6 +584,13 @@ function mergeContinuedTablesV4(
             currentTable.rows,
             0,
           ),
+      });
+
+      continuationContexts.push({
+        pageNumbers: [
+          analysis.pageNumber,
+        ],
+        transitions: [],
       });
 
       previousAnalysis =
@@ -617,19 +635,79 @@ function mergeContinuedTablesV4(
       mergedTables.length - 1
     ] = {
       ...previousTable,
+
       rows: [
         ...previousTable.rows,
         ...reindexedRows,
       ],
+
       confidence:
         mergedConfidence,
+    };
+
+    const contextIndex =
+      continuationContexts.length -
+      1;
+
+    const previousContext =
+      continuationContexts[
+        contextIndex
+      ];
+
+    continuationContexts[
+      contextIndex
+    ] = {
+      pageNumbers: [
+        ...new Set([
+          ...(previousContext
+            ?.pageNumbers ??
+            [
+              previousAnalysis
+                .pageNumber,
+            ]),
+
+          analysis.pageNumber,
+        ]),
+      ],
+
+      transitions: [
+        ...(previousContext
+          ?.transitions ??
+          []),
+
+        {
+          fromPageNumber:
+            previousAnalysis
+              .pageNumber,
+
+          toPageNumber:
+            analysis.pageNumber,
+
+          sameColumnCount,
+
+          columnCount:
+            analysis
+              .columnDetection
+              .columns.length,
+
+          sharedColumnCount:
+            sharedColumns,
+
+          serialContinuous,
+
+          leadingRowsAreHeaders,
+        },
+      ],
     };
 
     previousAnalysis =
       analysis;
   }
 
-  return mergedTables;
+  return {
+    tables: mergedTables,
+    continuationContexts,
+  };
 }
 
 export type AnalyzePdfV4Options = {
@@ -1506,10 +1584,17 @@ const finalTable =
     }
   }
 
-  const mergedTables =
+const mergedTableResult =
   mergeContinuedTablesV4(
     tableAnalyses,
   );
+
+const mergedTables =
+  mergedTableResult.tables;
+
+const mergedTableContinuationContexts =
+  mergedTableResult
+    .continuationContexts;
 
   const mergedTableReliability =
   mergedTables.map(
@@ -1529,17 +1614,23 @@ const finalTable =
 
         if (!rowReliability) {
           return analyzeTableReliabilityV2(
-            table,
-            analyzeRowReliabilityV1(
-              table,
-            ),
-          );
+  table,
+  analyzeRowReliabilityV1(
+    table,
+  ),
+  mergedTableContinuationContexts[
+    index
+  ],
+);
         }
 
         return analyzeTableReliabilityV2(
-          table,
-          rowReliability,
-        );
+  table,
+  rowReliability,
+  mergedTableContinuationContexts[
+    index
+  ],
+);
       },
     );
 

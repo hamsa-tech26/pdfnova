@@ -468,5 +468,184 @@ describe(
         ).toBe(true);
       },
     );
+        it(
+      "reports strong multi-page continuation reliability",
+      () => {
+        const rows = [
+          createRow(
+            0,
+            ["1", "Item A", "10"],
+          ),
+          createRow(
+            1,
+            ["2", "Item B", "20"],
+          ),
+          createRow(
+            2,
+            ["3", "Item C", "30"],
+          ),
+        ];
+
+        const table =
+          createTable(
+            rows,
+            0.98,
+          );
+
+        const rowReliability =
+          createRowReliability(
+            rows,
+            {
+              confidence: 0.96,
+              analysisMode:
+                "serial",
+              serialColumnIndex: 0,
+              sequenceConfidence:
+                1,
+            },
+          );
+
+        const result =
+          analyzeTableReliabilityV2(
+            table,
+            rowReliability,
+            {
+              pageNumbers: [
+                2,
+                3,
+                4,
+              ],
+
+              transitions: [
+                {
+                  fromPageNumber: 2,
+                  toPageNumber: 3,
+                  sameColumnCount:
+                    true,
+                  columnCount: 6,
+                  sharedColumnCount:
+                    5,
+                  serialContinuous:
+                    true,
+                  leadingRowsAreHeaders:
+                    true,
+                },
+
+                {
+                  fromPageNumber: 3,
+                  toPageNumber: 4,
+                  sameColumnCount:
+                    true,
+                  columnCount: 6,
+                  sharedColumnCount:
+                    6,
+                  serialContinuous:
+                    true,
+                  leadingRowsAreHeaders:
+                    true,
+                },
+              ],
+            },
+          );
+
+        expect(
+          result.level,
+        ).toBe("high");
+
+        expect(
+          result.continuationMergeCount,
+        ).toBe(2);
+
+        expect(
+          result.continuationPageNumbers,
+        ).toEqual([
+          2,
+          3,
+          4,
+        ]);
+
+        expect(
+          result
+            .continuationConsistencyScore,
+        ).toBeGreaterThan(
+          0.95,
+        );
+      },
+    );
+
+    it(
+      "flags weak continuation evidence for review",
+      () => {
+        const rows = [
+          createRow(
+            0,
+            ["1", "Item A", "10"],
+          ),
+          createRow(
+            1,
+            ["2", "Item B", "20"],
+          ),
+        ];
+
+        const table =
+          createTable(
+            rows,
+            0.99,
+          );
+
+        const rowReliability =
+          createRowReliability(
+            rows,
+            {
+              confidence: 0.98,
+              analysisMode:
+                "serial",
+              serialColumnIndex: 0,
+              sequenceConfidence:
+                1,
+            },
+          );
+
+        const result =
+          analyzeTableReliabilityV2(
+            table,
+            rowReliability,
+            {
+              pageNumbers: [
+                1,
+                2,
+              ],
+
+              transitions: [
+                {
+                  fromPageNumber: 1,
+                  toPageNumber: 2,
+                  sameColumnCount:
+                    false,
+                  columnCount: 6,
+                  sharedColumnCount:
+                    2,
+                  serialContinuous:
+                    false,
+                  leadingRowsAreHeaders:
+                    true,
+                },
+              ],
+            },
+          );
+
+        expect(
+          result.level,
+        ).toBe("review");
+
+        expect(
+          result.reasons.some(
+            (reason) =>
+              reason.code ===
+              "continuation-instability",
+          ),
+        ).toBe(true);
+      },
+    );
   },
 );

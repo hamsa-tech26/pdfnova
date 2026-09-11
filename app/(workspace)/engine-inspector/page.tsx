@@ -1689,12 +1689,47 @@ candidate.columnIndex
         </p>
 
         <p>
-          Structural consistency:{" "}
-          {formatConfidence(
-            tableReliabilityV2
-              .structuralConsistencyScore,
-          )}
-        </p>
+  Structural consistency:{" "}
+  {formatConfidence(
+    tableReliabilityV2
+      .structuralConsistencyScore,
+  )}
+</p>
+
+<p>
+  Continuation:{" "}
+  {tableReliabilityV2
+    .continuationMergeCount > 0
+    ? "Multi-page"
+    : "Single page"}
+</p>
+
+{tableReliabilityV2
+  .continuationMergeCount > 0 && (
+  <>
+    <p>
+      Pages:{" "}
+      {tableReliabilityV2
+        .continuationPageNumbers
+        .join(", ")}
+    </p>
+
+    <p>
+      Continuation merges:{" "}
+      {tableReliabilityV2
+        .continuationMergeCount}
+    </p>
+
+    <p>
+      Continuation consistency:{" "}
+      {formatConfidence(
+        tableReliabilityV2
+          .continuationConsistencyScore,
+      )}
+    </p>
+  </>
+)}
+
       </div>
 
       {tableReliabilityV2.reasons.length >

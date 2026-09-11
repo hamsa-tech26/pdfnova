@@ -13,13 +13,32 @@ export type TableReliabilityV2Level =
   | "review"
   | "low";
 
+export type TableReliabilityV2ContinuationTransition = {
+  fromPageNumber: number;
+  toPageNumber: number;
+
+  sameColumnCount: boolean;
+  columnCount: number;
+  sharedColumnCount: number;
+
+  serialContinuous: boolean;
+  leadingRowsAreHeaders: boolean;
+};
+
+export type TableReliabilityV2ContinuationContext = {
+  pageNumbers: number[];
+  transitions:
+    TableReliabilityV2ContinuationTransition[];
+};
+
 export type TableReliabilityV2ReasonCode =
   | "row-review-required"
   | "low-row-reliability"
   | "inconsistent-column-population"
   | "low-table-construction-confidence"
   | "inconsistent-row-shape"
-  | "serial-sequence-instability";
+  | "serial-sequence-instability"
+  | "continuation-instability";
 
 export type TableReliabilityV2Reason = {
   code: TableReliabilityV2ReasonCode;
@@ -39,6 +58,9 @@ export type TableReliabilityV2Result = {
   constructionScore: number;
   rowShapeConsistencyScore: number;
   structuralConsistencyScore: number;
+  continuationConsistencyScore: number;
+continuationPageNumbers: number[];
+continuationMergeCount: number;
 
   reasons: TableReliabilityV2Reason[];
 };
@@ -291,6 +313,56 @@ function getStructuralConsistencyScore(
   );
 }
 
+function getContinuationConsistencyScore(
+  continuationContext?:
+    TableReliabilityV2ContinuationContext,
+) {
+  if (
+    !continuationContext ||
+    continuationContext.transitions
+      .length === 0
+  ) {
+    return 1;
+  }
+
+  const transitionScores =
+    continuationContext.transitions.map(
+      (transition) => {
+        const columnContinuityScore =
+          transition.columnCount <= 0
+            ? 0
+            : clamp(
+                transition
+                  .sharedColumnCount /
+                  transition.columnCount,
+              );
+
+        return average([
+          transition.sameColumnCount
+            ? 1
+            : 0,
+
+          columnContinuityScore,
+
+          transition.serialContinuous
+            ? 1
+            : 0,
+
+          transition
+            .leadingRowsAreHeaders
+            ? 1
+            : 0,
+        ]);
+      },
+    );
+
+  return clamp(
+    average(
+      transitionScores,
+    ),
+  );
+}
+
 function buildTableReliabilityV2Reasons(
   reviewRowCount: number,
   rowReliabilityScore: number,
@@ -298,6 +370,8 @@ function buildTableReliabilityV2Reasons(
   constructionScore: number,
   rowShapeConsistencyScore: number,
   structuralConsistencyScore: number,
+  continuationConsistencyScore: number,
+continuationMergeCount: number,
   analysisMode:
     RowReliabilityResult["analysisMode"],
 ): TableReliabilityV2Reason[] {
@@ -380,6 +454,26 @@ message:
     });
   }
 
+  if (
+  continuationMergeCount > 0 &&
+  continuationConsistencyScore <
+    0.9
+) {
+  reasons.push({
+    code:
+      "continuation-instability",
+
+    message:
+      "The multi-page table continuation has weaker structural continuity than expected.",
+
+    severity:
+      continuationConsistencyScore <
+      0.75
+        ? "high"
+        : "medium",
+  });
+}
+
   return reasons;
 }
 
@@ -401,6 +495,8 @@ export function analyzeTableReliabilityV2(
   table: LogicalTable,
   rowReliability:
     RowReliabilityResult,
+  continuationContext?:
+    TableReliabilityV2ContinuationContext,
 ): TableReliabilityV2Result {
   const rowReliabilityScore =
     clamp(
@@ -429,19 +525,53 @@ export function analyzeTableReliabilityV2(
       rowReliability,
     );
 
-  const score =
-    clamp(
-      rowReliabilityScore *
-        0.35 +
-      columnConsistencyScore *
-        0.25 +
-      constructionScore *
-        0.2 +
-      rowShapeConsistencyScore *
-        0.1 +
-      structuralConsistencyScore *
-        0.1,
-    );
+    const continuationConsistencyScore =
+  getContinuationConsistencyScore(
+    continuationContext,
+  );
+
+const continuationPageNumbers =
+  continuationContext
+    ?.pageNumbers.length
+    ? [
+        ...new Set(
+          continuationContext
+            .pageNumbers,
+        ),
+      ]
+    : [table.pageNumber];
+
+const continuationMergeCount =
+  continuationContext
+    ?.transitions.length ??
+  0;
+
+  const baseScore =
+  clamp(
+    rowReliabilityScore *
+      0.35 +
+    columnConsistencyScore *
+      0.25 +
+    constructionScore *
+      0.2 +
+    rowShapeConsistencyScore *
+      0.1 +
+    structuralConsistencyScore *
+      0.1,
+  );
+
+const continuationPenalty =
+  continuationMergeCount > 0
+    ? 0.9 +
+      continuationConsistencyScore *
+        0.1
+    : 1;
+
+const score =
+  clamp(
+    baseScore *
+      continuationPenalty,
+  );
 
   const reasons =
     buildTableReliabilityV2Reasons(
@@ -451,6 +581,8 @@ export function analyzeTableReliabilityV2(
       constructionScore,
       rowShapeConsistencyScore,
       structuralConsistencyScore,
+      continuationConsistencyScore,
+continuationMergeCount,
       rowReliability.analysisMode,
     );
 
@@ -482,6 +614,9 @@ export function analyzeTableReliabilityV2(
     constructionScore,
     rowShapeConsistencyScore,
     structuralConsistencyScore,
+    continuationConsistencyScore,
+continuationPageNumbers,
+continuationMergeCount,
 
     reasons,
   };
