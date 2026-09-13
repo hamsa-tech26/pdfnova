@@ -136,6 +136,90 @@ function startsWithSerialNumber(
   );
 }
 
+function startsWithSerialTwo(
+  line: PdfLine,
+) {
+  return /^2[.)]?(?:\s|$)/.test(
+    getFirstText(line),
+  );
+}
+
+function isOcrConfusedFirstSerial(
+  line: PdfLine,
+  columns: ColumnCandidate[],
+) {
+  const firstWord =
+    getSortedWords(line)[0];
+
+  if (
+    !firstWord ||
+    firstWord.extractionProvenance
+      ?.source !==
+      "ocr-tesseract"
+  ) {
+    return false;
+  }
+
+  const normalizedText =
+    firstWord.text
+      .trim()
+      .toLowerCase();
+
+  const looksLikeOne =
+    normalizedText === "il" ||
+    normalizedText === "i" ||
+    normalizedText === "l";
+
+  if (!looksLikeOne) {
+    return false;
+  }
+
+  return (
+    findNearestColumnIndex(
+      firstWord,
+      columns,
+    ) === 0
+  );
+}
+
+function normalizeOcrFirstSerialLine(
+  line: PdfLine,
+): PdfLine {
+  const firstWord =
+    getSortedWords(line)[0];
+
+  if (!firstWord) {
+    return line;
+  }
+
+  const words =
+    line.words.map(
+      (word) =>
+        word.id === firstWord.id
+          ? {
+              ...word,
+              text: "1",
+            }
+          : word,
+    );
+
+  return {
+    ...line,
+    words,
+    text:
+      [...words]
+        .sort(
+          (first, second) =>
+            first.bounds.x -
+            second.bounds.x,
+        )
+        .map(
+          (word) => word.text,
+        )
+        .join(" "),
+  };
+}
+
 function getLineCenterY(line: PdfLine) {
   return (
     line.bounds.y +
@@ -450,6 +534,96 @@ function isSerialBridgePattern(
   );
 }
 
+function isOcrFirstSerialBridgePattern(
+  leadingLine: PdfLine,
+  confusedSerialLine:
+    | PdfLine
+    | undefined,
+  nextSerialLine:
+    | PdfLine
+    | undefined,
+  columns: ColumnCandidate[],
+) {
+  if (
+    !confusedSerialLine ||
+    !nextSerialLine ||
+    columns.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    startsWithSerialNumber(
+      leadingLine,
+    ) ||
+    !isOcrConfusedFirstSerial(
+      confusedSerialLine,
+      columns,
+    ) ||
+    !startsWithSerialTwo(
+      nextSerialLine,
+    )
+  ) {
+    return false;
+  }
+
+  const leadingIndexes =
+    getPopulatedColumnIndexes(
+      leadingLine,
+      columns,
+    );
+
+  const confusedSerialIndexes =
+    getPopulatedColumnIndexes(
+      confusedSerialLine,
+      columns,
+    );
+
+  const nextSerialIndexes =
+    getPopulatedColumnIndexes(
+      nextSerialLine,
+      columns,
+    );
+
+  if (
+    leadingIndexes.length === 0 ||
+    confusedSerialIndexes.length ===
+      0 ||
+    nextSerialIndexes.length === 0
+  ) {
+    return false;
+  }
+
+  if (
+    leadingIndexes.includes(0) ||
+    !confusedSerialIndexes.includes(
+      0,
+    ) ||
+    !nextSerialIndexes.includes(0)
+  ) {
+    return false;
+  }
+
+  const averageHeight =
+    getAverageLineHeight([
+      leadingLine,
+      confusedSerialLine,
+      nextSerialLine,
+    ]);
+
+  const gapBeforeSerial =
+    getVerticalGap(
+      leadingLine,
+      confusedSerialLine,
+    );
+
+  const closeBefore =
+    gapBeforeSerial <=
+    averageHeight * 0.9;
+
+  return closeBefore;
+}
+
 function calculateDecision(
   previousLogicalLines: PdfLine[],
   currentLine: PdfLine,
@@ -718,6 +892,20 @@ for (
 
   if (
     previousRow &&
+    isOcrFirstSerialBridgePattern(
+      line,
+      nextLine,
+      lineAfterNext,
+      columns,
+    )
+  ) {
+    pendingLeadingLine =
+      line;
+
+    continue;
+  }
+  if (
+    previousRow &&
     isSerialBridgePattern(
       line,
       nextLine,
@@ -731,31 +919,44 @@ for (
     continue;
   }
 
+  const effectiveLine =
+    pendingLeadingLine &&
+    isOcrConfusedFirstSerial(
+      line,
+      columns,
+    ) &&
+    startsWithSerialTwo(
+      nextLine,
+    )
+      ? normalizeOcrFirstSerialLine(
+          line,
+        )
+      : line;
   const previousLines =
     previousRow?.lines ?? [];
 
   const decision =
     calculateDecision(
       previousLines,
-      line,
+      effectiveLine,
       columns,
       resolvedOptions,
     );
 
   const hasPendingSerialBridge =
-  pendingLeadingLine !== undefined &&
-  startsWithSerialNumber(
-    line,
-  );
+    pendingLeadingLine !== undefined &&
+    startsWithSerialNumber(
+      effectiveLine,
+    );
 
-if (
-  !previousRow ||
-  decision.isNewRecord ||
-  hasPendingSerialBridge
-) {
+  if (
+    !previousRow ||
+    decision.isNewRecord ||
+    hasPendingSerialBridge
+  ) {
     let newRow =
       createLogicalRow(
-        line,
+        effectiveLine,
         logicalRows.length,
         decision,
       );
@@ -763,7 +964,7 @@ if (
     if (
       pendingLeadingLine &&
       startsWithSerialNumber(
-        line,
+        effectiveLine,
       )
     ) {
       newRow =
@@ -787,7 +988,7 @@ if (
     logicalRows.length - 1
   ] = appendLineToRow(
     previousRow,
-    line,
+    effectiveLine,
   );
 }
 

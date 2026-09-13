@@ -3,6 +3,10 @@ import type {
 } from "./ocrDecision";
 
 import {
+  preparePdfV4PrimaryOcrPages,
+} from "./ocrPrimaryImagePreparer";
+
+import {
   preparePdfV4OcrPages,
 } from "./ocrPageRenderer";
 
@@ -92,9 +96,14 @@ export async function runPdfV4ControlledOcr(
       pageNumbers,
     );
 
+  const primaryOcrPages =
+    await preparePdfV4PrimaryOcrPages(
+      preparedPages,
+    );
+
   const pages =
     await recognizePdfV4OcrPages(
-      preparedPages,
+      primaryOcrPages,
     );
 
   const retryRequests =

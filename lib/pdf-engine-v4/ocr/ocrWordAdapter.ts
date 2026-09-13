@@ -87,6 +87,64 @@ export function adaptPdfV4OcrWordToPdfWord(
   };
 }
 
+function isPdfV4OcrGridArtifact(
+  word: PdfV4OcrWord,
+) {
+  const text =
+    word.text.trim();
+
+  if (
+    !text ||
+    !/^[|¦│┃—–_=~-]+$/.test(
+      text,
+    )
+  ) {
+    return false;
+  }
+
+  const width =
+    Math.max(
+      word.bounds.x1 -
+        word.bounds.x0,
+      0,
+    );
+
+  const height =
+    Math.max(
+      word.bounds.y1 -
+        word.bounds.y0,
+      0,
+    );
+
+  if (
+    width <= 0 ||
+    height <= 0
+  ) {
+    return false;
+  }
+
+  const longerSide =
+    Math.max(
+      width,
+      height,
+    );
+
+  const shorterSide =
+    Math.max(
+      Math.min(
+        width,
+        height,
+      ),
+      1,
+    );
+
+  return (
+    longerSide /
+      shorterSide >=
+    4
+  );
+}
+
 export function adaptPdfV4OcrWordsToPdfWords(
   words: PdfV4OcrWord[],
   pageNumber: number,
@@ -95,18 +153,25 @@ export function adaptPdfV4OcrWordsToPdfWords(
   pdfWidth: number,
   pdfHeight: number,
 ): PdfWord[] {
-  return words.map(
-    (word, wordIndex) =>
-      adaptPdfV4OcrWordToPdfWord(
-        word,
-        pageNumber,
-        wordIndex,
-        renderedWidth,
-        renderedHeight,
-        pdfWidth,
-        pdfHeight,
-      ),
-  );
+  return words
+    .filter(
+      (word) =>
+        !isPdfV4OcrGridArtifact(
+          word,
+        ),
+    )
+    .map(
+      (word, wordIndex) =>
+        adaptPdfV4OcrWordToPdfWord(
+          word,
+          pageNumber,
+          wordIndex,
+          renderedWidth,
+          renderedHeight,
+          pdfWidth,
+          pdfHeight,
+        ),
+    );
 }
 
 export function adaptPdfV4OcrPageToPdfWords(

@@ -266,5 +266,85 @@ describe(
         });
       },
     );
+    it(
+      "filters elongated OCR grid-line artifacts while preserving real content",
+      () => {
+        const pdfWords =
+          adaptPdfV4OcrWordsToPdfWords(
+            [
+              {
+                text: "|",
+                confidence: 80,
+                bounds: {
+                  x0: 20,
+                  y0: 100,
+                  x1: 23,
+                  y1: 150,
+                },
+                coordinateSpace:
+                  "rendered-image-pixels",
+                source:
+                  "ocr-tesseract",
+              },
+              {
+                text: "—",
+                confidence: 80,
+                bounds: {
+                  x0: 40,
+                  y0: 100,
+                  x1: 100,
+                  y1: 104,
+                },
+                coordinateSpace:
+                  "rendered-image-pixels",
+                source:
+                  "ocr-tesseract",
+              },
+              {
+                text: "-",
+                confidence: 90,
+                bounds: {
+                  x0: 120,
+                  y0: 100,
+                  x1: 128,
+                  y1: 112,
+                },
+                coordinateSpace:
+                  "rendered-image-pixels",
+                source:
+                  "ocr-tesseract",
+              },
+              {
+                text: "Functional",
+                confidence: 95,
+                bounds: {
+                  x0: 150,
+                  y0: 100,
+                  x1: 260,
+                  y1: 130,
+                },
+                coordinateSpace:
+                  "rendered-image-pixels",
+                source:
+                  "ocr-tesseract",
+              },
+            ],
+            1,
+            1200,
+            1600,
+            600,
+            800,
+          );
+
+        expect(
+          pdfWords.map(
+            (word) => word.text,
+          ),
+        ).toEqual([
+          "-",
+          "Functional",
+        ]);
+      },
+    );
   },
 );

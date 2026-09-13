@@ -106,6 +106,55 @@ function findNearestColumn(
   return nearestColumn;
 }
 
+function findCellAssignmentColumn(
+  word: PdfWord,
+  columns: ColumnCandidate[],
+) {
+  if (
+    word.extractionProvenance
+      ?.source !==
+      "ocr-tesseract" ||
+    columns.length <= 1
+  ) {
+    return findNearestColumn(
+      word,
+      columns,
+    );
+  }
+
+  const sortedColumns =
+    [...columns].sort(
+      (first, second) =>
+        first.x - second.x,
+    );
+
+  const tolerance =
+    Math.max(
+      word.bounds.height * 0.6,
+      4,
+    );
+
+  for (
+    let index =
+      sortedColumns.length - 1;
+    index >= 0;
+    index -= 1
+  ) {
+    const column =
+      sortedColumns[index];
+
+    if (
+      word.bounds.x +
+        word.bounds.width / 2 >=
+      column.x - tolerance
+    ) {
+      return column;
+    }
+  }
+
+  return sortedColumns[0];
+}
+
 function getMappedColumnIndexes(
   lines: LogicalRowCandidate["lines"],
   columns: ColumnCandidate[],
@@ -438,9 +487,9 @@ function assignWordsToCells(
         createAnalysisWordsV4(line),
     );
 
-for (const word of analysisWords) {
+  for (const word of analysisWords) {
     const nearestColumn =
-      findNearestColumn(
+      findCellAssignmentColumn(
         word,
         columns,
       );
