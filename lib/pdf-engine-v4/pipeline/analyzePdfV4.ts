@@ -1,5 +1,6 @@
 import type {
   PdfDocumentModel,
+  PdfPageTextExtractionMetrics,
   TableRegionAnalysis,
 } from "../model/types";
 import {
@@ -136,6 +137,12 @@ export type PdfV4TextExtractionProfile = {
   sufficientTextPageCount: number;
 };
 
+export type PdfV4NativePageTextExtraction = {
+  pageNumber: number;
+  textExtraction:
+    PdfPageTextExtractionMetrics;
+};
+
 export type PdfV4OcrDecision =
   PdfV4OcrDecisionFromModule;
 
@@ -228,9 +235,11 @@ export type PdfEngineV4Result = {
   processingTimes: PdfV4ProcessingTimes;
   analysisOutcome: PdfV4AnalysisOutcome;
   textExtractionProfile: PdfV4TextExtractionProfile;
-ocrDecision: PdfV4OcrDecision;
-controlledOcrResult?: PdfV4ControlledOcrResult;
-confidence: number;
+    nativePageTextExtraction:
+    PdfV4NativePageTextExtraction[];
+  ocrDecision: PdfV4OcrDecision;
+  controlledOcrResult?: PdfV4ControlledOcrResult;
+  confidence: number;
 };
 function getRowSerialNumber(
   row: LogicalTable["rows"][number],
@@ -1076,6 +1085,17 @@ const nativeOcrDecision =
     rawDocument,
   );
 
+  const nativePageTextExtraction =
+    rawDocument.pages.map(
+      (page) => ({
+        pageNumber:
+          page.pageNumber,
+        textExtraction: {
+          ...page.textExtraction,
+        },
+      }),
+    );
+
   const controlledOcrResult =
   options?.enableControlledOcr
     ? await runPdfV4ControlledOcr(
@@ -1702,6 +1722,7 @@ const confidence =
 },
 analysisOutcome,
 textExtractionProfile,
+nativePageTextExtraction,
 ocrDecision,
 controlledOcrResult,
 confidence,

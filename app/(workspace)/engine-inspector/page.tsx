@@ -1904,8 +1904,27 @@ candidate.columnIndex
             </p>
 
             <div className="mt-5 space-y-5">
-              {result.document.pages.map(
-                (page) => (
+{result.document.pages.map(
+  (page) => {
+    const nativePage =
+      result.nativePageTextExtraction.find(
+        (entry) =>
+          entry.pageNumber ===
+          page.pageNumber,
+      );
+
+    const nativeTextExtraction =
+      nativePage?.textExtraction ??
+      page.textExtraction;
+
+    const ocrPage =
+      result.controlledOcrResult?.pages.find(
+        (entry) =>
+          entry.pageNumber ===
+          page.pageNumber,
+      );
+
+    return (
                   <div
                     key={page.pageNumber}
                     className="rounded-2xl border border-gray-200 p-4 dark:border-slate-700"
@@ -1914,29 +1933,76 @@ candidate.columnIndex
                       Page {page.pageNumber}
                     </p>
 
-                    <div className="mt-2 text-xs text-gray-600 dark:text-slate-400">
-  Text extraction:{" "}
-  <span className="font-semibold text-gray-950 dark:text-white">
-    {formatAnalysisOutcome(
-      page.textExtraction.status,
-    )}
-  </span>
-  {" • "}
-  Quality:{" "}
-  <span className="font-semibold text-gray-950 dark:text-white">
-    {Math.round(
-      page.textExtraction.qualityScore *
-        100,
-    )}
-    %
-  </span>
-  {" • "}
-  {page.textExtraction.wordCount} words
-  {" • "}
-  {page.textExtraction.lineCount} lines
-  {" • "}
-  {page.textExtraction.characterCount} characters
-</div>
+                      <div className="mt-2 space-y-1 text-xs text-gray-600 dark:text-slate-400">
+                        <div>
+                          Native extraction:{" "}
+                          <span className="font-semibold text-gray-950 dark:text-white">
+                            {formatAnalysisOutcome(
+                              nativeTextExtraction.status,
+                            )}
+                          </span>
+                          {" • "}
+                          Quality:{" "}
+                          <span className="font-semibold text-gray-950 dark:text-white">
+                            {Math.round(
+                              nativeTextExtraction.qualityScore *
+                                100,
+                            )}
+                            %
+                          </span>
+                          {" • "}
+                          {
+                            nativeTextExtraction.wordCount
+                          }{" "}
+                          words
+                          {" • "}
+                          {
+                            nativeTextExtraction.lineCount
+                          }{" "}
+                          lines
+                          {" • "}
+                          {
+                            nativeTextExtraction.characterCount
+                          }{" "}
+                          characters
+                        </div>
+
+                        {ocrPage && (
+                          <div>
+                            OCR recovery:{" "}
+                            <span className="font-semibold text-gray-950 dark:text-white">
+                              {formatAnalysisOutcome(
+                                page.textExtraction
+                                  .status,
+                              )}
+                            </span>
+                            {" • "}
+                            Quality:{" "}
+                            <span className="font-semibold text-gray-950 dark:text-white">
+                              {Math.round(
+                                page.textExtraction
+                                  .qualityScore *
+                                  100,
+                              )}
+                              %
+                            </span>
+                            {" • "}
+                            {
+                              page.textExtraction
+                                .wordCount
+                            }{" "}
+                            words
+                            {" • "}
+                            OCR confidence:{" "}
+                            <span className="font-semibold text-gray-950 dark:text-white">
+                              {Math.round(
+                                ocrPage.confidence,
+                              )}
+                              %
+                            </span>
+                          </div>
+                        )}
+                      </div>
 
                     <div className="mt-3 space-y-3">
                       {page.blocks.map(
@@ -2014,8 +2080,9 @@ candidate.columnIndex
                       )}
                     </div>
                   </div>
-                ),
-              )}
+                );
+              },
+            )}
             </div>
           </section>
 
