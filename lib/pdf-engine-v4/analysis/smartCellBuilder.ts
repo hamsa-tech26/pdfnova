@@ -106,6 +106,151 @@ function findNearestColumn(
   return nearestColumn;
 }
 
+function getMappedColumnIndexes(
+  lines: LogicalRowCandidate["lines"],
+  columns: ColumnCandidate[],
+) {
+  const indexes =
+    new Set<number>();
+
+  for (const line of lines) {
+    for (const word of line.words) {
+      const nearestColumn =
+        findNearestColumn(
+          word,
+          columns,
+        );
+
+      if (!nearestColumn) {
+        continue;
+      }
+
+      const columnIndex =
+        columns.findIndex(
+          (column) =>
+            column.id ===
+            nearestColumn.id,
+        );
+
+      if (columnIndex >= 0) {
+        indexes.add(
+          columnIndex,
+        );
+      }
+    }
+  }
+
+  return indexes;
+}
+
+function getLinesForCellAssignment(
+  row: LogicalRowCandidate,
+  columns: ColumnCandidate[],
+  isFirstLogicalRow: boolean,
+) {
+  if (
+    !isFirstLogicalRow ||
+    row.lines.length < 2 ||
+    columns.length < 3
+  ) {
+    return row.lines;
+  }
+
+  const [
+    firstLine,
+    ...remainingLines
+  ] = row.lines;
+
+  const firstLineColumns =
+    getMappedColumnIndexes(
+      [firstLine],
+      columns,
+    );
+
+  const remainingColumns =
+    getMappedColumnIndexes(
+      remainingLines,
+      columns,
+    );
+
+  const lastColumnIndex =
+    columns.length - 1;
+
+  const firstLineAvoidsEdges =
+    !firstLineColumns.has(0) &&
+    !firstLineColumns.has(
+      lastColumnIndex,
+    );
+
+  const firstLineIsCompact =
+    firstLineColumns.size > 0 &&
+    firstLineColumns.size <=
+      Math.max(
+        2,
+        Math.floor(
+          columns.length / 2,
+        ),
+      );
+
+  const tableLeft =
+    columns[0].leftBoundary;
+
+  const tableRight =
+    columns[
+      lastColumnIndex
+    ].rightBoundary;
+
+  const tableWidth =
+    Math.max(
+      tableRight - tableLeft,
+      1,
+    );
+
+  const tableCenterX =
+    tableLeft +
+    tableWidth / 2;
+
+  const firstLineCenterX =
+    firstLine.bounds.x +
+    firstLine.bounds.width / 2;
+
+  const firstLineIsCentered =
+    Math.abs(
+      firstLineCenterX -
+        tableCenterX,
+    ) <=
+    tableWidth * 0.15;
+
+  const firstLineIsNarrow =
+    firstLine.bounds.width <=
+    tableWidth * 0.6;
+
+  const remainingSpansTable =
+    remainingColumns.has(0) &&
+    remainingColumns.has(
+      lastColumnIndex,
+    );
+
+  const remainingIsBroader =
+    remainingColumns.size >=
+      Math.max(
+        3,
+        firstLineColumns.size + 1,
+      );
+
+  const hasLeadingTableTitle =
+    firstLineAvoidsEdges &&
+    firstLineIsCompact &&
+    firstLineIsCentered &&
+    firstLineIsNarrow &&
+    remainingSpansTable &&
+    remainingIsBroader;
+
+  return hasLeadingTableTitle
+    ? remainingLines
+    : row.lines;
+}
+
 function sortWordsForReading(
   words: PdfWord[],
 ) {
@@ -272,6 +417,7 @@ function createEmptyCells(
 function assignWordsToCells(
   row: LogicalRowCandidate,
   columns: ColumnCandidate[],
+  isFirstLogicalRow: boolean,
 ) {
   const cells =
     createEmptyCells(
@@ -279,11 +425,18 @@ function assignWordsToCells(
       columns,
     );
 
+  const linesForAssignment =
+    getLinesForCellAssignment(
+      row,
+      columns,
+      isFirstLogicalRow,
+    );
+
   const analysisWords =
-  row.lines.flatMap(
-    (line) =>
-      createAnalysisWordsV4(line),
-  );
+    linesForAssignment.flatMap(
+      (line) =>
+        createAnalysisWordsV4(line),
+    );
 
 for (const word of analysisWords) {
     const nearestColumn =
@@ -355,11 +508,14 @@ function buildLogicalRow(
   row: LogicalRowCandidate,
   columns: ColumnCandidate[],
   minimumCellConfidence: number,
+  isFirstLogicalRow: boolean,
 ): LogicalRow {
+
   const emptyCells =
     assignWordsToCells(
       row,
       columns,
+      isFirstLogicalRow,
     );
 
   const cells =
@@ -429,12 +585,17 @@ export function buildSmartTableV4(
   }
 
   const logicalRows =
-    rows.map((row) =>
-      buildLogicalRow(
+    rows.map(
+      (
         row,
-        columns,
-        minimumCellConfidence,
-      ),
+        rowPosition,
+      ) =>
+        buildLogicalRow(
+          row,
+          columns,
+          minimumCellConfidence,
+          rowPosition === 0,
+        ),
     );
 
   const populatedRows =
