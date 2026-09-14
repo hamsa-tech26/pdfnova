@@ -887,16 +887,69 @@ function recoverSparseTrailingCandidates(
       return supportRatio <= 0.2;
     })
     .filter((candidate) =>
-      topLines.some((line) =>
-        line.words.some(
-          (word) =>
-            Math.abs(
-              word.bounds.x -
+      topLines.some((line) => {
+        const candidateSupported =
+          line.words.some(
+            (word) =>
+              Math.abs(
+                word.bounds.x -
+                  candidate.x,
+              ) <=
+              headerMatchTolerance,
+          );
+
+        if (!candidateSupported) {
+          return false;
+        }
+
+        const previousAccepted =
+          [...sortedAccepted]
+            .reverse()
+            .find(
+              (column) =>
+                column.x <
                 candidate.x,
-            ) <=
-            headerMatchTolerance,
-        ),
-      ),
+            );
+
+        const nextAccepted =
+          sortedAccepted.find(
+            (column) =>
+              column.x >
+              candidate.x,
+          );
+
+        if (
+          !previousAccepted ||
+          !nextAccepted
+        ) {
+          return true;
+        }
+
+        const previousSupported =
+          line.words.some(
+            (word) =>
+              Math.abs(
+                word.bounds.x -
+                  previousAccepted.x,
+              ) <=
+              headerMatchTolerance,
+          );
+
+        const nextSupported =
+          line.words.some(
+            (word) =>
+              Math.abs(
+                word.bounds.x -
+                  nextAccepted.x,
+              ) <=
+              headerMatchTolerance,
+          );
+
+        return (
+          previousSupported &&
+          nextSupported
+        );
+      }),
     )
     .map((candidate) => ({
       ...candidate,

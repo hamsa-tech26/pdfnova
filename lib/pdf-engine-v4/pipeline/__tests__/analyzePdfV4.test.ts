@@ -5,6 +5,7 @@ import {
 } from "vitest";
 
 import {
+  areLeadingRowsLikelyHeaders,
   classifyPdfV4AnalysisOutcome,
   countConfirmedTableRegions,
   createPdfV4OcrDecision,
@@ -51,6 +52,20 @@ function createTestPage(
         : 1,
 },
   };
+}
+
+function createHeaderTestRow(
+  values: string[],
+) {
+  return {
+    cells:
+      values.map(
+        (text, columnIndex) => ({
+          text,
+          columnIndex,
+        }),
+      ),
+  } as LogicalTable["rows"][number];
 }
 
 describe(
@@ -521,6 +536,61 @@ describe(
         expect(
           decision.nativeTextPageNumbers,
         ).toEqual([1]);
+      },
+    );
+
+    it(
+      "recognizes a multi-level header with a title row above column labels",
+      () => {
+        const result =
+          areLeadingRowsLikelyHeaders([
+            createHeaderTestRow([
+              "Water Supply Details",
+              "",
+              "",
+              "",
+            ]),
+            createHeaderTestRow([
+              "Sl No",
+              "Name of Scheme",
+              "Status",
+              "Remarks",
+            ]),
+          ]);
+
+        expect(result).toBe(true);
+      },
+    );
+
+    it(
+      "does not treat ordinary leading data rows as a multi-level header",
+      () => {
+        const result =
+          areLeadingRowsLikelyHeaders([
+            createHeaderTestRow([
+              "Rani Para",
+              "Damcherra RF VC",
+              "30000",
+              "Functional",
+            ]),
+            createHeaderTestRow([
+              "Khahamthai Para",
+              "West Damcherra",
+              "75000",
+              "Functional",
+            ]),
+          ]);
+
+        expect(result).toBe(false);
+      },
+    );
+
+    it(
+      "allows continuation when there are no leading header rows",
+      () => {
+        expect(
+          areLeadingRowsLikelyHeaders([]),
+        ).toBe(true);
       },
     );
   },

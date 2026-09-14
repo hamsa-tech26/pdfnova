@@ -351,6 +351,110 @@ function isLikelyHeaderRow(
   );
 }
 
+function isLikelyHeaderTitleRow(
+  row: LogicalTable["rows"][number],
+) {
+  const populatedCells =
+    row.cells.filter(
+      (cell) =>
+        Boolean(
+          cell.text.trim(),
+        ),
+    );
+
+  if (populatedCells.length === 0) {
+    return false;
+  }
+
+  const maximumTitleCells =
+    Math.max(
+      1,
+      Math.ceil(
+        row.cells.length * 0.5,
+      ),
+    );
+
+  if (
+    populatedCells.length >
+    maximumTitleCells
+  ) {
+    return false;
+  }
+
+  const text =
+    populatedCells
+      .map(
+        (cell) =>
+          cell.text.trim(),
+      )
+      .join(" ");
+
+  const compactText =
+    text.replace(/\s/g, "");
+
+  if (!compactText) {
+    return false;
+  }
+
+  const alphabeticCharacterCount =
+    text.replace(
+      /[^a-zA-Z]/g,
+      "",
+    ).length;
+
+  const mostlyText =
+    alphabeticCharacterCount >=
+    compactText.length * 0.6;
+
+  const wordCount =
+    text
+      .split(/\s+/)
+      .filter(Boolean)
+      .length;
+
+  const looksLikeSentence =
+    /[.!?]$/.test(text);
+
+  return (
+    mostlyText &&
+    wordCount <= 12 &&
+    !looksLikeSentence
+  );
+}
+
+export function areLeadingRowsLikelyHeaders(
+  rows: LogicalTable["rows"],
+) {
+  if (rows.length === 0) {
+    return true;
+  }
+
+  const finalHeaderRow =
+    rows[
+      rows.length - 1
+    ];
+
+  if (
+    !finalHeaderRow ||
+    !isLikelyHeaderRow(
+      finalHeaderRow,
+    )
+  ) {
+    return false;
+  }
+
+  return rows
+    .slice(
+      0,
+      -1,
+    )
+    .every(
+      (row) =>
+        isLikelyHeaderRow(row) ||
+        isLikelyHeaderTitleRow(row),
+    );
+}
+
 function getSharedColumnCount(
   previous:
     PdfV4TableAnalysis,
@@ -550,14 +654,12 @@ function mergeContinuedTablesV4(
 
     const leadingRowsAreHeaders =
       firstSerial
-        ? currentTable.rows
-            .slice(
+        ? areLeadingRowsLikelyHeaders(
+            currentTable.rows.slice(
               0,
               firstSerial.rowIndex,
-            )
-            .every(
-              isLikelyHeaderRow,
-            )
+            ),
+          )
         : false;
 
     const serialContinuous =

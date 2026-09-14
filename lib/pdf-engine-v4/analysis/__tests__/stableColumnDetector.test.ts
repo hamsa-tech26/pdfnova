@@ -244,6 +244,106 @@ function createSparseInternalColumnBlock():
     confidence: 1,
   };
 }
+
+function createMultiLevelHeaderBlock():
+  PdfVisualBlock {
+  const lines: PdfLine[] = [
+    createLine(
+      0,
+      [
+        {
+          text:
+            "Water Supply Details",
+          x: 238,
+          width: 110,
+        },
+      ],
+    ),
+    createLine(
+      1,
+      [
+        {
+          text: "Sl No",
+          x: 78,
+          width: 30,
+        },
+        {
+          text: "Name of Scheme",
+          x: 118,
+          width: 100,
+        },
+        {
+          text: "Status",
+          x: 360,
+          width: 50,
+        },
+        {
+          text: "Remarks",
+          x: 438,
+          width: 55,
+        },
+      ],
+    ),
+  ];
+
+  for (
+    let index = 0;
+    index < 4;
+    index += 1
+  ) {
+    lines.push(
+      createLine(
+        index + 2,
+        [
+          {
+            text: `${index + 1}`,
+            x: 78,
+            width: 6,
+          },
+          {
+            text:
+              `Scheme${index + 1}`,
+            x: 118,
+            width: 70,
+          },
+          {
+            text: "Functional",
+            x: 360,
+            width: 55,
+          },
+          {
+            text: "Normal supply",
+            x: 438,
+            width: 65,
+          },
+        ],
+      ),
+    );
+  }
+
+  return {
+    id:
+      "multi-level-header-table",
+    type: "paragraph",
+    pageNumber: 1,
+    bounds: {
+      x: 60,
+      y: 500,
+      width: 460,
+      height: 220,
+    },
+    lines,
+    text:
+      lines
+        .map(
+          (line) =>
+            line.text,
+        )
+        .join(" "),
+    confidence: 1,
+  };
+}
+
 describe(
   "Stable Column Detector V4",
   () => {
@@ -298,6 +398,27 @@ describe(
               ) <= 1,
           ),
         ).toBe(true);
+      },
+    );
+    it(
+      "does not recover a spanning multi-level title as an internal column",
+      () => {
+        const result =
+          detectStableColumnsV4(
+            createMultiLevelHeaderBlock(),
+          );
+        expect(
+          result.columns,
+        ).toHaveLength(4);
+
+        expect(
+          result.columns.some(
+            (column) =>
+              Math.abs(
+                column.x - 238,
+              ) <= 1,
+          ),
+        ).toBe(false);
       },
     );
   },
