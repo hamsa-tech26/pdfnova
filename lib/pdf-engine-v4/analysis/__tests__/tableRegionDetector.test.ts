@@ -96,6 +96,24 @@ function createParagraph(
   };
 }
 
+function createSingleLineParagraph(
+  index: number,
+  text: string,
+): PdfVisualBlock {
+  const line =
+    createLine(index, text);
+
+  return {
+    id: `paragraph-${index}`,
+    type: "paragraph",
+    pageNumber: 1,
+    bounds: line.bounds,
+    lines: [line],
+    text,
+    confidence: 1,
+  };
+}
+
 describe(
   "Table Region Detector V2",
   () => {
@@ -146,6 +164,85 @@ describe(
             .analysis.breakdown.header
             .score,
         ).toBeGreaterThan(0);
+      },
+    );
+    it(
+      "recognizes consecutive single-line blocks as one table candidate",
+      () => {
+        const blocks = [
+          createSingleLineParagraph(
+            10,
+            "Sl No Name of Scheme GP / VC Capacity Status",
+          ),
+          createSingleLineParagraph(
+            11,
+            "1 Rani Para Innovative Scheme Damcherra RF VC 30,000 G/day Functional",
+          ),
+          createSingleLineParagraph(
+            12,
+            "2 Khahamthai Para Water Supply West Damcherra 75,000 G/day Functional",
+          ),
+          createSingleLineParagraph(
+            13,
+            "3 Jalidhan Para Innovative Scheme Uttamjoy Para VC 20,000 G/day Repair ongoing",
+          ),
+          createSingleLineParagraph(
+            14,
+            "4 Nilbhusan Para Innovative Scheme Kacharicherra VC 15,000 G/day Functional",
+          ),
+          createSingleLineParagraph(
+            15,
+            "5 Kamalacherri Innovative Scheme 15,000 G/day Functional",
+          ),
+          createSingleLineParagraph(
+            16,
+            "6 Purnaram Para Innovative Scheme Thumsarai Para 30,000 G/day Source low",
+          ),
+        ];
+
+        const result =
+          detectTableRegionsForPage(
+            blocks,
+          );
+
+        expect(
+          result.tableRegions.some(
+            (region) =>
+              region.block.type ===
+              "paragraph" &&
+              region.block.lines.length ===
+              7,
+          ),
+        ).toBe(true);
+      },
+    );
+
+    it(
+      "does not treat consecutive single-line prose blocks as a table candidate",
+      () => {
+        const blocks = [
+          createSingleLineParagraph(
+            20,
+            "This document explains the proposed water supply improvement work.",
+          ),
+          createSingleLineParagraph(
+            21,
+            "The scheme will serve households located within the project area.",
+          ),
+          createSingleLineParagraph(
+            22,
+            "Implementation will proceed after administrative approval is received.",
+          ),
+        ];
+
+        const result =
+          detectTableRegionsForPage(
+            blocks,
+          );
+
+        expect(
+          result.tableRegions.length,
+        ).toBe(0);
       },
     );
   },

@@ -24,6 +24,8 @@ const DEFAULT_TABLE_THRESHOLD = 60;
 const DEFAULT_POSSIBLE_TABLE_THRESHOLD = 42;
 const DEFAULT_X_ALIGNMENT_TOLERANCE = 14;
 
+const CROSS_BLOCK_MAXIMUM_GAP = 36;
+
 const MAX_ALIGNMENT_SCORE = 30;
 const MAX_SPACING_SCORE = 20;
 const MAX_DENSITY_SCORE = 15;
@@ -81,6 +83,284 @@ function getBlockLines(
   }
 
   return [];
+}
+
+function getSingleLineTextBlockLine(
+  block: PdfVisualBlock,
+): PdfLine | null {
+  if (
+    block.type !== "paragraph" &&
+    block.type !== "heading"
+  ) {
+    return null;
+  }
+
+  if (block.lines.length !== 1) {
+    return null;
+  }
+
+  return block.lines[0] ?? null;
+}
+
+function getCrossBlockVerticalGap(
+  previousLine: PdfLine,
+  currentLine: PdfLine,
+) {
+  return (
+    previousLine.bounds.y -
+    (currentLine.bounds.y +
+      currentLine.bounds.height)
+  );
+}
+
+function getCrossBlockHorizontalOverlapRatio(
+  previousLine: PdfLine,
+  currentLine: PdfLine,
+) {
+  const previousLeft =
+    previousLine.bounds.x;
+
+  const previousRight =
+    previousLine.bounds.x +
+    previousLine.bounds.width;
+
+  const currentLeft =
+    currentLine.bounds.x;
+
+  const currentRight =
+    currentLine.bounds.x +
+    currentLine.bounds.width;
+
+  const overlap =
+    Math.max(
+      0,
+      Math.min(
+        previousRight,
+        currentRight,
+      ) -
+        Math.max(
+          previousLeft,
+          currentLeft,
+        ),
+    );
+
+  const shorterWidth =
+    Math.min(
+      previousLine.bounds.width,
+      currentLine.bounds.width,
+    );
+
+  return shorterWidth <= 0
+    ? 0
+    : overlap / shorterWidth;
+}
+
+function canJoinCrossBlockRun(
+  previousBlock: PdfVisualBlock,
+  currentBlock: PdfVisualBlock,
+) {
+  if (
+    previousBlock.pageNumber !==
+    currentBlock.pageNumber
+  ) {
+    return false;
+  }
+
+  const previousLine =
+    getSingleLineTextBlockLine(
+      previousBlock,
+    );
+
+  const currentLine =
+    getSingleLineTextBlockLine(
+      currentBlock,
+    );
+
+  if (!previousLine || !currentLine) {
+    return false;
+  }
+
+  const verticalGap =
+    getCrossBlockVerticalGap(
+      previousLine,
+      currentLine,
+    );
+
+  if (
+    verticalGap < 0 ||
+    verticalGap >
+      CROSS_BLOCK_MAXIMUM_GAP
+  ) {
+    return false;
+  }
+
+  const horizontalOverlapRatio =
+    getCrossBlockHorizontalOverlapRatio(
+      previousLine,
+      currentLine,
+    );
+
+  return horizontalOverlapRatio >= 0.75;
+}
+
+function createCrossBlockCandidate(
+  blocks: PdfVisualBlock[],
+): PdfVisualBlock | null {
+  if (blocks.length < 3) {
+    return null;
+  }
+
+  const lines =
+    blocks
+      .map(
+        getSingleLineTextBlockLine,
+      )
+      .filter(
+        (
+          line,
+        ): line is PdfLine =>
+          line !== null,
+      )
+      .sort(
+        (first, second) =>
+          second.bounds.y -
+          first.bounds.y,
+      );
+
+  if (lines.length !== blocks.length) {
+    return null;
+  }
+
+  const firstBlock = blocks[0];
+  const lastBlock =
+    blocks[blocks.length - 1];
+
+  if (!firstBlock || !lastBlock) {
+    return null;
+  }
+
+  const minX =
+    Math.min(
+      ...lines.map(
+        (line) => line.bounds.x,
+      ),
+    );
+
+  const minY =
+    Math.min(
+      ...lines.map(
+        (line) => line.bounds.y,
+      ),
+    );
+
+  const maxX =
+    Math.max(
+      ...lines.map(
+        (line) =>
+          line.bounds.x +
+          line.bounds.width,
+      ),
+    );
+
+  const maxY =
+    Math.max(
+      ...lines.map(
+        (line) =>
+          line.bounds.y +
+          line.bounds.height,
+      ),
+    );
+
+  return {
+    id:
+      `cross-block-${firstBlock.pageNumber}-${firstBlock.id}-${lastBlock.id}`,
+    type: "paragraph",
+    pageNumber:
+      firstBlock.pageNumber,
+    bounds: {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    },
+    lines,
+    text: lines
+      .map(
+        (line) => line.text.trim(),
+      )
+      .filter(Boolean)
+      .join(" "),
+    confidence:
+      Math.min(
+        ...blocks.map(
+          (block) =>
+            block.confidence,
+        ),
+      ),
+  };
+}
+
+function createCrossBlockCandidates(
+  blocks: PdfVisualBlock[],
+): PdfVisualBlock[] {
+  const candidates: PdfVisualBlock[] =
+    [];
+
+  let currentRun: PdfVisualBlock[] =
+    [];
+
+  const flushCurrentRun = () => {
+    const candidate =
+      createCrossBlockCandidate(
+        currentRun,
+      );
+
+    if (candidate) {
+      candidates.push(candidate);
+    }
+
+    currentRun = [];
+  };
+
+  for (const block of blocks) {
+    const line =
+      getSingleLineTextBlockLine(
+        block,
+      );
+
+    if (!line) {
+      flushCurrentRun();
+      continue;
+    }
+
+    if (currentRun.length === 0) {
+      currentRun = [block];
+      continue;
+    }
+
+    const previousBlock =
+      currentRun[
+        currentRun.length - 1
+      ];
+
+    if (
+      previousBlock &&
+      canJoinCrossBlockRun(
+        previousBlock,
+        block,
+      )
+    ) {
+      currentRun.push(block);
+      continue;
+    }
+
+    flushCurrentRun();
+    currentRun = [block];
+  }
+
+  flushCurrentRun();
+
+  return candidates;
 }
 
 function getLineStarts(lines: PdfLine[]) {
@@ -556,8 +836,18 @@ export function detectTableRegionsForPage(
       DEFAULT_X_ALIGNMENT_TOLERANCE,
   };
 
+  const crossBlockCandidates =
+    createCrossBlockCandidates(
+      blocks,
+    );
+
+  const candidateBlocks = [
+    ...blocks,
+    ...crossBlockCandidates,
+  ];
+
   const regions =
-    blocks.map((block) => ({
+    candidateBlocks.map((block) => ({
       block,
       analysis: analyzeBlock(
         block,
