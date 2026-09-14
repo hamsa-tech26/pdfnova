@@ -362,5 +362,213 @@ describe(
         ).toBe("2");
       },
     );
+    it(
+      "keeps wrapped physical lines inside the same logical row",
+      () => {
+        const headerLine =
+          createLine(
+            "header",
+            700,
+            [
+              createWord(
+                "header-serial",
+                "Sl No",
+                50,
+                700,
+                25,
+              ),
+              createWord(
+                "header-name",
+                "Name of Scheme",
+                100,
+                700,
+                90,
+              ),
+              createWord(
+                "header-gp",
+                "GP / VC",
+                300,
+                700,
+                50,
+              ),
+              createWord(
+                "header-capacity",
+                "Capacity",
+                400,
+                700,
+                55,
+              ),
+              createWord(
+                "header-status",
+                "Status",
+                500,
+                700,
+                45,
+              ),
+            ],
+          );
+
+        const firstRowLine =
+          createLine(
+            "row-1",
+            680,
+            [
+              createWord(
+                "row-1-serial",
+                "1",
+                50,
+                680,
+                8,
+              ),
+              createWord(
+                "row-1-name",
+                "Rani Para Innovative",
+                100,
+                680,
+                120,
+              ),
+              createWord(
+                "row-1-gp",
+                "Damcherra RF VC",
+                300,
+                680,
+                90,
+              ),
+              createWord(
+                "row-1-capacity",
+                "30,000 G/day",
+                400,
+                680,
+                75,
+              ),
+              createWord(
+                "row-1-status",
+                "Functional",
+                500,
+                680,
+                65,
+              ),
+            ],
+          );
+
+        const wrappedLine =
+          createLine(
+            "row-1-wrapped",
+            665,
+            [
+              createWord(
+                "row-1-wrapped-name",
+                "Scheme Extension",
+                100,
+                665,
+                100,
+              ),
+              createWord(
+                "row-1-wrapped-gp",
+                "North Zone",
+                300,
+                665,
+                70,
+              ),
+            ],
+          );
+
+        const secondRowLine =
+          createLine(
+            "row-2",
+            620,
+            [
+              createWord(
+                "row-2-serial",
+                "2",
+                50,
+                620,
+                8,
+              ),
+              createWord(
+                "row-2-name",
+                "Khahamthai Para",
+                100,
+                620,
+                90,
+              ),
+              createWord(
+                "row-2-gp",
+                "West Damcherra",
+                300,
+                620,
+                90,
+              ),
+              createWord(
+                "row-2-capacity",
+                "75,000 G/day",
+                400,
+                620,
+                75,
+              ),
+              createWord(
+                "row-2-status",
+                "Functional",
+                500,
+                620,
+                65,
+              ),
+            ],
+          );
+
+        const block:
+          PdfParagraphBlock = {
+            id: "wrapped-table-block",
+            type: "paragraph",
+            pageNumber: 1,
+            bounds: {
+              x: 40,
+              y: 620,
+              width: 540,
+              height: 90,
+            },
+            lines: [
+              headerLine,
+              firstRowLine,
+              wrappedLine,
+              secondRowLine,
+            ],
+            text: [
+              headerLine.text,
+              firstRowLine.text,
+              wrappedLine.text,
+              secondRowLine.text,
+            ].join("\n"),
+            confidence: 1,
+          };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+          result.rows,
+        ).toHaveLength(3);
+
+        expect(
+          result.rows[1].lines,
+        ).toHaveLength(2);
+
+        expect(
+          result.rows[1].words.map(
+            (word) => word.text,
+          ),
+        ).toContain(
+          "Scheme Extension",
+        );
+
+        expect(
+          result.rows[2].words[0]
+            ?.text,
+        ).toBe("2");
+      },
+    );
   },
 );

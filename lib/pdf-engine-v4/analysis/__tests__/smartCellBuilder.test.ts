@@ -343,5 +343,256 @@ describe(
         );
       },
     );
+    it(
+      "joins wrapped physical lines into the correct logical cells",
+      () => {
+        const columns:
+          ColumnCandidate[] = [
+            createColumn(
+              "column-1",
+              50,
+              40,
+              75,
+            ),
+            createColumn(
+              "column-2",
+              100,
+              75,
+              200,
+            ),
+            createColumn(
+              "column-3",
+              300,
+              200,
+              350,
+            ),
+            createColumn(
+              "column-4",
+              400,
+              350,
+              450,
+            ),
+            createColumn(
+              "column-5",
+              500,
+              450,
+              570,
+            ),
+          ];
+
+        const header =
+          createRow(
+            "header",
+            0,
+            700,
+            [
+              createWord(
+                "h1",
+                "Sl No",
+                50,
+                700,
+              ),
+              createWord(
+                "h2",
+                "Name of Scheme",
+                100,
+                700,
+                90,
+              ),
+              createWord(
+                "h3",
+                "GP / VC",
+                300,
+                700,
+                50,
+              ),
+              createWord(
+                "h4",
+                "Capacity",
+                400,
+                700,
+                55,
+              ),
+              createWord(
+                "h5",
+                "Status",
+                500,
+                700,
+                45,
+              ),
+            ],
+          );
+
+        const firstLineWords = [
+          createWord(
+            "r1-serial",
+            "1",
+            50,
+            650,
+            8,
+          ),
+          createWord(
+            "r1-name-1",
+            "Rani",
+            100,
+            650,
+            25,
+          ),
+          createWord(
+            "r1-name-2",
+            "Para",
+            130,
+            650,
+            25,
+          ),
+          createWord(
+            "r1-name-3",
+            "Innovative",
+            160,
+            650,
+            35,
+          ),
+          createWord(
+            "r1-gp",
+            "Damcherra",
+            300,
+            650,
+            45,
+          ),
+          createWord(
+            "r1-capacity",
+            "30,000 G/day",
+            400,
+            650,
+            70,
+          ),
+          createWord(
+            "r1-status",
+            "Functional",
+            500,
+            650,
+            60,
+          ),
+        ];
+
+        const dataRow =
+          createRow(
+            "row-1",
+            1,
+            650,
+            firstLineWords,
+          );
+
+        const wrappedWords = [
+          createWord(
+            "r1-wrapped-name-1",
+            "Scheme",
+            100,
+            635,
+            40,
+          ),
+          createWord(
+            "r1-wrapped-name-2",
+            "Extension",
+            145,
+            635,
+            45,
+          ),
+          createWord(
+            "r1-wrapped-gp-1",
+            "North",
+            300,
+            635,
+            30,
+          ),
+          createWord(
+            "r1-wrapped-gp-2",
+            "Zone",
+            335,
+            635,
+            15,
+          ),
+        ];
+
+        const wrappedLine:
+          PdfLine = {
+            id: "row-1-wrapped-line",
+            pageNumber: 1,
+            words: wrappedWords,
+            bounds: {
+              x: 100,
+              y: 635,
+              width: 250,
+              height: 10,
+            },
+            text:
+              wrappedWords
+                .map(
+                  (word) =>
+                    word.text,
+                )
+                .join(" "),
+          };
+
+        const multilineRow:
+          LogicalRowCandidate = {
+            ...dataRow,
+            lines: [
+              dataRow.lines[0],
+              wrappedLine,
+            ],
+            words: [
+              ...dataRow.words,
+              ...wrappedWords,
+            ],
+            endY: 635,
+          };
+
+        const result =
+          buildSmartTableV4(
+            1,
+            [
+              header,
+              multilineRow,
+            ],
+            columns,
+          );
+
+        expect(
+          result.table,
+        ).not.toBeNull();
+
+        const row =
+          result.table!.rows[1];
+
+        expect(
+          row.cells[0].text,
+        ).toBe("1");
+
+        expect(
+          row.cells[1].text,
+        ).toBe(
+          "Rani Para Innovative Scheme Extension",
+        );
+
+        expect(
+          row.cells[2].text,
+        ).toBe(
+          "Damcherra North Zone",
+        );
+
+        expect(
+          row.cells[3].text,
+        ).toBe(
+          "30,000 G/day",
+        );
+
+        expect(
+          row.cells[4].text,
+        ).toBe(
+          "Functional",
+        );
+      },
+    );
   },
 );

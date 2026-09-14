@@ -533,7 +533,12 @@ function scorePhysicalLineMove(
     Math.abs(
       lineY - targetY,
     );
-
+  if (
+    verticalDistance >
+    maximumContinuationGap
+  ) {
+    return 0;
+  }
   const distanceScore =
     clamp(
       1 -
