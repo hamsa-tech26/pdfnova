@@ -831,12 +831,43 @@ function recoverSparseTrailingCandidates(
       (candidate) =>
         !candidate.accepted,
     )
-    .filter(
-      (candidate) =>
+    .filter((candidate) => {
+      const previousAccepted =
+        [...sortedAccepted]
+          .reverse()
+          .find(
+            (column) =>
+              column.x <
+              candidate.x,
+          );
+
+      const nextAccepted =
+        sortedAccepted.find(
+          (column) =>
+            column.x >
+            candidate.x,
+        );
+
+      const isSparseTrailingColumn =
         candidate.x >
         lastAccepted.x +
-          minimumTrailingGap,
-    )
+          minimumTrailingGap;
+
+      const isSparseInternalColumn =
+        previousAccepted !== undefined &&
+        nextAccepted !== undefined &&
+        candidate.x >
+          previousAccepted.x +
+            minimumTrailingGap &&
+        candidate.x <
+          nextAccepted.x -
+            minimumTrailingGap;
+
+      return (
+        isSparseTrailingColumn ||
+        isSparseInternalColumn
+      );
+    })
     .filter(
       (candidate) =>
         candidate.confidence >= 0.6,
