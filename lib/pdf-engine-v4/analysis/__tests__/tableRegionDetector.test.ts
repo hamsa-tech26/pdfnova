@@ -11,6 +11,7 @@ import {
 
 import type {
   PdfLine,
+  PdfParagraphBlock,
   PdfVisualBlock,
   PdfWord,
 } from "../../model/types";
@@ -71,7 +72,7 @@ function createLine(
 
 function createParagraph(
   texts: string[],
-): PdfVisualBlock {
+): PdfParagraphBlock {
   const lines =
     texts.map(
       (text, index) =>
