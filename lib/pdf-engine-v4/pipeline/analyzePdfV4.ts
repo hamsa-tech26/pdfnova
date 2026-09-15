@@ -20,6 +20,7 @@ import {
 } from "../analysis/visualBlockDetector";
 import {
   detectTableRegionsForPage,
+  getTableContentStartLineIndex,
 } from "../analysis/tableRegionDetector";
 import {
   detectStableColumnsV4,
@@ -1609,9 +1610,39 @@ if (
   continue;
 }
 
+const tableContentStartLineIndex =
+  region.block.type === "paragraph" ||
+  region.block.type === "heading"
+    ? getTableContentStartLineIndex(
+        region.block.lines,
+      )
+    : 0;
+
+const rowAnalysisBlock =
+  tableContentStartLineIndex > 0 &&
+  (region.block.type === "paragraph" ||
+    region.block.type === "heading")
+    ? {
+        ...region.block,
+        lines:
+          region.block.lines.slice(
+            tableContentStartLineIndex,
+          ),
+        text:
+          region.block.lines
+            .slice(
+              tableContentStartLineIndex,
+            )
+            .map(
+              (line) => line.text,
+            )
+            .join(" "),
+      }
+    : region.block;
+
 const rowDetection =
   detectAdaptiveRowsV4(
-    region.block,
+    rowAnalysisBlock,
     columnDetection.columns,
   );
 

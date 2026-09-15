@@ -6,6 +6,7 @@ import {
 
 import {
   detectTableRegionsForPage,
+  getTableContentStartLineIndex,
 } from "../tableRegionDetector";
 
 import type {
@@ -242,6 +243,44 @@ describe(
 
         expect(
           result.tableRegions.length,
+        ).toBe(0);
+      },
+    );
+    it(
+      "starts table analysis at the real header when multiple preamble lines come first",
+      () => {
+        const block =
+          createParagraph([
+            "PDFNova Phase 10.9 Controlled Fixture",
+            "Table A - North Zone",
+            "Sl No Name of Scheme Status Remarks",
+            "1 Rani Para Scheme Functional Normal supply",
+            "2 Khahamthai Para Scheme Functional Normal supply",
+          ]);
+
+        expect(
+          getTableContentStartLineIndex(
+            block.lines,
+          ),
+        ).toBe(2);
+      },
+    );
+
+    it(
+      "preserves a single upper-level title above the column header",
+      () => {
+        const block =
+          createParagraph([
+            "Water Supply Details",
+            "Sl No Name of Scheme Status Remarks",
+            "1 Rani Para Scheme Functional Normal supply",
+            "2 Khahamthai Para Scheme Functional Normal supply",
+          ]);
+
+        expect(
+          getTableContentStartLineIndex(
+            block.lines,
+          ),
         ).toBe(0);
       },
     );

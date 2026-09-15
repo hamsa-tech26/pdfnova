@@ -629,6 +629,29 @@ const hasHeaderLikeShape =
 );
 }
 
+export function getTableContentStartLineIndex(
+  lines: PdfLine[],
+) {
+  const firstHeaderIndex =
+    lines.findIndex(
+      isLikelyHeaderLine,
+    );
+
+  if (firstHeaderIndex < 2) {
+    return 0;
+  }
+
+  const remainingLineCount =
+    lines.length -
+    firstHeaderIndex;
+
+  if (remainingLineCount < 3) {
+    return 0;
+  }
+
+  return firstHeaderIndex;
+}
+
 function scoreHeader(lines: PdfLine[]) {
   if (lines.length === 0) {
     return { score: 0, confidence: 0 };
