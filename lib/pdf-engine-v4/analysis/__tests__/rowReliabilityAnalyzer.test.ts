@@ -348,6 +348,105 @@ describe(
     );
 
     it(
+      "handles formatted financial values and sparse total rows in structural mode",
+      () => {
+        const table =
+          createTable([
+            [
+              "Description",
+              "Quantity",
+              "Rate",
+              "Discount",
+              "Amount",
+            ],
+            [
+              "GI Pipe 100 mm",
+              "12.50",
+              "₹1,250.75",
+              "0%",
+              "₹15,634.38",
+            ],
+            [
+              "Pump Motor 5 HP",
+              "2",
+              "₹48,500.00",
+              "5%",
+              "₹92,150.00",
+            ],
+            [
+              "Valve Assembly",
+              "15",
+              "₹875.50",
+              "2.5%",
+              "₹12,804.19",
+            ],
+            [
+              "Testing Charges",
+              "1",
+              "₹7,250.00",
+              "0%",
+              "₹7,250.00",
+            ],
+            [
+              "Freight Adjustment",
+              "1",
+              "-₹2,500.00",
+              "0%",
+              "-₹2,500.00",
+            ],
+            [
+              "Subtotal",
+              "",
+              "",
+              "",
+              "₹1,25,338.57",
+            ],
+            [
+              "GST @ 18%",
+              "",
+              "",
+              "",
+              "₹22,560.94",
+            ],
+            [
+              "Grand Total",
+              "",
+              "",
+              "",
+              "₹1,47,899.51",
+            ],
+          ]);
+
+        const result =
+          analyzeRowReliabilityV1(
+            table,
+          );
+
+        expect(
+          result.analysisMode,
+        ).toBe("structural");
+
+        expect(
+          result
+            .serialColumnDiagnostics
+            .detectedColumnIndex,
+        ).toBeNull();
+
+        expect(
+          result.rows,
+        ).toHaveLength(8);
+
+        expect(
+          result.reviewRowCount,
+        ).toBe(0);
+
+        expect(
+          result.reliableRowCount,
+        ).toBe(8);
+      },
+    );
+
+    it(
       "records source fragment count for unusually short content",
       () => {
         const table =
