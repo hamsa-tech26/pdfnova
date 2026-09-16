@@ -116,6 +116,87 @@ function createSingleLineParagraph(
   };
 }
 
+function createMultiLineParagraph(
+  id: string,
+  startLineIndex: number,
+  texts: string[],
+  source?:
+    | "native-pdf"
+    | "ocr-tesseract",
+): PdfParagraphBlock {
+  const lines =
+    texts.map(
+      (text, offset) => {
+        const line =
+          createLine(
+            startLineIndex + offset,
+            text,
+          );
+
+        return {
+          ...line,
+          words:
+            line.words.map(
+              (word) => ({
+                ...word,
+                extractionProvenance:
+                  source
+                    ? {
+                        source,
+                        confidence: 85,
+                      }
+                    : undefined,
+              }),
+            ),
+        };
+      },
+    );
+
+  const minY =
+    Math.min(
+      ...lines.map(
+        (line) => line.bounds.y,
+      ),
+    );
+
+  const maxY =
+    Math.max(
+      ...lines.map(
+        (line) =>
+          line.bounds.y +
+          line.bounds.height,
+      ),
+    );
+
+  return {
+    id,
+    type: "paragraph",
+    pageNumber: 1,
+    bounds: {
+      x: 50,
+      y: minY,
+      width: 490,
+      height: maxY - minY,
+    },
+    lines,
+    text: texts.join(" "),
+    confidence: 1,
+  };
+}
+
+function createOcrMultiLineParagraph(
+  id: string,
+  startLineIndex: number,
+  texts: string[],
+): PdfParagraphBlock {
+  return createMultiLineParagraph(
+    id,
+    startLineIndex,
+    texts,
+    "ocr-tesseract",
+  );
+}
+
 describe(
   "Table Region Detector V2",
   () => {
@@ -220,6 +301,254 @@ describe(
     );
 
     it(
+      "recovers fragmented multi-line OCR blocks as one table candidate",
+      () => {
+        const blocks = [
+          createOcrMultiLineParagraph(
+            "ocr-fragment-1",
+            10,
+            [
+              "Sl No Name of Scheme GP / VC Status Remarks",
+              "1 Rani Para Scheme Damcherra RF Functional Normal",
+            ],
+          ),
+          createOcrMultiLineParagraph(
+            "ocr-fragment-2",
+            15,
+            [
+              "2 Khahamthai Para West Damcherra Functional Normal",
+              "3 Jalidhan Para Scheme Uttamjoy VC Functional Normal",
+            ],
+          ),
+          createOcrMultiLineParagraph(
+            "ocr-fragment-3",
+            20,
+            [
+              "4 Nilbusan Para Scheme Kacharicherra Repair Motor fault",
+              "5 Kamalacherri Scheme Thumsarai Functional Normal",
+            ],
+          ),
+        ];
+
+        const result =
+          detectTableRegionsForPage(
+            blocks,
+          );
+
+        expect(
+          result.tableRegions.some(
+            (region) =>
+              region.block.type ===
+                "paragraph" &&
+              region.block.lines.length ===
+                6,
+          ),
+        ).toBe(true);
+      },
+    );
+
+    it(
+      "does not keep a contained OCR fragment beside its larger recovered table candidate",
+      () => {
+        const blocks = [
+          createOcrMultiLineParagraph(
+            "ocr-overlap-1",
+            10,
+            [
+              "Sl No Name of Scheme GP / VC Status Remarks",
+              "1 Rani Para Scheme Damcherra RF Functional Normal",
+              "2 Khahamthai Para West Damcherra Functional Normal",
+            ],
+          ),
+          createOcrMultiLineParagraph(
+            "ocr-overlap-2",
+            16,
+            [
+              "3 Jalidhan Para Scheme Uttamjoy VC Functional Normal",
+              "4 Nilbusan Para Scheme Kacharicherra Repair Motor fault",
+              "5 Kamalacherri Scheme Thumsarai Functional Normal",
+            ],
+          ),
+          createOcrMultiLineParagraph(
+            "ocr-overlap-3",
+            22,
+            [
+              "6 Purnaram Para Scheme Thumsarai Low source Tanker used",
+              "7 Gouranga Para Scheme West Damcherra Repair Pipe damage",
+              "8 Halam Para Scheme Damcherra Functional Normal",
+            ],
+          ),
+        ];
+
+        const result =
+          detectTableRegionsForPage(
+            blocks,
+          );
+
+        const recoveredRegions =
+          result.tableRegions.filter(
+            (region) =>
+              region.block.type ===
+                "paragraph" &&
+              region.block.id.startsWith(
+                "ocr-cross-block-",
+              ),
+          );
+
+        expect(
+          recoveredRegions,
+        ).toHaveLength(1);
+
+        expect(
+          result.tableRegions,
+        ).toHaveLength(1);
+      },
+    );
+
+it(
+  "does not merge two nearby OCR tables into one recovered table",
+  () => {
+    const blocks = [
+      createOcrMultiLineParagraph(
+        "ocr-table-a-1",
+        10,
+        [
+          "Sl No Name of Scheme GP / VC Status Remarks",
+          "1 Rani Para Scheme Damcherra RF Functional Normal",
+        ],
+      ),
+      createOcrMultiLineParagraph(
+        "ocr-table-a-2",
+        13,
+        [
+          "2 Khahamthai Para West Damcherra Functional Normal",
+          "3 Jalidhan Para Scheme Uttamjoy VC Functional Normal",
+        ],
+      ),
+      createOcrMultiLineParagraph(
+        "ocr-table-a-3",
+        16,
+        [
+          "4 Nilbusan Para Scheme Kacharicherra Repair Motor fault",
+          "5 Kamalacherri Scheme Thumsarai Functional Normal",
+        ],
+      ),
+      createOcrMultiLineParagraph(
+        "ocr-table-b-1",
+        20,
+        [
+          "Sl No Description Quantity Rate Amount Remarks",
+          "1 Pipe repair 10 250 2500 Completed",
+        ],
+      ),
+      createOcrMultiLineParagraph(
+        "ocr-table-b-2",
+        23,
+        [
+          "2 Valve replacement 4 500 2000 Completed",
+          "3 Pump repair 1 1500 1500 Pending",
+        ],
+      ),
+      createOcrMultiLineParagraph(
+        "ocr-table-b-3",
+        26,
+        [
+          "4 Fitting replacement 8 150 1200 Completed",
+          "5 Labour charge 2 600 1200 Completed",
+        ],
+      ),
+    ];
+
+    const result =
+      detectTableRegionsForPage(
+        blocks,
+      );
+
+    const recoveredRegions =
+  result.regions.filter(
+        (region) =>
+          region.block.id.startsWith(
+            "ocr-cross-block-",
+          ),
+      );
+
+    expect(
+      recoveredRegions,
+    ).toHaveLength(2);
+
+    expect(
+      recoveredRegions.every(
+        (region) =>
+          region.block.type ===
+            "paragraph" &&
+          region.block.lines.length ===
+            6,
+      ),
+    ).toBe(true);
+
+expect(
+  recoveredRegions.some(
+    (region) =>
+      region.block.type ===
+        "paragraph" &&
+      region.block.lines.length >
+        6,
+  ),
+).toBe(false);
+  },
+);
+
+    it(
+      "does not automatically join fragmented native multi-line blocks",
+      () => {
+        const blocks = [
+          createMultiLineParagraph(
+            "native-fragment-1",
+            20,
+            [
+              "Sl No Name of Scheme GP / VC Status Remarks",
+              "1 Rani Para Scheme Damcherra RF Functional Normal",
+            ],
+            "native-pdf",
+          ),
+          createMultiLineParagraph(
+            "native-fragment-2",
+            25,
+            [
+              "2 Khahamthai Para West Damcherra Functional Normal",
+              "3 Jalidhan Para Scheme Uttamjoy VC Functional Normal",
+            ],
+            "native-pdf",
+          ),
+          createMultiLineParagraph(
+            "native-fragment-3",
+            30,
+            [
+              "4 Nilbusan Para Scheme Kacharicherra Repair Motor fault",
+              "5 Kamalacherri Scheme Thumsarai Functional Normal",
+            ],
+            "native-pdf",
+          ),
+        ];
+
+        const result =
+          detectTableRegionsForPage(
+            blocks,
+          );
+
+        expect(
+          result.tableRegions.some(
+            (region) =>
+              region.block.type ===
+                "paragraph" &&
+              region.block.lines.length ===
+                6,
+          ),
+        ).toBe(false);
+      },
+    );
+
+    it(
       "does not treat consecutive single-line prose blocks as a table candidate",
       () => {
         const blocks = [
@@ -285,5 +614,23 @@ describe(
         ).toBe(0);
       },
     );
+it(
+  "starts at the real header when a report title contains header-like words",
+  () => {
+    const block =
+      createParagraph([
+        "WATER SUPPLY SCHEME STATUS REPORT",
+        "Sl No Name of Scheme GP / VC Status Remarks",
+        "1 Rani Para Scheme Damcherra RF Functional Normal",
+        "2 Khahamthai Para West Damcherra Functional Normal",
+      ]);
+
+    expect(
+      getTableContentStartLineIndex(
+        block.lines,
+      ),
+    ).toBe(1);
+  },
+);
   },
 );

@@ -25,6 +25,10 @@ const DEFAULT_POSSIBLE_TABLE_THRESHOLD = 42;
 const DEFAULT_X_ALIGNMENT_TOLERANCE = 14;
 
 const CROSS_BLOCK_MAXIMUM_GAP = 36;
+const OCR_CROSS_BLOCK_MAXIMUM_GAP = 72;
+
+const OCR_CROSS_BLOCK_MINIMUM_OVERLAP_RATIO =
+  0.75;
 
 const MAX_ALIGNMENT_SCORE = 30;
 const MAX_SPACING_SCORE = 20;
@@ -363,6 +367,380 @@ function createCrossBlockCandidates(
   return candidates;
 }
 
+function isOcrTextBlock(
+  block: PdfVisualBlock,
+) {
+  const lines =
+    getBlockLines(block);
+
+  return (
+    lines.length > 0 &&
+    lines.every(
+      (line) =>
+        line.words.length > 0 &&
+        line.words.every(
+          (word) =>
+            word.extractionProvenance
+              ?.source ===
+            "ocr-tesseract",
+        ),
+    )
+  );
+}
+
+function getCrossBlockBoundsVerticalGap(
+  previousBlock: PdfVisualBlock,
+  currentBlock: PdfVisualBlock,
+) {
+  return (
+    previousBlock.bounds.y -
+    (currentBlock.bounds.y +
+      currentBlock.bounds.height)
+  );
+}
+
+function getCrossBlockBoundsHorizontalOverlapRatio(
+  previousBlock: PdfVisualBlock,
+  currentBlock: PdfVisualBlock,
+) {
+  const previousLeft =
+    previousBlock.bounds.x;
+
+  const previousRight =
+    previousBlock.bounds.x +
+    previousBlock.bounds.width;
+
+  const currentLeft =
+    currentBlock.bounds.x;
+
+  const currentRight =
+    currentBlock.bounds.x +
+    currentBlock.bounds.width;
+
+  const overlap =
+    Math.max(
+      0,
+      Math.min(
+        previousRight,
+        currentRight,
+      ) -
+        Math.max(
+          previousLeft,
+          currentLeft,
+        ),
+    );
+
+  const shorterWidth =
+    Math.min(
+      previousBlock.bounds.width,
+      currentBlock.bounds.width,
+    );
+
+  return shorterWidth <= 0
+    ? 0
+    : overlap / shorterWidth;
+}
+
+function canJoinOcrCrossBlockRun(
+  previousBlock: PdfVisualBlock,
+  currentBlock: PdfVisualBlock,
+) {
+  if (
+    previousBlock.pageNumber !==
+      currentBlock.pageNumber ||
+    !isOcrTextBlock(previousBlock) ||
+    !isOcrTextBlock(currentBlock)
+  ) {
+    return false;
+  }
+
+  const verticalGap =
+    getCrossBlockBoundsVerticalGap(
+      previousBlock,
+      currentBlock,
+    );
+
+  if (
+    verticalGap < 0 ||
+    verticalGap >
+      OCR_CROSS_BLOCK_MAXIMUM_GAP
+  ) {
+    return false;
+  }
+
+  const horizontalOverlapRatio =
+    getCrossBlockBoundsHorizontalOverlapRatio(
+      previousBlock,
+      currentBlock,
+    );
+
+  return (
+    horizontalOverlapRatio >=
+    OCR_CROSS_BLOCK_MINIMUM_OVERLAP_RATIO
+  );
+}
+
+function createOcrCrossBlockCandidate(
+  blocks: PdfVisualBlock[],
+): PdfVisualBlock | null {
+  if (blocks.length < 3) {
+    return null;
+  }
+
+  const hasMultiLineBlock =
+    blocks.some(
+      (block) =>
+        getBlockLines(block).length >
+        1,
+    );
+
+  if (!hasMultiLineBlock) {
+    return null;
+  }
+
+  const lines =
+    blocks
+      .flatMap(
+        getBlockLines,
+      )
+      .sort(
+        (first, second) =>
+          second.bounds.y -
+          first.bounds.y,
+      );
+
+  if (lines.length < 5) {
+    return null;
+  }
+
+  const hasHeaderEvidence =
+    lines.some(
+      isLikelyHeaderLine,
+    );
+
+  const numericLineCount =
+    lines.filter(
+      hasNumericStart,
+    ).length;
+
+  if (
+    !hasHeaderEvidence &&
+    numericLineCount < 3
+  ) {
+    return null;
+  }
+
+  const firstBlock =
+    blocks[0];
+
+  const lastBlock =
+    blocks[blocks.length - 1];
+
+  if (!firstBlock || !lastBlock) {
+    return null;
+  }
+
+  const minX =
+    Math.min(
+      ...lines.map(
+        (line) => line.bounds.x,
+      ),
+    );
+
+  const minY =
+    Math.min(
+      ...lines.map(
+        (line) => line.bounds.y,
+      ),
+    );
+
+  const maxX =
+    Math.max(
+      ...lines.map(
+        (line) =>
+          line.bounds.x +
+          line.bounds.width,
+      ),
+    );
+
+  const maxY =
+    Math.max(
+      ...lines.map(
+        (line) =>
+          line.bounds.y +
+          line.bounds.height,
+      ),
+    );
+
+  return {
+    id:
+      `ocr-cross-block-${firstBlock.pageNumber}-${firstBlock.id}-${lastBlock.id}`,
+    type: "paragraph",
+    pageNumber:
+      firstBlock.pageNumber,
+    bounds: {
+      x: minX,
+      y: minY,
+      width: maxX - minX,
+      height: maxY - minY,
+    },
+    lines,
+    text:
+      lines
+        .map(
+          (line) =>
+            line.text.trim(),
+        )
+        .filter(Boolean)
+        .join(" "),
+    confidence:
+      Math.min(
+        ...blocks.map(
+          (block) =>
+            block.confidence,
+        ),
+      ),
+  };
+}
+
+function createOcrCrossBlockCandidates(
+  blocks: PdfVisualBlock[],
+): PdfVisualBlock[] {
+  const candidates:
+    PdfVisualBlock[] = [];
+
+  let currentRun:
+    PdfVisualBlock[] = [];
+
+  const flushCurrentRun = () => {
+    const candidate =
+      createOcrCrossBlockCandidate(
+        currentRun,
+      );
+
+    if (candidate) {
+      candidates.push(
+        candidate,
+      );
+    }
+
+    currentRun = [];
+  };
+
+  for (const block of blocks) {
+    if (!isOcrTextBlock(block)) {
+      flushCurrentRun();
+      continue;
+    }
+
+    if (currentRun.length === 0) {
+      currentRun = [block];
+      continue;
+    }
+
+const currentBlockHasHeaderEvidence =
+  getBlockLines(
+    block,
+  ).some(
+    hasExplicitColumnHeaderEvidence,
+  );
+
+const currentRunHasHeaderEvidence =
+  currentRun.some(
+    (runBlock) =>
+      getBlockLines(
+        runBlock,
+      ).some(
+        hasExplicitColumnHeaderEvidence,
+      ),
+  );
+
+if (
+  currentBlockHasHeaderEvidence &&
+  currentRunHasHeaderEvidence
+) {
+  flushCurrentRun();
+  currentRun = [block];
+  continue;
+}
+
+    const previousBlock =
+      currentRun[
+        currentRun.length - 1
+      ];
+
+    if (
+      previousBlock &&
+      canJoinOcrCrossBlockRun(
+        previousBlock,
+        block,
+      )
+    ) {
+      currentRun.push(block);
+      continue;
+    }
+
+    flushCurrentRun();
+    currentRun = [block];
+  }
+
+  flushCurrentRun();
+
+  return candidates;
+}
+
+function isContainedByRecoveredOcrRegion(
+  region: AnalyzedTableRegion,
+  recoveredRegions:
+    AnalyzedTableRegion[],
+) {
+  if (
+    !isOcrTextBlock(region.block) ||
+    region.block.id.startsWith(
+      "ocr-cross-block-",
+    )
+  ) {
+    return false;
+  }
+
+  const regionLines =
+    getBlockLines(region.block);
+
+  if (regionLines.length === 0) {
+    return false;
+  }
+
+  return recoveredRegions.some(
+    (recoveredRegion) => {
+      const recoveredLines =
+        getBlockLines(
+          recoveredRegion.block,
+        );
+
+      if (
+        recoveredLines.length <=
+        regionLines.length
+      ) {
+        return false;
+      }
+
+      const recoveredLineIds =
+        new Set(
+          recoveredLines.map(
+            (line) => line.id,
+          ),
+        );
+
+      return regionLines.every(
+        (line) =>
+          recoveredLineIds.has(
+            line.id,
+          ),
+      );
+    },
+  );
+}
+
 function getLineStarts(lines: PdfLine[]) {
   return lines.flatMap((line) =>
     line.words.map((word) => word.bounds.x),
@@ -629,6 +1007,53 @@ const hasHeaderLikeShape =
 );
 }
 
+function hasExplicitColumnHeaderEvidence(
+  line: PdfLine,
+) {
+  const text =
+    line.text
+      .trim()
+      .toLowerCase();
+
+  if (!text) {
+    return false;
+  }
+
+  const explicitHeaderTerms = [
+    "sl no",
+    "serial",
+    "name of",
+    "habitation",
+    "quantity",
+    "rate",
+    "amount",
+    "description",
+    "unit",
+    "remarks",
+  ];
+
+  return explicitHeaderTerms.some(
+    (term) =>
+      text.includes(term),
+  );
+}
+
+function isLikelyReportTitleLine(
+  line: PdfLine,
+) {
+  const text =
+    line.text
+      .trim()
+      .toLowerCase();
+
+  return (
+    /\breport\b/.test(text) &&
+    !hasExplicitColumnHeaderEvidence(
+      line,
+    )
+  );
+}
+
 export function getTableContentStartLineIndex(
   lines: PdfLine[],
 ) {
@@ -636,6 +1061,28 @@ export function getTableContentStartLineIndex(
     lines.findIndex(
       isLikelyHeaderLine,
     );
+if (
+  firstHeaderIndex === 0 &&
+  lines[0] &&
+  isLikelyReportTitleLine(
+    lines[0],
+  )
+) {
+  const explicitHeaderIndex =
+    lines
+      .slice(1, 4)
+      .findIndex(
+        hasExplicitColumnHeaderEvidence,
+      );
+
+  if (
+    explicitHeaderIndex >= 0
+  ) {
+    return (
+      explicitHeaderIndex + 1
+    );
+  }
+}
 
   if (firstHeaderIndex < 2) {
     return 0;
@@ -859,15 +1306,21 @@ export function detectTableRegionsForPage(
       DEFAULT_X_ALIGNMENT_TOLERANCE,
   };
 
-  const crossBlockCandidates =
-    createCrossBlockCandidates(
-      blocks,
-    );
+const crossBlockCandidates =
+  createCrossBlockCandidates(
+    blocks,
+  );
 
-  const candidateBlocks = [
-    ...blocks,
-    ...crossBlockCandidates,
-  ];
+const ocrCrossBlockCandidates =
+  createOcrCrossBlockCandidates(
+    blocks,
+  );
+
+const candidateBlocks = [
+  ...blocks,
+  ...crossBlockCandidates,
+  ...ocrCrossBlockCandidates,
+];
 
   const regions =
     candidateBlocks.map((block) => ({
@@ -878,12 +1331,29 @@ export function detectTableRegionsForPage(
       ),
     }));
 
-  const tableRegions =
-    regions.filter(
-      (region) =>
-        region.analysis.totalScore >=
-        resolvedOptions.possibleTableThreshold,
-    );
+const scoredTableRegions =
+  regions.filter(
+    (region) =>
+      region.analysis.totalScore >=
+      resolvedOptions.possibleTableThreshold,
+  );
+
+const recoveredOcrRegions =
+  scoredTableRegions.filter(
+    (region) =>
+      region.block.id.startsWith(
+        "ocr-cross-block-",
+      ),
+  );
+
+const tableRegions =
+  scoredTableRegions.filter(
+    (region) =>
+      !isContainedByRecoveredOcrRegion(
+        region,
+        recoveredOcrRegions,
+      ),
+  );
 
   return {
     regions,

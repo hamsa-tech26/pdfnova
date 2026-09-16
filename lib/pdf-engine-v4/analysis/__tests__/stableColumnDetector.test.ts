@@ -96,6 +96,40 @@ function createLine(
   };
 }
 
+function createOcrLine(
+  index: number,
+  entries: Array<{
+    text: string;
+    x: number;
+    width?: number;
+  }>,
+): PdfLine {
+  const line =
+    createLine(
+      index,
+      entries,
+    );
+
+  return {
+    ...line,
+    words:
+      line.words.map(
+        (word) => ({
+          ...word,
+          font: {
+            ...word.font,
+            name: "ocr-tesseract",
+          },
+          extractionProvenance: {
+            source:
+              "ocr-tesseract",
+            confidence: 90,
+          },
+        }),
+      ),
+  };
+}
+
 function createSparseTrailingColumnBlock():
   PdfVisualBlock {
   const lines: PdfLine[] = [];
@@ -419,6 +453,153 @@ describe(
               ) <= 1,
           ),
         ).toBe(false);
+      },
+    );
+    it(
+      "merges split OCR serial alignments into one logical column",
+      () => {
+        const lines: PdfLine[] =
+  [];
+
+lines.push(
+  createOcrLine(
+    0,
+    [
+{
+  text: "Sl",
+  x: 34,
+  width: 8,
+},
+{
+  text: "No",
+  x: 51,
+  width: 10,
+},
+      {
+        text: "Name",
+        x: 78,
+        width: 30,
+      },
+      {
+        text: "GP/VC",
+        x: 270,
+        width: 30,
+      },
+      {
+        text: "Status",
+        x: 375,
+        width: 35,
+      },
+      {
+        text: "Remarks",
+        x: 449,
+        width: 40,
+      },
+    ],
+  ),
+);
+
+for (
+  let index = 1;
+  index <= 9;
+  index += 1
+) {
+  const serialX =
+    [3, 5, 6, 7].includes(
+      index,
+    )
+      ? 34
+      : 51;
+
+  const entries: Array<{
+    text: string;
+    x: number;
+    width?: number;
+  }> = [
+    {
+      text: String(index),
+      x: serialX,
+      width: 4,
+    },
+    {
+      text:
+        `Scheme${index}`,
+      x: 78,
+      width: 40,
+    },
+    {
+      text:
+        `VC${index}`,
+      x: 270,
+      width: 30,
+    },
+    {
+      text: "Functional",
+      x: 375,
+      width: 45,
+    },
+    {
+      text: "Normal",
+      x: 449,
+      width: 30,
+    },
+  ];
+
+  lines.push(
+    createOcrLine(
+      index,
+      entries,
+    ),
+  );
+}
+
+const block:
+  PdfVisualBlock = {
+    id:
+      "ocr-leading-noise-table",
+    type: "paragraph",
+    pageNumber: 1,
+    bounds: {
+      x: 30,
+      y: 450,
+      width: 500,
+      height: 270,
+    },
+    lines,
+    text:
+      lines
+        .map(
+          (line) =>
+            line.text,
+        )
+        .join(" "),
+    confidence: 0.9,
+  };
+
+const result =
+  detectStableColumnsV4(
+    block,
+  );
+
+const acceptedXs =
+  result.columns.map(
+    (column) =>
+      Math.round(
+        column.x,
+      ),
+  );
+
+expect(
+  result.columns,
+).toHaveLength(5);
+
+expect(
+  acceptedXs.some(
+    (x) =>
+      x >= 34 &&
+      x <= 51,
+  ),
+).toBe(true);
       },
     );
   },

@@ -114,6 +114,37 @@ function getBlockLines(
   return [];
 }
 
+function isOcrPunctuationArtifactLine(
+  line: PdfLine,
+) {
+  const words =
+    getSortedWords(line);
+
+  if (
+    words.length === 0 ||
+    words.length > 2
+  ) {
+    return false;
+  }
+
+  return words.every(
+    (word) => {
+      const text =
+        word.text.trim();
+
+      return (
+        word.extractionProvenance
+          ?.source ===
+          "ocr-tesseract" &&
+        text.length > 0 &&
+        !/[A-Za-z0-9]/.test(
+          text,
+        )
+      );
+    },
+  );
+}
+
 function getSortedWords(line: PdfLine) {
   return [...line.words].sort(
     (first, second) =>
@@ -128,11 +159,88 @@ function getFirstText(line: PdfLine) {
   );
 }
 
+function getLeadingSerialText(
+  line: PdfLine,
+) {
+  const words =
+    getSortedWords(line);
+
+  let firstNoiseX:
+    number | null = null;
+
+  let sawPunctuationNoise =
+    false;
+
+  for (const word of words) {
+    const text =
+      word.text.trim();
+
+    if (
+      /^\d+[.)]?(?:\s|$)/.test(
+        text,
+      )
+    ) {
+      if (
+        firstNoiseX !== null &&
+        word.bounds.x -
+          firstNoiseX >
+          24
+      ) {
+        return "";
+      }
+
+      return text;
+    }
+
+    const isOcrWord =
+      word.extractionProvenance
+        ?.source ===
+      "ocr-tesseract";
+
+    const isPunctuationOnly =
+      text.length > 0 &&
+      !/[A-Za-z0-9]/.test(
+        text,
+      );
+
+    const isShortOcrGarbage =
+      text.length > 0 &&
+      text.length <= 2 &&
+      !/\d/.test(text) &&
+      sawPunctuationNoise;
+
+    const isOcrNoise =
+      isOcrWord &&
+      (
+        isPunctuationOnly ||
+        isShortOcrGarbage
+      );
+
+    if (!isOcrNoise) {
+      break;
+    }
+
+    if (firstNoiseX === null) {
+      firstNoiseX =
+        word.bounds.x;
+    }
+
+    if (isPunctuationOnly) {
+      sawPunctuationNoise =
+        true;
+    }
+  }
+
+  return "";
+}
+
 function startsWithSerialNumber(
   line: PdfLine,
 ) {
   return /^\d+[.)]?(?:\s|$)/.test(
-    getFirstText(line),
+    getLeadingSerialText(
+      line,
+    ),
   );
 }
 
@@ -140,7 +248,9 @@ function startsWithSerialTwo(
   line: PdfLine,
 ) {
   return /^2[.)]?(?:\s|$)/.test(
-    getFirstText(line),
+    getLeadingSerialText(
+      line,
+    ),
   );
 }
 
@@ -878,6 +988,13 @@ for (
   index += 1
 ) {
   const line = lines[index];
+if (
+  isOcrPunctuationArtifactLine(
+    line,
+  )
+) {
+  continue;
+}
 
   const nextLine =
     lines[index + 1];

@@ -566,24 +566,247 @@ function isSerialNumberColumn(
     );
 
   for (const line of lines) {
-    const firstWord =
-      createAnalysisWordsV4(line)[0];
+  const words =
+    createAnalysisWordsV4(line);
+
+  let firstNoiseX:
+    number | null = null;
+
+  let sawPunctuationNoise =
+    false;
+
+  for (const word of words) {
+    const text =
+      word.text.trim();
 
     if (
-      firstWord &&
-      /^\d+[.)]?$/.test(
-        firstWord.text.trim(),
-      ) &&
-      Math.abs(
-        firstWord.bounds.x -
-          column.x,
-      ) <= serialTolerance
+      /^\d+[.)]?$/.test(text)
     ) {
-      numericMatches += 1;
+      if (
+        firstNoiseX !== null &&
+        word.bounds.x -
+          firstNoiseX >
+          24
+      ) {
+        break;
+      }
+
+      if (
+        Math.abs(
+          word.bounds.x -
+            column.x,
+        ) <= serialTolerance
+      ) {
+        numericMatches += 1;
+      }
+
+      break;
+    }
+
+    const isOcrWord =
+      word.extractionProvenance
+        ?.source ===
+      "ocr-tesseract";
+
+    const isPunctuationOnly =
+      text.length > 0 &&
+      !/[A-Za-z0-9]/.test(
+        text,
+      );
+
+    const isShortOcrGarbage =
+      text.length > 0 &&
+      text.length <= 2 &&
+      !/\d/.test(text) &&
+      sawPunctuationNoise;
+
+    const isOcrNoise =
+      isOcrWord &&
+      (
+        isPunctuationOnly ||
+        isShortOcrGarbage
+      );
+
+    if (!isOcrNoise) {
+      break;
+    }
+
+    if (firstNoiseX === null) {
+      firstNoiseX =
+        word.bounds.x;
+    }
+
+    if (isPunctuationOnly) {
+      sawPunctuationNoise =
+        true;
     }
   }
+}
 
-  return numericMatches >= 5;
+  const topLines =
+  [...lines]
+    .sort(
+      (first, second) =>
+        second.bounds.y -
+        first.bounds.y,
+    )
+    .slice(0, 3);
+
+const hasSerialHeaderSupport =
+  topLines.some((line) =>
+    createAnalysisWordsV4(
+      line,
+    ).some((word) => {
+      const text =
+        word.text
+          .trim()
+          .toLowerCase();
+
+      const isSerialHeader =
+        text === "no" ||
+        text === "no." ||
+        text === "s.no" ||
+        text === "s.no." ||
+        text === "sl.no" ||
+        text === "sl.no.";
+
+      return (
+        isSerialHeader &&
+        Math.abs(
+          word.bounds.x -
+            column.x,
+        ) <=
+          Math.max(
+            serialTolerance,
+            8,
+          )
+      );
+    }),
+  );
+
+return (
+  numericMatches >= 5 ||
+  (
+    numericMatches >= 3 &&
+    hasSerialHeaderSupport
+  )
+);
+}
+
+function isOcrPunctuationNoiseColumn(
+  column: ColumnCandidate,
+  lines: PdfLine[],
+  tolerance: number,
+) {
+  const matchTolerance =
+    clamp(
+      tolerance * 0.5,
+      3,
+      6,
+    );
+
+  const matchingWords =
+    lines
+      .flatMap(
+        (line) => line.words,
+      )
+      .filter(
+        (word) =>
+          word.extractionProvenance
+            ?.source ===
+            "ocr-tesseract" &&
+          Math.abs(
+            word.bounds.x -
+              column.x,
+          ) <= matchTolerance,
+      );
+
+  if (
+    matchingWords.length < 2
+  ) {
+    return false;
+  }
+
+const noiseWords =
+  matchingWords.filter(
+    (word) => {
+      const text =
+        word.text.trim();
+
+      const isPunctuationOnly =
+        !/[A-Za-z0-9]/.test(
+          text,
+        );
+
+      const isShortOcrGarbage =
+        text.length <= 2 &&
+        !/\d/.test(text);
+
+      return (
+        text.length > 0 &&
+        (
+          isPunctuationOnly ||
+          isShortOcrGarbage
+        )
+      );
+    },
+  );
+
+  return (
+    noiseWords.length /
+      matchingWords.length >=
+    0.75
+  );
+}
+
+function isOcrSerialFragmentColumn(
+  column: ColumnCandidate,
+  lines: PdfLine[],
+  tolerance: number,
+) {
+  const matchTolerance =
+    clamp(
+      tolerance * 0.5,
+      3,
+      6,
+    );
+
+  const matchingWords =
+    lines
+      .flatMap(
+        (line) => line.words,
+      )
+      .filter(
+        (word) =>
+          word.extractionProvenance
+            ?.source ===
+            "ocr-tesseract" &&
+          Math.abs(
+            word.bounds.x -
+              column.x,
+          ) <= matchTolerance,
+      );
+
+  if (
+    matchingWords.length < 3
+  ) {
+    return false;
+  }
+
+  const numericWords =
+    matchingWords.filter(
+      (word) =>
+        /^\d+[.)]?$/.test(
+          word.text.trim(),
+        ),
+    );
+
+  return (
+    numericWords.length >= 2 &&
+    numericWords.length /
+      matchingWords.length >=
+      0.5
+  );
 }
 
 function consolidateNearbyColumns(
@@ -628,10 +851,67 @@ function consolidateNearbyColumns(
       36,
     );
 
+const leadingOcrNoiseDistance =
+  Math.max(
+    consolidationDistance,
+    20,
+  );
+
+const columnsWithoutLeadingOcrNoise =
+  sortedColumns.filter(
+    (column, index) => {
+      if (index !== 0) {
+        return true;
+      }
+
+      const nextColumn =
+        sortedColumns[
+          index + 1
+        ];
+
+      if (!nextColumn) {
+        return true;
+      }
+
+      const gap =
+        nextColumn.x -
+        column.x;
+
+      if (
+        gap >
+        leadingOcrNoiseDistance
+      ) {
+        return true;
+      }
+
+      const nextIsSerial =
+        isSerialNumberColumn(
+          nextColumn,
+          lines,
+          consolidationDistance,
+        );
+
+      const currentIsNoise =
+        isOcrPunctuationNoiseColumn(
+          column,
+          lines,
+          consolidationDistance,
+        );
+
+      return !(
+        nextIsSerial &&
+        currentIsNoise
+      );
+    },
+  );
+
   const consolidated:
     ColumnCandidate[] = [];
 
-  for (const column of sortedColumns) {
+  for (
+  const column of
+    columnsWithoutLeadingOcrNoise
+) {
     const previous =
       consolidated[
         consolidated.length - 1
@@ -661,6 +941,33 @@ function consolidateNearbyColumns(
         lines,
         consolidationDistance,
       );
+
+const previousIsOcrSerialFragment =
+  isOcrSerialFragmentColumn(
+    previous,
+    lines,
+    consolidationDistance,
+  );
+
+const currentIsOcrSerialFragment =
+  isOcrSerialFragmentColumn(
+    column,
+    lines,
+    consolidationDistance,
+  );
+
+const shouldMergeSplitOcrSerial =
+  gap <= consolidationDistance &&
+  (
+    (
+      previousIsSerial &&
+      currentIsOcrSerialFragment
+    ) ||
+    (
+      currentIsSerial &&
+      previousIsOcrSerialFragment
+    )
+  );
 
     const weakerSupport =
       Math.min(
@@ -693,14 +1000,17 @@ function consolidateNearbyColumns(
       gap <= sparseAlignmentDistance &&
       isSparseSecondaryAlignment;
 
-    if (
-      (
-        shouldMergeNormally ||
-        shouldMergeSparseAlignment
-      ) &&
-      !previousIsSerial &&
-      !currentIsSerial
-    ) {
+if (
+  shouldMergeSplitOcrSerial ||
+  (
+    (
+      shouldMergeNormally ||
+      shouldMergeSparseAlignment
+    ) &&
+    !previousIsSerial &&
+    !currentIsSerial
+  )
+) {
       consolidated[
         consolidated.length - 1
       ] = mergeCandidates(

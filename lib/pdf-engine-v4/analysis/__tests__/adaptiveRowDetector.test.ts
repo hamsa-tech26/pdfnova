@@ -570,5 +570,279 @@ describe(
         ).toBe("2");
       },
     );
+    it(
+      "starts a new OCR row when punctuation appears before a valid serial number",
+      () => {
+        const firstRow =
+          createLine(
+            "ocr-row-1",
+            680,
+            [
+              createWord(
+                "row-1-serial",
+                "1",
+                50,
+                680,
+                8,
+              ),
+              createWord(
+                "row-1-name",
+                "Rani Para",
+                100,
+                680,
+                80,
+              ),
+              createWord(
+                "row-1-gp",
+                "Damcherra",
+                300,
+                680,
+                70,
+              ),
+              createWord(
+                "row-1-status",
+                "Functional",
+                400,
+                680,
+                65,
+              ),
+              createWord(
+                "row-1-remarks",
+                "Normal",
+                500,
+                680,
+                50,
+              ),
+            ],
+          );
+
+const secondRow =
+  createLine(
+    "ocr-row-2",
+    660,
+    [
+      createWord(
+        "row-2-noise-1",
+        "|",
+        35,
+        660,
+        3,
+      ),
+      createWord(
+        "row-2-noise-2",
+        "a",
+        40,
+        660,
+        3,
+      ),
+      createWord(
+        "row-2-noise-3",
+        "|",
+        45,
+        660,
+        3,
+      ),
+      createWord(
+        "row-2-serial",
+        "2",
+        50,
+        660,
+        8,
+      ),
+              createWord(
+                "row-2-name",
+                "Khahamthai Para",
+                100,
+                660,
+                90,
+              ),
+              createWord(
+                "row-2-gp",
+                "West Damcherra",
+                300,
+                660,
+                90,
+              ),
+              createWord(
+                "row-2-status",
+                "Functional",
+                400,
+                660,
+                65,
+              ),
+              createWord(
+                "row-2-remarks",
+                "Normal",
+                500,
+                660,
+                50,
+              ),
+            ],
+          );
+
+        const block:
+          PdfParagraphBlock = {
+            id:
+              "ocr-leading-noise-rows",
+            type: "paragraph",
+            pageNumber: 1,
+            bounds: {
+              x: 35,
+              y: 660,
+              width: 520,
+              height: 30,
+            },
+            lines: [
+              firstRow,
+              secondRow,
+            ],
+            text:
+              [
+                firstRow.text,
+                secondRow.text,
+              ].join(" "),
+            confidence: 0.9,
+          };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+          result.rows,
+        ).toHaveLength(2);
+
+        expect(
+          result.rows[1]
+            ?.words.some(
+              (word) =>
+                word.text ===
+                "2",
+            ),
+        ).toBe(true);
+      },
+    );
+it(
+  "does not create a logical row from an OCR punctuation-only artifact line",
+  () => {
+    const firstRow =
+      createLine(
+        "row-1",
+        680,
+        [
+          createWord(
+            "row-1-serial",
+            "1",
+            50,
+            680,
+            8,
+          ),
+          createWord(
+            "row-1-name",
+            "Rani Para",
+            100,
+            680,
+            80,
+          ),
+          createWord(
+            "row-1-status",
+            "Functional",
+            400,
+            680,
+            65,
+          ),
+        ],
+      );
+
+    const artifactLine =
+      createLine(
+        "ocr-artifact",
+        640,
+        [
+          createWord(
+            "ocr-artifact-word",
+            "|",
+            50,
+            640,
+            3,
+          ),
+        ],
+      );
+
+    const secondRow =
+      createLine(
+        "row-2",
+        600,
+        [
+          createWord(
+            "row-2-serial",
+            "2",
+            50,
+            600,
+            8,
+          ),
+          createWord(
+            "row-2-name",
+            "Khahamthai Para",
+            100,
+            600,
+            90,
+          ),
+          createWord(
+            "row-2-status",
+            "Functional",
+            400,
+            600,
+            65,
+          ),
+        ],
+      );
+
+    const block:
+      PdfParagraphBlock = {
+        id:
+          "ocr-punctuation-artifact",
+        type: "paragraph",
+        pageNumber: 1,
+        bounds: {
+          x: 40,
+          y: 600,
+          width: 520,
+          height: 90,
+        },
+        lines: [
+          firstRow,
+          artifactLine,
+          secondRow,
+        ],
+        text: [
+          firstRow.text,
+          artifactLine.text,
+          secondRow.text,
+        ].join(" "),
+        confidence: 0.9,
+      };
+
+    const result =
+      detectAdaptiveRowsV4(
+        block,
+        columns,
+      );
+
+    expect(
+      result.rows,
+    ).toHaveLength(2);
+
+    expect(
+      result.rows.some(
+        (row) =>
+          row.words.length === 1 &&
+          row.words[0]?.text === "|",
+      ),
+    ).toBe(false);
+  },
+);
   },
 );
