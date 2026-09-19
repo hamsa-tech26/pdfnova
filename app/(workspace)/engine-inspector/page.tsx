@@ -155,6 +155,8 @@ export default function EngineInspectorPage() {
 
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] =
     useState(0);
+  const [diagnosticPageNumber, setDiagnosticPageNumber] =
+  useState(1);  
 
   const [selectedSource, setSelectedSource] =
   useState<SelectedSource | null>(null);  
@@ -428,6 +430,7 @@ seenCells.set(
     setResult(null);
     setOcrResult(null);
     setSelectedAnalysisIndex(0);
+    setDiagnosticPageNumber(1);
     setSelectedSource(null);
     setSelectedSourceIndex(null);
     setProgress(0);
@@ -1903,8 +1906,34 @@ candidate.columnIndex
               Shows how the PDF reader grouped page lines before table detection.
             </p>
 
+            <div className="mt-4 flex flex-wrap items-center gap-3">
+  <label
+    htmlFor="diagnostic-page"
+    className="text-sm font-semibold text-gray-700 dark:text-slate-300"
+  >
+    Diagnostic page
+  </label>
+
+  <select
+    id="diagnostic-page"
+    value={diagnosticPageNumber}
+    onChange={(event) =>
+      setDiagnosticPageNumber(Number(event.target.value))
+    }
+    className="rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm text-gray-950 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+  >
+    {result.document.pages.map((page) => (
+      <option key={page.pageNumber} value={page.pageNumber}>
+        Page {page.pageNumber}
+      </option>
+    ))}
+  </select>
+</div>
+
             <div className="mt-5 space-y-5">
-{result.document.pages.map(
+{result.document.pages
+  .filter((page) => page.pageNumber === diagnosticPageNumber)
+  .map(
   (page) => {
     const nativePage =
       result.nativePageTextExtraction.find(
@@ -2096,10 +2125,17 @@ candidate.columnIndex
             </p>
 
             <div className="mt-5 space-y-3">
-              {result.candidateRegionDiagnostics.length >
-              0 ? (
-                result.candidateRegionDiagnostics.map(
-                  (region, index) => (
+              {result.candidateRegionDiagnostics.some(
+  (region) => region.pageNumber === diagnosticPageNumber,
+) ? (
+  result.candidateRegionDiagnostics
+    .map((region, index) => ({ region, index }))
+    .filter(
+      ({ region }) =>
+        region.pageNumber === diagnosticPageNumber,
+    )
+    .map(
+      ({ region, index }) => (
                     <div
                       key={`${region.pageNumber}-${region.blockId}`}
                       className="rounded-xl bg-gray-50 p-4 dark:bg-slate-800"
@@ -2200,7 +2236,7 @@ candidate.columnIndex
                 )
               ) : (
                 <p className="text-sm text-gray-500 dark:text-slate-400">
-                  No candidate table regions were detected.
+                  No candidate table regions were detected on this page.
                 </p>
               )}
             </div>
@@ -2275,13 +2311,30 @@ candidate.columnIndex
               </h2>
             </div>
 
-            <pre className="mt-5 max-h-[40rem] overflow-auto rounded-2xl bg-black/40 p-5 text-xs leading-6 text-slate-300">
-              {JSON.stringify(
-                result,
-                null,
-                2,
-              )}
-            </pre>
+            <button
+  type="button"
+  className="mt-5 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
+  onClick={() => {
+    const json = JSON.stringify(result, null, 2);
+    const blob = new Blob([json], {
+      type: "application/json",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = "pdfnova-v4-analysis.json";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+
+    window.setTimeout(() => {
+      URL.revokeObjectURL(url);
+    }, 1000);
+  }}
+>
+  Download complete result JSON
+</button>
           </section>
         </div>
       )}
