@@ -549,6 +549,81 @@ describe(
         ).toBe(1);
       },
     );
+it(
+  "flags contaminated serial cells without dropping rows or changing text",
+  () => {
+    const serials = [
+      "1",
+      "2 RT vr Ora |",
+      "3",
+      "4",
+      "5",
+      "6 ]",
+      "7",
+      "'8",
+      "9",
+    ];
 
+    const table = createTable(
+      serials.map((serial) => [
+        serial,
+        "Example Scheme",
+        "Functional",
+      ]),
+    );
+
+    const result = analyzeRowReliabilityV1(table);
+
+    expect(result.analysisMode).toBe("serial");
+    expect(result.rows).toHaveLength(9);
+    expect(
+      result.rows.map((row) => row.serialNumber),
+    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8, 9]);
+
+    expect(
+      result.rows
+        .filter((row) => row.status === "needs-review")
+        .map((row) => row.serialNumber),
+    ).toEqual([2, 6, 8]);
+
+    for (const index of [1, 5, 7]) {
+      expect(result.rows[index].reasons).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            code: "serial-cell-contamination",
+            severity: "high",
+            columnIndex: 0,
+            cellId: table.rows[index].cells[0].id,
+            cellText: serials[index],
+            cellBounds: table.rows[index].cells[0].bounds,
+          }),
+        ]),
+      );
+    }
+
+    expect(
+      table.rows.map((row) => row.cells[0].text),
+    ).toEqual(serials);
+  },
+);
+
+it(
+  "keeps consistent serial-plus-name cells reliable",
+  () => {
+    const table = createTable([
+      ["20 Ramting Lal Tripura", "Male", "7928380"],
+      ["21 SUSEN TRIPURA", "Male", "8124502"],
+      ["22 UBAJAY REANG", "Male", "8124502"],
+      ["23 Vanzoichim Tripura", "Female", "7928380"],
+    ]);
+
+    const result = analyzeRowReliabilityV1(table);
+
+    expect(result.analysisMode).toBe("serial");
+    expect(result.rows).toHaveLength(4);
+    expect(result.reviewRowCount).toBe(0);
+    expect(result.reliableRowCount).toBe(4);
+  },
+);
   },
 );

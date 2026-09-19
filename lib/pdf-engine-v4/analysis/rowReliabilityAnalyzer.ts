@@ -536,7 +536,8 @@ export type RowReliabilityReasonCode =
   | "low-construction-confidence"
   | "unusual-column-emptiness"
   | "unusually-short-content"
-  | "serial-sequence-anomaly";
+  | "serial-sequence-anomaly"
+  | "serial-cell-contamination";
 
 export type RowReliabilityReason = {
   code: RowReliabilityReasonCode;
@@ -893,6 +894,20 @@ const dataRows =
     serialColumnIndex,
   );
 
+  const cleanSerialCellCount =
+  serialColumnIndex >= 0
+    ? dataRows.filter((row) =>
+        /^\d+[.)]?$/.test(
+          row.cells[serialColumnIndex]?.text.trim() ?? "",
+        ),
+      ).length
+    : 0;
+
+const expectsStandaloneSerial =
+  serialColumnIndex >= 0 &&
+  cleanSerialCellCount >= 2 &&
+  cleanSerialCellCount / dataRows.length >= 0.6;
+
   const assessments:
     RowReliabilityAssessment[] =
     [];
@@ -959,6 +974,27 @@ const dataRows =
         previousSerialNumber,
         serialColumnIndex,
       );
+
+        if (expectsStandaloneSerial && serialNumber !== null) {
+      const serialCell =
+        getSerialCellAtColumn(row, serialColumnIndex);
+
+      const serialText = serialCell?.text.trim() ?? "";
+
+      if (serialCell && !/^\d+[.)]?$/.test(serialText)) {
+        reasons.push({
+          code: "serial-cell-contamination",
+          columnIndex: serialColumnIndex,
+          cellId: serialCell.id,
+          cellText: serialText,
+          cellBounds: serialCell.bounds,
+          sourceFragmentCount: serialCell.words.length,
+          message:
+            "This column normally contains only serial numbers, but this cell includes additional text or unexpected punctuation. Verify it against the source.",
+          severity: "high",
+        });
+      }
+    }  
 
     const hasHighSeverityReason =
       reasons.some(
