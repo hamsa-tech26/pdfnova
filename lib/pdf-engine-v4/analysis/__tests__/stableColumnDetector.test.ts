@@ -279,6 +279,136 @@ function createSparseInternalColumnBlock():
   };
 }
 
+function createSplitHeaderPhraseBlock():
+  PdfVisualBlock {
+  const lines: PdfLine[] = [];
+
+  for (
+    let index = 0;
+    index < 10;
+    index += 1
+  ) {
+    if (index === 0) {
+      lines.push(
+        createOcrLine(
+          index,
+          [
+            {
+              text: "SI No",
+              x: 60,
+              width: 30,
+            },
+            {
+              text: "Name",
+              x: 95,
+              width: 28,
+            },
+            {
+              text: "of",
+              x: 126,
+              width: 10,
+            },
+            {
+              text: "Scheme",
+              x: 144,
+              width: 45,
+            },
+            {
+              text: "GP /VC",
+              x: 275,
+              width: 55,
+            },
+            {
+              text: "Status",
+              x: 380,
+              width: 45,
+            },
+            {
+              text: "Remarks",
+              x: 458,
+              width: 55,
+            },
+          ],
+        ),
+      );
+
+      continue;
+    }
+
+    const nameEntries =
+  index <= 2
+    ? [
+        {
+          text: `Name${index}`,
+          x: 95,
+          width: 28,
+        },
+        {
+          text: "Scheme",
+          x: 149,
+          width: 45,
+        },
+      ]
+    : [
+        {
+          text: `Scheme${index}`,
+          x: 95,
+          width: 70,
+        },
+      ];
+
+    lines.push(
+      createOcrLine(
+        index,
+        [
+          {
+            text: `${index}`,
+            x: 60,
+            width: 7,
+          },
+          ...nameEntries,
+          {
+            text: `VC${index}`,
+            x: 275,
+            width: 45,
+          },
+          {
+            text: "Functional",
+            x: 380,
+            width: 65,
+          },
+          {
+            text: "Normal",
+            x: 458,
+            width: 45,
+          },
+        ],
+      ),
+    );
+  }
+
+  return {
+    id:
+      "split-header-phrase-table",
+    type: "paragraph",
+    pageNumber: 1,
+    bounds: {
+      x: 50,
+      y: 520,
+      width: 480,
+      height: 190,
+    },
+    lines,
+    text:
+      lines
+        .map(
+          (line) => line.text,
+        )
+        .join(" "),
+    confidence: 0.9,
+  };
+}
+
 function createMultiLevelHeaderBlock():
   PdfVisualBlock {
   const lines: PdfLine[] = [
@@ -434,6 +564,28 @@ describe(
         ).toBe(true);
       },
     );
+    it(
+  "does not recover a split multi-word header phrase as a separate column",
+  () => {
+    const result =
+      detectStableColumnsV4(
+        createSplitHeaderPhraseBlock(),
+      );
+
+    expect(
+      result.columns,
+    ).toHaveLength(5);
+
+    expect(
+      result.columns.some(
+        (column) =>
+          Math.abs(
+            column.x - 155,
+          ) <= 2,
+      ),
+    ).toBe(false);
+  },
+);
     it(
       "does not recover a spanning multi-level title as an internal column",
       () => {

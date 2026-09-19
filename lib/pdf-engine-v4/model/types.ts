@@ -26,6 +26,7 @@ export type PdfWordExtractionProvenance = {
     | "native-pdf"
     | "ocr-tesseract";
   confidence?: number;
+  sourceBounds?: PdfBoundingBox;
 };
 
 export type PdfWord = {

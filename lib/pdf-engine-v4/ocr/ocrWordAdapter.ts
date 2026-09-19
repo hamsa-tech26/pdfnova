@@ -69,6 +69,20 @@ export function adaptPdfV4OcrWordToPdfWord(
       pdfWidth,
       pdfHeight,
     );
+    const sourceBounds =
+  word.sourceBounds
+    ? convertPdfV4OcrWordBounds(
+        {
+          ...word,
+          bounds:
+            word.sourceBounds,
+        },
+        renderedWidth,
+        renderedHeight,
+        pdfWidth,
+        pdfHeight,
+      )
+    : undefined;
 
   return {
     id: `ocr-word-${pageNumber}-${wordIndex}`,
@@ -81,9 +95,12 @@ export function adaptPdfV4OcrWordToPdfWord(
     },
     rotation: 0,
     extractionProvenance: {
-      source: "ocr-tesseract",
-      confidence: word.confidence,
-    },
+  source: "ocr-tesseract",
+  confidence: word.confidence,
+  ...(sourceBounds
+    ? { sourceBounds }
+    : {}),
+},
   };
 }
 

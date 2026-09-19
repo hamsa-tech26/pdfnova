@@ -23,6 +23,12 @@ export type PdfV4OcrWord = {
     x1: number;
     y1: number;
   };
+  sourceBounds?: {
+  x0: number;
+  y0: number;
+  x1: number;
+  y1: number;
+};
   coordinateSpace:
     "rendered-image-pixels";
   source: "ocr-tesseract";
@@ -35,6 +41,7 @@ export type PdfV4OcrPageResult = {
  renderedWidth: number;
  renderedHeight: number;
  words: PdfV4OcrWord[];
+ detectedSkewRadians: number | null;
   language: "eng";
   source: "ocr-tesseract";
 };
@@ -104,12 +111,41 @@ function extractPdfV4OcrWords(
   );
 }
 
+const PDF_V4_OCR_ORIENTATION_LOW_CONFIDENCE =
+  60;
+
+const PDF_V4_OCR_ORIENTATION_STRONG_CONFIDENCE =
+  90;
+
+const PDF_V4_OCR_ORIENTATION_STRONG_WORD_COUNT =
+  20;
+
+const PDF_V4_OCR_ORIENTATION_ROTATIONS = [
+  -Math.PI / 2,
+  Math.PI / 2,
+  Math.PI,
+] as const;
+
+export type PdfV4OcrRecognitionOptions = {
+  rotateAuto?: boolean;
+  allowQuarterTurnFallback?: boolean;
+};
+
 export async function recognizePdfV4OcrPages(
   pages: PdfV4PreparedOcrPage[],
+  options:
+    PdfV4OcrRecognitionOptions = {},
 ): Promise<PdfV4OcrPageResult[]> {
   if (pages.length === 0) {
     return [];
   }
+
+  const rotateAuto =
+  options.rotateAuto ?? true;
+
+const allowQuarterTurnFallback =
+  options.allowQuarterTurnFallback ??
+  true;
 
   const worker =
     await createWorker("eng"); 
@@ -119,20 +155,84 @@ export async function recognizePdfV4OcrPages(
       PdfV4OcrPageResult[] = [];
 
     for (const page of pages) {
-      const recognition =
+    let recognition =
   await worker.recognize(
     page.imageDataUrl,
-    {},
+    rotateAuto
+  ? { rotateAuto: true }
+  : {},
     {
       text: true,
       blocks: true,
     },
   );
-const words =
+  const detectedSkewRadians =
+  recognition.data.rotateRadians;
+
+let words =
   extractPdfV4OcrWords(
     recognition.data.blocks,
   );
 
+if (
+  allowQuarterTurnFallback &&
+  recognition.data.confidence <
+    PDF_V4_OCR_ORIENTATION_LOW_CONFIDENCE
+) {
+  for (
+    const rotateRadians of
+      PDF_V4_OCR_ORIENTATION_ROTATIONS
+  ) {
+    const rotatedRecognition =
+      await worker.recognize(
+        page.imageDataUrl,
+        { rotateRadians },
+        {
+          text: true,
+          blocks: true,
+        },
+      );
+
+    const rotatedWords =
+      extractPdfV4OcrWords(
+        rotatedRecognition.data.blocks,
+      );
+
+    const acceptableOrientation =
+      rotatedRecognition.data.confidence >=
+      PDF_V4_OCR_ORIENTATION_LOW_CONFIDENCE;
+
+    const betterOrientation =
+      rotatedRecognition.data.confidence >
+        recognition.data.confidence ||
+      (
+        rotatedRecognition.data.confidence ===
+          recognition.data.confidence &&
+        rotatedWords.length >
+          words.length
+      );
+
+    if (
+      acceptableOrientation &&
+      betterOrientation
+    ) {
+      recognition =
+        rotatedRecognition;
+
+      words =
+        rotatedWords;
+    }
+
+    if (
+      recognition.data.confidence >=
+        PDF_V4_OCR_ORIENTATION_STRONG_CONFIDENCE &&
+      words.length >=
+        PDF_V4_OCR_ORIENTATION_STRONG_WORD_COUNT
+    ) {
+      break;
+    }
+  }
+}
       results.push({
         pageNumber: page.pageNumber,
         text:
@@ -142,6 +242,7 @@ const words =
 renderedWidth: page.width,
 renderedHeight: page.height,
 words,
+detectedSkewRadians,
 language: "eng",
         source: "ocr-tesseract",
       });
@@ -257,7 +358,8 @@ export async function recognizePdfV4PreparedOcrPages(
         renderedHeight:
           page.height,
         words,
-        language: "eng",
+detectedSkewRadians: null,
+language: "eng",
         source: "ocr-tesseract",
       });
     }

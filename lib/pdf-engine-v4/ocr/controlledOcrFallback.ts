@@ -47,6 +47,14 @@ import {
   type PdfV4OcrPageReliability,
 } from "./ocrReliabilityAnalyzer";
 
+import {
+  preparePdfV4DeskewedOcrPage,
+} from "./ocrDeskewImagePreparer";
+
+import {
+  remapPdfV4DeskewedOcrWords,
+} from "./ocrDeskewWordRemapper";
+
 export type PdfV4ControlledOcrResult = {
   attempted: boolean;
   decisionStatus:
@@ -101,10 +109,114 @@ export async function runPdfV4ControlledOcr(
       preparedPages,
     );
 
-  const pages =
-    await recognizePdfV4OcrPages(
-      primaryOcrPages,
-    );
+  const initialPages =
+  await recognizePdfV4OcrPages(
+    primaryOcrPages,
+  );
+
+const pages =
+  await Promise.all(
+    initialPages.map(
+      async (page) => {
+        const detectedSkewRadians =
+          page.detectedSkewRadians;
+
+        if (
+          detectedSkewRadians === null ||
+          Math.abs(
+            detectedSkewRadians,
+          ) < 0.005 ||
+          page.confidence >= 90
+        ) {
+          return page;
+        }
+
+        const preparedPage =
+          preparedPages.find(
+            (candidate) =>
+              candidate.pageNumber ===
+              page.pageNumber,
+          );
+
+        if (!preparedPage) {
+          return page;
+        }
+
+        const deskewedPage =
+          await preparePdfV4DeskewedOcrPage(
+            preparedPage,
+            detectedSkewRadians,
+          );
+
+        const [
+          preparedDeskewedPage,
+        ] =
+          await preparePdfV4PrimaryOcrPages(
+            [deskewedPage],
+          );
+
+        if (!preparedDeskewedPage) {
+          return page;
+        }
+
+        const [
+          deskewedRecognition,
+        ] =
+          await recognizePdfV4OcrPages(
+            [
+              preparedDeskewedPage,
+            ],
+            {
+              rotateAuto: false,
+              allowQuarterTurnFallback:
+                false,
+            },
+          );
+
+        if (!deskewedRecognition) {
+          return page;
+        }
+
+        const remappedWords =
+          remapPdfV4DeskewedOcrWords(
+            deskewedRecognition.words,
+            page.renderedWidth,
+            page.renderedHeight,
+            -detectedSkewRadians,
+          );
+
+        const betterDeskewedRecognition =
+  deskewedRecognition.words.length >
+    page.words.length &&
+  deskewedRecognition.confidence >=
+    60;
+
+        if (
+          !betterDeskewedRecognition
+        ) {
+          return page;
+        }
+
+        return {
+  ...deskewedRecognition,
+  renderedWidth:
+    page.renderedWidth,
+  renderedHeight:
+    page.renderedHeight,
+  words:
+    deskewedRecognition.words.map(
+      (word, index) => ({
+        ...word,
+        sourceBounds:
+          remappedWords[index]
+            ?.bounds,
+      }),
+    ),
+  detectedSkewRadians,
+};
+      },
+    ),
+  );
 
   const retryRequests =
     pages.flatMap(

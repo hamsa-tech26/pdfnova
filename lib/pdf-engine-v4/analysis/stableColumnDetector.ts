@@ -1073,6 +1073,21 @@ function assignColumnBoundaries(
   );
 }
 
+function startsWithDataSerial(
+  line: PdfLine,
+) {
+  const firstWord =
+    createAnalysisWordsV4(line)[0];
+
+  if (!firstWord) {
+    return false;
+  }
+
+  return /^[\'’‘´]*\d+[.)]?$/.test(
+    firstWord.text.trim(),
+  );
+}
+
 function recoverSparseTrailingCandidates(
   candidates: ColumnCandidate[],
   acceptedColumns: ColumnCandidate[],
@@ -1113,16 +1128,29 @@ function recoverSparseTrailingCandidates(
     );
 
   const topLines =
-    [...lines]
-      .sort(
-        (first, second) =>
-          second.bounds.y -
-          first.bounds.y,
-      )
-      .slice(
-        0,
-        topLineCount,
-      );
+  [...lines]
+    .sort(
+      (first, second) =>
+        second.bounds.y -
+        first.bounds.y,
+    )
+    .filter(
+      (line) =>
+        !startsWithDataSerial(
+          line,
+        ),
+    )
+    .slice(
+      0,
+      topLineCount,
+    );
+
+      const averageCharacterWidth =
+  getAverageCharacterWidth(
+    lines.flatMap(
+      (line) => line.words,
+    ),
+  );
 
   const minimumTrailingGap =
     Math.max(
@@ -1198,15 +1226,18 @@ function recoverSparseTrailingCandidates(
     })
     .filter((candidate) =>
       topLines.some((line) => {
-        const candidateSupported =
-          line.words.some(
-            (word) =>
-              Math.abs(
-                word.bounds.x -
-                  candidate.x,
-              ) <=
-              headerMatchTolerance,
-          );
+       const candidateSupported =
+  splitLineIntoSegments(
+    line,
+    averageCharacterWidth,
+  ).some(
+    (segment) =>
+      Math.abs(
+        segment.x -
+          candidate.x,
+      ) <=
+      headerMatchTolerance,
+  );
 
         if (!candidateSupported) {
           return false;

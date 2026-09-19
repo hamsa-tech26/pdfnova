@@ -214,6 +214,55 @@ describe(
         ]);
       },
     );
+    it(
+  "detects serial numbers with attached OCR punctuation",
+  () => {
+    const table =
+      createTable([
+        [
+          "7",
+          "Gouranga Para Scheme",
+          "Repair",
+        ],
+        [
+          "'8",
+          "Halam Para Scheme",
+          "Functional",
+        ],
+        [
+          "9",
+          "Serechandra Para",
+          "Low pressure",
+        ],
+      ]);
+
+    const result =
+      analyzeRowReliabilityV1(
+        table,
+      );
+
+    expect(
+      result.analysisMode,
+    ).toBe("serial");
+
+    expect(
+      result
+        .serialColumnDiagnostics
+        .sequenceConfidence,
+    ).toBe(1);
+
+    expect(
+      result.rows.map(
+        (row) =>
+          row.serialNumber,
+      ),
+    ).toEqual([
+      7,
+      8,
+      9,
+    ]);
+  },
+);
         it(
       "uses structural mode for a non-serial table",
       () => {

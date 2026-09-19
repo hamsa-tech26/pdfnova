@@ -22,7 +22,9 @@ function parseSerialValue(
   const match =
     text
       .trim()
-      .match(/^(\d+)[.)]?(?:\s+|$)/);
+      .match(
+  /^['’‘´]*(\d+)[.)]?(?:\s+|$)/,
+);
 
   if (!match) {
     return null;

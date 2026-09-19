@@ -724,6 +724,139 @@ const secondRow =
         ).toBe(true);
       },
     );
+  it(
+  "starts a new OCR row when punctuation is attached to the serial number",
+  () => {
+    const firstRow =
+      createLine(
+        "ocr-row-7",
+        680,
+        [
+          createWord(
+            "row-7-serial",
+            "7",
+            50,
+            680,
+            8,
+          ),
+          createWord(
+            "row-7-name",
+            "Gouranga Para Scheme",
+            100,
+            680,
+            120,
+          ),
+          createWord(
+            "row-7-gp",
+            "West Damcherra",
+            300,
+            680,
+            90,
+          ),
+          createWord(
+            "row-7-status",
+            "Repair",
+            400,
+            680,
+            50,
+          ),
+          createWord(
+            "row-7-remarks",
+            "Pipe damage",
+            500,
+            680,
+            70,
+          ),
+        ],
+      );
+
+    const secondRow =
+      createLine(
+        "ocr-row-8",
+        660,
+        [
+          createWord(
+            "row-8-serial",
+            "'8",
+            50,
+            660,
+            10,
+          ),
+          createWord(
+            "row-8-name",
+            "Halam Para Scheme",
+            100,
+            660,
+            110,
+          ),
+          createWord(
+            "row-8-gp",
+            "Damcherra",
+            300,
+            660,
+            70,
+          ),
+          createWord(
+            "row-8-status",
+            "Functional",
+            400,
+            660,
+            65,
+          ),
+          createWord(
+            "row-8-remarks",
+            "Normal",
+            500,
+            660,
+            50,
+          ),
+        ],
+      );
+
+    const block:
+      PdfParagraphBlock = {
+        id:
+          "ocr-attached-serial-noise",
+        type: "paragraph",
+        pageNumber: 1,
+        bounds: {
+          x: 50,
+          y: 660,
+          width: 520,
+          height: 30,
+        },
+        lines: [
+          firstRow,
+          secondRow,
+        ],
+        text:
+          [
+            firstRow.text,
+            secondRow.text,
+          ].join(" "),
+        confidence: 0.9,
+      };
+
+    const result =
+      detectAdaptiveRowsV4(
+        block,
+        columns,
+      );
+
+    expect(
+      result.rows,
+    ).toHaveLength(2);
+
+    expect(
+      result.rows[1]
+        ?.words.some(
+          (word) =>
+            word.text ===
+            "'8",
+        ),
+    ).toBe(true);
+  },
+);  
 it(
   "does not create a logical row from an OCR punctuation-only artifact line",
   () => {
@@ -841,6 +974,124 @@ it(
           row.words.length === 1 &&
           row.words[0]?.text === "|",
       ),
+    ).toBe(false);
+  },
+);
+it(
+  "does not merge a distant trailing OCR footer into the final serial row",
+  () => {
+    const finalRow =
+      createLine(
+        "row-9",
+        300,
+        [
+          createWord(
+            "row-9-serial",
+            "9",
+            50,
+            300,
+            8,
+          ),
+          createWord(
+            "row-9-name",
+            "Serechandra Para",
+            100,
+            300,
+            100,
+          ),
+          createWord(
+            "row-9-gp",
+            "Thumsarai",
+            300,
+            300,
+            70,
+          ),
+          createWord(
+            "row-9-status",
+            "Low pressure",
+            400,
+            300,
+            80,
+          ),
+          createWord(
+            "row-9-remarks",
+            "Tail end",
+            500,
+            300,
+            60,
+          ),
+        ],
+      );
+
+    const footerLine =
+      createLine(
+        "ocr-footer",
+        230,
+        [
+          createWord(
+            "footer-1",
+            "CONTROLLED",
+            100,
+            230,
+            80,
+          ),
+          createWord(
+            "footer-2",
+            "TEST",
+            190,
+            230,
+            40,
+          ),
+          createWord(
+            "footer-3",
+            "FIXTURE",
+            240,
+            230,
+            60,
+          ),
+        ],
+      );
+
+    const block:
+      PdfParagraphBlock = {
+        id:
+          "ocr-trailing-footer",
+        type: "paragraph",
+        pageNumber: 1,
+        bounds: {
+          x: 50,
+          y: 230,
+          width: 520,
+          height: 80,
+        },
+        lines: [
+          finalRow,
+          footerLine,
+        ],
+        text: [
+          finalRow.text,
+          footerLine.text,
+        ].join(" "),
+        confidence: 0.9,
+      };
+
+    const result =
+      detectAdaptiveRowsV4(
+        block,
+        columns,
+      );
+
+    expect(
+      result.rows,
+    ).toHaveLength(1);
+
+    expect(
+      result.rows[0]
+        ?.words.some(
+          (word) =>
+            word.text ===
+            "CONTROLLED",
+        ),
     ).toBe(false);
   },
 );

@@ -173,13 +173,26 @@ function getLeadingSerialText(
 
   for (const word of words) {
     const text =
-      word.text.trim();
+  word.text.trim();
 
-    if (
-      /^\d+[.)]?(?:\s|$)/.test(
-        text,
+const isOcrWord =
+  word.extractionProvenance
+    ?.source ===
+  "ocr-tesseract";
+
+const serialText =
+  isOcrWord
+    ? text.replace(
+        /^[^A-Za-z0-9]+(?=\d)/,
+        "",
       )
-    ) {
+    : text;
+
+if (
+  /^\d+[.)]?(?:\s|$)/.test(
+    serialText,
+  )
+) {
       if (
         firstNoiseX !== null &&
         word.bounds.x -
@@ -189,13 +202,8 @@ function getLeadingSerialText(
         return "";
       }
 
-      return text;
+      return serialText;
     }
-
-    const isOcrWord =
-      word.extractionProvenance
-        ?.source ===
-      "ocr-tesseract";
 
     const isPunctuationOnly =
       text.length > 0 &&
@@ -521,6 +529,83 @@ function isLikelyWrappedText(
     closeVertically &&
     sameAlignment &&
     noSerial
+  );
+}
+
+function isLikelyTrailingOcrFooter(
+  previousRow:
+    | LogicalRowCandidate
+    | undefined,
+  currentLine: PdfLine,
+  nextLine: PdfLine | undefined,
+  columns: ColumnCandidate[],
+) {
+  if (
+    !previousRow ||
+    nextLine ||
+    columns.length === 0 ||
+    startsWithSerialNumber(
+      currentLine,
+    )
+  ) {
+    return false;
+  }
+
+  const isOcrLine =
+    currentLine.words.length > 0 &&
+    currentLine.words.every(
+      (word) =>
+        word.extractionProvenance
+          ?.source ===
+        "ocr-tesseract",
+    );
+
+  if (!isOcrLine) {
+    return false;
+  }
+
+  const previousHasSerial =
+    previousRow.lines.some(
+      (line) =>
+        startsWithSerialNumber(
+          line,
+        ),
+    );
+
+  if (
+    !previousHasSerial ||
+    !hasEmptyLeadingColumns(
+      currentLine,
+      columns,
+    )
+  ) {
+    return false;
+  }
+
+  const previousLine =
+    previousRow.lines[
+      previousRow.lines.length - 1
+    ];
+
+  if (!previousLine) {
+    return false;
+  }
+
+  const gap =
+    getVerticalGap(
+      previousLine,
+      currentLine,
+    );
+
+  const averageHeight =
+    getAverageLineHeight([
+      previousLine,
+      currentLine,
+    ]);
+
+  return (
+    gap >
+    averageHeight * 1.4
   );
 }
 
@@ -1006,6 +1091,17 @@ if (
     logicalRows[
       logicalRows.length - 1
     ];
+
+    if (
+  isLikelyTrailingOcrFooter(
+    previousRow,
+    line,
+    nextLine,
+    columns,
+  )
+) {
+  continue;
+}
 
   if (
     previousRow &&
