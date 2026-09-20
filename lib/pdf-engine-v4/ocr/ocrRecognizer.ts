@@ -3,6 +3,10 @@ import {
   PSM,
 } from "tesseract.js";
 
+import {
+  estimatePdfV4DeskewRadiansFromBlocks,
+} from "./ocrSkewEstimator";
+
 import type {
   PdfV4PreparedOcrPage,
 } from "./ocrPageRenderer";
@@ -166,8 +170,47 @@ const allowQuarterTurnFallback =
       blocks: true,
     },
   );
-  const detectedSkewRadians =
+
+  let detectedSkewRadians =
   recognition.data.rotateRadians;
+
+if (
+  rotateAuto &&
+  recognition.data.confidence >=
+    PDF_V4_OCR_ORIENTATION_LOW_CONFIDENCE &&
+  recognition.data.confidence <
+    PDF_V4_OCR_ORIENTATION_STRONG_CONFIDENCE &&
+  (
+    detectedSkewRadians === null ||
+    Math.abs(
+      detectedSkewRadians,
+    ) < 0.005
+  )
+) {
+  const rawRecognition =
+    await worker.recognize(
+      page.imageDataUrl,
+      {
+        rotateAuto: false,
+      },
+      {
+        text: true,
+        blocks: true,
+      },
+    );
+
+  const estimatedDeskewRadians =
+    estimatePdfV4DeskewRadiansFromBlocks(
+      rawRecognition.data.blocks,
+    );
+
+  if (
+    estimatedDeskewRadians !== null
+  ) {
+    detectedSkewRadians =
+      estimatedDeskewRadians;
+  }
+}
 
 let words =
   extractPdfV4OcrWords(

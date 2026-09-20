@@ -43,14 +43,14 @@ export function calculatePdfV4OcrVerticalCoverage(
   const top =
     Math.min(
       ...page.words.map(
-        (word) => word.bounds.y0,
+        (word) => (word.sourceBounds ?? word.bounds).y0,
       ),
     );
 
   const bottom =
     Math.max(
       ...page.words.map(
-        (word) => word.bounds.y1,
+        (word) => (word.sourceBounds ?? word.bounds).y1,
       ),
     );
 

@@ -24,6 +24,7 @@ describe(
               confidence: 95,
               renderedWidth: 1200,
               renderedHeight: 1600,
+          detectedSkewRadians: null,
               words: [
                 {
                   text: "PDFNova",
@@ -83,6 +84,7 @@ describe(
           confidence: 0,
           renderedWidth: 1200,
           renderedHeight: 1600,
+          detectedSkewRadians: null,
           words: [],
           language: "eng",
           source: "ocr-tesseract",
@@ -108,6 +110,7 @@ it(
           confidence: 95,
           renderedWidth: 1200,
           renderedHeight: 1600,
+          detectedSkewRadians: null,
           words: [
             {
               text: "PDFNova",
@@ -175,6 +178,7 @@ it(
           confidence: 95,
           renderedWidth: 1200,
           renderedHeight: 1600,
+          detectedSkewRadians: null,
           words: [
             {
               text: "PDFNova",
@@ -231,6 +235,7 @@ it(
           confidence: 95,
           renderedWidth: 1200,
           renderedHeight: 1600,
+          detectedSkewRadians: null,
           words: [
             {
               text: "PDFNova",
@@ -280,6 +285,7 @@ it(
           confidence: 95,
           renderedWidth: 1200,
           renderedHeight: 1600,
+          detectedSkewRadians: null,
           words: [
             {
               text: "PDFNova",
@@ -322,6 +328,78 @@ it(
       width: 1200,
       height: 800,
       gapRatio: 0.5,
+    });
+  },
+);
+it(
+  "uses original-page bounds for coverage and retry selection after deskewing",
+  () => {
+    const page: Parameters<
+      typeof calculatePdfV4OcrVerticalCoverage
+    >[0] = {
+      pageNumber: 1,
+      text: "First Last",
+      confidence: 85,
+      renderedWidth: 1200,
+      renderedHeight: 1600,
+          detectedSkewRadians: null,
+      words: [
+        {
+          text: "First",
+          confidence: 85,
+          bounds: {
+            x0: 100,
+            y0: 400,
+            x1: 220,
+            y1: 460,
+          },
+          sourceBounds: {
+            x0: 100,
+            y0: 200,
+            x1: 220,
+            y1: 260,
+          },
+          coordinateSpace: "rendered-image-pixels",
+          source: "ocr-tesseract",
+        },
+        {
+          text: "Last",
+          confidence: 85,
+          bounds: {
+            x0: 900,
+            y0: 1000,
+            x1: 1100,
+            y1: 1100,
+          },
+          sourceBounds: {
+            x0: 900,
+            y0: 800,
+            x1: 1100,
+            y1: 900,
+          },
+          coordinateSpace: "rendered-image-pixels",
+          source: "ocr-tesseract",
+        },
+      ],
+      language: "eng",
+      source: "ocr-tesseract",
+    };
+
+    const coverage =
+      calculatePdfV4OcrVerticalCoverage(page);
+
+    expect(coverage.top).toBe(200);
+    expect(coverage.bottom).toBe(900);
+    expect(coverage.coveredHeight).toBe(700);
+    expect(coverage.coverageRatio).toBeCloseTo(700 / 1600);
+
+    expect(selectPdfV4OcrRetryRegion(page)).toEqual({
+      edge: "bottom",
+      left: 0,
+      top: 900,
+      width: 1200,
+      height: 560,
+      gapRatio: 700 / 1600,
     });
   },
 );

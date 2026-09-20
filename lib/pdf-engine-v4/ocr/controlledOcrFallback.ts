@@ -18,6 +18,14 @@ import {
 } from "./ocrRecognizer";
 
 import {
+  filterPdfV4LowConfidenceOcrWords,
+} from "./ocrWordConfidenceFilter";
+
+import {
+  normalizePdfV4OcrWords,
+} from "./ocrWordNormalizer";
+
+import {
   createPdfV4OcrRetryRequest,
 } from "./ocrRetryPlanner";
 
@@ -177,19 +185,29 @@ const pages =
           return page;
         }
 
+                const filteredDeskewedWords =
+          filterPdfV4LowConfidenceOcrWords(
+            deskewedRecognition.words,
+          );
+
+        const normalizedDeskewedWords =
+          normalizePdfV4OcrWords(
+            filteredDeskewedWords,
+          );
+
         const remappedWords =
           remapPdfV4DeskewedOcrWords(
-            deskewedRecognition.words,
+            normalizedDeskewedWords,
             page.renderedWidth,
             page.renderedHeight,
             -detectedSkewRadians,
           );
 
         const betterDeskewedRecognition =
-  deskewedRecognition.words.length >
-    page.words.length &&
-  deskewedRecognition.confidence >=
-    60;
+          normalizedDeskewedWords.length >
+            page.words.length &&
+          deskewedRecognition.confidence >=
+            60;
 
         if (
           !betterDeskewedRecognition
@@ -204,7 +222,7 @@ const pages =
   renderedHeight:
     page.renderedHeight,
   words:
-    deskewedRecognition.words.map(
+  normalizedDeskewedWords.map(
       (word, index) => ({
         ...word,
         sourceBounds:
