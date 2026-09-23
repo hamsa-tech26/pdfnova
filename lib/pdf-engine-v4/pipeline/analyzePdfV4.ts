@@ -250,7 +250,7 @@ function getRowSerialNumber(
 
   const match =
   text.match(
-    /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(\d+)[.)]?$/,
+    /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(?:\((\d+)\)|(\d+)[.)]?)$/,
   );
 
   if (!match) {
@@ -258,10 +258,10 @@ function getRowSerialNumber(
   }
 
   const value =
-    Number.parseInt(
-      match[1],
-      10,
-    );
+  Number.parseInt(
+    match[1] ?? match[2],
+    10,
+  );
 
   return Number.isFinite(value)
     ? value

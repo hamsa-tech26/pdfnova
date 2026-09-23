@@ -356,6 +356,94 @@ it(
     ).toBe("“4");
   },
 );
+
+it(
+  "keeps a parenthesized OCR serial reliable without changing source text",
+  () => {
+    const table =
+      createTable([
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Functional",
+        ],
+        [
+          "4",
+          "Nilbusan Para Scheme",
+          "Repair",
+        ],
+        [
+          "(5)",
+          "Kamalacherri Scheme",
+          "Functional",
+        ],
+        [
+          "6",
+          "Purnaram Para Scheme",
+          "Low source",
+        ],
+      ]);
+
+    table.rows[2].cells[0].words = [
+      {
+        ...createWord(
+          "ocr-parenthesized-serial",
+          "(5)",
+        ),
+        extractionProvenance: {
+          source: "ocr-tesseract",
+          confidence: 90,
+        },
+      },
+    ];
+
+    const result =
+      analyzeRowReliabilityV1(
+        table,
+      );
+
+    expect(
+      result.analysisMode,
+    ).toBe("serial");
+
+    expect(
+      result
+        .serialColumnDiagnostics
+        .sequenceConfidence,
+    ).toBe(1);
+
+    expect(
+      result.rows.map(
+        (row) =>
+          row.serialNumber,
+      ),
+    ).toEqual([
+      3,
+      4,
+      5,
+      6,
+    ]);
+
+    expect(
+      result.rows[2].status,
+    ).toBe("reliable");
+
+    expect(
+      result.rows[2]
+        .reasons.some(
+          (reason) =>
+            reason.code ===
+            "serial-cell-contamination",
+        ),
+    ).toBe(false);
+
+    expect(
+      table.rows[2]
+        .cells[0]
+        .text,
+    ).toBe("(5)");
+  },
+);
         it(
       "uses structural mode for a non-serial table",
       () => {

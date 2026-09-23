@@ -23,17 +23,17 @@ function parseSerialValue(
     text
       .trim()
       .match(
-        /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(\d+)[.)]?(?:\s+|$)/,
-      );
+  /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(?:\((\d+)\)|(\d+)[.)]?)(?:\s+|$)/,
+);
   if (!match) {
     return null;
   }
 
   const value =
-    Number.parseInt(
-      match[1],
-      10,
-    );
+  Number.parseInt(
+    match[1] ?? match[2],
+    10,
+  );
 
   return Number.isFinite(value)
     ? value
@@ -993,6 +993,12 @@ const expectsStandaloneSerial =
           serialText,
         );
 
+        const isToleratedOcrParenthesizedSerial =
+  hasOcrProvenance &&
+  /^\(\d+\)$/.test(
+    serialText,
+  );
+
       const isToleratedOcrQuoteSerial =
         hasOcrProvenance &&
         /^[\u201C\u201D]\d+[.)]?$/.test(
@@ -1000,10 +1006,11 @@ const expectsStandaloneSerial =
         );
 
       if (
-        serialCell &&
-        !isCleanSerial &&
-        !isToleratedOcrQuoteSerial
-      ) {
+  serialCell &&
+  !isCleanSerial &&
+  !isToleratedOcrQuoteSerial &&
+  !isToleratedOcrParenthesizedSerial
+) {
         reasons.push({
           code: "serial-cell-contamination",
           columnIndex: serialColumnIndex,
