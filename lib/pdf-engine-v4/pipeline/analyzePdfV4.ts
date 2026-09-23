@@ -249,7 +249,9 @@ function getRowSerialNumber(
     row.cells[0]?.text.trim() ?? "";
 
   const match =
-    text.match(/^(\d+)[.)]?$/);
+  text.match(
+    /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(\d+)[.)]?$/,
+  );
 
   if (!match) {
     return null;

@@ -263,6 +263,99 @@ describe(
     ]);
   },
 );
+it(
+  "keeps a smart-quoted OCR serial reliable without changing source text",
+  () => {
+    const table =
+      createTable([
+        [
+          "1",
+          "Rani Para Scheme",
+          "Functional",
+        ],
+        [
+          "2",
+          "Khahamthai Para",
+          "Functional",
+        ],
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Functional",
+        ],
+        [
+          "“4",
+          "Nilbusan Para Scheme",
+          "Repair",
+        ],
+        [
+          "5",
+          "Kamalacherri Scheme",
+          "Functional",
+        ],
+      ]);
+
+    table.rows[3].cells[0].words = [
+      {
+        ...createWord(
+          "ocr-smart-quote-serial",
+          "“4",
+        ),
+        extractionProvenance: {
+          source: "ocr-tesseract",
+          confidence: 90,
+        },
+      },
+    ];
+
+    const result =
+      analyzeRowReliabilityV1(
+        table,
+      );
+
+    expect(
+      result.analysisMode,
+    ).toBe("serial");
+
+    expect(
+      result
+        .serialColumnDiagnostics
+        .sequenceConfidence,
+    ).toBe(1);
+
+    expect(
+      result.rows.map(
+        (row) =>
+          row.serialNumber,
+      ),
+    ).toEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+    ]);
+
+    expect(
+      result.rows[3].status,
+    ).toBe("reliable");
+
+    expect(
+      result.rows[3]
+        .reasons.some(
+          (reason) =>
+            reason.code ===
+            "serial-cell-contamination",
+        ),
+    ).toBe(false);
+
+    expect(
+      table.rows[3]
+        .cells[0]
+        .text,
+    ).toBe("“4");
+  },
+);
         it(
       "uses structural mode for a non-serial table",
       () => {

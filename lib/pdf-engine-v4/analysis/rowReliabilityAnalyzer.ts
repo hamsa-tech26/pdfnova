@@ -23,9 +23,8 @@ function parseSerialValue(
     text
       .trim()
       .match(
-  /^['’‘´]*(\d+)[.)]?(?:\s+|$)/,
-);
-
+        /^[\u0022\u0027\u0060\u00B4\u2018\u2019\u201C\u201D]*(\d+)[.)]?(?:\s+|$)/,
+      );
   if (!match) {
     return null;
   }
@@ -981,7 +980,30 @@ const expectsStandaloneSerial =
 
       const serialText = serialCell?.text.trim() ?? "";
 
-      if (serialCell && !/^\d+[.)]?$/.test(serialText)) {
+      const hasOcrProvenance =
+        serialCell?.words.some(
+          (word) =>
+            word.extractionProvenance
+              ?.source ===
+            "ocr-tesseract",
+        ) ?? false;
+
+      const isCleanSerial =
+        /^\d+[.)]?$/.test(
+          serialText,
+        );
+
+      const isToleratedOcrQuoteSerial =
+        hasOcrProvenance &&
+        /^[\u201C\u201D]\d+[.)]?$/.test(
+          serialText,
+        );
+
+      if (
+        serialCell &&
+        !isCleanSerial &&
+        !isToleratedOcrQuoteSerial
+      ) {
         reasons.push({
           code: "serial-cell-contamination",
           columnIndex: serialColumnIndex,
