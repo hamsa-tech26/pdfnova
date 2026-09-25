@@ -448,9 +448,17 @@ function isSuspiciousCell(
       cell.columnIndex + 1
     ];
 
-  const neighbourIsEmpty =
-    !previousCell?.text.trim() ||
+  const previousNeighbourIsEmpty =
+    Boolean(previousCell) &&
+    !previousCell?.text.trim();
+
+  const nextNeighbourIsEmpty =
+    Boolean(nextCell) &&
     !nextCell?.text.trim();
+
+  const neighbourIsEmpty =
+    previousNeighbourIsEmpty ||
+    nextNeighbourIsEmpty;
 
   return (
   (wordCount <= 4 &&

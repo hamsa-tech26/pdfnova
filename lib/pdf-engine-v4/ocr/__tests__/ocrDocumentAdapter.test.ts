@@ -81,6 +81,7 @@ describe(
                 confidence: 95,
                 renderedWidth: 1200,
                 renderedHeight: 1600,
+                detectedSkewRadians: null,
                 words: [
                   {
                     text: "OCR",

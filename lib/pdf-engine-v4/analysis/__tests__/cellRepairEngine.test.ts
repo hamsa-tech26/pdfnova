@@ -540,5 +540,175 @@ describe(
         );
       },
     );
+    it(
+      "does not move a valid short cell from the final column just because there is no right-hand neighbour",
+      () => {
+        const header =
+          createRow(
+            0,
+            [
+              createCell(
+                0,
+                0,
+                [
+                  createWord(
+                    "h-serial",
+                    "Sl No",
+                    50,
+                    130,
+                  ),
+                ],
+              ),
+              createCell(
+                0,
+                1,
+                [
+                  createWord(
+                    "h-remarks",
+                    "Remarks",
+                    300,
+                    130,
+                  ),
+                ],
+              ),
+            ],
+          );
+
+        const previousRow =
+          createRow(
+            1,
+            [
+              createCell(
+                1,
+                0,
+                [
+                  createWord(
+                    "r5-serial",
+                    "5",
+                    50,
+                    100,
+                    8,
+                  ),
+                ],
+              ),
+              createCell(
+                1,
+                1,
+                [],
+              ),
+            ],
+          );
+
+        const sourceRow =
+          createRow(
+            2,
+            [
+              createCell(
+                2,
+                0,
+                [
+                  createWord(
+                    "r6-serial",
+                    "6",
+                    50,
+                    90,
+                    8,
+                  ),
+                ],
+              ),
+              createCell(
+                2,
+                1,
+                [
+                  createWord(
+                    "r6-tanker",
+                    "Tanker used",
+                    300,
+                    90,
+                    80,
+                  ),
+                ],
+              ),
+            ],
+          );
+
+        const nextRow =
+          createRow(
+            3,
+            [
+              createCell(
+                3,
+                0,
+                [
+                  createWord(
+                    "r7-serial",
+                    "7",
+                    50,
+                    80,
+                    8,
+                  ),
+                ],
+              ),
+              createCell(
+                3,
+                1,
+                [
+                  createWord(
+                    "r7-remarks",
+                    "Pipe damage",
+                    300,
+                    80,
+                    80,
+                  ),
+                ],
+              ),
+            ],
+          );
+
+        const table:
+          LogicalTable = {
+            id: "final-column-valid-cell-table",
+            pageNumber: 1,
+            rows: [
+              header,
+              previousRow,
+              sourceRow,
+              nextRow,
+            ],
+            columnCount: 2,
+            bounds: {
+              x: 40,
+              y: 70,
+              width: 400,
+              height: 80,
+            },
+            confidence: 1,
+          };
+
+        const result =
+          repairLogicalTableV1(
+            table,
+          );
+
+        expect(
+          result.actions,
+        ).toHaveLength(0);
+
+        expect(
+          result.table.rows[2]
+            .cells[1].text,
+        ).toBe(
+          "Tanker used",
+        );
+
+        expect(
+          result.table.rows[1]
+            .cells[1].text,
+        ).toBe(
+          "",
+        );
+      },
+    );
+
   },
 );

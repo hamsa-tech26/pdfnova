@@ -594,5 +594,88 @@ describe(
         );
       },
     );
+    it(
+      "normalizes trailing punctuation from an OCR serial in the final table",
+      () => {
+        const columns:
+          ColumnCandidate[] = [
+            createColumn(
+              "column-1",
+              50,
+              40,
+              75,
+            ),
+            createColumn(
+              "column-2",
+              100,
+              75,
+              250,
+            ),
+          ];
+
+        const header =
+          createRow(
+            "serial-normalization-header",
+            0,
+            700,
+            [
+              createWord(
+                "serial-header",
+                "Sl No",
+                50,
+                700,
+              ),
+              createWord(
+                "name-header",
+                "Name",
+                100,
+                700,
+              ),
+            ],
+          );
+
+        const dataRow =
+          createRow(
+            "serial-normalization-row",
+            1,
+            650,
+            [
+              createWord(
+                "serial-5",
+                "5)",
+                50,
+                650,
+                10,
+              ),
+              createWord(
+                "scheme-5",
+                "Kamalacherri Scheme",
+                100,
+                650,
+                120,
+              ),
+            ],
+          );
+
+        const result =
+          buildSmartTableV4(
+            1,
+            [
+              header,
+              dataRow,
+            ],
+            columns,
+          );
+
+        expect(
+          result.table,
+        ).not.toBeNull();
+
+        expect(
+          result.table!.rows[1]
+            .cells[0].text,
+        ).toBe("5");
+      },
+    );
   },
 );

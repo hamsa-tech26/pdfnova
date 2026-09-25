@@ -517,13 +517,50 @@ function assignWordsToCells(
   return cells;
 }
 
+function normalizeFinalSerialCellText(
+  cell: LogicalCell,
+  text: string,
+) {
+  if (cell.columnIndex !== 0) {
+    return text;
+  }
+
+  const isOcrCell =
+    cell.words.length > 0 &&
+    cell.words.every(
+      (word) =>
+        word.extractionProvenance
+          ?.source ===
+        "ocr-tesseract",
+    );
+
+  if (!isOcrCell) {
+    return text;
+  }
+
+  const match =
+    text
+      .trim()
+      .match(
+        /^['\u2019]?(\d+)[.)]?$/,
+      );
+
+  return match?.[1] ?? text;
+}
+
 function finalizeCell(
   cell: LogicalCell,
   column: ColumnCandidate,
   minimumCellConfidence: number,
 ): LogicalCell {
-  const text =
+  const rawText =
     joinWords(cell.words);
+
+  const text =
+    normalizeFinalSerialCellText(
+      cell,
+      rawText,
+    );
 
   const bounds =
     getBounds(cell.words);
