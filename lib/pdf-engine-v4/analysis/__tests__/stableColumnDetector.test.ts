@@ -538,8 +538,8 @@ describe(
         expect(
           trailingColumn.reason,
         ).toContain(
-          "Recovered as a sparse trailing column",
-        );
+  "Recovered as a sparse column",
+);
       },
     );
     it(
@@ -752,6 +752,487 @@ expect(
       x <= 51,
   ),
 ).toBe(true);
+      },
+    );
+       it(
+      "preserves five logical columns under mild perspective drift",
+      () => {
+        const lines: PdfLine[] = [];
+
+        for (
+          let index = 0;
+          index <= 9;
+          index += 1
+        ) {
+          const leftDrift =
+            index * 2.4;
+
+          const middleDrift =
+            index * 0.4;
+
+          const rightDrift =
+            index * -1.2;
+
+          const entries =
+            index === 0
+              ? [
+                  {
+                    text: "Sl No",
+                    x: 42 + leftDrift,
+                    width: 24,
+                  },
+                  {
+                    text: "Name",
+                    x: 90 + leftDrift,
+                    width: 34,
+                  },
+                  {
+                    text: "GP/VC",
+                    x: 270 + middleDrift,
+                    width: 35,
+                  },
+                  {
+                    text: "Status",
+                    x: 380 + rightDrift,
+                    width: 40,
+                  },
+                  {
+                    text: "Remarks",
+                    x: 465 + rightDrift,
+                    width: 45,
+                  },
+                ]
+              : [
+                  {
+                    text: String(index),
+                    x: 42 + leftDrift,
+                    width: 6,
+                  },
+                  {
+                    text: `Scheme${index}`,
+                    x: 90 + leftDrift,
+                    width: 55,
+                  },
+                  {
+                    text: `VC${index}`,
+                    x: 270 + middleDrift,
+                    width: 30,
+                  },
+                  {
+                    text: "Functional",
+                    x: 380 + rightDrift,
+                    width: 55,
+                  },
+                  {
+                    text: "Normal",
+                    x: 465 + rightDrift,
+                    width: 40,
+                  },
+                ];
+
+          lines.push(
+            createOcrLine(
+              index,
+              entries,
+            ),
+          );
+        }
+
+        const block:
+          PdfVisualBlock = {
+          id:
+            "perspective-drift-table",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 40,
+            y: 500,
+            width: 500,
+            height: 250,
+          },
+          lines,
+          text:
+            lines
+              .map(
+                (line) =>
+                  line.text,
+              )
+              .join(" "),
+          confidence: 0.95,
+        };
+
+        const result =
+          detectStableColumnsV4(
+            block,
+          );
+
+        expect(
+          result.columns,
+        ).toHaveLength(5);
+      },
+    );
+       it(
+      "preserves the serial column when perspective drift combines with missing OCR serials",
+      () => {
+        const lines: PdfLine[] = [];
+
+        for (
+          let index = 0;
+          index <= 9;
+          index += 1
+        ) {
+          const leftDrift =
+            index * 2.8;
+
+          const middleDrift =
+            index * 0.5;
+
+          const rightDrift =
+            index * -1.3;
+
+          if (index === 0) {
+            lines.push(
+              createOcrLine(
+                index,
+                [
+                  {
+                    text: "|s",
+                    x: 40,
+                    width: 10,
+                  },
+                  {
+                    text: "ol",
+                    x: 53,
+                    width: 9,
+                  },
+                  {
+                    text: "Name",
+                    x: 92,
+                    width: 34,
+                  },
+                  {
+                    text: "GP/VC",
+                    x: 270,
+                    width: 35,
+                  },
+                  {
+                    text: "Status",
+                    x: 380,
+                    width: 40,
+                  },
+                  {
+                    text: "Remarks",
+                    x: 465,
+                    width: 45,
+                  },
+                ],
+              ),
+            );
+
+            continue;
+          }
+
+          const entries: Array<{
+            text: string;
+            x: number;
+            width?: number;
+          }> = [];
+
+          if (
+            index !== 4 &&
+            index !== 8
+          ) {
+            entries.push({
+              text: String(index),
+              x: 42 + leftDrift,
+              width: 6,
+            });
+          }
+
+          entries.push(
+            {
+              text: `Scheme${index}`,
+              x: 92 + leftDrift,
+              width: 55,
+            },
+            {
+              text: `VC${index}`,
+              x: 270 + middleDrift,
+              width: 30,
+            },
+            {
+              text: "Functional",
+              x: 380 + rightDrift,
+              width: 55,
+            },
+            {
+              text: "Normal",
+              x: 465 + rightDrift,
+              width: 40,
+            },
+          );
+
+          lines.push(
+            createOcrLine(
+              index,
+              entries,
+            ),
+          );
+        }
+
+        const block:
+          PdfVisualBlock = {
+          id:
+            "perspective-missing-serials-table",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 40,
+            y: 500,
+            width: 500,
+            height: 250,
+          },
+          lines,
+          text:
+            lines
+              .map(
+                (line) =>
+                  line.text,
+              )
+              .join(" "),
+          confidence: 0.95,
+        };
+
+        const result =
+          detectStableColumnsV4(
+            block,
+          );
+
+        expect(
+          result.columns,
+        ).toHaveLength(5);
+
+        expect(
+          result.columns.some(
+            (column) =>
+              column.x < 80,
+          ),
+        ).toBe(true);
+      },
+    );
+        it(
+      "recovers a sparse leading serial column",
+      () => {
+        const lines =
+          Array.from(
+            { length: 10 },
+            (_, index) =>
+              createOcrLine(
+                index,
+                index === 0
+                  ? [
+                      { text: "Sl No", x: 42, width: 28 },
+                      { text: "Name", x: 100, width: 35 },
+                      { text: "GP/VC", x: 270, width: 35 },
+                      { text: "Status", x: 380, width: 40 },
+                      { text: "Remarks", x: 465, width: 45 },
+                    ]
+                  : [
+                      ...(index === 1
+                        ? [
+                            {
+                              text: "1",
+                              x: 42,
+                              width: 6,
+                            },
+                          ]
+                        : []),
+                      {
+                        text: `Scheme${index}`,
+                        x: 100,
+                        width: 55,
+                      },
+                      {
+                        text: `VC${index}`,
+                        x: 270,
+                        width: 30,
+                      },
+                      {
+                        text: "Functional",
+                        x: 380,
+                        width: 55,
+                      },
+                      {
+                        text: "Normal",
+                        x: 465,
+                        width: 40,
+                      },
+                    ],
+              ),
+          );
+
+        const block: PdfVisualBlock = {
+          id: "sparse-leading-serial",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 35,
+            y: 500,
+            width: 500,
+            height: 250,
+          },
+          lines,
+          text: lines
+            .map((line) => line.text)
+            .join(" "),
+          confidence: 0.95,
+        };
+
+        const result =
+          detectStableColumnsV4(block);
+
+        expect(
+          result.columns,
+        ).toHaveLength(5);
+      },
+    );
+        it(
+      "recovers an unstable leading serial column under perspective",
+      () => {
+        const serialXs =
+          new Map([
+            [1, 34],
+            [2, 34],
+            [3, 46],
+            [5, 47],
+          ]);
+
+        const lines: PdfLine[] = [
+          createOcrLine(
+            0,
+            [
+              {
+                text: "Sl No",
+                x: 42,
+                width: 28,
+              },
+              {
+                text: "Name",
+                x: 100,
+                width: 35,
+              },
+              {
+                text: "GP/VC",
+                x: 270,
+                width: 35,
+              },
+              {
+                text: "Status",
+                x: 380,
+                width: 40,
+              },
+              {
+                text: "Remarks",
+                x: 465,
+                width: 45,
+              },
+            ],
+          ),
+        ];
+
+        for (
+          let index = 1;
+          index <= 9;
+          index += 1
+        ) {
+          const entries: Array<{
+            text: string;
+            x: number;
+            width?: number;
+          }> = [];
+
+          const serialX =
+            serialXs.get(index);
+
+          if (
+            serialX !== undefined
+          ) {
+            entries.push({
+              text: String(index),
+              x: serialX,
+              width: 10,
+            });
+          }
+
+          entries.push(
+            {
+              text: `Scheme${index}`,
+              x: 100,
+              width: 55,
+            },
+            {
+              text: `VC${index}`,
+              x: 270,
+              width: 30,
+            },
+            {
+              text: "Functional",
+              x: 380,
+              width: 55,
+            },
+            {
+              text: "Normal",
+              x: 465,
+              width: 40,
+            },
+          );
+
+          lines.push(
+            createOcrLine(
+              index,
+              entries,
+            ),
+          );
+        }
+
+        const block:
+          PdfVisualBlock = {
+          id:
+            "unstable-leading-serial-perspective",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 30,
+            y: 500,
+            width: 500,
+            height: 250,
+          },
+          lines,
+          text:
+            lines
+              .map(
+                (line) =>
+                  line.text,
+              )
+              .join(" "),
+          confidence: 0.95,
+        };
+
+        const result =
+          detectStableColumnsV4(
+            block,
+          );
+
+        expect(
+          result.columns,
+        ).toHaveLength(5);
+
+        expect(
+          result.columns.some(
+            (column) =>
+              column.x < 80,
+          ),
+        ).toBe(true);
       },
     );
   },

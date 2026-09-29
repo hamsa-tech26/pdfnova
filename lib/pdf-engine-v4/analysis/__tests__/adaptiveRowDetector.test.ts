@@ -856,7 +856,7 @@ const secondRow =
         ),
     ).toBe(true);
   },
-);  
+);
 it(
   "does not create a logical row from an OCR punctuation-only artifact line",
   () => {
@@ -978,6 +978,177 @@ it(
   },
 );
 it(
+  "does not merge a short OCR artifact line into a complete row before the next sequential serial",
+  () => {
+    const rowFive =
+      createLine(
+        "artifact-mixed-row-5",
+        680,
+        [
+          createWord(
+            "artifact-mixed-row-5-serial",
+            "5",
+            50,
+            680,
+            8,
+          ),
+          createWord(
+            "artifact-mixed-row-5-name",
+            "Kamalacherri Scheme",
+            100,
+            680,
+            120,
+          ),
+          createWord(
+            "artifact-mixed-row-5-gp",
+            "Thumsarai",
+            300,
+            680,
+            70,
+          ),
+          createWord(
+            "artifact-mixed-row-5-status",
+            "Functional",
+            400,
+            680,
+            70,
+          ),
+          createWord(
+            "artifact-mixed-row-5-remarks",
+            "Normal",
+            500,
+            680,
+            55,
+          ),
+        ],
+      );
+
+    const artifactLine =
+      createLine(
+        "artifact-mixed-noise",
+        660,
+        [
+          createWord(
+            "artifact-mixed-pipe",
+            "|",
+            50,
+            660,
+            5,
+          ),
+          createWord(
+            "artifact-mixed-rm",
+            "rm",
+            400,
+            660,
+            18,
+          ),
+          createWord(
+            "artifact-mixed-jum",
+            "Jum",
+            500,
+            660,
+            25,
+          ),
+        ],
+      );
+
+    const rowSix =
+      createLine(
+        "artifact-mixed-row-6",
+        640,
+        [
+          createWord(
+            "artifact-mixed-row-6-serial",
+            "6",
+            50,
+            640,
+            8,
+          ),
+          createWord(
+            "artifact-mixed-row-6-name",
+            "Purnaram Para Scheme",
+            100,
+            640,
+            120,
+          ),
+          createWord(
+            "artifact-mixed-row-6-gp",
+            "Thumsarai",
+            300,
+            640,
+            70,
+          ),
+          createWord(
+            "artifact-mixed-row-6-status",
+            "Low source",
+            400,
+            640,
+            70,
+          ),
+          createWord(
+            "artifact-mixed-row-6-remarks",
+            "Tanker",
+            500,
+            640,
+            55,
+          ),
+        ],
+      );
+
+    const block: PdfParagraphBlock = {
+      id: "mixed-ocr-artifact",
+      type: "paragraph",
+      pageNumber: 1,
+      bounds: {
+        x: 40,
+        y: 640,
+        width: 520,
+        height: 60,
+      },
+      lines: [
+        rowFive,
+        artifactLine,
+        rowSix,
+      ],
+      text: [
+        rowFive.text,
+        artifactLine.text,
+        rowSix.text,
+      ].join(" "),
+      confidence: 0.9,
+    };
+
+    const result =
+      detectAdaptiveRowsV4(
+        block,
+        columns,
+      );
+
+    expect(
+      result.rows,
+    ).toHaveLength(2);
+
+    const extractedWords =
+      result.rows.flatMap(
+        (row) =>
+          row.words.map(
+            (word) =>
+              word.text,
+          ),
+      );
+
+    expect(
+      extractedWords,
+    ).not.toEqual(
+      expect.arrayContaining([
+        "|",
+        "rm",
+        "Jum",
+      ]),
+    );
+  },
+);
+it(
   "does not merge a distant trailing OCR footer into the final serial row",
   () => {
     const finalRow =
@@ -1095,5 +1266,770 @@ it(
     ).toBe(false);
   },
 );
+    it(
+      "starts a new row when OCR loses the serial but the remaining columns are strongly populated",
+      () => {
+        const rowThree =
+          createLine(
+            "row-3",
+            600,
+            [
+              createWord(
+                "row-3-serial",
+                "3",
+                50,
+                600,
+                8,
+              ),
+              createWord(
+                "row-3-name",
+                "Jalidhan Para Scheme",
+                100,
+                600,
+                120,
+              ),
+              createWord(
+                "row-3-gp",
+                "Uttamjoy VC",
+                300,
+                600,
+                80,
+              ),
+              createWord(
+                "row-3-status",
+                "Functional",
+                400,
+                600,
+                70,
+              ),
+              createWord(
+                "row-3-remarks",
+                "Normal",
+                500,
+                600,
+                55,
+              ),
+            ],
+          );
+
+        const rowFourWithoutSerial =
+          createLine(
+            "row-4-no-serial",
+            575,
+            [
+              createWord(
+                "row-4-name",
+                "Nilbusan Para Scheme",
+                100,
+                575,
+                120,
+              ),
+              createWord(
+                "row-4-gp",
+                "Kacharicherra",
+                300,
+                575,
+                80,
+              ),
+              createWord(
+                "row-4-status",
+                "Repair",
+                400,
+                575,
+                55,
+              ),
+              createWord(
+                "row-4-remarks",
+                "Motor fault",
+                500,
+                575,
+                70,
+              ),
+            ],
+          );
+
+                const rowFive =
+          createLine(
+            "row-5",
+            550,
+            [
+              createWord(
+                "row-5-serial",
+                "5",
+                50,
+                550,
+                8,
+              ),
+              createWord(
+                "row-5-name",
+                "Kamalacherri Scheme",
+                100,
+                550,
+                120,
+              ),
+              createWord(
+                "row-5-gp",
+                "Thumsarai",
+                300,
+                550,
+                70,
+              ),
+              createWord(
+                "row-5-status",
+                "Functional",
+                400,
+                550,
+                70,
+              ),
+              createWord(
+                "row-5-remarks",
+                "Normal",
+                500,
+                550,
+                55,
+              ),
+            ],
+          );
+
+        const block:
+          PdfParagraphBlock = {
+          id:
+            "missing-serial-new-row",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 50,
+            y: 575,
+            width: 520,
+            height: 40,
+          },
+          lines: [
+  rowThree,
+  rowFourWithoutSerial,
+  rowFive,
+],
+          text: [
+  rowThree.text,
+  rowFourWithoutSerial.text,
+  rowFive.text,
+].join(" "),
+          confidence: 0.9,
+        };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+  result.rows,
+).toHaveLength(3);
+
+        expect(
+          result.rows[1]
+            ?.words.some(
+              (word) =>
+                word.text ===
+                "Nilbusan Para Scheme",
+            ),
+        ).toBe(true);
+      },
+    );
+        it(
+      "starts a new row when the missing serial cell contains only OCR punctuation",
+      () => {
+        const rowThree =
+          createLine(
+            "noisy-row-3",
+            600,
+            [
+              createWord(
+                "noisy-row-3-serial",
+                "3",
+                50,
+                600,
+                8,
+              ),
+              createWord(
+                "noisy-row-3-name",
+                "Jalidhan Para Scheme",
+                100,
+                600,
+                120,
+              ),
+              createWord(
+                "noisy-row-3-gp",
+                "Uttamjoy VC",
+                300,
+                600,
+                80,
+              ),
+              createWord(
+                "noisy-row-3-status",
+                "Functional",
+                400,
+                600,
+                70,
+              ),
+              createWord(
+                "noisy-row-3-remarks",
+                "Normal",
+                500,
+                600,
+                55,
+              ),
+            ],
+          );
+
+        const rowFour =
+          createLine(
+            "noisy-row-4",
+            575,
+            [
+              createWord(
+                "noisy-row-4-artifact",
+                "|",
+                50,
+                575,
+                5,
+              ),
+              createWord(
+                "noisy-row-4-name",
+                "Nilbusan Para Scheme",
+                100,
+                575,
+                120,
+              ),
+              createWord(
+                "noisy-row-4-gp",
+                "Kacharicherra",
+                300,
+                575,
+                80,
+              ),
+              createWord(
+                "noisy-row-4-status",
+                "Repair",
+                400,
+                575,
+                55,
+              ),
+              createWord(
+                "noisy-row-4-remarks",
+                "Motor fault",
+                500,
+                575,
+                70,
+              ),
+            ],
+          );
+
+        const rowFive =
+          createLine(
+            "noisy-row-5",
+            550,
+            [
+              createWord(
+                "noisy-row-5-serial",
+                "5",
+                50,
+                550,
+                8,
+              ),
+              createWord(
+                "noisy-row-5-name",
+                "Kamalacherri Scheme",
+                100,
+                550,
+                120,
+              ),
+              createWord(
+                "noisy-row-5-gp",
+                "Thumsarai",
+                300,
+                550,
+                70,
+              ),
+              createWord(
+                "noisy-row-5-status",
+                "Functional",
+                400,
+                550,
+                70,
+              ),
+              createWord(
+                "noisy-row-5-remarks",
+                "Normal",
+                500,
+                550,
+                55,
+              ),
+            ],
+          );
+
+        const block:
+          PdfParagraphBlock = {
+          id:
+            "missing-serial-punctuation",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 45,
+            y: 550,
+            width: 530,
+            height: 70,
+          },
+          lines: [
+            rowThree,
+            rowFour,
+            rowFive,
+          ],
+          text: [
+            rowThree.text,
+            rowFour.text,
+            rowFive.text,
+          ].join(" "),
+          confidence: 0.9,
+        };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+          result.rows,
+        ).toHaveLength(3);
+
+        expect(
+          result.rows[1]
+            ?.words.some(
+              (word) =>
+                word.text ===
+                "Nilbusan Para Scheme",
+            ),
+        ).toBe(true);
+      },
+    );
+        it(
+      "keeps a split missing-serial OCR row together as a new logical row",
+      () => {
+        const rowThree =
+          createLine(
+            "split-row-3",
+            600,
+            [
+              createWord(
+                "split-row-3-serial",
+                "3",
+                50,
+                600,
+                8,
+              ),
+              createWord(
+                "split-row-3-name",
+                "Jalidhan Para Scheme",
+                100,
+                600,
+                120,
+              ),
+              createWord(
+                "split-row-3-gp",
+                "Uttamjoy VC",
+                300,
+                600,
+                80,
+              ),
+              createWord(
+                "split-row-3-status",
+                "Functional",
+                400,
+                600,
+                70,
+              ),
+              createWord(
+                "split-row-3-remarks",
+                "Normal",
+                500,
+                600,
+                55,
+              ),
+            ],
+          );
+
+        const rowFourLeading =
+          createLine(
+            "split-row-4-leading",
+            575,
+            [
+              createWord(
+                "split-row-4-artifact",
+                "|",
+                50,
+                575,
+                5,
+              ),
+              createWord(
+                "split-row-4-name",
+                "Nilbusan Para Scheme",
+                100,
+                575,
+                120,
+              ),
+            ],
+          );
+
+        const rowFourTrailing =
+          createLine(
+            "split-row-4-trailing",
+            565,
+            [
+              createWord(
+                "split-row-4-gp",
+                "Kacharicherra",
+                300,
+                565,
+                80,
+              ),
+              createWord(
+                "split-row-4-status",
+                "Repair",
+                400,
+                565,
+                55,
+              ),
+              createWord(
+                "split-row-4-remarks",
+                "Motor fault",
+                500,
+                565,
+                70,
+              ),
+            ],
+          );
+
+        const rowFive =
+          createLine(
+            "split-row-5",
+            540,
+            [
+              createWord(
+                "split-row-5-serial",
+                "5",
+                50,
+                540,
+                8,
+              ),
+              createWord(
+                "split-row-5-name",
+                "Kamalacherri Scheme",
+                100,
+                540,
+                120,
+              ),
+              createWord(
+                "split-row-5-gp",
+                "Thumsarai",
+                300,
+                540,
+                70,
+              ),
+              createWord(
+                "split-row-5-status",
+                "Functional",
+                400,
+                540,
+                70,
+              ),
+              createWord(
+                "split-row-5-remarks",
+                "Normal",
+                500,
+                540,
+                55,
+              ),
+            ],
+          );
+
+        const block:
+          PdfParagraphBlock = {
+          id:
+            "split-missing-serial-row",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 45,
+            y: 540,
+            width: 530,
+            height: 80,
+          },
+          lines: [
+            rowThree,
+            rowFourLeading,
+            rowFourTrailing,
+            rowFive,
+          ],
+          text: [
+            rowThree.text,
+            rowFourLeading.text,
+            rowFourTrailing.text,
+            rowFive.text,
+          ].join(" "),
+          confidence: 0.9,
+        };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+          result.rows,
+        ).toHaveLength(3);
+
+        expect(
+          result.rows[1]
+            ?.words.map(
+              (word) =>
+                word.text,
+            ),
+        ).toEqual(
+          expect.arrayContaining([
+            "Nilbusan Para Scheme",
+            "Kacharicherra",
+            "Repair",
+            "Motor fault",
+          ]),
+        );
+      },
+    );
+        it(
+      "starts a new logical row when a missing-serial OCR row is split across two complementary lines",
+      () => {
+        const rowThree =
+          createLine(
+            "two-part-row-3",
+            600,
+            [
+              createWord(
+                "two-part-row-3-serial",
+                "3",
+                50,
+                600,
+                8,
+              ),
+              createWord(
+                "two-part-row-3-name",
+                "Jalidhan Para Scheme",
+                100,
+                600,
+                120,
+              ),
+              createWord(
+                "two-part-row-3-gp",
+                "Uttamjoy VC",
+                300,
+                600,
+                80,
+              ),
+              createWord(
+                "two-part-row-3-status",
+                "Functional",
+                400,
+                600,
+                70,
+              ),
+              createWord(
+                "two-part-row-3-remarks",
+                "Normal",
+                500,
+                600,
+                55,
+              ),
+            ],
+          );
+
+        const rowFourPartOne =
+          createLine(
+            "two-part-row-4-a",
+            575,
+            [
+              createWord(
+                "two-part-row-4-name",
+                "Nilbusan Para Scheme",
+                100,
+                575,
+                120,
+              ),
+              createWord(
+                "two-part-row-4-remarks",
+                "Motor fault",
+                500,
+                575,
+                70,
+              ),
+            ],
+          );
+
+        const rowFourPartTwo =
+          createLine(
+            "two-part-row-4-b",
+            565,
+            [
+              createWord(
+                "two-part-row-4-gp",
+                "Kacharicherra",
+                300,
+                565,
+                80,
+              ),
+              createWord(
+                "two-part-row-4-status",
+                "Repair",
+                400,
+                565,
+                55,
+              ),
+            ],
+          );
+
+        const rowFive =
+          createLine(
+            "two-part-row-5",
+            540,
+            [
+              createWord(
+                "two-part-row-5-serial",
+                "5",
+                50,
+                540,
+                8,
+              ),
+              createWord(
+                "two-part-row-5-name",
+                "Kamalacherri Scheme",
+                100,
+                540,
+                120,
+              ),
+              createWord(
+                "two-part-row-5-gp",
+                "Thumsarai",
+                300,
+                540,
+                70,
+              ),
+              createWord(
+                "two-part-row-5-status",
+                "Functional",
+                400,
+                540,
+                70,
+              ),
+              createWord(
+                "two-part-row-5-remarks",
+                "Normal",
+                500,
+                540,
+                55,
+              ),
+            ],
+          );
+
+                const interveningArtifact = createLine(
+          "two-part-row-4-artifact",
+          555,
+          [
+            createWord(
+              "two-part-row-4-artifact-word",
+              "|",
+              50,
+              555,
+              5,
+            ),
+          ],
+        );
+
+        const block: PdfParagraphBlock = {
+          id: "two-part-missing-serial-row",
+          type: "paragraph",
+          pageNumber: 1,
+          bounds: {
+            x: 45,
+            y: 540,
+            width: 530,
+            height: 80,
+          },
+          lines: [
+            rowThree,
+            rowFourPartOne,
+            rowFourPartTwo,
+            interveningArtifact,
+            rowFive,
+          ],
+          text: [
+            rowThree.text,
+            rowFourPartOne.text,
+            rowFourPartTwo.text,
+            interveningArtifact.text,
+            rowFive.text,
+          ].join(" "),
+          confidence: 0.9,
+        };
+
+        const result =
+          detectAdaptiveRowsV4(
+            block,
+            columns,
+          );
+
+        expect(
+          result.rows,
+        ).toHaveLength(3);
+
+        expect(
+          result.rows[1]
+            ?.words.map(
+              (word) =>
+                word.text,
+            ),
+        ).toEqual(
+          expect.arrayContaining([
+            "Nilbusan Para Scheme",
+            "Kacharicherra",
+            "Repair",
+            "Motor fault",
+          ]),
+        );
+                expect(
+          result.rows.map((row) =>
+            row.lines.map((line) => line.id),
+          ),
+        ).toEqual([
+          [rowThree.id],
+          [
+            rowFourPartOne.id,
+            rowFourPartTwo.id,
+          ],
+          [rowFive.id],
+        ]);
+
+        expect(
+          result.rows.map((row) =>
+            row.words.map((word) => word.id),
+          ),
+        ).toEqual([
+          rowThree.words.map((word) => word.id),
+          [
+            ...rowFourPartOne.words,
+            ...rowFourPartTwo.words,
+          ].map((word) => word.id),
+          rowFive.words.map((word) => word.id),
+        ]);
+      },
+    );
   },
 );

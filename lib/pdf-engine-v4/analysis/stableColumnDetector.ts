@@ -1088,7 +1088,69 @@ function startsWithDataSerial(
   );
 }
 
-function recoverSparseTrailingCandidates(
+function isLikelySerialCandidate(
+  candidate: ColumnCandidate,
+  lines: PdfLine[],
+  tolerance: number,
+) {
+  const minimumX =
+    candidate.minX - tolerance;
+
+  const maximumX =
+    candidate.maxX + tolerance;
+
+  let supportedLineCount = 0;
+  let serialLikeCount = 0;
+
+  for (const line of lines) {
+    const firstWord =
+      createAnalysisWordsV4(
+        line,
+      )[0];
+
+    if (!firstWord) {
+      continue;
+    }
+
+    if (
+      firstWord.bounds.x <
+        minimumX ||
+      firstWord.bounds.x >
+        maximumX
+    ) {
+      continue;
+    }
+
+    supportedLineCount += 1;
+
+    const text =
+      firstWord.text.trim();
+
+    const isSerialLike =
+      isAnalysisSerialFragmentV4(
+        firstWord,
+      ) ||
+      /^['\u2019\u2018\u00B4]*\d+[.)]?$/.test(
+        text,
+      );
+
+    if (isSerialLike) {
+      serialLikeCount += 1;
+    }
+  }
+
+  return (
+    serialLikeCount >= 2 &&
+    serialLikeCount /
+      Math.max(
+        supportedLineCount,
+        1,
+      ) >=
+      0.5
+  );
+}
+
+function recoverSparseCandidates(
   candidates: ColumnCandidate[],
   acceptedColumns: ColumnCandidate[],
   lines: PdfLine[],
@@ -1107,14 +1169,20 @@ function recoverSparseTrailingCandidates(
         first.x - second.x,
     );
 
-  const lastAccepted =
-    sortedAccepted[
-      sortedAccepted.length - 1
-    ];
+  const firstAccepted =
+  sortedAccepted[0];
 
-  if (!lastAccepted) {
-    return [];
-  }
+const lastAccepted =
+  sortedAccepted[
+    sortedAccepted.length - 1
+  ];
+
+if (
+  !firstAccepted ||
+  !lastAccepted
+) {
+  return [];
+}
 
   const topLineCount =
     Math.min(
@@ -1186,44 +1254,83 @@ function recoverSparseTrailingCandidates(
             candidate.x,
         );
 
-      const isSparseTrailingColumn =
-        candidate.x >
-        lastAccepted.x +
-          minimumTrailingGap;
+      const isSparseLeadingColumn =
+  candidate.x <
+  firstAccepted.x -
+    minimumTrailingGap;
 
-      const isSparseInternalColumn =
-        previousAccepted !== undefined &&
-        nextAccepted !== undefined &&
-        candidate.x >
-          previousAccepted.x +
-            minimumTrailingGap &&
-        candidate.x <
-          nextAccepted.x -
-            minimumTrailingGap;
+const isSparseTrailingColumn =
+  candidate.x >
+  lastAccepted.x +
+    minimumTrailingGap;
 
-      return (
-        isSparseTrailingColumn ||
-        isSparseInternalColumn
-      );
+const isSparseInternalColumn =
+  previousAccepted !== undefined &&
+  nextAccepted !== undefined &&
+  candidate.x >
+    previousAccepted.x +
+      minimumTrailingGap &&
+  candidate.x <
+    nextAccepted.x -
+      minimumTrailingGap;
+
+return (
+  isSparseLeadingColumn ||
+  isSparseTrailingColumn ||
+  isSparseInternalColumn
+);
     })
     .filter(
       (candidate) =>
         candidate.confidence >= 0.6,
     )
-    .filter(
-      (candidate) =>
-        candidate.stability >= 0.8,
-    )
     .filter((candidate) => {
-      const supportRatio =
-        candidate.distinctLineCount /
-        Math.max(
-          lines.length,
-          1,
-        );
+  if (
+    candidate.stability >= 0.8
+  ) {
+    return true;
+  }
 
-      return supportRatio <= 0.2;
-    })
+  const isLeadingCandidate =
+    candidate.x <
+    firstAccepted.x -
+      minimumTrailingGap;
+
+  return (
+    isLeadingCandidate &&
+    isLikelySerialCandidate(
+  candidate,
+  lines,
+  tolerance,
+)
+  );
+})
+    .filter((candidate) => {
+  const supportRatio =
+    candidate.distinctLineCount /
+    Math.max(
+      lines.length,
+      1,
+    );
+
+  const isLeadingCandidate =
+    candidate.x <
+    firstAccepted.x -
+      minimumTrailingGap;
+
+  if (
+    isLeadingCandidate &&
+    isLikelySerialCandidate(
+      candidate,
+      lines,
+      tolerance,
+    )
+  ) {
+    return true;
+  }
+
+  return supportRatio <= 0.2;
+})
     .filter((candidate) =>
       topLines.some((line) => {
        const candidateSupported =
@@ -1296,7 +1403,7 @@ function recoverSparseTrailingCandidates(
       ...candidate,
       accepted: true,
       reason:
-        "Recovered as a sparse trailing column supported by the table header.",
+        "Recovered as a sparse column supported by the table header.",
     }));
 }
 
@@ -1376,7 +1483,7 @@ export function detectStableColumnsV4(
   );
 
 const recoveredSparseTrailingCandidates =
-  recoverSparseTrailingCandidates(
+  recoverSparseCandidates(
     candidates,
     initiallyAccepted,
     lines,

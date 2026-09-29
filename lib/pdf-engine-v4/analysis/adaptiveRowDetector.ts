@@ -242,6 +242,31 @@ if (
   return "";
 }
 
+function getLeadingSerialNumber(
+  line: PdfLine,
+) {
+  const match =
+    getLeadingSerialText(
+      line,
+    ).match(
+      /^(\d+)/,
+    );
+
+  if (!match) {
+    return null;
+  }
+
+  const value =
+    Number.parseInt(
+      match[1],
+      10,
+    );
+
+  return Number.isFinite(value)
+    ? value
+    : null;
+}
+
 function startsWithSerialNumber(
   line: PdfLine,
 ) {
@@ -609,6 +634,110 @@ function isLikelyTrailingOcrFooter(
   );
 }
 
+function isLikelyInterSerialOcrArtifact(
+  previousRow:
+    | LogicalRowCandidate
+    | undefined,
+  currentLine: PdfLine,
+  nextLine: PdfLine | undefined,
+  columns: ColumnCandidate[],
+) {
+  if (
+    !previousRow ||
+    !nextLine ||
+    columns.length < 4 ||
+    startsWithSerialNumber(
+      currentLine,
+    )
+  ) {
+    return false;
+  }
+
+  const previousSerialNumber =
+    [...previousRow.lines]
+      .reverse()
+      .map(
+        (line) =>
+          getLeadingSerialNumber(
+            line,
+          ),
+      )
+      .find(
+        (value) =>
+          value !== null,
+      ) ?? null;
+
+  const nextSerialNumber =
+    getLeadingSerialNumber(
+      nextLine,
+    );
+
+  if (
+    previousSerialNumber === null ||
+    nextSerialNumber === null ||
+    nextSerialNumber !==
+      previousSerialNumber + 1
+  ) {
+    return false;
+  }
+
+  const isOcrLine =
+    currentLine.words.length > 0 &&
+    currentLine.words.every(
+      (word) =>
+        word.extractionProvenance
+          ?.source ===
+        "ocr-tesseract",
+    );
+
+  if (
+    !isOcrLine ||
+    currentLine.words.length > 3
+  ) {
+    return false;
+  }
+
+  const previousIndexes =
+    new Set(
+      previousRow.lines.flatMap(
+        (line) =>
+          getPopulatedColumnIndexes(
+            line,
+            columns,
+          ),
+      ),
+    );
+
+  const previousRowIsComplete =
+    previousIndexes.size >=
+    columns.length;
+
+  if (!previousRowIsComplete) {
+    return false;
+  }
+
+  const hasLeadingPunctuationArtifact =
+    currentLine.words.some(
+      (word) => {
+        const text =
+          word.text.trim();
+
+        return (
+          findNearestColumnIndex(
+            word,
+            columns,
+          ) === 0 &&
+          text.length > 0 &&
+          !/[A-Za-z0-9]/.test(
+            text,
+          )
+        );
+      },
+    );
+
+  return hasLeadingPunctuationArtifact;
+}
+
 function isSerialBridgePattern(
   leadingLine: PdfLine,
   serialLine: PdfLine | undefined,
@@ -819,6 +948,213 @@ function isOcrFirstSerialBridgePattern(
   return closeBefore;
 }
 
+function isSplitMissingSerialRowPattern(
+  previousRow: LogicalRowCandidate | undefined,
+  firstLine: PdfLine,
+  secondLine: PdfLine | undefined,
+  nextSerialLine: PdfLine | undefined,
+  columns: ColumnCandidate[],
+) {
+  if (
+    !previousRow ||
+    !secondLine ||
+    !nextSerialLine ||
+    columns.length < 4
+  ) {
+    return false;
+  }
+
+    const previousSerialNumber =
+    [...previousRow.lines]
+      .reverse()
+      .map(
+        (line) =>
+          getLeadingSerialNumber(
+            line,
+          ),
+      )
+      .find(
+        (value) =>
+          value !== null,
+      ) ?? null;
+
+  const nextSerialNumber =
+    getLeadingSerialNumber(
+      nextSerialLine,
+    );
+
+  if (
+    previousSerialNumber === null ||
+    nextSerialNumber === null ||
+    nextSerialNumber !==
+      previousSerialNumber + 2 ||
+    startsWithSerialNumber(
+      firstLine,
+    ) ||
+    startsWithSerialNumber(
+      secondLine,
+    )
+  ) {
+    return false;
+  }
+
+  const firstIsOcr =
+    firstLine.words.length > 0 &&
+    firstLine.words.every(
+      (word) =>
+        word.extractionProvenance?.source ===
+        "ocr-tesseract",
+    );
+
+  const secondIsOcr =
+    secondLine.words.length > 0 &&
+    secondLine.words.every(
+      (word) =>
+        word.extractionProvenance?.source ===
+        "ocr-tesseract",
+    );
+
+  if (!firstIsOcr || !secondIsOcr) {
+    return false;
+  }
+
+  const firstIndexes =
+    getPopulatedColumnIndexes(
+      firstLine,
+      columns,
+    ).filter((index) => index > 0);
+
+  const secondIndexes =
+    getPopulatedColumnIndexes(
+      secondLine,
+      columns,
+    ).filter((index) => index > 0);
+
+  if (
+    firstIndexes.length === 0 ||
+    secondIndexes.length === 0
+  ) {
+    return false;
+  }
+
+  const combinedIndexes = new Set([
+    ...firstIndexes,
+    ...secondIndexes,
+  ]);
+
+  const availableNonSerialColumns =
+    columns.length - 1;
+
+  const hasStrongCombinedCoverage =
+    combinedIndexes.size >= 3 &&
+    combinedIndexes.size /
+      availableNonSerialColumns >=
+      0.75;
+
+  if (!hasStrongCombinedCoverage) {
+    return false;
+  }
+
+  const firstSet = new Set(firstIndexes);
+  const secondSet = new Set(secondIndexes);
+
+  const firstAddsContent =
+    firstIndexes.some(
+      (index) => !secondSet.has(index),
+    );
+
+  const secondAddsContent =
+    secondIndexes.some(
+      (index) => !firstSet.has(index),
+    );
+
+  if (
+    !firstAddsContent ||
+    !secondAddsContent
+  ) {
+    return false;
+  }
+
+  const averageHeight =
+    getAverageLineHeight([
+      firstLine,
+      secondLine,
+    ]);
+
+  const gap = getVerticalGap(
+    firstLine,
+    secondLine,
+  );
+
+  return gap <= averageHeight * 0.9;
+}
+
+function isStrongMissingSerialRow(
+  previousLogicalLines: PdfLine[],
+  currentLine: PdfLine,
+  columns: ColumnCandidate[],
+) {
+  if (
+    previousLogicalLines.length === 0 ||
+    columns.length < 4 ||
+    startsWithSerialNumber(
+      currentLine,
+    ) ||
+    !hasEmptyLeadingColumns(
+      currentLine,
+      columns,
+    )
+  ) {
+    return false;
+  }
+
+  const isOcrLine =
+    currentLine.words.length > 0 &&
+    currentLine.words.every(
+      (word) =>
+        word.extractionProvenance
+          ?.source ===
+        "ocr-tesseract",
+    );
+
+  if (!isOcrLine) {
+    return false;
+  }
+
+  const previousHasSerial =
+    previousLogicalLines.some(
+      (line) =>
+        startsWithSerialNumber(
+          line,
+        ),
+    );
+
+  if (!previousHasSerial) {
+    return false;
+  }
+
+  const populatedIndexes =
+    getPopulatedColumnIndexes(
+      currentLine,
+      columns,
+    );
+
+  const populatedNonSerialCount =
+    populatedIndexes.filter(
+      (index) => index > 0,
+    ).length;
+
+  const availableNonSerialColumns =
+    columns.length - 1;
+
+  return (
+    populatedNonSerialCount >= 3 &&
+    populatedNonSerialCount /
+      availableNonSerialColumns >=
+      0.75
+  );
+}
+
 function calculateDecision(
   previousLogicalLines: PdfLine[],
   currentLine: PdfLine,
@@ -916,16 +1252,31 @@ function calculateDecision(
       -options.emptyLeadingColumnsPenalty;
   }
 
-  const score =
-    breakdown.serialNumber +
-    breakdown.verticalGap +
-    breakdown.leftAlignment +
-    breakdown.emptyLeadingColumns +
-    breakdown.wrappedText;
+  const strongMissingSerialRow =
+  isStrongMissingSerialRow(
+    previousLogicalLines,
+    currentLine,
+    columns,
+  );
 
-  const isNewRecord =
-    score >=
-    options.newRecordThreshold;
+const baseScore =
+  breakdown.serialNumber +
+  breakdown.verticalGap +
+  breakdown.leftAlignment +
+  breakdown.emptyLeadingColumns +
+  breakdown.wrappedText;
+
+const score =
+  strongMissingSerialRow
+    ? Math.max(
+        baseScore,
+        options.newRecordThreshold,
+      )
+    : baseScore;
+
+const isNewRecord =
+  score >=
+  options.newRecordThreshold;
 
   const confidence =
     clamp(
@@ -1087,6 +1438,14 @@ if (
   const lineAfterNext =
     lines[index + 2];
 
+    const splitNextSerialLine =
+    lineAfterNext &&
+    isOcrPunctuationArtifactLine(
+      lineAfterNext,
+    )
+      ? lines[index + 3]
+      : lineAfterNext;
+
   const previousRow =
     logicalRows[
       logicalRows.length - 1
@@ -1102,6 +1461,57 @@ if (
 ) {
   continue;
 }
+
+  if (
+    isLikelyInterSerialOcrArtifact(
+      previousRow,
+      line,
+      nextLine,
+      columns,
+    )
+  ) {
+    continue;
+  }
+
+  if (
+    !pendingLeadingLine &&
+    nextLine &&
+    isSplitMissingSerialRowPattern(
+      previousRow,
+      line,
+      nextLine,
+      splitNextSerialLine,
+      columns,
+    )
+  ) {
+    const splitDecision = calculateDecision(
+      previousRow?.lines ?? [],
+      line,
+      columns,
+      resolvedOptions,
+    );
+
+    const splitRow = createLogicalRow(
+      line,
+      logicalRows.length,
+      {
+        ...splitDecision,
+        isNewRecord: true,
+      },
+    );
+
+    logicalRows.push(
+      appendLineToRow(
+        splitRow,
+        nextLine,
+      ),
+    );
+
+    // Both physical lines now belong to this row.
+    // The loop increment advances to lineAfterNext.
+    index += 1;
+    continue;
+  }
 
   if (
     previousRow &&
