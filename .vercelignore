@@ -1,0 +1,5 @@
+test-fixtures/
+scripts/
+**/__tests__/
+**/*.test.ts
+tsconfig.tsbuildinfo
