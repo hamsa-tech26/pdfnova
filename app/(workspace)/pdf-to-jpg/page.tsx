@@ -1,9 +1,8 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import FileUploader from "@/components/pdf/FileUploader";
 import PdfPageCard from "@/components/pdf/PdfPageCard";
-import ToolHeader from "@/components/pdf/ToolHeader";
+import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import {
   renderPdfPages,
@@ -191,18 +190,11 @@ export default function PdfToJpgPage() {
   }
 
   return (
-    <>
-      <Navbar />
-
-      <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white px-6 py-20">
-        <div className="mx-auto max-w-6xl">
-          <ToolHeader
-            label="PDF to JPG"
-            title="Convert PDF pages into JPG images"
-            description="Upload a PDF, preview every page, select the pages you need, and download them individually or together as a ZIP file."
-          />
-
-          <section className="mt-12 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl md:p-8">
+    <ToolLayout
+      label="PDF to JPG"
+      title="Convert PDF pages into JPG images"
+      description="Upload a PDF, preview every page, select the pages you need, and download high-quality JPG images individually or together as a ZIP file."
+    >
             <FileUploader
               fileInputRef={fileInputRef}
               onFileSelection={handleFileSelection}
@@ -352,9 +344,6 @@ export default function PdfToJpgPage() {
               />
               Your PDF is processed inside your browser and is not uploaded.
             </div>
-          </section>
-        </div>
-      </main>
-    </>
+  </ToolLayout>
   );
 }
