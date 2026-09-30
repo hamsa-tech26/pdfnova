@@ -93,6 +93,8 @@ const navigationGroups: SidebarGroup[] = [
         label: "Protect PDF",
         href: "/protect-pdf",
         icon: LockKeyhole,
+        badge: "Soon",
+        available: false,
       },
       {
         label: "Unlock PDF",
@@ -111,10 +113,8 @@ const navigationGroups: SidebarGroup[] = [
       },
       {
         label: "PDF to Word",
-        href: "#",
+        href: "/pdf-to-word",
         icon: FileText,
-        badge: "Soon",
-        available: false,
       },
     ],
   },
@@ -247,13 +247,10 @@ export default function WorkspaceSidebar() {
                 PDFNova
               </p>
 
-              <span className="rounded-full bg-blue-50 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-700 dark:bg-blue-950 dark:text-blue-300">
-                Beta
-              </span>
             </div>
 
             <p className="truncate text-xs font-medium text-gray-500 dark:text-slate-400">
-              AI document workspace
+              Private PDF workspace
             </p>
           </div>
         </Link>
@@ -269,11 +266,11 @@ export default function WorkspaceSidebar() {
 
           <div className="min-w-0">
             <p className="font-bold text-gray-950 dark:text-white">
-              PDFNova 3.0
+              PDFNova Workspace
             </p>
 
             <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-slate-400">
-              Beautiful, fast and intelligent.
+              Private, focused PDF tools.
             </p>
           </div>
         </div>
@@ -311,37 +308,8 @@ export default function WorkspaceSidebar() {
           </span>
         </Link>
 
-        <div className="rounded-3xl bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-5 text-white shadow-xl">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <ShieldCheck
-                size={18}
-                className="text-cyan-300"
-              />
-
-              <p className="text-sm font-bold text-cyan-200">
-                PDFNova Pro
-              </p>
-            </div>
-
-            <span className="rounded-full bg-white/10 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-blue-100">
-              Future
-            </span>
-          </div>
-
-          <p className="mt-3 text-sm leading-6 text-slate-200">
-            Unlock larger files, batch tools, cloud storage and Nova AI.
-          </p>
-
-          <button
-            type="button"
-            disabled
-            className="mt-5 w-full cursor-not-allowed rounded-xl bg-white/80 px-4 py-2.5 text-sm font-semibold text-slate-800 opacity-80"
-          >
-            Upgrade Coming Soon
-          </button>
-        </div>
       </div>
     </aside>
   );
 }
+

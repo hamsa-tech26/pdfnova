@@ -42,11 +42,11 @@ const aiTools = [
 
 export default function AISection() {
   return (
-    <section className="bg-slate-950 px-6 py-24 text-white">
+    <section id="ai" className="bg-slate-950 px-6 py-24 text-white">
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300">
-            Meet Nova AI
+            Nova AI - Coming Soon
           </p>
 
           <h2 className="mt-4 text-4xl font-extrabold tracking-tight md:text-5xl">
@@ -54,13 +54,12 @@ export default function AISection() {
           </h2>
 
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
-            Nova AI helps you summarize, translate, explain, rewrite, and find
-            important information inside your PDFs in seconds.
+            Nova AI is planned to help you summarize, translate, explain, rewrite, and find important information inside your PDFs. These AI features are not part of the current launch.
           </p>
 
-          <button className="mt-8 rounded-xl bg-cyan-400 px-7 py-4 font-semibold text-slate-950 transition hover:bg-cyan-300">
-            Try Nova AI
-          </button>
+          <div className="mt-8 inline-flex rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-6 py-3 font-semibold text-cyan-200">
+            Coming Soon
+          </div>
         </div>
 
         <div className="rounded-3xl border border-white/10 bg-white/5 p-6 shadow-2xl backdrop-blur">
@@ -72,7 +71,7 @@ export default function AISection() {
             <div>
               <h3 className="text-xl font-bold">Nova AI Assistant</h3>
               <p className="text-sm text-slate-400">
-                Intelligent help for every PDF
+                Planned AI document assistance
               </p>
             </div>
           </div>

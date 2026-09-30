@@ -79,6 +79,14 @@ const availableTools = [
     accent: "bg-emerald-50 text-emerald-600",
   },
   {
+    title: "PDF to Word",
+    description: "Convert selectable-text PDFs into editable Word documents.",
+    href: "/pdf-to-word",
+    category: "Office",
+    icon: FileText,
+    accent: "bg-sky-50 text-sky-600",
+  },
+  {
     title: "Word to PDF",
     description: "Convert readable DOCX content into a downloadable PDF.",
     href: "/word-to-pdf",
@@ -142,11 +150,6 @@ const comingSoonTools = [
     icon: LockKeyhole,
   },
   {
-    title: "PDF to Word",
-    description: "Convert PDF documents into editable Word files.",
-    icon: FileText,
-  },
-  {
     title: "Nova AI Workspace",
     description: "Summarize, explain, translate, and chat with documents.",
     icon: Bot,
@@ -166,28 +169,14 @@ function formatRecentDate(createdAt: string) {
   }).format(date);
 }
 
-function getGreeting() {
-  const hour = new Date().getHours();
-
-  if (hour < 12) {
-    return "Good morning";
-  }
-
-  if (hour < 17) {
-    return "Good afternoon";
-  }
-
-  return "Good evening";
-}
 
 export default function DashboardPage() {
   const [recentFiles, setRecentFiles] = useState<RecentFileItem[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
-  const [greeting, setGreeting] = useState("Welcome back");
+
 
   useEffect(() => {
     setRecentFiles(getRecentFiles());
-    setGreeting(getGreeting());
   }, []);
 
   const filteredTools = useMemo(() => {
@@ -222,7 +211,7 @@ export default function DashboardPage() {
             </div>
 
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white md:text-5xl">
-              {greeting}, Prasenjit 👋
+              Welcome to PDFNova
             </h1>
 
             <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600 dark:text-slate-400">
@@ -242,22 +231,22 @@ export default function DashboardPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
                 <Zap size={16} />
-                PDFNova 3.0
+                PDFNova Workspace
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight md:text-5xl">
-                Beautiful, fast and intelligent document tools
+                Beautiful, fast and private document tools
               </h2>
 
               <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">
-                Convert, organize, secure, and manage PDFs without leaving your
+                Convert, organize, and manage PDFs without leaving your
                 browser. Your supported files stay on your device.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
                   href="/word-to-pdf"
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-white px-6 py-3.5 font-semibold text-blue-800 transition hover:-translate-y-0.5 hover:bg-blue-50"
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200"
                 >
                   Convert Word to PDF
                   <ArrowRight size={18} />

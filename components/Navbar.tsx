@@ -1,10 +1,11 @@
 import { FileText, Sparkles } from "lucide-react";
+import Link from "next/link";
 
 export default function Navbar() {
   return (
-    <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl">
+    <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
-        <a href="#" className="flex items-center gap-3">
+        <Link href="/" className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-lg shadow-blue-200">
             <FileText size={22} />
           </div>
@@ -14,21 +15,21 @@ export default function Navbar() {
               PDFNova
             </p>
             <p className="text-xs font-medium text-gray-500">
-              AI document workspace
+              Private PDF workspace
             </p>
           </div>
-        </a>
+        </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
           <a
-            href="#tools"
+            href="/#tools"
             className="text-sm font-semibold text-gray-700 transition hover:text-blue-600"
           >
             Tools
           </a>
 
           <a
-            href="#ai"
+            href="/#ai"
             className="flex items-center gap-2 text-sm font-semibold text-gray-700 transition hover:text-blue-600"
           >
             <Sparkles size={16} />
@@ -36,14 +37,7 @@ export default function Navbar() {
           </a>
 
           <a
-            href="#pricing"
-            className="text-sm font-semibold text-gray-700 transition hover:text-blue-600"
-          >
-            Pricing
-          </a>
-
-          <a
-            href="#about"
+            href="/#about"
             className="text-sm font-semibold text-gray-700 transition hover:text-blue-600"
           >
             About
@@ -51,13 +45,10 @@ export default function Navbar() {
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">
-          <button className="hidden rounded-xl px-4 py-2 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 sm:block">
-            Login
-          </button>
 
-          <button className="rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-600 sm:px-5">
+          <Link href="/dashboard" className="rounded-xl bg-gray-950 px-4 py-2.5 text-sm font-semibold text-white shadow-lg transition hover:-translate-y-0.5 hover:bg-blue-600 dark:bg-white dark:text-slate-950 dark:hover:bg-blue-100 sm:px-5">
             Start Free
-          </button>
+          </Link>
         </div>
       </div>
     </header>

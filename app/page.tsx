@@ -1,9 +1,8 @@
-import Navbar from "@/components/Navbar";
+import Navbar from '@/components/Navbar';
+import Link from 'next/link';
 import ToolsSection from "@/components/ToolsSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import AISection from "@/components/AISection";
-import StatsSection from "@/components/StatsSection";
-import PricingSection from "@/components/PricingSection";
 
 export default function Home() {
   return (
@@ -12,72 +11,71 @@ export default function Home() {
 
       <main>
         {/* Hero */}
-        <section className="bg-gradient-to-b from-blue-50 to-white px-6 py-24">
-          <div className="mx-auto grid max-w-7xl items-center gap-12 md:grid-cols-2">
-            <div>
-              <p className="mb-4 inline-block rounded-full bg-blue-100 px-4 py-2 text-sm font-semibold text-blue-700">
-                AI-Powered PDF Workspace
-              </p>
+        <section className='bg-slate-50 px-5 py-8 sm:px-6 sm:py-12 lg:py-16'>
+          <div className='mx-auto max-w-7xl'>
+            <div className='overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 text-white shadow-2xl'>
+              <div className='grid items-center gap-10 p-7 sm:p-9 lg:grid-cols-[1.2fr_0.8fr] lg:p-12 xl:p-14'>
+                <div>
+                  <div className='inline-flex items-center rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur'>
+                    Private PDF Workspace
+                  </div>
 
-              <h1 className="text-5xl font-extrabold leading-tight text-gray-900 md:text-6xl">
-                Work smarter with every PDF
-              </h1>
+                  <h1 className='mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl'>
+                    Powerful PDF tools. Private by design.
+                  </h1>
 
-              <p className="mt-6 max-w-xl text-lg leading-8 text-gray-600">
-                Merge, split, compress, convert, summarize, and chat with your
-                PDF documents in one secure workspace.
-              </p>
+                  <p className='mt-6 max-w-2xl text-lg leading-8 text-blue-100'>
+                    Merge, split, compress, convert, organize, watermark, and unlock PDFs directly in your browser. Supported files stay on your device.
+                  </p>
 
-              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
-                <button className="rounded-xl bg-blue-600 px-7 py-4 font-semibold text-white transition hover:bg-blue-700">
-                  Start Free
-                </button>
+                  <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
+                    <Link href='/dashboard' className='inline-flex items-center justify-center rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200'>
+                      Open PDFNova Workspace
+                    </Link>
 
-                <button className="rounded-xl border border-gray-300 bg-white px-7 py-4 font-semibold text-gray-800 transition hover:bg-gray-50">
-                  Explore Tools
-                </button>
-              </div>
+                    <a href='#tools' className='inline-flex items-center justify-center rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur transition hover:bg-white/20'>
+                      Explore Tools
+                    </a>
+                  </div>
 
-              <div className="mt-8 flex flex-wrap gap-6 text-sm text-gray-600">
-                <span>✓ No installation</span>
-                <span>✓ Secure processing</span>
-                <span>✓ Works on all devices</span>
-              </div>
-            </div>
+                  <div className='mt-7 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-blue-100'>
+                    <span>No installation</span>
+                    <span>Browser-based processing</span>
+                    <span>Up to 25 MB per file</span>
+                  </div>
+                </div>
 
-            <div className="rounded-3xl border border-blue-100 bg-white p-8 shadow-xl">
-              <div className="rounded-2xl border-2 border-dashed border-blue-300 bg-blue-50 p-12 text-center">
-                <div className="text-6xl">📄</div>
+                <div className='grid grid-cols-2 gap-3 sm:gap-4'>
+                  <div className='rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur'>
+                    <p className='font-bold'>Private</p>
+                    <p className='mt-2 text-sm leading-6 text-blue-100'>Supported files stay on your device.</p>
+                  </div>
 
-                <h2 className="mt-4 text-2xl font-bold text-gray-900">
-                  Upload your PDF
-                </h2>
+                  <div className='rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur'>
+                    <p className='font-bold'>Fast</p>
+                    <p className='mt-2 text-sm leading-6 text-blue-100'>Built for quick everyday document work.</p>
+                  </div>
 
-                <p className="mt-2 text-gray-600">
-                  Drag and drop your document here
-                </p>
+                  <div className='rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur'>
+                    <p className='font-bold'>Browser-based</p>
+                    <p className='mt-2 text-sm leading-6 text-blue-100'>No software installation required.</p>
+                  </div>
 
-                <button className="mt-6 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700">
-                  Choose File
-                </button>
-
-                <p className="mt-4 text-sm text-gray-500">
-                  Maximum file size: 25 MB
-                </p>
+                  <div className='rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur'>
+                    <p className='font-bold'>10 working tools</p>
+                    <p className='mt-2 text-sm leading-6 text-blue-100'>Ready for common PDF workflows.</p>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </section>
-
-        <StatsSection />
 
         <ToolsSection />
 
         <FeaturesSection />
 
         <AISection />
-
-        <PricingSection />
       </main>
     </>
   );
