@@ -1,9 +1,8 @@
 "use client";
 
-import Navbar from "@/components/Navbar";
 import ActionButton from "@/components/pdf/ActionButton";
 import FileUploader from "@/components/pdf/FileUploader";
-import ToolHeader from "@/components/pdf/ToolHeader";
+import ToolLayout from "@/components/pdf/ToolLayout";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { downloadFile } from "@/lib/downloadFile";
 import {
@@ -181,19 +180,12 @@ export default function JpgToPdfPage() {
     }
   }
 
-  return (
-    <>
-      <Navbar />
-
-      <main className="min-h-screen bg-gradient-to-b from-blue-50 to-white px-6 py-20">
-        <div className="mx-auto max-w-5xl">
-          <ToolHeader
-            label="JPG to PDF"
-            title="Turn images into one PDF document"
-            description="Upload JPG or PNG images, arrange their order, and download them as a single PDF."
-          />
-
-          <section className="mt-12 rounded-3xl border border-blue-100 bg-white p-6 shadow-xl md:p-10">
+      return (
+    <ToolLayout
+      label="JPG to PDF"
+      title="Turn images into one PDF document"
+      description="Upload JPG or PNG images, arrange their order, and download them as a single PDF."
+    >
             <FileUploader
               fileInputRef={fileInputRef}
               onFileSelection={handleFileSelection}
@@ -330,9 +322,6 @@ export default function JpgToPdfPage() {
               Your images are processed inside your browser and are not
               uploaded.
             </div>
-          </section>
-        </div>
-      </main>
-    </>
+                  </ToolLayout>
   );
 }
