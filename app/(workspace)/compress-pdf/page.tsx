@@ -252,7 +252,9 @@ export default function CompressPdfPage() {
       setProgress(82);
       setCurrentStep(3);
 
-      const originalName = file.name.replace(/\.pdf$/i, "");
+      const originalName = file.name
+        .replace(/\.pdf$/i, '')
+        .replace(/(?:-compressed)+$/i, '');
 
       const generatedFileName = `${
         originalName || "pdfnova"
@@ -327,7 +329,7 @@ export default function CompressPdfPage() {
         title="Select one PDF file"
         description="Choose or drag the PDF document you want to optimize."
         buttonText="Choose PDF File"
-        helperText="Supported format: PDF · Maximum file size: 25 MB"
+        helperText={"Supported format: PDF \u00B7 Maximum file size: 25 MB"}
         disabled={isCompressing}
       />
 
@@ -459,8 +461,7 @@ export default function CompressPdfPage() {
 
                 {result.compressedSize >= result.originalSize && (
                   <p className="mt-4 text-sm leading-6 text-amber-700 dark:text-amber-300">
-                    This PDF was already well optimized, so its file
-                    size could not be reduced further.
+                    No smaller output was produced at this optimization level, so PDFNova kept the original file to preserve its quality.
                   </p>
                 )}
               </section>
@@ -470,7 +471,7 @@ export default function CompressPdfPage() {
                 description={
                   result.compressedSize < result.originalSize
                     ? "The PDF was optimized successfully and downloaded to your device."
-                    : "The PDF was processed successfully, but it was already well optimized."
+                    : "The PDF was processed successfully. No smaller result was produced, so the original file was preserved."
                 }
                 fileName={outputFileName}
                 onDownloadAgain={downloadResultAgain}
