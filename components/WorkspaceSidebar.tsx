@@ -246,7 +246,7 @@ export default function WorkspaceSidebar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate text-lg font-extrabold text-gray-950 dark:text-white">
-                Peakatee
+                Peakatee PDF
               </p>
 
             </div>
@@ -268,7 +268,7 @@ export default function WorkspaceSidebar() {
 
           <div className="min-w-0">
             <p className="font-bold text-gray-950 dark:text-white">
-              Peakatee Workspace
+              Peakatee PDF Workspace
             </p>
 
             <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-slate-400">
