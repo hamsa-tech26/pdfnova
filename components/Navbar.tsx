@@ -15,7 +15,7 @@ export default function Navbar() {
 
           <div>
             <p className="text-xl font-extrabold tracking-tight text-gray-950">
-              PDFNova
+              Peakatee
             </p>
             <p className="text-xs font-medium text-gray-500">
               Private PDF workspace
