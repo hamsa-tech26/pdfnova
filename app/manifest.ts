@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "PDFNova - Private Browser-Based PDF Tools",
-    short_name: "PDFNova",
+    name: "Peakatee - Private Browser-Based PDF Tools",
+    short_name: "Peakatee",
     description:
       "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
     start_url: "/",
