@@ -3,14 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const root = process.cwd();
-
-const source = path.join(
-  root,
-  "public",
-  "brand",
-  "pdfnova-icon-final.png",
-);
-
+const source = path.join(root, "public", "brand", "peakatee-icon-final.png");
 const publicIcons = path.join(root, "public", "icons");
 const appDir = path.join(root, "app");
 const brandDir = path.join(root, "public", "brand");
@@ -18,28 +11,23 @@ const brandDir = path.join(root, "public", "brand");
 await fs.mkdir(publicIcons, { recursive: true });
 await fs.mkdir(brandDir, { recursive: true });
 
-const master = sharp(source).resize(1024, 1024, {
-  fit: "cover",
-  position: "centre",
-  kernel: "lanczos3",
-});
-
-await master
-  .clone()
+await sharp(source)
+  .resize(1024, 1024, {
+    fit: "cover",
+    position: "centre",
+    kernel: "lanczos3",
+  })
   .png({ compressionLevel: 9 })
-  .toFile(
-    path.join(brandDir, "pdfnova-icon-master-1024.png"),
-  );
+  .toFile(path.join(brandDir, "peakatee-icon-master-1024.png"));
 
 const sizes = [32, 64, 96, 180, 192, 512];
 
 for (const size of sizes) {
-  const pipeline = sharp(source)
-    .resize(size, size, {
-      fit: "cover",
-      position: "centre",
-      kernel: "lanczos3",
-    });
+  const pipeline = sharp(source).resize(size, size, {
+    fit: "cover",
+    position: "centre",
+    kernel: "lanczos3",
+  });
 
   if (size <= 64) {
     pipeline.sharpen({
@@ -51,24 +39,9 @@ for (const size of sizes) {
 
   await pipeline
     .png({ compressionLevel: 9 })
-    .toFile(
-      path.join(
-        publicIcons,
-        `pdfnova-icon-${size}.png`,
-      ),
-    );
-
-  console.log(`Created ${size}x${size} icon`);
+    .toFile(path.join(publicIcons, `peakatee-icon-${size}.png`));
 }
 
-/*
-  Android / PWA maskable icons.
-
-  The approved master already has a full square background
-  and the Nova P remains inside the safe central region,
-  so we preserve the exact same artwork rather than creating
-  a second, visually inconsistent icon.
-*/
 for (const size of [192, 512]) {
   await sharp(source)
     .resize(size, size, {
@@ -77,19 +50,9 @@ for (const size of [192, 512]) {
       kernel: "lanczos3",
     })
     .png({ compressionLevel: 9 })
-    .toFile(
-      path.join(
-        publicIcons,
-        `pdfnova-maskable-${size}.png`,
-      ),
-    );
-
-  console.log(`Created ${size}x${size} maskable icon`);
+    .toFile(path.join(publicIcons, `peakatee-maskable-${size}.png`));
 }
 
-/*
-  Next.js metadata icons.
-*/
 await sharp(source)
   .resize(512, 512, {
     fit: "cover",
@@ -108,6 +71,4 @@ await sharp(source)
   .png({ compressionLevel: 9 })
   .toFile(path.join(appDir, "apple-icon.png"));
 
-console.log("Created Next.js app icon");
-console.log("Created Apple touch icon");
-console.log("PDFNova final brand asset generation complete.");
+console.log("Peakatee brand asset generation complete.");

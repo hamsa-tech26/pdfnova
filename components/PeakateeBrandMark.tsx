@@ -13,7 +13,7 @@ export default function PeakateeBrandMark({
 }: PeakateeBrandMarkProps) {
   return (
     <Image
-      src="/icons/pdfnova-brand-v1-192.png"
+      src="/icons/peakatee-brand-v1-192.png"
       alt=""
       aria-hidden="true"
       width={size}
