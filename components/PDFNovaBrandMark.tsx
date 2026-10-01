@@ -13,7 +13,7 @@ export default function PDFNovaBrandMark({
 }: PDFNovaBrandMarkProps) {
   return (
     <Image
-      src="/icons/pdfnova-icon-192.png"
+      src="/icons/pdfnova-brand-v1-192.png"
       alt=""
       aria-hidden="true"
       width={size}
