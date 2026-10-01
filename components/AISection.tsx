@@ -46,7 +46,7 @@ export default function AISection() {
       <div className="mx-auto grid max-w-7xl items-center gap-14 lg:grid-cols-2">
         <div>
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-cyan-300">
-            Nova AI - Coming Soon
+            Peakatee AI - Coming Soon
           </p>
 
           <h2 className="mt-4 text-4xl font-extrabold tracking-tight md:text-5xl">
@@ -54,7 +54,7 @@ export default function AISection() {
           </h2>
 
           <p className="mt-6 max-w-xl text-lg leading-8 text-slate-300">
-            Nova AI is planned to help you summarize, translate, explain, rewrite, and find important information inside your PDFs. These AI features are not part of the current launch.
+            Peakatee AI is planned to help you summarize, translate, explain, rewrite, and find important information inside your PDFs. These AI features are not part of the current launch.
           </p>
 
           <div className="mt-8 inline-flex rounded-xl border border-cyan-300/30 bg-cyan-300/10 px-6 py-3 font-semibold text-cyan-200">
@@ -69,7 +69,7 @@ export default function AISection() {
             </div>
 
             <div>
-              <h3 className="text-xl font-bold">Nova AI Assistant</h3>
+              <h3 className="text-xl font-bold">Peakatee AI Assistant</h3>
               <p className="text-sm text-slate-400">
                 Planned AI document assistance
               </p>
