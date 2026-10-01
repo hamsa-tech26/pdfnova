@@ -40,7 +40,7 @@ const defaultTips: ToolTip[] = [
   {
     title: "Keep this tab open",
     description:
-      "Large files may need a little more time while Peakatee processes them.",
+      "Large files may need a little more time while Peakatee PDF processes them.",
   },
   {
     title: "Check the result",
@@ -56,7 +56,7 @@ const defaultFaqs: ToolFaq[] = [
       "Supported tools process files inside your browser, so the document stays on your device.",
   },
   {
-    question: "Can I use Peakatee for free?",
+    question: "Can I use Peakatee PDF for free?",
     answer:
       "The currently available tools can be used from the free workspace.",
   },
@@ -242,7 +242,7 @@ export default function ToolLayout({
               </h2>
 
               <p className="mt-2 text-gray-600 dark:text-slate-400">
-                Continue with another document task from the Peakatee workspace.
+                Continue with another document task from the Peakatee PDF workspace.
               </p>
             </div>
 
