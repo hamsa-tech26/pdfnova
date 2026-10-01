@@ -37,7 +37,7 @@ export default function Home() {
 
                   <div className='mt-8 flex flex-col gap-3 sm:flex-row'>
                     <Link href='/dashboard' className='inline-flex items-center justify-center rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200'>
-                      Open PDFNova Workspace
+                      Open Peakatee Workspace
                     </Link>
 
                     <a href='#tools' className='inline-flex items-center justify-center rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur transition hover:bg-white/20'>
