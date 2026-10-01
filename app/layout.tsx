@@ -14,9 +14,47 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+const siteUrl = "https://pdfnova-sable.vercel.app";
+
 export const metadata: Metadata = {
-  title: "PDFNova",
-  description: "Modern AI-powered PDF workspace",
+  metadataBase: new URL(siteUrl),
+
+  title: {
+    default: "PDFNova - Private Browser-Based PDF Tools",
+    template: "%s | PDFNova",
+  },
+
+  description:
+    "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
+
+  applicationName: "PDFNova",
+
+  openGraph: {
+    type: "website",
+    siteName: "PDFNova",
+    title: "PDFNova - Private Browser-Based PDF Tools",
+    description:
+      "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "PDFNova - Private Browser-Based PDF Tools",
+    description:
+      "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+      "max-video-preview": -1,
+    },
+  },
 };
 
 export default function RootLayout({

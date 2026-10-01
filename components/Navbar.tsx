@@ -1,4 +1,5 @@
-import { FileText, Sparkles } from "lucide-react";
+import PDFNovaBrandMark from "@/components/PDFNovaBrandMark";
+import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function Navbar() {
@@ -6,9 +7,11 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-lg shadow-blue-200">
-            <FileText size={22} />
-          </div>
+          <PDFNovaBrandMark
+  size={40}
+  priority
+  className="drop-shadow-lg"
+/>
 
           <div>
             <p className="text-xl font-extrabold tracking-tight text-gray-950">

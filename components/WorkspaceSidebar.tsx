@@ -1,5 +1,6 @@
 "use client";
 
+import PDFNovaBrandMark from "@/components/PDFNovaBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
@@ -7,7 +8,6 @@ import {
   Clock3,
   FileImage,
   FileText,
-  Gauge,
   Heart,
   Images,
   LayoutDashboard,
@@ -237,9 +237,11 @@ export default function WorkspaceSidebar() {
           href="/dashboard"
           className="flex min-w-0 items-center gap-3"
         >
-          <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 to-cyan-400 text-white shadow-lg shadow-blue-200 dark:shadow-none">
-            <Gauge size={24} />
-          </div>
+          <PDFNovaBrandMark
+  size={48}
+  priority
+  className="drop-shadow-lg"
+ />
 
           <div className="min-w-0">
             <div className="flex items-center gap-2">
@@ -260,9 +262,9 @@ export default function WorkspaceSidebar() {
 
       <div className="mt-7 rounded-2xl border border-blue-100 bg-gradient-to-br from-blue-50 to-cyan-50 p-4 dark:border-slate-800 dark:from-slate-900 dark:to-slate-900">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white">
-            <Sparkles size={20} />
-          </div>
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-blue-600 text-white shadow-sm">
+  <Sparkles size={20} />
+</div>
 
           <div className="min-w-0">
             <p className="font-bold text-gray-950 dark:text-white">
