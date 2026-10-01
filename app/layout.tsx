@@ -20,26 +20,26 @@ export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
 
   title: {
-    default: "PDFNova - Private Browser-Based PDF Tools",
-    template: "%s | PDFNova",
+    default: "Peakatee - Private Browser-Based PDF Tools",
+    template: "%s | Peakatee",
   },
 
   description:
     "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
 
-  applicationName: "PDFNova",
+  applicationName: "Peakatee",
 
   openGraph: {
     type: "website",
-    siteName: "PDFNova",
-    title: "PDFNova - Private Browser-Based PDF Tools",
+    siteName: "Peakatee",
+    title: "Peakatee - Private Browser-Based PDF Tools",
     description:
       "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "PDFNova - Private Browser-Based PDF Tools",
+    title: "Peakatee - Private Browser-Based PDF Tools",
     description:
       "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
   },
