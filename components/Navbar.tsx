@@ -15,10 +15,10 @@ export default function Navbar() {
 
           <div>
             <p className="text-xl font-extrabold tracking-tight text-gray-950">
-              Peakatee
+              Peakatee PDF
             </p>
             <p className="text-xs font-medium text-gray-500">
-              Private PDF workspace
+              Private browser-based PDF tools
             </p>
           </div>
         </Link>
