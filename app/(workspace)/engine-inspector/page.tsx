@@ -83,7 +83,7 @@ const inspectorFaqs = [
       "No. It reads and analyzes the PDF without changing the original document.",
   },
   {
-    question: "Is this a public PDFNova tool?",
+    question: "Is this a public Peakatee tool?",
     answer:
       "No. It is an internal development page used to test and improve PDF Engine V4.",
   },
@@ -591,7 +591,7 @@ seenCells.set(
           {isAnalyzing && (
             <ProgressCard
               title="Running PDF Engine V4"
-              description="PDFNova is reading the document, detecting structure, building logical tables, and applying cell repair."
+              description="Peakatee is reading the document, detecting structure, building logical tables, and applying cell repair."
               progress={progress}
               currentStep={currentStep}
               steps={processingSteps}
@@ -2323,7 +2323,7 @@ candidate.columnIndex
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "pdfnova-v4-analysis.json";
+    link.download = "peakatee-v4-analysis.json";
     document.body.appendChild(link);
     link.click();
     link.remove();

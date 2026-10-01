@@ -95,7 +95,7 @@ export default function PdfToJpgPage() {
 
   function downloadPage(page: RenderedPdfPage) {
     const imageBytes = dataUrlToBytes(page.dataUrl);
-    const fileName = `pdfnova-page-${page.pageNumber}.jpg`;
+    const fileName = `peakatee-page-${page.pageNumber}.jpg`;
 
     downloadFile(imageBytes, fileName, "image/jpeg");
 
@@ -135,7 +135,7 @@ export default function PdfToJpgPage() {
 
       for (const page of pagesToDownload) {
         const imageBytes = dataUrlToBytes(page.dataUrl);
-        const imageFileName = `pdfnova-page-${page.pageNumber}.jpg`;
+        const imageFileName = `peakatee-page-${page.pageNumber}.jpg`;
 
         zip.file(imageFileName, imageBytes);
       }
@@ -176,7 +176,7 @@ export default function PdfToJpgPage() {
   async function downloadSelectedPages() {
     await downloadPagesAsZip(
       selectedPages,
-      "pdfnova-selected-jpg-pages.zip",
+      "peakatee-selected-jpg-pages.zip",
     );
   }
 
@@ -185,7 +185,7 @@ export default function PdfToJpgPage() {
 
     await downloadPagesAsZip(
       allPageNumbers,
-      "pdfnova-all-jpg-pages.zip",
+      "peakatee-all-jpg-pages.zip",
     );
   }
 
