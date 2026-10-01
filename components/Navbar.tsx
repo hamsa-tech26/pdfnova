@@ -1,4 +1,4 @@
-import PDFNovaBrandMark from "@/components/PDFNovaBrandMark";
+import PeakateeBrandMark from "@/components/PeakateeBrandMark";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -7,7 +7,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <PDFNovaBrandMark
+          <PeakateeBrandMark
   size={40}
   priority
   className="drop-shadow-lg"
