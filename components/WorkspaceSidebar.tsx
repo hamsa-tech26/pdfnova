@@ -1,6 +1,6 @@
 "use client";
 
-import PDFNovaBrandMark from "@/components/PDFNovaBrandMark";
+import PeakateeBrandMark from "@/components/PeakateeBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
@@ -237,7 +237,7 @@ export default function WorkspaceSidebar() {
           href="/dashboard"
           className="flex min-w-0 items-center gap-3"
         >
-          <PDFNovaBrandMark
+          <PeakateeBrandMark
   size={48}
   priority
   className="drop-shadow-lg"
