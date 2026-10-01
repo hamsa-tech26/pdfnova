@@ -28,13 +28,13 @@ const unlockPdfTips = [
   {
     title: "Keep the original file",
     description:
-      "PDFNova creates a separate unlocked copy and does not modify your original document.",
+      "Peakatee creates a separate unlocked copy and does not modify your original document.",
   },
 ];
 
 const unlockPdfFaqs = [
   {
-    question: "Does PDFNova store my PDF password?",
+    question: "Does Peakatee store my PDF password?",
     answer:
       "No. The password is used only inside your browser while processing the selected PDF.",
   },
@@ -108,7 +108,7 @@ export default function UnlockPdfPage() {
     try {
       const unlockedBytes = await unlockPdf(file, password);
       const originalName = file.name.replace(/\.pdf$/i, "");
-      const outputFileName = `${originalName || "pdfnova"}-unlocked.pdf`;
+      const outputFileName = `${originalName || "peakatee"}-unlocked.pdf`;
 
       downloadFile(
         unlockedBytes,
@@ -141,7 +141,7 @@ export default function UnlockPdfPage() {
     <ToolLayout
       label="Unlock PDF"
       title="Remove password protection from a PDF"
-      description="Upload a protected PDF, enter the correct password, and download an unlocked copy directly from your private PDFNova workspace."
+      description="Upload a protected PDF, enter the correct password, and download an unlocked copy directly from your private Peakatee workspace."
       tips={unlockPdfTips}
       faqs={unlockPdfFaqs}
       maxWidthClassName="max-w-6xl"

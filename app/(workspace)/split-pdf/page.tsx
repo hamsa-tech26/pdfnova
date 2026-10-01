@@ -30,7 +30,7 @@ const splitPdfTips = [
   {
     title: "Keep the original document",
     description:
-      "PDFNova creates a separate extracted PDF and does not change the original file.",
+      "Peakatee creates a separate extracted PDF and does not change the original file.",
   },
 ];
 
@@ -311,7 +311,7 @@ export default function SplitPdfPage() {
 
       const originalName = file.name.replace(/\.pdf$/i, "");
       const generatedFileName = `${
-        originalName || "pdfnova"
+        originalName || "peakatee"
       }-extracted.pdf`;
 
       await new Promise((resolve) =>
@@ -358,7 +358,7 @@ export default function SplitPdfPage() {
     <ToolLayout
       label="Split PDF"
       title="Extract selected pages from your PDF"
-      description="Upload one PDF, choose the pages you need, and download them as a separate document from your private PDFNova workspace."
+      description="Upload one PDF, choose the pages you need, and download them as a separate document from your private Peakatee workspace."
       tips={splitPdfTips}
       faqs={splitPdfFaqs}
       maxWidthClassName="max-w-6xl"
@@ -430,7 +430,7 @@ export default function SplitPdfPage() {
           {isSplitting && (
             <ProgressCard
               title="Extracting PDF pages"
-              description="PDFNova is creating a new PDF from your selected page range."
+              description="Peakatee is creating a new PDF from your selected page range."
               progress={progress}
               currentStep={currentStep}
               steps={splitSteps}
