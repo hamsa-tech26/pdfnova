@@ -15,7 +15,7 @@ const features = [
   {
     title: "No installation",
     description:
-      "Open Peakatee in your browser and start working without installing desktop software.",
+      "Open Peakatee PDF in your browser and start working without installing desktop software.",
     icon: Monitor,
   },
   {
@@ -27,7 +27,7 @@ const features = [
   {
     title: "Works across devices",
     description:
-      "Use Peakatee on desktop, tablet, or mobile with responsive layouts built for everyday work.",
+      "Use Peakatee PDF on desktop, tablet, or mobile with responsive layouts built for everyday work.",
     icon: Smartphone,
   },
 ];
@@ -42,7 +42,7 @@ export default function FeaturesSection() {
         <div className="grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:items-start">
           <div>
             <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
-              Why Peakatee
+              Why Peakatee PDF
             </p>
 
             <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-gray-950 md:text-5xl">
@@ -50,7 +50,7 @@ export default function FeaturesSection() {
             </h2>
 
             <p className="mt-5 max-w-xl text-lg leading-8 text-gray-600">
-              Peakatee focuses on practical PDF workflows that are fast to understand,
+              Peakatee PDF focuses on practical PDF workflows that are fast to understand,
               easy to use, and designed around browser-based processing.
             </p>
           </div>
