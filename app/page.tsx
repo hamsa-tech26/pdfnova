@@ -1,8 +1,15 @@
+import type { Metadata } from 'next';
 import Navbar from '@/components/Navbar';
 import Link from 'next/link';
 import ToolsSection from "@/components/ToolsSection";
 import FeaturesSection from "@/components/FeaturesSection";
 import AISection from "@/components/AISection";
+
+export const metadata: Metadata = {
+  alternates: {
+    canonical: '/',
+  },
+};
 
 export default function Home() {
   return (
