@@ -286,7 +286,7 @@ const svg = `
     font-size="28"
     fill="black"
   >
-    CONTROLLED PDFNOVA OCR TORTURE FIXTURE
+    CONTROLLED PEAKATEE OCR TORTURE FIXTURE
   </text>
 </svg>
 `;
