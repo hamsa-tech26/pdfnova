@@ -19,7 +19,7 @@ const PARAGRAPH_GAP = 7;
 const TABLE_FONT_SIZE = 10;
 const TABLE_LINE_HEIGHT = 14;
 const TABLE_CELL_PADDING = 5;
-const TABLE_GAP = 10;
+const TABLE_GAP = 26;
 
 function normalizeText(text: string) {
   return text
