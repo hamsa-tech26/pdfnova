@@ -19,7 +19,7 @@ const PARAGRAPH_GAP = 7;
 const TABLE_FONT_SIZE = 10;
 const TABLE_LINE_HEIGHT = 14;
 const TABLE_CELL_PADDING = 5;
-const TABLE_GAP = 26;
+const TABLE_GAP = 42;
 
 function normalizeText(text: string) {
   return text
@@ -303,6 +303,7 @@ export async function convertWordToPdf(
       lineHeight?: number;
       gapAfter?: number;
       indent?: number;
+      keepWithNext?: boolean;
     } = {},
   ) {
     const normalized =
@@ -331,6 +332,9 @@ export async function convertWordToPdf(
     const indent =
       options.indent ?? 0;
 
+    const keepWithNext =
+      options.keepWithNext ?? false;
+
     const maxTextWidth =
       pageWidth -
       PAGE_MARGIN * 2 -
@@ -342,6 +346,15 @@ export async function convertWordToPdf(
       fontSize,
       maxTextWidth,
     );
+
+    if (keepWithNext) {
+      ensureSpace(
+        lines.length *
+          lineHeight +
+          gapAfter +
+          BODY_LINE_HEIGHT * 2,
+      );
+    }
 
     for (const line of lines) {
       ensureSpace(lineHeight);
@@ -876,6 +889,7 @@ export async function convertWordToPdf(
           fontSize: 18,
           lineHeight: 22,
           gapAfter: 10,
+          keepWithNext: true,
         },
       );
       return;
@@ -889,6 +903,7 @@ export async function convertWordToPdf(
           fontSize: 16,
           lineHeight: 20,
           gapAfter: 9,
+          keepWithNext: true,
         },
       );
       return;
@@ -902,6 +917,7 @@ export async function convertWordToPdf(
           fontSize: 14,
           lineHeight: 18,
           gapAfter: 8,
+          keepWithNext: true,
         },
       );
       return;
@@ -919,6 +935,7 @@ export async function convertWordToPdf(
           fontSize: 12,
           lineHeight: 16,
           gapAfter: 7,
+          keepWithNext: true,
         },
       );
       return;
