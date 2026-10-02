@@ -5,7 +5,7 @@ import type { Metadata } from "next";
 export const metadata: Metadata = {
   title: "Privacy Policy",
   description:
-    "Learn how Peakatee PDF handles documents and browser-based processing.",
+    "Learn how Kukureku PDF handles documents and browser-based processing.",
   alternates: {
     canonical: "/privacy",
   },
@@ -19,7 +19,7 @@ export default function PrivacyPage() {
       <main className="bg-slate-50 px-5 py-12 dark:bg-slate-950 sm:px-6 lg:py-16">
         <article className="mx-auto max-w-3xl rounded-[2rem] border border-gray-200 bg-white p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
-            Peakatee
+            Kukureku
           </p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white">
             Privacy Policy
@@ -34,7 +34,7 @@ export default function PrivacyPage() {
                 Browser-based document processing
               </h2>
               <p className="mt-3">
-                Peakatee PDF is designed so supported current tools process your documents locally in your browser. Those tool workflows do not intentionally upload the contents of your document to Peakatee servers for processing.
+                Kukureku PDF is designed so supported current tools process your documents locally in your browser. Those tool workflows do not intentionally upload the contents of your document to Kukureku servers for processing.
               </p>
             </section>
 
@@ -52,7 +52,7 @@ export default function PrivacyPage() {
                 Website hosting
               </h2>
               <p className="mt-3">
-                Like other websites, the hosting and network providers used to deliver Peakatee may receive ordinary technical request information when pages and site assets are loaded, such as IP address, browser details, timestamps, and requested URLs. This is different from the local document-processing workflow.
+                Like other websites, the hosting and network providers used to deliver Kukureku may receive ordinary technical request information when pages and site assets are loaded, such as IP address, browser details, timestamps, and requested URLs. This is different from the local document-processing workflow.
               </p>
             </section>
 
@@ -61,7 +61,7 @@ export default function PrivacyPage() {
                 Accounts, advertising, and AI features
               </h2>
               <p className="mt-3">
-                The current launch does not require an account to use the available PDF tools. Planned Peakatee AI features are not part of the current launch. If a future feature needs cloud processing or changes how document data is handled, this policy should be updated before that feature is enabled.
+                The current launch does not require an account to use the available PDF tools. Planned Kukureku AI features are not part of the current launch. If a future feature needs cloud processing or changes how document data is handled, this policy should be updated before that feature is enabled.
               </p>
             </section>
 

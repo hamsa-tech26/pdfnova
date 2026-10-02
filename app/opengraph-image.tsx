@@ -1,6 +1,6 @@
 import { ImageResponse } from "next/og";
 
-export const alt = "Peakatee PDF - Free private browser-based PDF tools";
+export const alt = "Kukureku PDF - Free private browser-based PDF tools";
 export const size = {
   width: 1200,
   height: 630,
@@ -57,7 +57,7 @@ export default function OpenGraphImage() {
           </div>
 
           <div style={{ display: "flex", flexDirection: "column" }}>
-            <div style={{ fontSize: 42, fontWeight: 800 }}>Peakatee PDF</div>
+            <div style={{ fontSize: 42, fontWeight: 800 }}>Kukureku PDF</div>
             <div style={{ marginTop: 8, fontSize: 22, color: "#bae6fd" }}>
               Free private PDF & document tools
             </div>

@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "Terms of Use",
-  description: "Terms for using Peakatee PDF and its browser-based document tools.",
+  description: "Terms for using Kukureku PDF and its browser-based document tools.",
   alternates: {
     canonical: "/terms",
   },
@@ -18,7 +18,7 @@ export default function TermsPage() {
       <main className="bg-slate-50 px-5 py-12 dark:bg-slate-950 sm:px-6 lg:py-16">
         <article className="mx-auto max-w-3xl rounded-[2rem] border border-gray-200 bg-white p-7 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-10">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-blue-600 dark:text-blue-400">
-            Peakatee
+            Kukureku
           </p>
           <h1 className="mt-3 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white">
             Terms of Use
@@ -30,7 +30,7 @@ export default function TermsPage() {
           <div className="mt-9 space-y-8 text-base leading-8 text-gray-700 dark:text-slate-300">
             <section>
               <h2 className="text-xl font-bold text-gray-950 dark:text-white">
-                Using Peakatee PDF
+                Using Kukureku PDF
               </h2>
               <p className="mt-3">
                 You may use the currently available tools for lawful document work. You are responsible for the files you choose to process and for having the rights or permission needed to use them.
@@ -42,7 +42,7 @@ export default function TermsPage() {
                 Password-protected documents
               </h2>
               <p className="mt-3">
-                Use the Unlock PDF tool only on documents you own or are authorized to unlock. Peakatee is not intended to bypass access controls on files you do not have permission to use.
+                Use the Unlock PDF tool only on documents you own or are authorized to unlock. Kukureku is not intended to bypass access controls on files you do not have permission to use.
               </p>
             </section>
 
@@ -60,7 +60,7 @@ export default function TermsPage() {
                 Availability
               </h2>
               <p className="mt-3">
-                Peakatee may improve, replace, limit, or discontinue tools as the service evolves. Features marked Coming Soon are planned features and are not commitments that they will be available on a particular date.
+                Kukureku may improve, replace, limit, or discontinue tools as the service evolves. Features marked Coming Soon are planned features and are not commitments that they will be available on a particular date.
               </p>
             </section>
 
@@ -69,7 +69,7 @@ export default function TermsPage() {
                 No professional advice
               </h2>
               <p className="mt-3">
-                Peakatee provides document utilities, not legal, financial, medical, or other professional advice. You remain responsible for reviewing documents and outputs before using them in consequential decisions.
+                Kukureku provides document utilities, not legal, financial, medical, or other professional advice. You remain responsible for reviewing documents and outputs before using them in consequential decisions.
               </p>
             </section>
           </div>

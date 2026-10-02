@@ -44,7 +44,7 @@ const wordToPdfTips = [
 
 const wordToPdfFaqs = [
   {
-    question: "Does Peakatee preserve all Word formatting?",
+    question: "Does Kukureku preserve all Word formatting?",
     answer:
       "This browser version preserves readable text, headings, lists, and basic tables. It does not reproduce Microsoft Word's exact page layout or advanced formatting.",
   },
@@ -179,7 +179,7 @@ export default function WordToPdfPage() {
 
       const originalName = file.name.replace(/\.docx$/i, "");
       const generatedFileName = `${
-        originalName || "peakatee-document"
+        originalName || "kukureku-document"
       }.pdf`;
 
       await new Promise((resolve) => setTimeout(resolve, 200));
@@ -223,7 +223,7 @@ export default function WordToPdfPage() {
     <ToolLayout
       label="Word to PDF"
       title="Convert a Word document into PDF"
-      description="Upload a DOCX file and create a clean, downloadable PDF directly inside your private Peakatee workspace."
+      description="Upload a DOCX file and create a clean, downloadable PDF directly inside your private Kukureku workspace."
       tips={wordToPdfTips}
       faqs={wordToPdfFaqs}
       maxWidthClassName="max-w-6xl"
@@ -273,7 +273,7 @@ export default function WordToPdfPage() {
           {isConverting && (
             <ProgressCard
               title="Converting Word to PDF"
-              description="Peakatee is reading your document and creating the downloadable PDF."
+              description="Kukureku is reading your document and creating the downloadable PDF."
               progress={progress}
               currentStep={currentStep}
               steps={processingSteps}

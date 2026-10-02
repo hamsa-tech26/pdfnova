@@ -11,13 +11,13 @@ export default function NotFound() {
           This page could not be found
         </h1>
         <p className="mt-4 leading-7 text-gray-600 dark:text-slate-400">
-          The link may be outdated, or the page may have moved. You can return to Peakatee PDF and choose a document tool.
+          The link may be outdated, or the page may have moved. You can return to Kukureku PDF and choose a document tool.
         </p>
         <Link
           href="/"
           className="mt-7 inline-flex rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
         >
-          Back to Peakatee PDF
+          Back to Kukureku PDF
         </Link>
       </div>
     </main>

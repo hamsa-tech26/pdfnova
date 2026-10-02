@@ -19,8 +19,8 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   title: {
-    default: "Peakatee PDF - Free Private PDF Tools Online",
-    template: "%s | Peakatee PDF",
+    default: "Kukureku PDF - Free Private PDF Tools Online",
+    template: "%s | Kukureku PDF",
   },
 
   description: PRODUCT_DESCRIPTION,
@@ -30,13 +30,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: PRODUCT_NAME,
-    title: "Peakatee PDF - Free Private PDF Tools Online",
+    title: "Kukureku PDF - Free Private PDF Tools Online",
     description: PRODUCT_DESCRIPTION,
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Peakatee PDF - Free Private PDF Tools Online",
+    title: "Kukureku PDF - Free Private PDF Tools Online",
     description: PRODUCT_DESCRIPTION,
   },
 
