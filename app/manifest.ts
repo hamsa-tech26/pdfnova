@@ -14,27 +14,15 @@ export default function manifest(): MetadataRoute.Manifest {
 
     icons: [
       {
-        src: "/icons/kukureku-icon-192.png",
-        sizes: "192x192",
-        type: "image/png",
+        src: "/brand/kukureku-mark.svg",
+        sizes: "any",
+        type: "image/svg+xml",
         purpose: "any",
       },
       {
-        src: "/icons/kukureku-icon-512.png",
-        sizes: "512x512",
-        type: "image/png",
-        purpose: "any",
-      },
-      {
-        src: "/icons/kukureku-maskable-192.png",
-        sizes: "192x192",
-        type: "image/png",
-        purpose: "maskable",
-      },
-      {
-        src: "/icons/kukureku-maskable-512.png",
-        sizes: "512x512",
-        type: "image/png",
+        src: "/brand/kukureku-mark.svg",
+        sizes: "any",
+        type: "image/svg+xml",
         purpose: "maskable",
       },
     ],
