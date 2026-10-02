@@ -33,10 +33,7 @@ function toPdfSafeText(
   text: string,
   font: PDFFont,
 ) {
-  const normalized = toPdfSafeText(
-    text,
-    font,
-  );
+  const normalized = normalizeText(text);
 
   if (!normalized) {
     return "";
@@ -117,7 +114,10 @@ function wrapText(
   fontSize: number,
   maxWidth: number,
 ) {
-  const normalized = normalizeText(text);
+  const normalized = toPdfSafeText(
+    text,
+    font,
+  );
 
   if (!normalized) {
     return [""];
