@@ -3,7 +3,7 @@ import {
   addRecentFile, clearRecentFiles, getRecentFiles, subscribeRecentFiles,
 } from "../recentFiles";
 
-const key = "pdfnova-recent-files";
+const key = "kukureku-recent-files";
 let values: Map<string, string>;
 let localStorage: { getItem: ReturnType<typeof vi.fn>; setItem: ReturnType<typeof vi.fn>; removeItem: ReturnType<typeof vi.fn> };
 

@@ -5,7 +5,7 @@ export type RecentFileItem = {
   createdAt: string;
 };
 
-const STORAGE_KEY = "pdfnova-recent-files";
+const STORAGE_KEY = "kukureku-recent-files";
 const MAX_RECENT_FILES = 8;
 const HISTORY_EVENT = "kukureku-history-change";
 const EMPTY_HISTORY: RecentFileItem[] = [];
