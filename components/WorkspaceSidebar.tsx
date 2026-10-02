@@ -4,17 +4,11 @@ import PeakateeBrandMark from "@/components/PeakateeBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
-  Bot,
-  Clock3,
   FileImage,
   FileText,
-  Heart,
   Images,
   LayoutDashboard,
-  LockKeyhole,
-  MessageSquareText,
   Scissors,
-  Settings,
   Sparkles,
   UnlockKeyhole,
   WandSparkles,
