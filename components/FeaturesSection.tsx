@@ -50,8 +50,9 @@ export default function FeaturesSection() {
             </h2>
 
             <p className="mt-5 max-w-xl text-lg leading-8 text-gray-600">
-              Kukureku PDF focuses on practical PDF workflows that are fast to understand,
-              easy to use, and designed around browser-based processing.
+              Kukureku takes its name from the rooster&apos;s call at dawn — a signal to start.
+              Our PDF workspace follows the same idea: open a document, get the job done,
+              and move on with fast, private browser-based tools.
             </p>
           </div>
 
