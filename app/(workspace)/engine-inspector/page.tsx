@@ -83,7 +83,7 @@ const inspectorFaqs = [
       "No. It reads and analyzes the PDF without changing the original document.",
   },
   {
-    question: "Is this a public Peakatee tool?",
+    question: "Is this a public Kukureku tool?",
     answer:
       "No. It is an internal development page used to test and improve PDF Engine V4.",
   },
@@ -594,7 +594,7 @@ seenCells.set(
           {isAnalyzing && (
             <ProgressCard
               title="Running PDF Engine V4"
-              description="Peakatee is reading the document, detecting structure, building logical tables, and applying cell repair."
+              description="Kukureku is reading the document, detecting structure, building logical tables, and applying cell repair."
               progress={progress}
               currentStep={currentStep}
               steps={processingSteps}
@@ -2326,7 +2326,7 @@ candidate.columnIndex
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "peakatee-v4-analysis.json";
+    link.download = "kukureku-v4-analysis.json";
     document.body.appendChild(link);
     link.click();
     link.remove();

@@ -155,7 +155,7 @@ export default function JpgToPdfPage() {
       }
 
       const pdfBytes = await pdf.save();
-      const outputFileName = "peakatee-images.pdf";
+      const outputFileName = "kukureku-images.pdf";
 
       downloadFile(pdfBytes, outputFileName, "application/pdf");
 

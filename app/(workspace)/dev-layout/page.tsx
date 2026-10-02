@@ -50,7 +50,7 @@ const viewerTips = [
 
 const viewerFaqs = [
   {
-    question: "Is this page visible to normal Peakatee users?",
+    question: "Is this page visible to normal Kukureku users?",
     answer:
       "This is an internal developer tool used to inspect and improve the PDF layout engine.",
   },
@@ -257,7 +257,7 @@ export default function DevLayoutPage() {
     <ToolLayout
       label="Developer"
       title="PDF Layout Engine Viewer"
-      description="Upload a PDF and inspect how Peakatee detects words, lines, rows, columns, cells, and tables."
+      description="Upload a PDF and inspect how Kukureku detects words, lines, rows, columns, cells, and tables."
       tips={viewerTips}
       faqs={viewerFaqs}
       maxWidthClassName="max-w-7xl"
@@ -301,7 +301,7 @@ export default function DevLayoutPage() {
           {isAnalyzing && (
             <ProgressCard
               title="Analyzing PDF structure"
-              description="Peakatee is reading page geometry and building a structured layout model."
+              description="Kukureku is reading page geometry and building a structured layout model."
               progress={progress}
               currentStep={currentStep}
               steps={analysisSteps}
