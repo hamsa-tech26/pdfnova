@@ -30,7 +30,7 @@ const splitPdfTips = [
   {
     title: "Keep the original document",
     description:
-      "Peakatee creates a separate extracted PDF and does not change the original file.",
+      "Kukureku creates a separate extracted PDF and does not change the original file.",
   },
 ];
 
@@ -311,7 +311,7 @@ export default function SplitPdfPage() {
 
       const originalName = file.name.replace(/\.pdf$/i, "");
       const generatedFileName = `${
-        originalName || "peakatee"
+        originalName || "kukureku"
       }-extracted.pdf`;
 
       await new Promise((resolve) =>
@@ -358,7 +358,7 @@ export default function SplitPdfPage() {
     <ToolLayout
       label="Split PDF"
       title="Extract selected pages from your PDF"
-      description="Upload one PDF, choose the pages you need, and download them as a separate document from your private Peakatee workspace."
+      description="Upload one PDF, choose the pages you need, and download them as a separate document from your private Kukureku workspace."
       tips={splitPdfTips}
       faqs={splitPdfFaqs}
       maxWidthClassName="max-w-6xl"
@@ -430,7 +430,7 @@ export default function SplitPdfPage() {
           {isSplitting && (
             <ProgressCard
               title="Extracting PDF pages"
-              description="Peakatee is creating a new PDF from your selected page range."
+              description="Kukureku is creating a new PDF from your selected page range."
               progress={progress}
               currentStep={currentStep}
               steps={splitSteps}
