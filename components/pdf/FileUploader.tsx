@@ -38,7 +38,7 @@ export default function FileUploader({
   disabled = false,
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
-  const [dragDepth, setDragDepth] = useState(0);
+  const [, setDragDepth] = useState(0);
 
   function openFilePicker() {
     if (!disabled) {

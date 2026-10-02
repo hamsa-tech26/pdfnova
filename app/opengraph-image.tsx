@@ -50,7 +50,9 @@ export default function OpenGraphImage() {
                 color: "white",
               }}
             >
-              ✦
+              <svg width="23" height="23" viewBox="0 0 24 24">
+                <path d="M12 0 15 9 24 12 15 15 12 24 9 15 0 12 9 9Z" fill="white" />
+              </svg>
             </span>
           </div>
 

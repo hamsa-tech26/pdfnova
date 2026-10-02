@@ -22,7 +22,7 @@ body {
   font-family: Arial, Helvetica, sans-serif;
 }
 
-/* Dark mode support for existing PDFNova pages */
+/* Dark mode support for document tool pages */
 
 html.dark .bg-white {
   background-color: #0f172a !important;

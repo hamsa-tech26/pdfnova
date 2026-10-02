@@ -3,7 +3,8 @@
 import {
   clearRecentFiles,
   getRecentFiles,
-  type RecentFileItem,
+  getServerRecentFiles,
+  subscribeRecentFiles,
 } from "@/lib/storage/recentFiles";
 import {
   Archive,
@@ -27,7 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 const availableTools = [
   {
@@ -171,13 +172,12 @@ function formatRecentDate(createdAt: string) {
 
 
 export default function DashboardPage() {
-  const [recentFiles, setRecentFiles] = useState<RecentFileItem[]>([]);
+  const recentFiles = useSyncExternalStore(
+    subscribeRecentFiles, getRecentFiles, getServerRecentFiles,
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
 
-  useEffect(() => {
-    setRecentFiles(getRecentFiles());
-  }, []);
 
   const filteredTools = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -197,7 +197,6 @@ export default function DashboardPage() {
 
   function handleClearHistory() {
     clearRecentFiles();
-    setRecentFiles([]);
   }
 
   return (

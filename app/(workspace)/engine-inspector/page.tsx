@@ -321,6 +321,9 @@ function navigateSourceIssue(
   }, [result]); 
 
   const sourceIssues =
+  // Preserve this cache for large OCR documents. The compiler cannot infer the
+  // deduplication map's local mutations; all inputs come from reviewItems.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   useMemo<SelectedSource[]>(() => {
     const issues: SelectedSource[] = [];
     const seenCells =
@@ -950,7 +953,7 @@ seenCells.set(
         .map(
           (word, wordIndex) => (
             <div key={wordIndex}>
-              "{word.text}" —{" "}
+              &quot;{word.text}&quot; —{" "}
               {Math.round(
                 word.confidence,
               )}
@@ -992,7 +995,7 @@ seenCells.set(
           <div className="text-gray-600 dark:text-slate-300">
             PDF-space first word:{" "}
             <span className="font-bold text-gray-950 dark:text-white">
-              "{pdfWord.text}"
+              &quot;{pdfWord.text}&quot;
             </span>
             {" — "}
             [

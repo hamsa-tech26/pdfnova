@@ -24,27 +24,27 @@ export default function Navbar() {
         </Link>
 
         <nav className="hidden items-center gap-8 md:flex">
-          <a
+          <Link
             href="/#tools"
             className="text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
             Tools
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/#ai"
             className="flex items-center gap-2 text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
             <Sparkles size={16} />
             AI PDF
-          </a>
+          </Link>
 
-          <a
+          <Link
             href="/#about"
             className="text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
             About
-          </a>
+          </Link>
         </nav>
 
         <div className="flex items-center gap-2 sm:gap-3">

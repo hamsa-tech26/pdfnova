@@ -15,7 +15,6 @@ import {
   MessageSquareText,
   Scissors,
   Settings,
-  ShieldCheck,
   Sparkles,
   UnlockKeyhole,
   WandSparkles,
@@ -299,19 +298,18 @@ export default function WorkspaceSidebar() {
       </nav>
 
       <div className="mt-6 space-y-3">
-        <Link
-          href="#"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
+        <div
+          aria-disabled="true"
+          className="flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-400 dark:text-slate-500"
         >
           <Settings size={19} />
           Settings
           <span className="ml-auto rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500 dark:bg-slate-800 dark:text-slate-400">
             Soon
           </span>
-        </Link>
+        </div>
 
       </div>
     </aside>
   );
 }
-
