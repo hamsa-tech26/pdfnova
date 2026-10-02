@@ -1,6 +1,6 @@
 "use client";
 
-import PeakateeBrandMark from "@/components/PeakateeBrandMark";
+import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
@@ -190,7 +190,7 @@ export default function WorkspaceSidebar() {
           href="/dashboard"
           className="flex min-w-0 items-center gap-3"
         >
-          <PeakateeBrandMark
+          <KukurekuBrandMark
   size={48}
   priority
   className="drop-shadow-lg"
@@ -199,7 +199,7 @@ export default function WorkspaceSidebar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate text-lg font-extrabold text-gray-950 dark:text-white">
-                Peakatee PDF
+                Kukureku PDF
               </p>
 
             </div>
@@ -221,7 +221,7 @@ export default function WorkspaceSidebar() {
 
           <div className="min-w-0">
             <p className="font-bold text-gray-950 dark:text-white">
-              Peakatee PDF Workspace
+              Kukureku PDF Workspace
             </p>
 
             <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-slate-400">

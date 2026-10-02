@@ -7,7 +7,7 @@ export type RecentFileItem = {
 
 const STORAGE_KEY = "pdfnova-recent-files";
 const MAX_RECENT_FILES = 8;
-const HISTORY_EVENT = "peakatee-history-change";
+const HISTORY_EVENT = "kukureku-history-change";
 const EMPTY_HISTORY: RecentFileItem[] = [];
 let cachedValue: string | null = null;
 let cachedItems = EMPTY_HISTORY;

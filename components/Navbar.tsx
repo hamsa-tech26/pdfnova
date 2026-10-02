@@ -1,4 +1,4 @@
-import PeakateeBrandMark from "@/components/PeakateeBrandMark";
+import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
@@ -7,7 +7,7 @@ export default function Navbar() {
     <header className="sticky top-0 z-50 border-b border-white/60 bg-white/80 backdrop-blur-xl dark:border-slate-800 dark:bg-slate-950/90">
       <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-4">
         <Link href="/" className="flex items-center gap-3">
-          <PeakateeBrandMark
+          <KukurekuBrandMark
             size={40}
             priority
             className="drop-shadow-lg"
@@ -15,7 +15,7 @@ export default function Navbar() {
 
           <div>
             <p className="text-xl font-extrabold tracking-tight text-gray-950 dark:text-white">
-              Peakatee PDF
+              Kukureku PDF
             </p>
             <p className="text-xs font-medium text-gray-500 dark:text-slate-400">
               Free private PDF tools

@@ -37,7 +37,7 @@ const defaultSteps: ProgressStep[] = [
 
 export default function ProgressCard({
   title = "Processing your document",
-  description = "Please keep this tab open while Peakatee completes the task.",
+  description = "Please keep this tab open while Kukureku completes the task.",
   progress,
   currentStep = 1,
   steps = defaultSteps,
@@ -73,7 +73,7 @@ export default function ProgressCard({
           <div>
             <div className="flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">
               <Zap size={16} />
-              Peakatee Processing
+              Kukureku Processing
             </div>
 
             <h2 className="mt-2 text-xl font-extrabold text-gray-950 dark:text-white">

@@ -1,7 +1,7 @@
-export const BRAND_NAME = "Peakatee";
-export const PRODUCT_NAME = "Peakatee PDF";
+export const BRAND_NAME = "Kukureku";
+export const PRODUCT_NAME = "Kukureku PDF";
 export const PRODUCT_DESCRIPTION =
-  "Free, fast, private browser-based PDF tools for merging, splitting, compressing, converting, organizing, watermarking, and unlocking documents.";
+  "Kukureku PDF offers fast, private browser-based tools to merge, split, compress, convert, organize, watermark, and unlock PDF documents.";
 
 const configuredSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
