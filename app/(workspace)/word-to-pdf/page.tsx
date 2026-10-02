@@ -38,7 +38,7 @@ const wordToPdfTips = [
   {
     title: "Review complex formatting",
     description:
-      "Tables, text boxes, images, headers, footers, and custom fonts may not match Microsoft Word exactly.",
+      "Basic tables are supported, but merged cells, images, text boxes, headers, footers, custom fonts, and exact Word layout may not be retained.",
   },
 ];
 
@@ -46,7 +46,7 @@ const wordToPdfFaqs = [
   {
     question: "Does Peakatee preserve all Word formatting?",
     answer:
-      "This browser version preserves readable text and paragraph structure. Complex formatting may not be retained exactly.",
+      "This browser version preserves readable text, headings, lists, and basic tables. It does not reproduce Microsoft Word's exact page layout or advanced formatting.",
   },
   {
     question: "Why does an image-only Word document fail?",
@@ -67,7 +67,7 @@ const processingSteps = [
   },
   {
     label: "Creating PDF pages",
-    description: "Formatting paragraphs and generating the PDF document.",
+    description: "Formatting text, lists, and basic tables into PDF pages.",
   },
   {
     label: "Preparing download",
@@ -264,9 +264,9 @@ export default function WordToPdfPage() {
             </p>
 
             <p className="mt-2 text-sm leading-6 text-amber-700 dark:text-amber-300">
-              This version preserves readable text and paragraph structure.
-              Complex tables, images, headers, footers, custom fonts, and exact
-              Microsoft Word formatting may not be retained.
+              This version preserves readable text, headings, lists, and basic
+              tables. Merged cells, images, text boxes, headers, footers, custom
+              fonts, and exact Microsoft Word layout may not be retained.
             </p>
           </div>
 
@@ -300,7 +300,7 @@ export default function WordToPdfPage() {
               reasons={[
                 "The DOCX file may contain no readable text.",
                 "The file may be damaged or may not be a genuine DOCX document.",
-                "The document may contain only scanned images or unsupported objects.",
+                "The document may contain scanned images, unsupported objects, or characters the current browser converter cannot render.",
               ]}
               onRetry={handleConvert}
               onReset={startAgain}

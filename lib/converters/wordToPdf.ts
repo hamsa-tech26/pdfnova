@@ -29,6 +29,55 @@ function normalizeText(text: string) {
     .trim();
 }
 
+function toPdfSafeText(
+  text: string,
+  font: PDFFont,
+) {
+  const normalized = toPdfSafeText(
+    text,
+    font,
+  );
+
+  if (!normalized) {
+    return "";
+  }
+
+  let safeText = "";
+  let visibleCharacters = 0;
+  let unsupportedCharacters = 0;
+
+  for (const character of normalized) {
+    if (/\s/u.test(character)) {
+      safeText += character;
+      continue;
+    }
+
+    visibleCharacters += 1;
+
+    try {
+      font.encodeText(character);
+      safeText += character;
+    } catch {
+      unsupportedCharacters += 1;
+      safeText += "?";
+    }
+  }
+
+  if (
+    unsupportedCharacters >=
+    Math.max(
+      4,
+      Math.ceil(visibleCharacters * 0.15),
+    )
+  ) {
+    throw new Error(
+      "This Word document contains characters that the current browser converter cannot render reliably. Please use a Latin-script DOCX or remove unsupported symbols and try again.",
+    );
+  }
+
+  return safeText;
+}
+
 function splitLongWord(
   word: string,
   font: PDFFont,
@@ -363,71 +412,98 @@ export async function convertWordToPdf(
     );
   }
 
-  function drawTableRow(
+  type TableCellData = {
+    text: string;
+    lines: string[];
+    font: PDFFont;
+  };
+
+  function getTableCellData(
     row: Element,
     columnCount: number,
     columnWidth: number,
     forceHeader = false,
-  ) {
+  ): TableCellData[] {
     const cells =
       getRowCells(row);
 
-    const cellData =
-      Array.from(
-        { length: columnCount },
-        (_, index) => {
-          const cell =
-            cells[index];
+    return Array.from(
+      { length: columnCount },
+      (_, index) => {
+        const cell =
+          cells[index];
 
-          const isHeader =
-            forceHeader ||
-            cell?.tagName
-              .toLowerCase() === "th";
+        const isHeader =
+          forceHeader ||
+          cell?.tagName
+            .toLowerCase() === "th";
 
-          const font = isHeader
-            ? boldFont
-            : regularFont;
+        const font = isHeader
+          ? boldFont
+          : regularFont;
 
-          const text = cell
-            ? normalizeText(
-                cell.textContent ?? "",
-              )
-            : "";
+        const text = cell
+          ? toPdfSafeText(
+              cell.textContent ?? "",
+              font,
+            )
+          : "";
 
-          const lines = wrapText(
-            text,
-            font,
-            TABLE_FONT_SIZE,
-            columnWidth -
-              TABLE_CELL_PADDING * 2,
-          );
+        const lines = wrapText(
+          text,
+          font,
+          TABLE_FONT_SIZE,
+          columnWidth -
+            TABLE_CELL_PADDING * 2,
+        );
 
-          return {
-            text,
-            lines,
-            font,
-          };
-        },
-      );
+        return {
+          text,
+          lines,
+          font,
+        };
+      },
+    );
+  }
 
-    const maximumLines =
-      Math.max(
-        1,
-        ...cellData.map(
-          (cell) =>
-            Math.max(
-              1,
-              cell.lines.length,
-            ),
-        ),
-      );
+  function getTableRowLineCount(
+    cellData: TableCellData[],
+  ) {
+    return Math.max(
+      1,
+      ...cellData.map(
+        (cell) =>
+          Math.max(
+            1,
+            cell.lines.length,
+          ),
+      ),
+    );
+  }
 
+  function getTableRowHeight(
+    cellData: TableCellData[],
+  ) {
+    return (
+      getTableRowLineCount(
+        cellData,
+      ) *
+        TABLE_LINE_HEIGHT +
+      TABLE_CELL_PADDING * 2
+    );
+  }
+
+  function drawTableRowSegment(
+    cellData: TableCellData[],
+    columnCount: number,
+    columnWidth: number,
+    lineOffset: number,
+    lineCount: number,
+  ) {
     const rowHeight =
-      maximumLines *
+      lineCount *
         TABLE_LINE_HEIGHT +
       TABLE_CELL_PADDING * 2;
-
-    ensureSpace(rowHeight);
 
     const rowTop = yPosition;
     const rowBottom =
@@ -458,7 +534,16 @@ export async function convertWordToPdf(
       const cell =
         cellData[columnIndex];
 
-      if (!cell.text) {
+      const visibleLines =
+        cell.lines.slice(
+          lineOffset,
+          lineOffset + lineCount,
+        );
+
+      if (
+        !cell.text ||
+        visibleLines.length === 0
+      ) {
         continue;
       }
 
@@ -468,7 +553,7 @@ export async function convertWordToPdf(
         TABLE_FONT_SIZE;
 
       for (
-        const line of cell.lines
+        const line of visibleLines
       ) {
         page.drawText(line, {
           x:
@@ -486,6 +571,116 @@ export async function convertWordToPdf(
     }
 
     yPosition = rowBottom;
+  }
+
+  function drawTableRow(
+    row: Element,
+    columnCount: number,
+    columnWidth: number,
+    forceHeader = false,
+  ) {
+    const cellData =
+      getTableCellData(
+        row,
+        columnCount,
+        columnWidth,
+        forceHeader,
+      );
+
+    const totalLines =
+      getTableRowLineCount(
+        cellData,
+      );
+
+    const fullRowHeight =
+      getTableRowHeight(
+        cellData,
+      );
+
+    const usablePageHeight =
+      A4_HEIGHT -
+      PAGE_MARGIN * 2;
+
+    if (
+      fullRowHeight <=
+        usablePageHeight &&
+      yPosition -
+        fullRowHeight <
+        PAGE_MARGIN
+    ) {
+      createNewPage();
+    }
+
+    let lineOffset = 0;
+
+    while (
+      lineOffset < totalLines
+    ) {
+      const availableHeight =
+        yPosition -
+        PAGE_MARGIN;
+
+      let availableLines =
+        Math.floor(
+          (
+            availableHeight -
+            TABLE_CELL_PADDING * 2
+          ) /
+            TABLE_LINE_HEIGHT,
+        );
+
+      if (availableLines <= 0) {
+        createNewPage();
+        continue;
+      }
+
+      if (
+        fullRowHeight >
+          usablePageHeight &&
+        lineOffset === 0 &&
+        availableLines <
+          Math.min(
+            3,
+            totalLines,
+          )
+      ) {
+        createNewPage();
+
+        availableLines =
+          Math.floor(
+            (
+              yPosition -
+              PAGE_MARGIN -
+              TABLE_CELL_PADDING * 2
+            ) /
+              TABLE_LINE_HEIGHT,
+          );
+      }
+
+      const lineCount =
+        Math.min(
+          availableLines,
+          totalLines - lineOffset,
+        );
+
+      drawTableRowSegment(
+        cellData,
+        columnCount,
+        columnWidth,
+        lineOffset,
+        lineCount,
+      );
+
+      lineOffset +=
+        lineCount;
+
+      if (
+        lineOffset <
+        totalLines
+      ) {
+        createNewPage();
+      }
+    }
   }
 
   function drawTable(
@@ -525,6 +720,22 @@ export async function convertWordToPdf(
     const firstRowIsHeader =
       isHeaderRow(firstRow);
 
+    const usablePageHeight =
+      A4_HEIGHT -
+      PAGE_MARGIN * 2;
+
+    const headerHeight =
+      firstRowIsHeader
+        ? getTableRowHeight(
+            getTableCellData(
+              firstRow,
+              columnCount,
+              columnWidth,
+              true,
+            ),
+          )
+        : 0;
+
     for (
       let rowIndex = 0;
       rowIndex < rows.length;
@@ -533,56 +744,49 @@ export async function convertWordToPdf(
       const row =
         rows[rowIndex];
 
-      const cells =
-        getRowCells(row);
+      const rowIsHeader =
+        isHeaderRow(row);
 
-      const estimatedLines =
-        Math.max(
-          1,
-          ...cells.map(
-            (cell) =>
-              wrapText(
-                normalizeText(
-                  cell.textContent ??
-                    "",
-                ),
-                regularFont,
-                TABLE_FONT_SIZE,
-                columnWidth -
-                  TABLE_CELL_PADDING *
-                    2,
-              ).length,
+      const rowHeight =
+        getTableRowHeight(
+          getTableCellData(
+            row,
+            columnCount,
+            columnWidth,
+            rowIsHeader,
           ),
         );
 
-      const estimatedHeight =
-        estimatedLines *
-          TABLE_LINE_HEIGHT +
-        TABLE_CELL_PADDING * 2;
-
-      const movedToNewPage =
-        ensureSpace(
-          estimatedHeight,
-        );
-
       if (
-        movedToNewPage &&
-        rowIndex > 0 &&
-        firstRowIsHeader
+        rowHeight <=
+          usablePageHeight &&
+        yPosition -
+          rowHeight <
+          PAGE_MARGIN
       ) {
-        drawTableRow(
-          firstRow,
-          columnCount,
-          columnWidth,
-          true,
-        );
+        createNewPage();
+
+        if (
+          rowIndex > 0 &&
+          firstRowIsHeader &&
+          headerHeight +
+            rowHeight <=
+            usablePageHeight
+        ) {
+          drawTableRow(
+            firstRow,
+            columnCount,
+            columnWidth,
+            true,
+          );
+        }
       }
 
       drawTableRow(
         row,
         columnCount,
         columnWidth,
-        isHeaderRow(row),
+        rowIsHeader,
       );
     }
 

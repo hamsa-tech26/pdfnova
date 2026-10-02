@@ -44,20 +44,6 @@ const navigationGroups: SidebarGroup[] = [
         href: "/dashboard",
         icon: LayoutDashboard,
       },
-      {
-        label: "Favorites",
-        href: "#",
-        icon: Heart,
-        badge: "Soon",
-        available: false,
-      },
-      {
-        label: "Recent",
-        href: "#",
-        icon: Clock3,
-        badge: "Soon",
-        available: false,
-      },
     ],
   },
   {
@@ -87,13 +73,6 @@ const navigationGroups: SidebarGroup[] = [
         label: "Watermark PDF",
         href: "/watermark-pdf",
         icon: WandSparkles,
-      },
-      {
-        label: "Protect PDF",
-        href: "/protect-pdf",
-        icon: LockKeyhole,
-        badge: "Soon",
-        available: false,
       },
       {
         label: "Unlock PDF",
@@ -129,25 +108,6 @@ const navigationGroups: SidebarGroup[] = [
         label: "PDF to JPG",
         href: "/pdf-to-jpg",
         icon: FileImage,
-      },
-    ],
-  },
-  {
-    label: "Peakatee AI",
-    links: [
-      {
-        label: "AI Workspace",
-        href: "#",
-        icon: Bot,
-        badge: "Soon",
-        available: false,
-      },
-      {
-        label: "Chat with PDF",
-        href: "#",
-        icon: MessageSquareText,
-        badge: "Soon",
-        available: false,
       },
     ],
   },
@@ -297,19 +257,6 @@ export default function WorkspaceSidebar() {
         ))}
       </nav>
 
-      <div className="mt-6 space-y-3">
-        <div
-          aria-disabled="true"
-          className="flex cursor-not-allowed items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-400 dark:text-slate-500"
-        >
-          <Settings size={19} />
-          Settings
-          <span className="ml-auto rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500 dark:bg-slate-800 dark:text-slate-400">
-            Soon
-          </span>
-        </div>
-
-      </div>
     </aside>
   );
 }
