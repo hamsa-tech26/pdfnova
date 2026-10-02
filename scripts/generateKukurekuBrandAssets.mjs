@@ -3,7 +3,7 @@ import path from "node:path";
 import sharp from "sharp";
 
 const root = process.cwd();
-const source = path.join(root, "public", "brand", "peakatee-icon-final.png");
+const source = path.join(root, "public", "brand", "kukureku-icon-final.png");
 const publicIcons = path.join(root, "public", "icons");
 const appDir = path.join(root, "app");
 const brandDir = path.join(root, "public", "brand");
@@ -18,7 +18,7 @@ await sharp(source)
     kernel: "lanczos3",
   })
   .png({ compressionLevel: 9 })
-  .toFile(path.join(brandDir, "peakatee-icon-master-1024.png"));
+  .toFile(path.join(brandDir, "kukureku-icon-master-1024.png"));
 
 const sizes = [32, 64, 96, 180, 192, 512];
 
@@ -39,7 +39,7 @@ for (const size of sizes) {
 
   await pipeline
     .png({ compressionLevel: 9 })
-    .toFile(path.join(publicIcons, `peakatee-icon-${size}.png`));
+    .toFile(path.join(publicIcons, `kukureku-icon-${size}.png`));
 }
 
 for (const size of [192, 512]) {
@@ -50,7 +50,7 @@ for (const size of [192, 512]) {
       kernel: "lanczos3",
     })
     .png({ compressionLevel: 9 })
-    .toFile(path.join(publicIcons, `peakatee-maskable-${size}.png`));
+    .toFile(path.join(publicIcons, `kukureku-maskable-${size}.png`));
 }
 
 await sharp(source)
@@ -71,4 +71,4 @@ await sharp(source)
   .png({ compressionLevel: 9 })
   .toFile(path.join(appDir, "apple-icon.png"));
 
-console.log("Peakatee brand asset generation complete.");
+console.log("Kukureku brand asset generation complete.");
