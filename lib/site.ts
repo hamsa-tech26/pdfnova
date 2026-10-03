@@ -5,6 +5,6 @@ export const PRODUCT_DESCRIPTION =
 
 const configuredSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||
-  "https://pdfnova-sable.vercel.app";
+  "https://kukureku.com";
 
 export const SITE_URL = configuredSiteUrl.replace(/\/+$/, "");
