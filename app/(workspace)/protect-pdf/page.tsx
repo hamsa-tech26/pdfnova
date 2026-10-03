@@ -48,7 +48,7 @@ export default function ProtectPdfPage() {
     <ToolLayout
       label="Protect PDF"
       title="Add password protection to your PDF"
-      description="Secure browser-based PDF encryption is being prepared for the PDFNova workspace."
+      description="Secure browser-based PDF encryption is being prepared for the Kukureku workspace."
       tips={protectPdfTips}
       faqs={protectPdfFaqs}
       maxWidthClassName="max-w-6xl"

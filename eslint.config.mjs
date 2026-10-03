@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Vendored qpdf runtime; keep our worker wrapper linted.
+    "public/qpdf/qpdf.js",
   ]),
 ]);
 

@@ -1,6 +1,5 @@
+import { SITE_URL } from "@/lib/site";
 import type { MetadataRoute } from "next";
-
-const siteUrl = "https://pdfnova-sable.vercel.app";
 
 const publicRoutes = [
   "",
@@ -14,12 +13,14 @@ const publicRoutes = [
   "/organize-pdf",
   "/watermark-pdf",
   "/unlock-pdf",
+  "/privacy",
+  "/terms",
 ];
 
 export default function sitemap(): MetadataRoute.Sitemap {
   return publicRoutes.map((route) => ({
-    url: `${siteUrl}${route}`,
+    url: `${SITE_URL}${route}`,
     changeFrequency: route === "" ? "weekly" : "monthly",
-    priority: route === "" ? 1 : 0.8,
+    priority: route === "" ? 1 : route === "/privacy" || route === "/terms" ? 0.3 : 0.8,
   }));
 }

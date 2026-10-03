@@ -1,4 +1,5 @@
 import ThemeProvider from "@/components/providers/ThemeProvider";
+import { PRODUCT_DESCRIPTION, PRODUCT_NAME, SITE_URL } from "@/lib/site";
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "sonner";
@@ -14,34 +15,29 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const siteUrl = "https://pdfnova-sable.vercel.app";
-
 export const metadata: Metadata = {
-  metadataBase: new URL(siteUrl),
+  metadataBase: new URL(SITE_URL),
 
   title: {
-    default: "PDFNova - Private Browser-Based PDF Tools",
-    template: "%s | PDFNova",
+    default: "Kukureku PDF - Free Private PDF Tools Online",
+    template: "%s | Kukureku PDF",
   },
 
-  description:
-    "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
-
-  applicationName: "PDFNova",
+  description: PRODUCT_DESCRIPTION,
+  applicationName: PRODUCT_NAME,
+  category: "productivity",
 
   openGraph: {
     type: "website",
-    siteName: "PDFNova",
-    title: "PDFNova - Private Browser-Based PDF Tools",
-    description:
-      "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
+    siteName: PRODUCT_NAME,
+    title: "Kukureku PDF - Free Private PDF Tools Online",
+    description: PRODUCT_DESCRIPTION,
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "PDFNova - Private Browser-Based PDF Tools",
-    description:
-      "Merge, split, compress, convert, organize, watermark, and unlock PDFs with fast, private browser-based tools.",
+    title: "Kukureku PDF - Free Private PDF Tools Online",
+    description: PRODUCT_DESCRIPTION,
   },
 
   robots: {

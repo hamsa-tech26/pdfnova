@@ -17,7 +17,7 @@ type SuccessCardProps = {
 
 export default function SuccessCard({
   title = "Your file is ready",
-  description = "PDFNova completed the task successfully.",
+  description = "Kukureku completed the task successfully.",
   fileName,
   onDownloadAgain,
   onStartAgain,

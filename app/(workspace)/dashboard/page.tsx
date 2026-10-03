@@ -3,7 +3,8 @@
 import {
   clearRecentFiles,
   getRecentFiles,
-  type RecentFileItem,
+  getServerRecentFiles,
+  subscribeRecentFiles,
 } from "@/lib/storage/recentFiles";
 import {
   Archive,
@@ -27,7 +28,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState, useSyncExternalStore } from "react";
 
 const availableTools = [
   {
@@ -150,7 +151,7 @@ const comingSoonTools = [
     icon: LockKeyhole,
   },
   {
-    title: "Nova AI Workspace",
+    title: "Kukureku AI Workspace",
     description: "Summarize, explain, translate, and chat with documents.",
     icon: Bot,
   },
@@ -171,13 +172,12 @@ function formatRecentDate(createdAt: string) {
 
 
 export default function DashboardPage() {
-  const [recentFiles, setRecentFiles] = useState<RecentFileItem[]>([]);
+  const recentFiles = useSyncExternalStore(
+    subscribeRecentFiles, getRecentFiles, getServerRecentFiles,
+  );
   const [searchTerm, setSearchTerm] = useState("");
 
 
-  useEffect(() => {
-    setRecentFiles(getRecentFiles());
-  }, []);
 
   const filteredTools = useMemo(() => {
     const normalizedSearch = searchTerm.trim().toLowerCase();
@@ -197,7 +197,6 @@ export default function DashboardPage() {
 
   function handleClearHistory() {
     clearRecentFiles();
-    setRecentFiles([]);
   }
 
   return (
@@ -207,11 +206,11 @@ export default function DashboardPage() {
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-blue-100 bg-white px-4 py-2 text-sm font-semibold text-blue-700 shadow-sm dark:border-slate-800 dark:bg-slate-900 dark:text-blue-300">
               <Sparkles size={16} />
-              PDFNova Workspace
+              Kukureku Workspace
             </div>
 
             <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-gray-950 dark:text-white md:text-5xl">
-              Welcome to PDFNova
+              Welcome to Kukureku
             </h1>
 
             <p className="mt-4 max-w-2xl text-lg leading-8 text-gray-600 dark:text-slate-400">
@@ -231,7 +230,7 @@ export default function DashboardPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
                 <Zap size={16} />
-                PDFNova Workspace
+                Kukureku Workspace
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight md:text-5xl">
@@ -561,7 +560,7 @@ export default function DashboardPage() {
             </div>
 
             <p className="mt-7 text-sm font-semibold uppercase tracking-[0.22em] text-blue-100">
-              Nova AI Workspace
+              Kukureku AI Workspace
             </p>
 
             <h2 className="mt-3 text-3xl font-extrabold">

@@ -131,6 +131,49 @@ function buildLineText(
     .trim();
 }
 
+function createWordParagraph(
+  text: string,
+) {
+  return new Paragraph({
+    children: [
+      new TextRun({
+        text,
+        size: 22,
+      }),
+    ],
+    spacing: {
+      after: 120,
+    },
+  });
+}
+
+function appendTextLines(
+  lines: TextLine[],
+  documentChildren: Array<Paragraph | Table>,
+) {
+  let characterCount = 0;
+
+  for (const line of lines) {
+    const lineText =
+      buildLineText(line.items);
+
+    if (!lineText) {
+      continue;
+    }
+
+    characterCount +=
+      lineText.length;
+
+    documentChildren.push(
+      createWordParagraph(
+        lineText,
+      ),
+    );
+  }
+
+  return characterCount;
+}
+
 function isPdfTextItem(
   item: unknown,
 ): item is PdfTextItem {
@@ -270,7 +313,51 @@ export async function convertPdfToWord(
            const detectedTable =
         detectPdfTable(positionedItems);
 
+      const lines =
+        groupItemsIntoLines(
+          textItems,
+        );
+
       if (detectedTable) {
+        const tableYValues =
+          detectedTable.rows.map(
+            (row) => row.y,
+          );
+
+        const tableTopY =
+          Math.max(
+            ...tableYValues,
+          );
+
+        const tableBottomY =
+          Math.min(
+            ...tableYValues,
+          );
+
+        const verticalTolerance = 3;
+
+        const linesBeforeTable =
+          lines.filter(
+            (line) =>
+              line.y >
+              tableTopY +
+                verticalTolerance,
+          );
+
+        const linesAfterTable =
+          lines.filter(
+            (line) =>
+              line.y <
+              tableBottomY -
+                verticalTolerance,
+          );
+
+        extractedCharacterCount +=
+          appendTextLines(
+            linesBeforeTable,
+            documentChildren,
+          );
+
         const tableRows = detectedTable.rows.map(
           (row) =>
             new TableRow({
@@ -314,35 +401,18 @@ export async function convertPdfToWord(
             },
           }),
         );
-      } else {
-        const lines =
-          groupItemsIntoLines(textItems);
 
-        for (const line of lines) {
-          const lineText =
-            buildLineText(line.items);
-
-          if (!lineText) {
-            continue;
-          }
-
-          extractedCharacterCount +=
-            lineText.length;
-
-          documentChildren.push(
-            new Paragraph({
-              children: [
-                new TextRun({
-                  text: lineText,
-                  size: 22,
-                }),
-              ],
-              spacing: {
-                after: 120,
-              },
-            }),
+        extractedCharacterCount +=
+          appendTextLines(
+            linesAfterTable,
+            documentChildren,
           );
-        }
+      } else {
+        extractedCharacterCount +=
+          appendTextLines(
+            lines,
+            documentChildren,
+          );
       }
 
       if (pageNumber < pdf.numPages) {

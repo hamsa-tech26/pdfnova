@@ -291,7 +291,7 @@ export default function MergePdfPage() {
       setProgress(88);
 
       const mergedPdfBytes = await mergedPdf.save();
-      const generatedFileName = "pdfnova-merged.pdf";
+      const generatedFileName = "kukureku-merged.pdf";
 
       await new Promise((resolve) =>
         setTimeout(resolve, 150),
@@ -334,7 +334,7 @@ export default function MergePdfPage() {
     <ToolLayout
       label="Merge PDF"
       title="Combine multiple PDFs into one file"
-      description="Upload two or more PDF files, arrange them in the correct order, and download one merged document from your private PDFNova workspace."
+      description="Upload two or more PDF files, arrange them in the correct order, and download one merged document from your private Kukureku workspace."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
       maxWidthClassName="max-w-6xl"
@@ -363,7 +363,7 @@ export default function MergePdfPage() {
           {isMerging && (
             <ProgressCard
               title="Merging PDF files"
-              description="PDFNova is combining the selected documents in the order shown above."
+              description="Kukureku is combining the selected documents in the order shown above."
               progress={progress}
               currentStep={currentStep}
               steps={mergeSteps}

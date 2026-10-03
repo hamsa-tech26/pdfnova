@@ -2,19 +2,21 @@
 
 import { Moon, Sun } from "lucide-react";
 import { useTheme } from "next-themes";
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
+
+const subscribe = () => () => {};
+const getClientSnapshot = () => true;
+const getServerSnapshot = () => false;
 
 export default function ThemeToggle() {
   const { theme, setTheme, resolvedTheme } = useTheme();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const mounted = useSyncExternalStore(
+    subscribe, getClientSnapshot, getServerSnapshot,
+  );
 
   if (!mounted) {
     return (
-      <button className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white">
+      <button type="button" disabled aria-label="Toggle theme" className="flex h-10 w-10 items-center justify-center rounded-xl border border-gray-200 bg-white">
         <Sun size={18} />
       </button>
     );

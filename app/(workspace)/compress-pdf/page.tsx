@@ -257,7 +257,7 @@ export default function CompressPdfPage() {
         .replace(/(?:-compressed)+$/i, '');
 
       const generatedFileName = `${
-        originalName || "pdfnova"
+        originalName || "kukureku"
       }-compressed.pdf`;
 
       await new Promise((resolve) =>
@@ -316,7 +316,7 @@ export default function CompressPdfPage() {
     <ToolLayout
       label="Compress PDF"
       title="Reduce the size of your PDF"
-      description="Select a PDF, choose an optimization level, and create a smaller document whenever possible inside your private PDFNova workspace."
+      description="Select a PDF, choose an optimization level, and create a smaller document whenever possible inside your private Kukureku workspace."
       tips={compressionTips}
       faqs={compressionFaqs}
       maxWidthClassName="max-w-6xl"
@@ -357,7 +357,7 @@ export default function CompressPdfPage() {
             </p>
 
             <p className="mt-2 text-sm leading-6 text-gray-500 dark:text-slate-400">
-              Choose how strongly PDFNova should attempt to optimize
+              Choose how strongly Kukureku should attempt to optimize
               the selected document.
             </p>
 
@@ -408,7 +408,7 @@ export default function CompressPdfPage() {
           {isCompressing && (
             <ProgressCard
               title="Compressing your PDF"
-              description="PDFNova is optimizing the selected document using your chosen compression level."
+              description="Kukureku is optimizing the selected document using your chosen compression level."
               progress={progress}
               currentStep={currentStep}
               steps={compressionSteps}
@@ -461,7 +461,7 @@ export default function CompressPdfPage() {
 
                 {result.compressedSize >= result.originalSize && (
                   <p className="mt-4 text-sm leading-6 text-amber-700 dark:text-amber-300">
-                    No smaller output was produced at this optimization level, so PDFNova kept the original file to preserve its quality.
+                    No smaller output was produced at this optimization level, so Kukureku kept the original file to preserve its quality.
                   </p>
                 )}
               </section>

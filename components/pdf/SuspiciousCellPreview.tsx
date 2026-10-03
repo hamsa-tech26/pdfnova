@@ -194,7 +194,7 @@ export default function SuspiciousCellPreview({
         <p className="mt-2 text-xs text-gray-500 dark:text-slate-400">
           Highlighted cell:{" "}
           <span className="font-semibold text-gray-700 dark:text-slate-200">
-            "{cellText}"
+            &quot;{cellText}&quot;
           </span>
         </p>
       )}

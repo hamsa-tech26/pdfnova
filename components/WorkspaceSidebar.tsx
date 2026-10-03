@@ -1,21 +1,14 @@
 "use client";
 
-import PDFNovaBrandMark from "@/components/PDFNovaBrandMark";
+import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
-  Bot,
-  Clock3,
   FileImage,
   FileText,
-  Heart,
   Images,
   LayoutDashboard,
-  LockKeyhole,
-  MessageSquareText,
   Scissors,
-  Settings,
-  ShieldCheck,
   Sparkles,
   UnlockKeyhole,
   WandSparkles,
@@ -44,20 +37,6 @@ const navigationGroups: SidebarGroup[] = [
         label: "Dashboard",
         href: "/dashboard",
         icon: LayoutDashboard,
-      },
-      {
-        label: "Favorites",
-        href: "#",
-        icon: Heart,
-        badge: "Soon",
-        available: false,
-      },
-      {
-        label: "Recent",
-        href: "#",
-        icon: Clock3,
-        badge: "Soon",
-        available: false,
       },
     ],
   },
@@ -88,13 +67,6 @@ const navigationGroups: SidebarGroup[] = [
         label: "Watermark PDF",
         href: "/watermark-pdf",
         icon: WandSparkles,
-      },
-      {
-        label: "Protect PDF",
-        href: "/protect-pdf",
-        icon: LockKeyhole,
-        badge: "Soon",
-        available: false,
       },
       {
         label: "Unlock PDF",
@@ -130,25 +102,6 @@ const navigationGroups: SidebarGroup[] = [
         label: "PDF to JPG",
         href: "/pdf-to-jpg",
         icon: FileImage,
-      },
-    ],
-  },
-  {
-    label: "Nova AI",
-    links: [
-      {
-        label: "AI Workspace",
-        href: "#",
-        icon: Bot,
-        badge: "Soon",
-        available: false,
-      },
-      {
-        label: "Chat with PDF",
-        href: "#",
-        icon: MessageSquareText,
-        badge: "Soon",
-        available: false,
       },
     ],
   },
@@ -237,7 +190,7 @@ export default function WorkspaceSidebar() {
           href="/dashboard"
           className="flex min-w-0 items-center gap-3"
         >
-          <PDFNovaBrandMark
+          <KukurekuBrandMark
   size={48}
   priority
   className="drop-shadow-lg"
@@ -246,7 +199,7 @@ export default function WorkspaceSidebar() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <p className="truncate text-lg font-extrabold text-gray-950 dark:text-white">
-                PDFNova
+                Kukureku PDF
               </p>
 
             </div>
@@ -268,7 +221,7 @@ export default function WorkspaceSidebar() {
 
           <div className="min-w-0">
             <p className="font-bold text-gray-950 dark:text-white">
-              PDFNova Workspace
+              Kukureku PDF Workspace
             </p>
 
             <p className="mt-1 text-xs leading-5 text-gray-600 dark:text-slate-400">
@@ -298,20 +251,6 @@ export default function WorkspaceSidebar() {
         ))}
       </nav>
 
-      <div className="mt-6 space-y-3">
-        <Link
-          href="#"
-          className="flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold text-gray-700 transition hover:bg-gray-100 dark:text-slate-300 dark:hover:bg-slate-800"
-        >
-          <Settings size={19} />
-          Settings
-          <span className="ml-auto rounded-full bg-gray-100 px-2 py-1 text-[10px] font-bold uppercase text-gray-500 dark:bg-slate-800 dark:text-slate-400">
-            Soon
-          </span>
-        </Link>
-
-      </div>
     </aside>
   );
 }
-

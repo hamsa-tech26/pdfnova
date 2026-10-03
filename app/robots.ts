@@ -1,6 +1,5 @@
+import { SITE_URL } from "@/lib/site";
 import type { MetadataRoute } from "next";
-
-const siteUrl = "https://pdfnova-sable.vercel.app";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -13,7 +12,7 @@ export default function robots(): MetadataRoute.Robots {
         "/engine-inspector",
       ],
     },
-    sitemap: `${siteUrl}/sitemap.xml`,
-    host: siteUrl,
+    sitemap: `${SITE_URL}/sitemap.xml`,
+    host: SITE_URL,
   };
 }

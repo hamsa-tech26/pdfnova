@@ -2,19 +2,19 @@ import type { Metadata } from "next";
 
 export const metadata: Metadata = {
   title: "PDF to Word Converter - Convert PDF to DOCX",
-  description: "Convert selectable-text PDF documents into editable Word files directly in your browser with PDFNova.",
+  description: "Convert selectable-text PDF documents into editable Word files directly in your browser with Kukureku.",
   alternates: {
     canonical: "/pdf-to-word",
   },
   openGraph: {
     title: "PDF to Word Converter - Convert PDF to DOCX",
-    description: "Convert selectable-text PDF documents into editable Word files directly in your browser with PDFNova.",
+    description: "Convert selectable-text PDF documents into editable Word files directly in your browser with Kukureku.",
     url: "/pdf-to-word",
     type: "website",
   },
   twitter: {
     title: "PDF to Word Converter - Convert PDF to DOCX",
-    description: "Convert selectable-text PDF documents into editable Word files directly in your browser with PDFNova.",
+    description: "Convert selectable-text PDF documents into editable Word files directly in your browser with Kukureku.",
   },
 };
 

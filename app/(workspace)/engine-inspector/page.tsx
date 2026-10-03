@@ -83,7 +83,7 @@ const inspectorFaqs = [
       "No. It reads and analyzes the PDF without changing the original document.",
   },
   {
-    question: "Is this a public PDFNova tool?",
+    question: "Is this a public Kukureku tool?",
     answer:
       "No. It is an internal development page used to test and improve PDF Engine V4.",
   },
@@ -321,6 +321,9 @@ function navigateSourceIssue(
   }, [result]); 
 
   const sourceIssues =
+  // Preserve this cache for large OCR documents. The compiler cannot infer the
+  // deduplication map's local mutations; all inputs come from reviewItems.
+  // eslint-disable-next-line react-hooks/preserve-manual-memoization
   useMemo<SelectedSource[]>(() => {
     const issues: SelectedSource[] = [];
     const seenCells =
@@ -591,7 +594,7 @@ seenCells.set(
           {isAnalyzing && (
             <ProgressCard
               title="Running PDF Engine V4"
-              description="PDFNova is reading the document, detecting structure, building logical tables, and applying cell repair."
+              description="Kukureku is reading the document, detecting structure, building logical tables, and applying cell repair."
               progress={progress}
               currentStep={currentStep}
               steps={processingSteps}
@@ -950,7 +953,7 @@ seenCells.set(
         .map(
           (word, wordIndex) => (
             <div key={wordIndex}>
-              "{word.text}" —{" "}
+              &quot;{word.text}&quot; —{" "}
               {Math.round(
                 word.confidence,
               )}
@@ -992,7 +995,7 @@ seenCells.set(
           <div className="text-gray-600 dark:text-slate-300">
             PDF-space first word:{" "}
             <span className="font-bold text-gray-950 dark:text-white">
-              "{pdfWord.text}"
+              &quot;{pdfWord.text}&quot;
             </span>
             {" — "}
             [
@@ -2323,7 +2326,7 @@ candidate.columnIndex
     const link = document.createElement("a");
 
     link.href = url;
-    link.download = "pdfnova-v4-analysis.json";
+    link.download = "kukureku-v4-analysis.json";
     document.body.appendChild(link);
     link.click();
     link.remove();

@@ -37,7 +37,7 @@ const organizePdfTips = [
   {
     title: "Keep at least one page",
     description:
-      "PDFNova will not allow every page to be removed from the document.",
+      "Kukureku will not allow every page to be removed from the document.",
   },
 ];
 
@@ -50,7 +50,7 @@ const organizePdfFaqs = [
   {
     question: "Does organizing change my original PDF?",
     answer:
-      "No. PDFNova creates a separate organized copy and keeps the original file unchanged.",
+      "No. Kukureku creates a separate organized copy and keeps the original file unchanged.",
   },
   {
     question: "Is my PDF uploaded?",
@@ -73,7 +73,7 @@ const loadingSteps = [
   {
     label: "Preparing workspace",
     description:
-      "Loading the pages into the PDFNova organizer.",
+      "Loading the pages into the Kukureku organizer.",
   },
 ];
 
@@ -505,7 +505,7 @@ export default function OrganizePdfPage() {
         file.name.replace(/\.pdf$/i, "");
 
       const generatedFileName = `${
-        originalName || "pdfnova"
+        originalName || "kukureku"
       }-organized.pdf`;
 
       await new Promise((resolve) =>
@@ -604,7 +604,7 @@ export default function OrganizePdfPage() {
           {isLoading && (
             <ProgressCard
               title="Loading PDF pages"
-              description="PDFNova is creating visual previews for the page organizer."
+              description="Kukureku is creating visual previews for the page organizer."
               progress={progress}
               currentStep={currentStep}
               steps={loadingSteps}
@@ -647,7 +647,7 @@ export default function OrganizePdfPage() {
           {isSaving && (
             <ProgressCard
               title="Creating organized PDF"
-              description="PDFNova is applying the new page order, rotations, and deletions."
+              description="Kukureku is applying the new page order, rotations, and deletions."
               progress={progress}
               currentStep={currentStep}
               steps={savingSteps}

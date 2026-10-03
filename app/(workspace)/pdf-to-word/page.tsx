@@ -215,7 +215,7 @@ export default function PdfToWordPage() {
         file.name.replace(/\.pdf$/i, "");
 
       const generatedFileName = `${
-        originalName || "pdfnova-document"
+        originalName || "kukureku-document"
       }.docx`;
 
       await new Promise((resolve) =>
@@ -260,7 +260,7 @@ export default function PdfToWordPage() {
     <ToolLayout
       label="PDF to Word"
       title="Convert PDF documents into Word files"
-      description="Upload a text-based PDF, extract its readable content, and download an editable DOCX document from your private PDFNova workspace."
+      description="Upload a text-based PDF, extract its readable content, and download an editable DOCX document from your private Kukureku workspace."
       tips={pdfToWordTips}
       faqs={pdfToWordFaqs}
       maxWidthClassName="max-w-6xl"
@@ -320,7 +320,7 @@ export default function PdfToWordPage() {
           {isConverting && (
             <ProgressCard
               title="Converting PDF to Word"
-              description="PDFNova is extracting readable text and creating your editable DOCX document."
+              description="Kukureku is extracting readable text and creating your editable DOCX document."
               progress={progress}
               currentStep={currentStep}
               steps={processingSteps}

@@ -63,7 +63,7 @@ const watermarkFaqs = [
   {
     question: "Is the watermark added to every page?",
     answer:
-      "Yes. PDFNova applies the selected text or image watermark to every page of the uploaded PDF.",
+      "Yes. Kukureku applies the selected text or image watermark to every page of the uploaded PDF.",
   },
   {
     question: "Which watermark image formats are supported?",
@@ -156,7 +156,7 @@ export default function WatermarkPdfPage() {
     useState<WatermarkMode>("text");
 
   const [watermarkText, setWatermarkText] =
-    useState("PDFNova");
+    useState("Kukureku");
   const [watermarkColor, setWatermarkColor] =
     useState("#595959");
   const [fontSize, setFontSize] = useState(42);
@@ -201,7 +201,7 @@ export default function WatermarkPdfPage() {
 
   function resetWatermarkSettings() {
     setWatermarkMode("text");
-    setWatermarkText("PDFNova");
+    setWatermarkText("Kukureku");
     setWatermarkColor("#595959");
     setFontSize(42);
     setImageSize(30);
@@ -494,7 +494,7 @@ export default function WatermarkPdfPage() {
         file.name.replace(/\.pdf$/i, "");
 
       const generatedFileName = `${
-        originalName || "pdfnova"
+        originalName || "kukureku"
       }-watermarked.pdf`;
 
       await new Promise((resolve) =>
@@ -544,7 +544,7 @@ export default function WatermarkPdfPage() {
     <ToolLayout
       label="Watermark PDF"
       title="Add text or image watermarks to your PDF"
-      description="Upload a PDF, choose a text or image watermark, customize its appearance, and download the updated document from your private PDFNova workspace."
+      description="Upload a PDF, choose a text or image watermark, customize its appearance, and download the updated document from your private Kukureku workspace."
       tips={watermarkTips}
       faqs={watermarkFaqs}
       maxWidthClassName="max-w-6xl"
@@ -925,7 +925,7 @@ export default function WatermarkPdfPage() {
           {isProcessing && (
             <ProgressCard
               title="Adding watermark to PDF"
-              description="PDFNova is applying your selected watermark to every page."
+              description="Kukureku is applying your selected watermark to every page."
               progress={progress}
               currentStep={currentStep}
               steps={watermarkSteps}

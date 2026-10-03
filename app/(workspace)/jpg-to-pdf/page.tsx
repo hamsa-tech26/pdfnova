@@ -155,7 +155,7 @@ export default function JpgToPdfPage() {
       }
 
       const pdfBytes = await pdf.save();
-      const outputFileName = "pdfnova-images.pdf";
+      const outputFileName = "kukureku-images.pdf";
 
       downloadFile(pdfBytes, outputFileName, "application/pdf");
 
@@ -299,7 +299,7 @@ export default function JpgToPdfPage() {
                         Fit to image
                       </p>
                       <p className="mt-1 text-sm text-gray-500">
-                        Use each image's original dimensions.
+                        Use each image&apos;s original dimensions.
                       </p>
                     </button>
                   </div>
