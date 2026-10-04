@@ -18,6 +18,7 @@ const PUBLIC_ROUTES = [
   "/watermark-pdf",
   "/unlock-pdf",
   "/about",
+  "/trust",
   "/guides/private-pdf-tools",
   "/privacy",
   "/terms",
@@ -27,6 +28,7 @@ const TOOL_ROUTES = PUBLIC_ROUTES.filter(
   (route) =>
     route !== "/" &&
     route !== "/about" &&
+    route !== "/trust" &&
     route !== "/guides/private-pdf-tools" &&
     route !== "/privacy" &&
     route !== "/terms",
@@ -80,6 +82,10 @@ function routesForFile(file) {
 
   if (file === "app/about/page.tsx") {
     routes.add("/about");
+  }
+
+  if (file === "app/trust/page.tsx") {
+    routes.add("/trust");
   }
 
   if (file === "app/guides/private-pdf-tools/page.tsx") {
