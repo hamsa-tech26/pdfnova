@@ -31,6 +31,9 @@ export default function Footer() {
           >
             PDF Privacy Guide
           </Link>
+          <Link href="/press" className="transition hover:text-blue-600">
+            Press
+          </Link>
           <Link href="/privacy" className="transition hover:text-blue-600">
             Privacy
           </Link>
