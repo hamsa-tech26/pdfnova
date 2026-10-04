@@ -98,8 +98,9 @@ function routesForFile(file) {
   }
 
   if (
-    file.startsWith("components/ToolLayout") ||
-    file.startsWith("components/layout/")
+    file === "components/pdf/ToolLayout.tsx" ||
+    file === "components/seo/ToolSeoLayout.tsx" ||
+    file === "lib/seo/tools.ts"
   ) {
     TOOL_ROUTES.forEach((route) => routes.add(route));
   }
