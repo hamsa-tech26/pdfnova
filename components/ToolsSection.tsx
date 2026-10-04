@@ -96,12 +96,12 @@ export default function ToolsSection() {
           </p>
 
           <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-gray-900 md:text-5xl">
-            Everything you need for everyday PDF work
+            Free PDF tools that keep files on your device
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Choose a tool and work directly in your browser with a simple,
-            focused workflow.
+            Merge, split, compress, convert, organize, watermark, and unlock PDFs
+            in your browser with no account required.
           </p>
         </div>
 
