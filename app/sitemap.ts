@@ -14,6 +14,7 @@ const publicRoutes = [
   "/watermark-pdf",
   "/unlock-pdf",
   "/about",
+  "/guides/private-pdf-tools",
   "/privacy",
   "/terms",
 ];
@@ -25,9 +26,11 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority:
       route === ""
         ? 1
-        : route === "/about"
-          ? 0.6
-          : route === "/privacy" || route === "/terms"
+        : route === "/guides/private-pdf-tools"
+          ? 0.7
+          : route === "/about"
+            ? 0.6
+            : route === "/privacy" || route === "/terms"
             ? 0.3
             : 0.8,
   }));
