@@ -35,6 +35,11 @@ type ToolLayoutProps = {
   faqs?: ToolFaq[];
   howToTitle?: string;
   howToSteps?: ToolHowToStep[];
+  guide?: {
+    href: string;
+    title: string;
+    description: string;
+  };
   maxWidthClassName?: string;
 };
 
@@ -96,6 +101,7 @@ export default function ToolLayout({
   faqs = defaultFaqs,
   howToTitle,
   howToSteps,
+  guide,
   maxWidthClassName = "max-w-6xl",
 }: ToolLayoutProps) {
   return (
@@ -284,6 +290,33 @@ export default function ToolLayout({
             </div>
           </div>
         </section>
+
+        {guide && (
+          <section className="mt-8 rounded-3xl border border-blue-100 bg-blue-50 p-6 dark:border-blue-950 dark:bg-blue-950/30 sm:p-7">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-300">
+              Learn more
+            </p>
+
+            <div className="mt-2 flex flex-col justify-between gap-5 md:flex-row md:items-center">
+              <div>
+                <h2 className="text-2xl font-extrabold text-gray-950 dark:text-white">
+                  {guide.title}
+                </h2>
+
+                <p className="mt-2 max-w-2xl leading-7 text-gray-600 dark:text-slate-300">
+                  {guide.description}
+                </p>
+              </div>
+
+              <Link
+                href={guide.href}
+                className="inline-flex shrink-0 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
+              >
+                Read guide
+              </Link>
+            </div>
+          </section>
+        )}
 
         <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-center">
