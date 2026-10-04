@@ -1,0 +1,32 @@
+name: Notify IndexNow
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Wait briefly for production deployment
+        if: github.event_name == 'push'
+        run: sleep 90
+
+      - name: Notify IndexNow
+        run: node scripts/submitIndexNow.mjs
+        env:
+          INDEXNOW_BEFORE_SHA: ${{ github.event.before }}
+          INDEXNOW_AFTER_SHA: ${{ github.sha }}
+          INDEXNOW_FULL: ${{ github.event_name == 'workflow_dispatch' && '1' || '0' }}
