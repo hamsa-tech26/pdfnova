@@ -333,10 +333,28 @@ export default function MergePdfPage() {
   return (
     <ToolLayout
       label="Merge PDF"
-      title="Combine multiple PDFs into one file"
-      description="Upload two or more PDF files, arrange them in the correct order, and download one merged document from your private Kukureku workspace."
+      title="Merge PDF files online, privately"
+      description="Add two or more PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
+      howToTitle="How to merge PDF files online"
+      howToSteps={[
+        {
+          title: "Add your PDFs",
+          description:
+            "Choose two or more PDF files from your device. Each file can be up to 25 MB.",
+        },
+        {
+          title: "Set the file order",
+          description:
+            "Use the move controls to arrange the PDFs in the exact order you want.",
+        },
+        {
+          title: "Merge and download",
+          description:
+            "Combine the pages locally in your browser and download the merged PDF.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader
