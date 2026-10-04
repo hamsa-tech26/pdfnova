@@ -1,0 +1,38 @@
+# Kukureku PDF
+
+> Free private PDF tools that run in the browser.
+
+Kukureku PDF is a browser-based PDF workspace at https://kukureku.com. The current tools are designed to process supported files locally on the user's device rather than upload document contents for server-side conversion. No Kukureku account is required for the current launch tools.
+
+## Primary pages
+
+- Home: https://kukureku.com/
+- About: https://kukureku.com/about
+- Trust Center: https://kukureku.com/trust
+- Private PDF processing guide: https://kukureku.com/guides/private-pdf-tools
+- Privacy Policy: https://kukureku.com/privacy
+- Terms: https://kukureku.com/terms
+- Public source repository: https://github.com/hamsa-tech26/pdfnova
+
+## Current tools
+
+- Merge PDF: https://kukureku.com/merge-pdf
+- Split PDF: https://kukureku.com/split-pdf
+- Compress PDF: https://kukureku.com/compress-pdf
+- PDF to Word: https://kukureku.com/pdf-to-word
+- Word to PDF: https://kukureku.com/word-to-pdf
+- JPG to PDF: https://kukureku.com/jpg-to-pdf
+- PDF to JPG: https://kukureku.com/pdf-to-jpg
+- Organize PDF: https://kukureku.com/organize-pdf
+- Watermark PDF: https://kukureku.com/watermark-pdf
+- Unlock PDF: https://kukureku.com/unlock-pdf
+
+## Important product facts
+
+- Current supported document workflows run locally in the browser.
+- Website analytics are separate from document processing and are disclosed in the Privacy Policy.
+- Most PDF and DOCX workflows currently use a 25 MB input limit; individual tool pages describe their exact limits.
+- PDF to Word is intended for selectable-text PDFs; scanned pages require OCR.
+- Word to PDF focuses on readable text, headings, lists, and basic tables rather than exact Microsoft Word layout reproduction.
+- Unlock PDF should only be used for documents the user owns or is authorized to modify.
+- Planned AI features are not part of the current public launch.

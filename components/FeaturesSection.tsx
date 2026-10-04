@@ -56,12 +56,21 @@ export default function FeaturesSection() {
               and move on with fast, private browser-based tools.
             </p>
 
-            <Link
-              href="/guides/private-pdf-tools"
-              className="mt-6 inline-flex font-semibold text-blue-600 transition hover:text-blue-700"
-            >
-              Learn how private browser-based PDF processing works →
-            </Link>
+            <div className="mt-6 flex flex-wrap gap-x-5 gap-y-3">
+              <Link
+                href="/guides/private-pdf-tools"
+                className="inline-flex font-semibold text-blue-600 transition hover:text-blue-700"
+              >
+                Learn how private browser-based PDF processing works →
+              </Link>
+
+              <Link
+                href="/trust"
+                className="inline-flex font-semibold text-gray-700 transition hover:text-blue-700"
+              >
+                View the Trust Center →
+              </Link>
+            </div>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
