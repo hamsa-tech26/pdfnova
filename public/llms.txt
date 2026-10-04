@@ -9,6 +9,7 @@ Kukureku PDF is a browser-based PDF workspace at https://kukureku.com. The curre
 - Home: https://kukureku.com/
 - About: https://kukureku.com/about
 - Trust Center: https://kukureku.com/trust
+- Tool verification report: https://kukureku.com/trust/verification
 - Private PDF processing guide: https://kukureku.com/guides/private-pdf-tools
 - Privacy Policy: https://kukureku.com/privacy
 - Terms: https://kukureku.com/terms
