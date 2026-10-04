@@ -22,6 +22,12 @@ export default function Footer() {
           <Link href="/about" className="transition hover:text-blue-600">
             About
           </Link>
+          <Link
+            href="/guides/private-pdf-tools"
+            className="transition hover:text-blue-600"
+          >
+            PDF Privacy Guide
+          </Link>
           <Link href="/privacy" className="transition hover:text-blue-600">
             Privacy
           </Link>
