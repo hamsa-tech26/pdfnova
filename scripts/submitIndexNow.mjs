@@ -58,6 +58,9 @@ function routesForFile(file) {
     file === "lib/site.ts" ||
     file === "app/sitemap.ts" ||
     file === "app/robots.ts" ||
+    file === "scripts/submitIndexNow.mjs" ||
+    file === ".github/workflows/indexnow.yml" ||
+    file === `public/${KEY}.txt` ||
     file.startsWith("app/opengraph-image") ||
     file.startsWith("public/brand/")
   ) {
