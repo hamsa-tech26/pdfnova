@@ -100,8 +100,16 @@ function routesForFile(file) {
     routes.add("/trust/verification");
   }
 
-  if (file === "app/guides/private-pdf-tools/page.tsx") {
-    routes.add("/guides/private-pdf-tools");
+  if (file === "app/guides/page.tsx") {
+    routes.add("/guides");
+  }
+
+  if (file.startsWith("app/guides/")) {
+    const guideRoute = "/" + file.replace(/\/page\.tsx$/, "");
+    if (PUBLIC_ROUTES.includes(guideRoute)) {
+      routes.add(guideRoute);
+      routes.add("/guides");
+    }
   }
 
   if (file === "app/privacy/page.tsx") {
