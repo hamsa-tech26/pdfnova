@@ -1,27 +1,17 @@
-import type { Metadata } from "next";
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";
+import { buildToolMetadata } from "@/lib/seo/tools";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Watermark PDF Online - Add Text Watermarks",
-  description: "Add custom text watermarks to PDF pages directly in your browser with Kukureku.",
-  alternates: {
-    canonical: "/watermark-pdf",
-  },
-  openGraph: {
-    title: "Watermark PDF Online - Add Text Watermarks",
-    description: "Add custom text watermarks to PDF pages directly in your browser with Kukureku.",
-    url: "/watermark-pdf",
-    type: "website",
-  },
-  twitter: {
-    title: "Watermark PDF Online - Add Text Watermarks",
-    description: "Add custom text watermarks to PDF pages directly in your browser with Kukureku.",
-  },
-};
+export const metadata = buildToolMetadata("watermark-pdf");
 
 export default function Layout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return children;
+  return (
+    <ToolSeoLayout slug="watermark-pdf">
+      {children}
+    </ToolSeoLayout>
+  );
 }
