@@ -3,7 +3,12 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import ToolsSection from "@/components/ToolsSection";
-import { PRODUCT_DESCRIPTION, PRODUCT_NAME, SITE_URL } from "@/lib/site";
+import {
+  BRAND_NAME,
+  PRODUCT_DESCRIPTION,
+  PRODUCT_NAME,
+  SITE_URL,
+} from "@/lib/site";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -15,13 +20,30 @@ export const metadata: Metadata = {
 
 const structuredData = {
   "@context": "https://schema.org",
-  "@type": "WebApplication",
-  name: PRODUCT_NAME,
-  url: SITE_URL,
-  description: PRODUCT_DESCRIPTION,
-  applicationCategory: "ProductivityApplication",
-  operatingSystem: "Any",
-  isAccessibleForFree: true,
+  "@graph": [
+    {
+      "@type": "WebSite",
+      name: PRODUCT_NAME,
+      alternateName: BRAND_NAME,
+      url: SITE_URL,
+      description: PRODUCT_DESCRIPTION,
+    },
+    {
+      "@type": "WebApplication",
+      name: PRODUCT_NAME,
+      url: SITE_URL,
+      description: PRODUCT_DESCRIPTION,
+      applicationCategory: "UtilitiesApplication",
+      operatingSystem: "Any",
+      browserRequirements:
+        "Requires a modern web browser with JavaScript enabled.",
+      offers: {
+        "@type": "Offer",
+        price: "0",
+        priceCurrency: "USD",
+      },
+    },
+  ],
 };
 
 export default function Home() {
@@ -47,11 +69,11 @@ export default function Home() {
                   </div>
 
                   <h1 className="mt-6 max-w-3xl text-4xl font-extrabold leading-tight tracking-tight sm:text-5xl lg:text-6xl">
-                    Essential PDF tools. Fast, private, and simple.
+                    Free private PDF tools. No uploads. No account.
                   </h1>
 
                   <p className="mt-6 max-w-2xl text-lg leading-8 text-blue-100">
-                    Merge, split, compress, convert, organize, watermark, and unlock PDFs with Kukureku PDF. Supported tools process files locally in your browser.
+                    Merge, split, compress, convert, organize, watermark, and unlock PDFs directly in your browser. Current Kukureku tools keep supported files on your device.
                   </p>
 
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -82,7 +104,7 @@ export default function Home() {
                   <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
                     <p className="font-bold">Private</p>
                     <p className="mt-2 text-sm leading-6 text-blue-100">
-                      Supported files stay on your device.
+                      Current tools process supported files locally.
                     </p>
                   </div>
 

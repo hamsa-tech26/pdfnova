@@ -259,10 +259,28 @@ export default function PdfToWordPage() {
   return (
     <ToolLayout
       label="PDF to Word"
-      title="Convert PDF documents into Word files"
-      description="Upload a text-based PDF, extract its readable content, and download an editable DOCX document from your private Kukureku workspace."
+      title="Convert PDF to Word in your browser"
+      description="Convert a selectable-text PDF into an editable DOCX file locally in your browser. Your document is not uploaded, and files can be up to 25 MB."
       tips={pdfToWordTips}
       faqs={pdfToWordFaqs}
+      howToTitle="How to convert PDF to Word"
+      howToSteps={[
+        {
+          title: "Add a text-based PDF",
+          description:
+            "Choose a PDF with selectable text. Scanned image-only PDFs need OCR instead.",
+        },
+        {
+          title: "Convert the document",
+          description:
+            "Kukureku extracts readable content and builds an editable DOCX in your browser.",
+        },
+        {
+          title: "Download the Word file",
+          description:
+            "Save the DOCX to your device and open it in Word or another compatible editor.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader

@@ -1,27 +1,17 @@
-import type { Metadata } from "next";
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";
+import { buildToolMetadata } from "@/lib/seo/tools";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Compress PDF Online - Reduce PDF File Size",
-  description: "Compress PDF files and reduce file size while preserving readable quality with Kukureku's browser-based PDF tool.",
-  alternates: {
-    canonical: "/compress-pdf",
-  },
-  openGraph: {
-    title: "Compress PDF Online - Reduce PDF File Size",
-    description: "Compress PDF files and reduce file size while preserving readable quality with Kukureku's browser-based PDF tool.",
-    url: "/compress-pdf",
-    type: "website",
-  },
-  twitter: {
-    title: "Compress PDF Online - Reduce PDF File Size",
-    description: "Compress PDF files and reduce file size while preserving readable quality with Kukureku's browser-based PDF tool.",
-  },
-};
+export const metadata = buildToolMetadata("compress-pdf");
 
 export default function Layout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return children;
+  return (
+    <ToolSeoLayout slug="compress-pdf">
+      {children}
+    </ToolSeoLayout>
+  );
 }

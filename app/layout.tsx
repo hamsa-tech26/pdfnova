@@ -20,7 +20,7 @@ export const metadata: Metadata = {
   metadataBase: new URL(SITE_URL),
 
   title: {
-    default: "Kukureku PDF - Free Private PDF Tools Online",
+    default: "Kukureku PDF - Free Private PDF Tools, No Upload",
     template: "%s | Kukureku PDF",
   },
 
@@ -31,13 +31,13 @@ export const metadata: Metadata = {
   openGraph: {
     type: "website",
     siteName: PRODUCT_NAME,
-    title: "Kukureku PDF - Free Private PDF Tools Online",
+    title: "Kukureku PDF - Free Private PDF Tools, No Upload",
     description: PRODUCT_DESCRIPTION,
   },
 
   twitter: {
     card: "summary_large_image",
-    title: "Kukureku PDF - Free Private PDF Tools Online",
+    title: "Kukureku PDF - Free Private PDF Tools, No Upload",
     description: PRODUCT_DESCRIPTION,
   },
 

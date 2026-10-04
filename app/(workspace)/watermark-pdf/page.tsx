@@ -543,10 +543,28 @@ export default function WatermarkPdfPage() {
   return (
     <ToolLayout
       label="Watermark PDF"
-      title="Add text or image watermarks to your PDF"
-      description="Upload a PDF, choose a text or image watermark, customize its appearance, and download the updated document from your private Kukureku workspace."
+      title="Add a watermark to PDF privately"
+      description="Add text or image watermarks to PDF pages locally in your browser. Customize placement, opacity, rotation, and appearance without uploading the file."
       tips={watermarkTips}
       faqs={watermarkFaqs}
+      howToTitle="How to add a watermark to PDF"
+      howToSteps={[
+        {
+          title: "Add one PDF",
+          description:
+            "Choose the PDF you want to watermark, up to 25 MB.",
+        },
+        {
+          title: "Design the watermark",
+          description:
+            "Choose text or an image, then adjust position, opacity, rotation, and size.",
+        },
+        {
+          title: "Apply and download",
+          description:
+            "Add the watermark locally to every page and download the new PDF.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader

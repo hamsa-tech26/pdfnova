@@ -1,27 +1,17 @@
-import type { Metadata } from "next";
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";
+import { buildToolMetadata } from "@/lib/seo/tools";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Unlock PDF Online - Remove PDF Password Protection",
-  description: "Unlock password-protected PDF files using the correct password directly in your browser with Kukureku.",
-  alternates: {
-    canonical: "/unlock-pdf",
-  },
-  openGraph: {
-    title: "Unlock PDF Online - Remove PDF Password Protection",
-    description: "Unlock password-protected PDF files using the correct password directly in your browser with Kukureku.",
-    url: "/unlock-pdf",
-    type: "website",
-  },
-  twitter: {
-    title: "Unlock PDF Online - Remove PDF Password Protection",
-    description: "Unlock password-protected PDF files using the correct password directly in your browser with Kukureku.",
-  },
-};
+export const metadata = buildToolMetadata("unlock-pdf");
 
 export default function Layout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return children;
+  return (
+    <ToolSeoLayout slug="unlock-pdf">
+      {children}
+    </ToolSeoLayout>
+  );
 }

@@ -1,27 +1,17 @@
-import type { Metadata } from "next";
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";
+import { buildToolMetadata } from "@/lib/seo/tools";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "JPG to PDF Converter - Images to PDF",
-  description: "Convert JPG and PNG images into a single PDF document directly in your browser with Kukureku.",
-  alternates: {
-    canonical: "/jpg-to-pdf",
-  },
-  openGraph: {
-    title: "JPG to PDF Converter - Images to PDF",
-    description: "Convert JPG and PNG images into a single PDF document directly in your browser with Kukureku.",
-    url: "/jpg-to-pdf",
-    type: "website",
-  },
-  twitter: {
-    title: "JPG to PDF Converter - Images to PDF",
-    description: "Convert JPG and PNG images into a single PDF document directly in your browser with Kukureku.",
-  },
-};
+export const metadata = buildToolMetadata("jpg-to-pdf");
 
 export default function Layout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return children;
+  return (
+    <ToolSeoLayout slug="jpg-to-pdf">
+      {children}
+    </ToolSeoLayout>
+  );
 }

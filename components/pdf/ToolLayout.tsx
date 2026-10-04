@@ -21,6 +21,11 @@ type ToolFaq = {
   answer: string;
 };
 
+type ToolHowToStep = {
+  title: string;
+  description: string;
+};
+
 type ToolLayoutProps = {
   label: string;
   title: string;
@@ -28,6 +33,8 @@ type ToolLayoutProps = {
   children: ReactNode;
   tips?: ToolTip[];
   faqs?: ToolFaq[];
+  howToTitle?: string;
+  howToSteps?: ToolHowToStep[];
   maxWidthClassName?: string;
 };
 
@@ -47,6 +54,19 @@ const defaultTips: ToolTip[] = [
     description:
       "Open the downloaded file once to confirm that everything looks correct.",
   },
+];
+
+const relatedTools = [
+  { href: "/merge-pdf", label: "Merge PDF" },
+  { href: "/split-pdf", label: "Split PDF" },
+  { href: "/compress-pdf", label: "Compress PDF" },
+  { href: "/pdf-to-word", label: "PDF to Word" },
+  { href: "/word-to-pdf", label: "Word to PDF" },
+  { href: "/jpg-to-pdf", label: "JPG to PDF" },
+  { href: "/pdf-to-jpg", label: "PDF to JPG" },
+  { href: "/organize-pdf", label: "Organize PDF" },
+  { href: "/watermark-pdf", label: "Watermark PDF" },
+  { href: "/unlock-pdf", label: "Unlock PDF" },
 ];
 
 const defaultFaqs: ToolFaq[] = [
@@ -74,6 +94,8 @@ export default function ToolLayout({
   children,
   tips = defaultTips,
   faqs = defaultFaqs,
+  howToTitle,
+  howToSteps,
   maxWidthClassName = "max-w-6xl",
 }: ToolLayoutProps) {
   return (
@@ -151,6 +173,39 @@ export default function ToolLayout({
         <section className="mt-8 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7 md:p-9">
           {children}
         </section>
+
+        {howToTitle && howToSteps && howToSteps.length > 0 && (
+          <section className="mt-8 rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-600 dark:text-blue-400">
+              How it works
+            </p>
+
+            <h2 className="mt-2 text-2xl font-extrabold text-gray-950 dark:text-white">
+              {howToTitle}
+            </h2>
+
+            <div className="mt-6 grid gap-4 md:grid-cols-3">
+              {howToSteps.map((step, index) => (
+                <div
+                  key={step.title}
+                  className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-slate-800 dark:bg-slate-950"
+                >
+                  <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-blue-600 text-sm font-extrabold text-white">
+                    {index + 1}
+                  </div>
+
+                  <h3 className="mt-4 font-bold text-gray-950 dark:text-white">
+                    {step.title}
+                  </h3>
+
+                  <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
+                    {step.description}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         <section className="mt-8 grid gap-6 xl:grid-cols-2">
           <div className="rounded-3xl border border-blue-100 bg-blue-50 p-6 dark:border-blue-950 dark:bg-blue-950/30">
@@ -246,34 +301,16 @@ export default function ToolLayout({
               </p>
             </div>
 
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href="/merge-pdf"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Merge PDF
-              </Link>
-
-              <Link
-                href="/split-pdf"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Split PDF
-              </Link>
-
-              <Link
-                href="/word-to-pdf"
-                className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
-              >
-                Word to PDF
-              </Link>
-
-              <Link
-                href="/watermark-pdf"
-                className="rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
-              >
-                Watermark PDF
-              </Link>
+            <div className="flex max-w-2xl flex-wrap gap-2">
+              {relatedTools.map((tool) => (
+                <Link
+                  key={tool.href}
+                  href={tool.href}
+                  className="rounded-xl border border-gray-200 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-800"
+                >
+                  {tool.label}
+                </Link>
+              ))}
             </div>
           </div>
         </section>

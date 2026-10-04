@@ -551,10 +551,28 @@ export default function OrganizePdfPage() {
   return (
     <ToolLayout
       label="Organize PDF"
-      title="Reorder, rotate, and delete PDF pages"
-      description="Upload a PDF, arrange its pages visually, remove unwanted pages, rotate individual pages, and download the updated document."
+      title="Organize PDF pages in your browser"
+      description="Reorder, rotate, move, or delete PDF pages visually in your browser. Your original file stays on your device while you create an organized copy."
       tips={organizePdfTips}
       faqs={organizePdfFaqs}
+      howToTitle="How to organize PDF pages"
+      howToSteps={[
+        {
+          title: "Add one PDF",
+          description:
+            "Choose the PDF you want to organize, up to 25 MB.",
+        },
+        {
+          title: "Arrange the pages",
+          description:
+            "Reorder, rotate, move, or remove pages using the visual page controls.",
+        },
+        {
+          title: "Save the organized PDF",
+          description:
+            "Create a new copy locally in your browser and download it.",
+        },
+      ]}
       maxWidthClassName="max-w-7xl"
     >
       <FileUploader

@@ -183,8 +183,26 @@ export default function JpgToPdfPage() {
       return (
     <ToolLayout
       label="JPG to PDF"
-      title="Turn images into one PDF document"
-      description="Upload JPG or PNG images, arrange their order, and download them as a single PDF."
+      title="Convert JPG images to PDF privately"
+      description="Combine JPG or PNG images into one PDF locally in your browser. Arrange image order and create the document without uploading your files."
+      howToTitle="How to convert JPG images to PDF"
+      howToSteps={[
+        {
+          title: "Add your images",
+          description:
+            "Choose JPG or PNG images from your device.",
+        },
+        {
+          title: "Arrange the order",
+          description:
+            "Place the images in the sequence you want them to appear in the PDF.",
+        },
+        {
+          title: "Create and download",
+          description:
+            "Build the PDF locally in your browser and save it to your device.",
+        },
+      ]}
     >
             <FileUploader
               fileInputRef={fileInputRef}

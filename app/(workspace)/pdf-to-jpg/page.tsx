@@ -192,8 +192,26 @@ export default function PdfToJpgPage() {
   return (
     <ToolLayout
       label="PDF to JPG"
-      title="Convert PDF pages into JPG images"
-      description="Upload a PDF, preview every page, select the pages you need, and download high-quality JPG images individually or together as a ZIP file."
+      title="Convert PDF pages to JPG images"
+      description="Convert selected PDF pages to JPG images locally in your browser. Download images individually or together as a ZIP without uploading the PDF."
+      howToTitle="How to convert PDF pages to JPG"
+      howToSteps={[
+        {
+          title: "Add one PDF",
+          description:
+            "Choose the PDF whose pages you want to convert, up to 25 MB.",
+        },
+        {
+          title: "Select pages",
+          description:
+            "Preview the document and choose the pages you want as JPG images.",
+        },
+        {
+          title: "Export the images",
+          description:
+            "Convert locally and download individual JPG files or a ZIP.",
+        },
+      ]}
     >
             <FileUploader
               fileInputRef={fileInputRef}

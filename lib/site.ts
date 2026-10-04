@@ -1,7 +1,7 @@
 export const BRAND_NAME = "Kukureku";
 export const PRODUCT_NAME = "Kukureku PDF";
 export const PRODUCT_DESCRIPTION =
-  "Kukureku PDF offers fast, private browser-based tools to merge, split, compress, convert, organize, watermark, and unlock PDF documents.";
+  "Free private PDF tools that run in your browser. Merge, split, compress, convert, organize, watermark, and unlock PDFs without uploading your files.";
 
 const configuredSiteUrl =
   process.env.NEXT_PUBLIC_SITE_URL?.trim() ||

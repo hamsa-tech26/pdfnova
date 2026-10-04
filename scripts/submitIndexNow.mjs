@@ -17,12 +17,17 @@ const PUBLIC_ROUTES = [
   "/organize-pdf",
   "/watermark-pdf",
   "/unlock-pdf",
+  "/about",
   "/privacy",
   "/terms",
 ];
 
 const TOOL_ROUTES = PUBLIC_ROUTES.filter(
-  (route) => route !== "/" && route !== "/privacy" && route !== "/terms",
+  (route) =>
+    route !== "/" &&
+    route !== "/about" &&
+    route !== "/privacy" &&
+    route !== "/terms",
 );
 
 function allUrls() {
@@ -71,6 +76,10 @@ function routesForFile(file) {
     routes.add("/");
   }
 
+  if (file === "app/about/page.tsx") {
+    routes.add("/about");
+  }
+
   if (file === "app/privacy/page.tsx") {
     routes.add("/privacy");
   }
@@ -89,8 +98,9 @@ function routesForFile(file) {
   }
 
   if (
-    file.startsWith("components/ToolLayout") ||
-    file.startsWith("components/layout/")
+    file === "components/pdf/ToolLayout.tsx" ||
+    file === "components/seo/ToolSeoLayout.tsx" ||
+    file === "lib/seo/tools.ts"
   ) {
     TOOL_ROUTES.forEach((route) => routes.add(route));
   }
