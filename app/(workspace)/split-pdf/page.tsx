@@ -357,10 +357,28 @@ export default function SplitPdfPage() {
   return (
     <ToolLayout
       label="Split PDF"
-      title="Extract selected pages from your PDF"
-      description="Upload one PDF, choose the pages you need, and download them as a separate document from your private Kukureku workspace."
+      title="Split PDF and extract pages privately"
+      description="Choose a PDF, enter the pages or ranges you need, and create a separate PDF locally in your browser without uploading the original file."
       tips={splitPdfTips}
       faqs={splitPdfFaqs}
+      howToTitle="How to split a PDF and extract pages"
+      howToSteps={[
+        {
+          title: "Add one PDF",
+          description:
+            "Choose the PDF you want to split or extract pages from, up to 25 MB.",
+        },
+        {
+          title: "Choose pages",
+          description:
+            "Enter single pages or ranges such as 1-3, 5, 8-10.",
+        },
+        {
+          title: "Extract and download",
+          description:
+            "Create a new PDF from those pages locally in your browser and download it.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader
