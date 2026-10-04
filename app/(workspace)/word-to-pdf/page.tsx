@@ -222,10 +222,28 @@ export default function WordToPdfPage() {
   return (
     <ToolLayout
       label="Word to PDF"
-      title="Convert a Word document into PDF"
-      description="Upload a DOCX file and create a clean, downloadable PDF directly inside your private Kukureku workspace."
+      title="Convert Word to PDF in your browser"
+      description="Convert a DOCX file to PDF locally in your browser. Readable text, headings, lists, and basic tables are supported without uploading the document."
       tips={wordToPdfTips}
       faqs={wordToPdfFaqs}
+      howToTitle="How to convert Word to PDF"
+      howToSteps={[
+        {
+          title: "Choose a DOCX file",
+          description:
+            "Add the Word document you want to convert, up to 25 MB.",
+        },
+        {
+          title: "Create the PDF",
+          description:
+            "Kukureku reads supported document content and generates the PDF in your browser.",
+        },
+        {
+          title: "Download the result",
+          description:
+            "Save the generated PDF directly to your device.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader
