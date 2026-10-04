@@ -140,10 +140,28 @@ export default function UnlockPdfPage() {
   return (
     <ToolLayout
       label="Unlock PDF"
-      title="Remove password protection from a PDF"
-      description="Upload a protected PDF, enter the correct password, and download an unlocked copy directly from your private Kukureku workspace."
+      title="Unlock PDF with the correct password"
+      description="Unlock a PDF you own or are authorized to modify using the correct password. Processing happens locally in your browser and the file is not uploaded."
       tips={unlockPdfTips}
       faqs={unlockPdfFaqs}
+      howToTitle="How to unlock a PDF you are authorized to modify"
+      howToSteps={[
+        {
+          title: "Add the protected PDF",
+          description:
+            "Choose the password-protected PDF from your device, up to 25 MB.",
+        },
+        {
+          title: "Enter the correct password",
+          description:
+            "Use the document password you already know and are authorized to use.",
+        },
+        {
+          title: "Unlock and download",
+          description:
+            "Decrypt the PDF locally in your browser and save the unlocked copy.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader
