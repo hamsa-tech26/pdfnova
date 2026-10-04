@@ -21,7 +21,11 @@ const PUBLIC_ROUTES = [
   "/press",
   "/trust",
   "/trust/verification",
+  "/guides",
   "/guides/private-pdf-tools",
+  "/guides/compress-pdf-without-uploading",
+  "/guides/watermark-pdf-without-uploading",
+  "/guides/word-to-pdf-without-uploading",
   "/privacy",
   "/terms",
 ];
@@ -33,7 +37,8 @@ const TOOL_ROUTES = PUBLIC_ROUTES.filter(
     route !== "/press" &&
     route !== "/trust" &&
     route !== "/trust/verification" &&
-    route !== "/guides/private-pdf-tools" &&
+    route !== "/guides" &&
+    !route.startsWith("/guides/") &&
     route !== "/privacy" &&
     route !== "/terms",
 );
@@ -100,8 +105,16 @@ function routesForFile(file) {
     routes.add("/trust/verification");
   }
 
-  if (file === "app/guides/private-pdf-tools/page.tsx") {
-    routes.add("/guides/private-pdf-tools");
+  if (file === "app/guides/page.tsx") {
+    routes.add("/guides");
+  }
+
+  if (file.startsWith("app/guides/")) {
+    const guideRoute = "/" + file.replace(/\/page\.tsx$/, "");
+    if (PUBLIC_ROUTES.includes(guideRoute)) {
+      routes.add(guideRoute);
+      routes.add("/guides");
+    }
   }
 
   if (file === "app/privacy/page.tsx") {

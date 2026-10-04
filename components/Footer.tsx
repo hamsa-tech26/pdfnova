@@ -25,6 +25,9 @@ export default function Footer() {
           <Link href="/trust" className="transition hover:text-blue-600">
             Trust Center
           </Link>
+          <Link href="/guides" className="transition hover:text-blue-600">
+            Guides
+          </Link>
           <Link
             href="/guides/private-pdf-tools"
             className="transition hover:text-blue-600"

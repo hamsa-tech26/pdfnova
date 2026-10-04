@@ -47,6 +47,13 @@ export default function Navbar() {
           </Link>
 
           <Link
+            href="/guides"
+            className="text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+          >
+            Guides
+          </Link>
+
+          <Link
             href="/about"
             className="text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >

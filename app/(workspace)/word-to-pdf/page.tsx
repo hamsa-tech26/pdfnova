@@ -226,6 +226,12 @@ export default function WordToPdfPage() {
       description="Convert a DOCX file to PDF locally in your browser. Readable text, headings, lists, and basic tables are supported without uploading the document."
       tips={wordToPdfTips}
       faqs={wordToPdfFaqs}
+      guide={{
+        href: "/guides/word-to-pdf-without-uploading",
+        title: "How to convert Word to PDF without uploading it",
+        description:
+          "See which DOCX content the browser converter preserves, where layouts can differ, and what to review before sharing the result.",
+      }}
       howToTitle="How to convert Word to PDF"
       howToSteps={[
         {
