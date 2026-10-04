@@ -1,3 +1,4 @@
+import Link from "next/link";
 import {
   CheckCircle2,
   Monitor,
@@ -54,6 +55,13 @@ export default function FeaturesSection() {
               Our PDF workspace follows the same idea: open a document, get the job done,
               and move on with fast, private browser-based tools.
             </p>
+
+            <Link
+              href="/guides/private-pdf-tools"
+              className="mt-6 inline-flex font-semibold text-blue-600 transition hover:text-blue-700"
+            >
+              Learn how private browser-based PDF processing works →
+            </Link>
           </div>
 
           <div className="grid gap-5 sm:grid-cols-2">
