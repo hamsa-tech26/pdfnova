@@ -315,10 +315,28 @@ export default function CompressPdfPage() {
   return (
     <ToolLayout
       label="Compress PDF"
-      title="Reduce the size of your PDF"
-      description="Select a PDF, choose an optimization level, and create a smaller document whenever possible inside your private Kukureku workspace."
+      title="Compress PDF files in your browser"
+      description="Choose a PDF and an optimization level to reduce file size when possible. Compression runs locally in your browser without uploading the file."
       tips={compressionTips}
       faqs={compressionFaqs}
+      howToTitle="How to compress a PDF online"
+      howToSteps={[
+        {
+          title: "Add your PDF",
+          description:
+            "Choose the PDF you want to make smaller, up to 25 MB.",
+        },
+        {
+          title: "Choose compression",
+          description:
+            "Select Low, Medium, or High depending on your size and quality needs.",
+        },
+        {
+          title: "Compress and download",
+          description:
+            "Optimize the file locally in your browser and download the resulting PDF.",
+        },
+      ]}
       maxWidthClassName="max-w-6xl"
     >
       <FileUploader
