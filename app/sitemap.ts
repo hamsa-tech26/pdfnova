@@ -14,6 +14,7 @@ const publicRoutes = [
   "/watermark-pdf",
   "/unlock-pdf",
   "/about",
+  "/press",
   "/trust",
   "/trust/verification",
   "/guides/private-pdf-tools",
@@ -32,7 +33,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
             route === "/trust" ||
             route === "/trust/verification"
           ? 0.7
-          : route === "/about"
+          : route === "/about" || route === "/press"
             ? 0.6
             : route === "/privacy" || route === "/terms"
             ? 0.3
