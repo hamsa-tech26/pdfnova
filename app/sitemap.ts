@@ -17,7 +17,11 @@ const publicRoutes = [
   "/press",
   "/trust",
   "/trust/verification",
+  "/guides",
   "/guides/private-pdf-tools",
+  "/guides/compress-pdf-without-uploading",
+  "/guides/watermark-pdf-without-uploading",
+  "/guides/word-to-pdf-without-uploading",
   "/privacy",
   "/terms",
 ];
@@ -29,7 +33,8 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority:
       route === ""
         ? 1
-        : route === "/guides/private-pdf-tools" ||
+        : route === "/guides" ||
+            route.startsWith("/guides/") ||
             route === "/trust" ||
             route === "/trust/verification"
           ? 0.7
