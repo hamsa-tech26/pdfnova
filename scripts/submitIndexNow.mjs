@@ -17,12 +17,17 @@ const PUBLIC_ROUTES = [
   "/organize-pdf",
   "/watermark-pdf",
   "/unlock-pdf",
+  "/about",
   "/privacy",
   "/terms",
 ];
 
 const TOOL_ROUTES = PUBLIC_ROUTES.filter(
-  (route) => route !== "/" && route !== "/privacy" && route !== "/terms",
+  (route) =>
+    route !== "/" &&
+    route !== "/about" &&
+    route !== "/privacy" &&
+    route !== "/terms",
 );
 
 function allUrls() {
@@ -69,6 +74,10 @@ function routesForFile(file) {
 
   if (file === "app/page.tsx") {
     routes.add("/");
+  }
+
+  if (file === "app/about/page.tsx") {
+    routes.add("/about");
   }
 
   if (file === "app/privacy/page.tsx") {
