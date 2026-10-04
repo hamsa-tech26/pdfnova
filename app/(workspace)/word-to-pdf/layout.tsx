@@ -1,27 +1,17 @@
-import type { Metadata } from "next";
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";
+import { buildToolMetadata } from "@/lib/seo/tools";
+import type { ReactNode } from "react";
 
-export const metadata: Metadata = {
-  title: "Word to PDF Converter - Convert DOCX to PDF",
-  description: "Convert DOCX text, headings, lists, and basic tables into PDF files directly in your browser with Kukureku.",
-  alternates: {
-    canonical: "/word-to-pdf",
-  },
-  openGraph: {
-    title: "Word to PDF Converter - Convert DOCX to PDF",
-    description: "Convert DOCX text, headings, lists, and basic tables into PDF files directly in your browser with Kukureku.",
-    url: "/word-to-pdf",
-    type: "website",
-  },
-  twitter: {
-    title: "Word to PDF Converter - Convert DOCX to PDF",
-    description: "Convert DOCX text, headings, lists, and basic tables into PDF files directly in your browser with Kukureku.",
-  },
-};
+export const metadata = buildToolMetadata("word-to-pdf");
 
 export default function Layout({
   children,
 }: Readonly<{
-  children: React.ReactNode;
+  children: ReactNode;
 }>) {
-  return children;
+  return (
+    <ToolSeoLayout slug="word-to-pdf">
+      {children}
+    </ToolSeoLayout>
+  );
 }
