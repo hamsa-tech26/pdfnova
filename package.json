@@ -10,6 +10,7 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@vercel/analytics": "^2.0.1",
     "docx": "^9.7.1",
     "file-saver": "^2.0.5",
     "jszip": "^3.10.1",
