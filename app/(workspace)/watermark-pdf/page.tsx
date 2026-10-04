@@ -547,6 +547,12 @@ export default function WatermarkPdfPage() {
       description="Add text or image watermarks to PDF pages locally in your browser. Customize placement, opacity, rotation, and appearance without uploading the file."
       tips={watermarkTips}
       faqs={watermarkFaqs}
+      guide={{
+        href: "/guides/watermark-pdf-without-uploading",
+        title: "How to watermark a PDF without uploading it",
+        description:
+          "Learn when to use text or image watermarks and how to choose placement, opacity, and rotation without hiding important content.",
+      }}
       howToTitle="How to add a watermark to PDF"
       howToSteps={[
         {
