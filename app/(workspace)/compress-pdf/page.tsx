@@ -319,6 +319,12 @@ export default function CompressPdfPage() {
       description="Choose a PDF and an optimization level to reduce file size when possible. Compression runs locally in your browser without uploading the file."
       tips={compressionTips}
       faqs={compressionFaqs}
+      guide={{
+        href: "/guides/compress-pdf-without-uploading",
+        title: "How to compress a PDF without uploading it",
+        description:
+          "Learn why PDF compression results vary, when it helps most, and how to balance file size with readable quality.",
+      }}
       howToTitle="How to compress a PDF online"
       howToSteps={[
         {
