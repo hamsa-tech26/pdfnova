@@ -340,6 +340,12 @@ export default function TrustPage() {
 
             <div className="mt-5 flex flex-wrap gap-3">
               <Link
+                href="/trust/verification"
+                className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-900 dark:text-emerald-300"
+              >
+                Verification Report
+              </Link>
+              <Link
                 href="/privacy"
                 className="rounded-xl bg-white px-4 py-2.5 text-sm font-semibold text-emerald-800 shadow-sm transition hover:-translate-y-0.5 dark:bg-slate-900 dark:text-emerald-300"
               >

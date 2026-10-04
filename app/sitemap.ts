@@ -15,6 +15,7 @@ const publicRoutes = [
   "/unlock-pdf",
   "/about",
   "/trust",
+  "/trust/verification",
   "/guides/private-pdf-tools",
   "/privacy",
   "/terms",
@@ -27,7 +28,9 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority:
       route === ""
         ? 1
-        : route === "/guides/private-pdf-tools" || route === "/trust"
+        : route === "/guides/private-pdf-tools" ||
+            route === "/trust" ||
+            route === "/trust/verification"
           ? 0.7
           : route === "/about"
             ? 0.6
