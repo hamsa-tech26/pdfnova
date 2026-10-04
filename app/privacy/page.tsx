@@ -25,7 +25,7 @@ export default function PrivacyPage() {
             Privacy Policy
           </h1>
           <p className="mt-3 text-sm text-gray-500 dark:text-slate-400">
-            Last updated: October 2, 2026
+            Last updated: October 4, 2026
           </p>
 
           <div className="mt-9 space-y-8 text-base leading-8 text-gray-700 dark:text-slate-300">
@@ -53,6 +53,15 @@ export default function PrivacyPage() {
               </h2>
               <p className="mt-3">
                 Like other websites, the hosting and network providers used to deliver Kukureku may receive ordinary technical request information when pages and site assets are loaded, such as IP address, browser details, timestamps, and requested URLs. This is different from the local document-processing workflow.
+              </p>
+            </section>
+
+            <section>
+              <h2 className="text-xl font-bold text-gray-950 dark:text-white">
+                Website analytics
+              </h2>
+              <p className="mt-3">
+                Kukureku uses Vercel Web Analytics to understand website visits and page views so the site can be monitored and improved. This website analytics activity is separate from the current local document-processing workflow, and the supported PDF tools are not designed to send the contents of your selected documents to analytics for processing.
               </p>
             </section>
 
