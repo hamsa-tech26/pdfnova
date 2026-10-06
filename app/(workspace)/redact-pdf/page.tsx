@@ -296,7 +296,7 @@ export default function RedactPdfPage() {
       howToTitle="How to redact a PDF"
       howToSteps={[
         { title: "Choose one PDF", description: "Select the document you need to sanitize." },
-        { title: "Mark sensitive areas", description: "Choose each page and drag black redaction areas over private content." },
+        { title: "Mark sensitive areas", description: "Choose each page and drag black redaction areas or use the keyboard-friendly percentage controls." },
         { title: "Create the redacted copy", description: "Kukureku rasterizes the pages, applies the redactions, and rebuilds a new PDF." },
       ]}
       maxWidthClassName="max-w-6xl"
@@ -323,7 +323,7 @@ export default function RedactPdfPage() {
           />
 
           {!outputBytes && (
-            <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-950 dark:text-white">Mark redaction areas</h2>
@@ -331,7 +331,7 @@ export default function RedactPdfPage() {
                 </div>
                 <label className="text-sm font-semibold dark:text-white">
                   Page
-                  <select value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="ml-3 rounded-xl border border-gray-300 bg-white px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                  <select value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950 sm:ml-3 sm:mt-0 sm:w-auto">
                     {Array.from({ length: pageCount }, (_, index) => <option key={index + 1} value={index + 1}>Page {index + 1}</option>)}
                   </select>
                 </label>
