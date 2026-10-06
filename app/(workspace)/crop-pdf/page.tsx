@@ -15,7 +15,6 @@ import { calculateVisibleCropBox } from "@/lib/pdf/cropGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { Crop, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
