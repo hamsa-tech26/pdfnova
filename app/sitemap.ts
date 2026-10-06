@@ -21,6 +21,7 @@ const publicRoutes = [
   "/reverse-pdf",
   "/remove-pdf-metadata",
   "/add-page-numbers",
+  "/crop-pdf",
   "/watermark-pdf",
   "/protect-pdf",
   "/unlock-pdf",
