@@ -32,7 +32,6 @@ import {
 } from "react";
 import {
   degrees,
-  PDFDocument,
   rgb,
   StandardFonts,
 } from "pdf-lib";
@@ -279,7 +278,7 @@ export default function HeaderFooterPdfPage() {
 
     try {
       const pdf =
-        await PDFDocument.load(
+        loadPdfWithoutMetadataMutation(
           await selectedFile.arrayBuffer(),
         );
 
@@ -396,7 +395,7 @@ export default function HeaderFooterPdfPage() {
 
     try {
       const pdf =
-        await PDFDocument.load(
+        loadPdfWithoutMetadataMutation(
           await file.arrayBuffer(),
         );
 
