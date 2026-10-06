@@ -539,7 +539,7 @@ export default function SignPdfPage() {
 
     try {
       const pdf =
-        loadPdfWithoutMetadataMutation(
+        await loadPdfWithoutMetadataMutation(
           await selectedFile.arrayBuffer(),
         );
 
@@ -975,7 +975,7 @@ export default function SignPdfPage() {
 
     try {
       const pdf =
-        loadPdfWithoutMetadataMutation(
+        await loadPdfWithoutMetadataMutation(
           await file.arrayBuffer(),
         );
 
