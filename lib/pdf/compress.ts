@@ -221,10 +221,10 @@ async function compressVisualPdf(
         await outputPdf.embedJpg(jpegBytes);
 
       const pageWidth =
-        renderedPage.width / profile.scale;
+        renderedPage.width / renderedPage.scale;
 
       const pageHeight =
-        renderedPage.height / profile.scale;
+        renderedPage.height / renderedPage.scale;
 
       const page = outputPdf.addPage([
         pageWidth,
