@@ -131,6 +131,40 @@ describe("formBuilder", () => {
     expect(
       widgetRect.height,
     ).toBeGreaterThan(0);
+
+    expect(
+      widgetRect.x,
+    ).toBeGreaterThanOrEqual(
+      19,
+    );
+    expect(
+      widgetRect.y,
+    ).toBeGreaterThanOrEqual(
+      29,
+    );
+    expect(
+      widgetRect.x +
+        widgetRect.width,
+    ).toBeLessThanOrEqual(
+      581,
+    );
+    expect(
+      widgetRect.y +
+        widgetRect.height,
+    ).toBeLessThanOrEqual(
+      771,
+    );
+
+    expect(
+      form
+        .getTextField(
+          "full_name",
+        )
+        .acroField
+        .getWidgets()[0]
+        .getAppearanceCharacteristics()
+        ?.getRotation(),
+    ).toBe(90);
   });
 
   it("rejects duplicate field names already present in the PDF", async () => {
