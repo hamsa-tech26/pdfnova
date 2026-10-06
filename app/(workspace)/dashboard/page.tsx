@@ -108,6 +108,14 @@ const availableTools = [
     accent: "bg-sky-50 text-sky-700",
   },
   {
+    title: "Header & Footer PDF",
+    description: "Add headers, footers, and automatic page numbers.",
+    href: "/header-footer-pdf",
+    category: "PDF Tools",
+    icon: FileText,
+    accent: "bg-indigo-50 text-indigo-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text, logos, stamps, or signatures to PDF pages.",
     href: "/watermark-pdf",

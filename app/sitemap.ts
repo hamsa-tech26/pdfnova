@@ -23,6 +23,7 @@ const publicRoutes = [
   "/add-page-numbers",
   "/crop-pdf",
   "/resize-pdf-pages",
+  "/header-footer-pdf",
   "/watermark-pdf",
   "/protect-pdf",
   "/unlock-pdf",

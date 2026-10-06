@@ -113,6 +113,13 @@ const tools = [
     accent: "bg-sky-50 text-sky-700",
   },
   {
+    title: "Header & Footer PDF",
+    description: "Add headers, footers, and automatic page numbers to every page.",
+    href: "/header-footer-pdf",
+    icon: FileText,
+    accent: "bg-indigo-50 text-indigo-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
     href: "/watermark-pdf",
@@ -149,7 +156,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, protect, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, add headers and page numbers, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
