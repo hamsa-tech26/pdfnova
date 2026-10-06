@@ -261,3 +261,24 @@ export function applyPdfFormValues(
     form.updateFieldAppearances();
   }
 }
+
+
+export function getPdfFormProcessingError(
+  error: unknown,
+  fallback: string,
+) {
+  const message =
+    error instanceof Error
+      ? error.message
+      : "";
+
+  if (
+    message.includes(
+      "WinAnsi cannot encode",
+    )
+  ) {
+    return "This form contains text characters that the built-in PDF form font cannot render. This version supports standard WinAnsi/Latin form appearances; use simpler Latin text or a compatible source form and try again.";
+  }
+
+  return message || fallback;
+}
