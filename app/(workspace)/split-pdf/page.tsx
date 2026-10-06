@@ -8,6 +8,8 @@ import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { assertPageCopySafe } from "@/lib/pdf/pdfInputSafety";
+import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -187,7 +189,12 @@ export default function SplitPdfPage() {
 
     try {
       const fileBytes = await selectedFile.arrayBuffer();
-      const pdf = await PDFDocument.load(fileBytes);
+      const pdf = await loadPdfWithoutMetadataMutation(fileBytes);
+
+      assertPageCopySafe(
+        pdf,
+        "Split PDF",
+      );
 
       setFile(selectedFile);
       setPageCount(pdf.getPageCount());
@@ -199,7 +206,9 @@ export default function SplitPdfPage() {
       console.error(selectionError);
 
       const message =
-        "The selected PDF may be damaged or password-protected.";
+        selectionError instanceof Error
+          ? selectionError.message
+          : "The selected PDF may be damaged or password-protected.";
 
       setErrorMessage(message);
       toast.error(message);
@@ -273,7 +282,14 @@ export default function SplitPdfPage() {
 
     try {
       const sourceBytes = await file.arrayBuffer();
-      const sourcePdf = await PDFDocument.load(sourceBytes);
+      const sourcePdf = await loadPdfWithoutMetadataMutation(
+        sourceBytes,
+      );
+
+      assertPageCopySafe(
+        sourcePdf,
+        "Split PDF",
+      );
 
       await new Promise((resolve) =>
         setTimeout(resolve, 180),
@@ -476,6 +492,7 @@ export default function SplitPdfPage() {
                 "The entered page number may not exist in the PDF.",
                 "The page range format may be incorrect.",
                 "The PDF may be damaged or password-protected.",
+                "Interactive PDF forms must be flattened before page extraction.",
               ]}
               onRetry={
                 file && pageRange.trim()
