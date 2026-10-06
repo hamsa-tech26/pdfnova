@@ -1,0 +1,1 @@
+import PageSelectionTool from "@/components/pdf/PageSelectionTool";export default function Page(){return <PageSelectionTool mode="extract" label="Extract PDF Pages" title="Extract pages from PDF privately" description="Select specific PDF pages or ranges and save them as a new document directly in your browser."/>;}
