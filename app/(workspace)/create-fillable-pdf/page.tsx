@@ -7,6 +7,7 @@ import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { hasPdfXfa } from "@/lib/pdf/formFields";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import {
   normalizeVisibleRect,
@@ -135,6 +136,13 @@ export default function CreateFillablePdfPage() {
     }
     try {
       const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+
+      if (hasPdfXfa(pdf)) {
+        throw new Error(
+          "This PDF contains XFA form data. Kukureku will not modify it because pdf-lib cannot preserve XFA safely.",
+        );
+      }
+
       const count = pdf.getPageCount();
       setFile(selectedFile);
       setPageCount(count);
@@ -149,9 +157,13 @@ export default function CreateFillablePdfPage() {
       resetResult();
       void renderSelectedPreview(selectedFile, 1);
       toast.success("PDF ready for form fields.");
-    } catch {
+    } catch (error) {
       setFile(null);
-      setErrorMessage("Unable to open this PDF. It may be damaged or password-protected.");
+      setErrorMessage(
+        error instanceof Error
+          ? error.message
+          : "Unable to open this PDF. It may be damaged or password-protected.",
+      );
     }
   }
 
@@ -196,10 +208,37 @@ export default function CreateFillablePdfPage() {
   }
 
   function endDraw(event: PointerEvent<HTMLDivElement>) {
-    if (!dragStartRef.current) return;
+    const start = dragStartRef.current;
+
+    if (!start || !previewRef.current) {
+      return;
+    }
+
+    const point = pointRatio(
+      event,
+      previewRef.current,
+    );
+
     dragStartRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
-    if (pendingRect) setPendingRect(normalizeVisibleRect(pendingRect));
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    setPendingRect(
+      normalizeVisibleRect({
+        x: start.x,
+        y: start.y,
+        width: point.x - start.x,
+        height: point.y - start.y,
+      }),
+    );
   }
 
   function addField() {
@@ -243,6 +282,13 @@ export default function CreateFillablePdfPage() {
     setErrorMessage("");
     try {
       const pdf = await PDFDocument.load(await file.arrayBuffer());
+
+      if (hasPdfXfa(pdf)) {
+        throw new Error(
+          "This PDF contains XFA form data and cannot be modified safely by this tool.",
+        );
+      }
+
       const form = pdf.getForm();
       const font = await pdf.embedFont(StandardFonts.Helvetica);
       const existingNames = new Set(form.getFields().map((field) => field.getName()));
