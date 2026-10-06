@@ -12,6 +12,10 @@ import {
   Scissors,
   UnlockKeyhole,
   WandSparkles,
+  Trash2,
+  Copy,
+  AlignLeft,
+  PanelsTopLeft,
 } from "lucide-react";
 
 const tools = [
@@ -78,6 +82,10 @@ const tools = [
     icon: RotateCw,
     accent: "bg-indigo-50 text-indigo-600",
   },
+  { title: "Extract PDF Pages", description: "Save selected PDF pages or ranges as a new document.", href: "/extract-pdf-pages", icon: Copy, accent: "bg-lime-50 text-lime-700" },
+  { title: "Delete PDF Pages", description: "Remove unwanted pages and download a clean PDF copy.", href: "/delete-pdf-pages", icon: Trash2, accent: "bg-rose-50 text-rose-600" },
+  { title: "PDF to Text", description: "Extract selectable PDF text into a plain TXT file.", href: "/pdf-to-text", icon: AlignLeft, accent: "bg-slate-100 text-slate-700" },
+  { title: "Flatten PDF", description: "Flatten supported PDF form fields into page content.", href: "/flatten-pdf", icon: PanelsTopLeft, accent: "bg-fuchsia-50 text-fuchsia-600" },
   {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
@@ -108,7 +116,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, rotate, extract, delete, flatten, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>

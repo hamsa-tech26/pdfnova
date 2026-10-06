@@ -56,6 +56,10 @@ export const TOOL_SEO = {
     description:
       "Rotate PDF pages online for free in your browser. Turn every page clockwise, counter-clockwise, or 180 degrees without uploading your PDF.",
   },
+  "extract-pdf-pages": { name: "Extract PDF Pages", title: "Extract PDF Pages Online - Private, No Upload", description: "Extract selected PDF pages or ranges into a new PDF privately in your browser without uploading your document." },
+  "delete-pdf-pages": { name: "Delete PDF Pages", title: "Delete PDF Pages Online - Private, No Upload", description: "Remove unwanted pages from a PDF and download a new copy privately in your browser with no upload." },
+  "pdf-to-text": { name: "PDF to Text", title: "PDF to Text Online - Private Text Extraction", description: "Extract selectable PDF text into a TXT file directly in your browser. No upload or account required." },
+  "flatten-pdf": { name: "Flatten PDF", title: "Flatten PDF Forms Online - Private, No Upload", description: "Flatten supported interactive PDF form fields into page content privately in your browser without uploading the PDF." },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",

@@ -27,6 +27,9 @@ import {
   UnlockKeyhole,
   WandSparkles,
   Zap,
+  Copy,
+  AlignLeft,
+  PanelsTopLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -72,6 +75,10 @@ const availableTools = [
     icon: RotateCw,
     accent: "bg-indigo-50 text-indigo-600",
   },
+  { title: "Extract PDF Pages", description: "Save selected pages or ranges as a new PDF.", href: "/extract-pdf-pages", category: "PDF Tools", icon: Copy, accent: "bg-lime-50 text-lime-700" },
+  { title: "Delete PDF Pages", description: "Remove unwanted pages from a PDF copy.", href: "/delete-pdf-pages", category: "PDF Tools", icon: Trash2, accent: "bg-rose-50 text-rose-600" },
+  { title: "PDF to Text", description: "Extract selectable PDF text into a TXT file.", href: "/pdf-to-text", category: "Office", icon: AlignLeft, accent: "bg-slate-100 text-slate-700" },
+  { title: "Flatten PDF", description: "Flatten supported PDF form fields into page content.", href: "/flatten-pdf", category: "PDF Tools", icon: PanelsTopLeft, accent: "bg-fuchsia-50 text-fuchsia-600" },
   {
     title: "Watermark PDF",
     description: "Add custom text, logos, stamps, or signatures to PDF pages.",
