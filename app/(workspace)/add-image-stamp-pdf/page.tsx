@@ -8,6 +8,10 @@ import PositionControls from "@/components/pdf/PositionControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import { calculateSignaturePdfPlacement } from "@/lib/pdf/signaturePlacementGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -185,7 +189,7 @@ export default function AddImageStampPdfPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
+      const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
       const count = pdf.getPageCount();
       setFile(selectedFile);
       setPageCount(count);
@@ -329,7 +333,7 @@ export default function AddImageStampPdfPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
+      const pdf = await loadPdfWithoutMetadataMutation(await file.arrayBuffer());
       const bytes = dataUrlToBytes(imageDataUrl);
       const image = imageDataUrl.startsWith("data:image/jpeg") || imageDataUrl.startsWith("data:image/jpg") ? await pdf.embedJpg(bytes) : await pdf.embedPng(bytes);
       const targets = scope === "all" ? pdf.getPages().map((_, index) => index) : [selectedPage - 1];
@@ -353,7 +357,7 @@ export default function AddImageStampPdfPage() {
         });
       }
 
-      const output = await pdf.save();
+      const output = await savePdfWithoutFormAppearanceMutation(pdf);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + "-image-stamp.pdf";
       downloadFile(output, generatedFileName, "application/pdf");
