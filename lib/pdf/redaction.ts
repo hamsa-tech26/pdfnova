@@ -72,20 +72,24 @@ export async function createRasterRedactedPdf(
   const source = await PDFDocument.load(await file.arrayBuffer());
   const pageCount = source.getPageCount();
 
-  const rendered = await renderPdfPages(file, {
-    scale: 2,
-    quality: 0.94,
-    format: "jpeg",
-  });
-
-  if (rendered.length !== pageCount) {
-    throw new Error("Not every PDF page could be rendered for secure redaction.");
-  }
-
   const output = await PDFDocument.create();
 
   for (let index = 0; index < pageCount; index += 1) {
-    const renderedPage = rendered[index];
+    const rendered = await renderPdfPages(file, {
+      scale: 1.75,
+      quality: 0.92,
+      pageNumbers: [index + 1],
+      format: "jpeg",
+    });
+
+    const renderedPage = rendered[0];
+
+    if (!renderedPage) {
+      throw new Error(
+        `Page ${index + 1} could not be rendered for secure redaction.`,
+      );
+    }
+
     const sourcePage = source.getPage(index);
     const image = await loadImage(renderedPage.dataUrl);
 
@@ -113,7 +117,7 @@ export async function createRasterRedactedPdf(
       );
     }
 
-    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.95);
+    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.93);
     const embedded = await output.embedJpg(dataUrlToBytes(jpegDataUrl));
 
     const cropBox = sourcePage.getCropBox();
