@@ -1,0 +1,1 @@
+import ToolSeoLayout from "@/components/seo/ToolSeoLayout";import {buildToolMetadata} from "@/lib/seo/tools";import type {ReactNode} from "react";export const metadata=buildToolMetadata("reorder-pdf-pages");export default function Layout({children}:Readonly<{children:ReactNode}>){return <ToolSeoLayout slug="reorder-pdf-pages">{children}</ToolSeoLayout>;}
