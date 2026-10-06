@@ -1,13 +1,25 @@
 import { PDFDocument } from "pdf-lib";
 import { forEachRenderedPdfPage } from "@/lib/pdf/render";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 
 export type CompressionLevel = "low" | "medium" | "high";
+
+export type CompressPdfMethod =
+  | "qpdf"
+  | "visual-raster"
+  | "pdf-lib"
+  | "original";
 
 type CompressPdfResult = {
   bytes: Uint8Array;
   originalSize: number;
   compressedSize: number;
   reductionPercent: number;
+  method: CompressPdfMethod;
+  rasterized: boolean;
 };
 
 type VisualCompressionProfile = {
@@ -116,15 +128,23 @@ async function compressWithPdfLib(
   inputBytes: Uint8Array,
   level: CompressionLevel,
 ): Promise<Uint8Array> {
-  const pdf = await PDFDocument.load(inputBytes, {
-    updateMetadata: false,
-  });
+  const pdf =
+    await loadPdfWithoutMetadataMutation(
+      inputBytes,
+    );
 
-  return pdf.save({
-    useObjectStreams: level !== "low",
-    addDefaultPage: false,
-    objectsPerTick: level === "high" ? 100 : 50,
-  });
+  return savePdfWithoutFormAppearanceMutation(
+    pdf,
+    {
+      useObjectStreams:
+        level !== "low",
+      addDefaultPage: false,
+      objectsPerTick:
+        level === "high"
+          ? 100
+          : 50,
+    },
+  );
 }
 
 async function isImageOnlyPdf(
@@ -257,6 +277,11 @@ export async function compressPdf(
   );
 
   let candidateBytes: Uint8Array;
+  let candidateMethod:
+    Exclude<
+      CompressPdfMethod,
+      "original"
+    >;
 
   try {
     const shouldUseVisualCompression =
@@ -264,12 +289,15 @@ export async function compressPdf(
       (await isImageOnlyPdf(file));
 
     if (shouldUseVisualCompression) {
+      candidateMethod =
+        "visual-raster";
       candidateBytes =
         await compressVisualPdf(
           file,
           level,
         );
     } else {
+      candidateMethod = "qpdf";
       candidateBytes =
         await compressWithQpdf(
           originalBytes,
@@ -282,6 +310,7 @@ export async function compressPdf(
       compressionError,
     );
 
+    candidateMethod = "pdf-lib";
     candidateBytes =
       await compressWithPdfLib(
         originalBytes,
@@ -289,9 +318,12 @@ export async function compressPdf(
       );
   }
 
-  const compressedBytes =
+  const useCandidate =
     candidateBytes.byteLength <
-    originalBytes.byteLength
+    originalBytes.byteLength;
+
+  const compressedBytes =
+    useCandidate
       ? candidateBytes
       : originalBytes;
 
@@ -319,5 +351,12 @@ export async function compressPdf(
     originalSize,
     compressedSize,
     reductionPercent,
+    method: useCandidate
+      ? candidateMethod
+      : "original",
+    rasterized:
+      useCandidate &&
+      candidateMethod ===
+        "visual-raster",
   };
 }

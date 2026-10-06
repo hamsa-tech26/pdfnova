@@ -31,13 +31,13 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const tips = [
   { title: "Mark sensitive content precisely", description: "Drag one or more redaction boxes, or enter percentage coordinates when using a keyboard or touch device." },
-  { title: "Privacy-safe raster export", description: "The downloaded PDF is rebuilt from rendered page images after redaction, so original page text is not hidden underneath black boxes." },
+  { title: "Rasterized redaction export", description: "The downloaded PDF is rebuilt from rendered page images after redaction, so original page text is not hidden underneath black boxes." },
   { title: "Review before sharing", description: "Check every page and every marked area before distributing the redacted copy." },
 ];
 
 const faqs = [
   { question: "Is this only a black rectangle?", answer: "No. Kukureku renders the document, paints the redactions into the page pixels, and rebuilds a new PDF from those redacted page images." },
-  { question: "What changes in the output?", answer: "The privacy-safe output is rasterized. Selectable text, links, form fields, annotations, and other interactive page objects are not retained." },
+  { question: "What changes in the output?", answer: "The redacted output is rasterized. Selectable text, links, form fields, annotations, and other interactive page objects are not retained." },
   { question: "Is the PDF uploaded?", answer: "No. Preview rendering and redaction are performed locally in your browser." },
 ];
 
@@ -290,12 +290,12 @@ export default function RedactPdfPage() {
     <ToolLayout
       label="Redact PDF"
       title="Permanently redact PDF content privately"
-      description="Drag over sensitive information, then create a privacy-safe rasterized PDF in which the original page content is not hidden underneath the redaction marks."
+      description="Drag over sensitive information, then create a rasterized redacted PDF in which the original page content is not hidden underneath the redaction marks."
       tips={tips}
       faqs={faqs}
       howToTitle="How to redact a PDF"
       howToSteps={[
-        { title: "Choose one PDF", description: "Select the document you need to sanitize." },
+        { title: "Choose one PDF", description: "Select the document you need to redact." },
         { title: "Mark sensitive areas", description: "Choose each page and drag black redaction areas or use the keyboard-friendly percentage controls." },
         { title: "Create the redacted copy", description: "Kukureku rasterizes the pages, applies the redactions, and rebuilds a new PDF." },
       ]}
@@ -319,7 +319,7 @@ export default function RedactPdfPage() {
             file={file}
             onRemove={isProcessing ? undefined : startAgain}
             removeLabel="Remove PDF"
-            statusText={isProcessing ? "Creating privacy-safe redacted PDF" : String(totalRedactions) + " redaction areas marked"}
+            statusText={isProcessing ? "Creating rasterized redacted PDF" : String(totalRedactions) + " redaction areas marked"}
           />
 
           {!outputBytes && (
@@ -407,7 +407,7 @@ export default function RedactPdfPage() {
 
               <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                 <TriangleAlert size={19} className="shrink-0" />
-                <p>The privacy-safe output rasterizes every page. Selectable text, links, interactive forms, and annotations are removed from the rebuilt PDF. Review the downloaded result before sharing it.</p>
+                <p>The redacted output rasterizes every page. Selectable text, links, interactive forms, and annotations are removed from the rebuilt PDF. Review the downloaded result before sharing it.</p>
               </div>
             </section>
           )}

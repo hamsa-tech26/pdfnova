@@ -23,6 +23,7 @@ type CompressionResult = {
   originalSize: number;
   compressedSize: number;
   reductionPercent: number;
+  rasterized: boolean;
 };
 
 const compressionOptions: {
@@ -277,6 +278,7 @@ export default function CompressPdfPage() {
         originalSize: compressedResult.originalSize,
         compressedSize: compressedResult.compressedSize,
         reductionPercent: compressedResult.reductionPercent,
+        rasterized: compressedResult.rasterized,
       });
 
       setProgress(100);
@@ -486,6 +488,12 @@ export default function CompressPdfPage() {
                 {result.compressedSize >= result.originalSize && (
                   <p className="mt-4 text-sm leading-6 text-amber-700 dark:text-amber-300">
                     No smaller output was produced at this optimization level, so Kukureku kept the original file to preserve its quality.
+                  </p>
+                )}
+
+                {result.rasterized && (
+                  <p className="mt-4 text-sm leading-6 text-amber-700 dark:text-amber-300">
+                    Visual compression rebuilt this image-only PDF from JPEG page images. Selectable text, forms, links, annotations, bookmarks, attachments, digital signatures, metadata, and other non-page structures are not retained in the rebuilt copy. Review the result before sharing it.
                   </p>
                 )}
               </section>
