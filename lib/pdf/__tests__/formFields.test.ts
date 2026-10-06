@@ -138,6 +138,64 @@ describe("formFields", () => {
     ).toBe("Pro");
   });
 
+  it("persists filled values after save and reload", async () => {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([600, 800]);
+    const form = pdf.getForm();
+
+    const text = form.createTextField("name");
+    text.addToPage(page);
+
+    const check = form.createCheckBox("accepted");
+    check.addToPage(page);
+
+    applyPdfFormValues(
+      pdf,
+      {
+        name: "Prasenjit",
+        accepted: true,
+      },
+      false,
+    );
+
+    const saved = await pdf.save();
+    const reloaded = await PDFDocument.load(saved);
+    const described = describePdfFormFields(reloaded);
+
+    expect(
+      described.fields.find((field) => field.name === "name")?.value,
+    ).toBe("Prasenjit");
+
+    expect(
+      described.fields.find((field) => field.name === "accepted")?.value,
+    ).toBe(true);
+  });
+
+  it("supports multi-select option lists", async () => {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([600, 800]);
+    const form = pdf.getForm();
+
+    const list = form.createOptionList("fruits");
+    list.addOptions(["Apple", "Orange", "Mango"]);
+    list.enableMultiselect();
+    list.addToPage(page);
+
+    applyPdfFormValues(
+      pdf,
+      {
+        fruits: ["Apple", "Mango"],
+      },
+      false,
+    );
+
+    const described = describePdfFormFields(pdf);
+
+    expect(
+      described.fields.find((field) => field.name === "fruits")?.value,
+    ).toEqual(["Apple", "Mango"]);
+  });
+
   it("can flatten filled fields", async () => {
     const pdf =
       await PDFDocument.create();
@@ -166,6 +224,15 @@ describe("formFields", () => {
 
     expect(
       pdf
+        .getForm()
+        .getFields(),
+    ).toHaveLength(0);
+
+    const saved = await pdf.save();
+    const reloaded = await PDFDocument.load(saved);
+
+    expect(
+      reloaded
         .getForm()
         .getFields(),
     ).toHaveLength(0);
