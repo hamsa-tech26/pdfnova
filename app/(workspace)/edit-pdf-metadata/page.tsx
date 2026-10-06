@@ -161,7 +161,7 @@ export default function EditPdfMetadataPage() {
           />
 
           {!outputBytes && (
-            <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+            <section className="rounded-3xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6">
               <div className="flex items-center gap-3">
                 <FilePenLine size={22} className="text-blue-600" />
                 <div>
@@ -180,7 +180,7 @@ export default function EditPdfMetadataPage() {
                         value={metadata[item.key]}
                         onChange={(event) => updateField(item.key, event.target.value)}
                         placeholder={item.placeholder}
-                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                        className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950"
                       />
                     ) : (
                       <input
@@ -188,7 +188,7 @@ export default function EditPdfMetadataPage() {
                         value={metadata[item.key]}
                         onChange={(event) => updateField(item.key, event.target.value)}
                         placeholder={item.placeholder}
-                        className="mt-2 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
+                        className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950"
                       />
                     )}
                   </label>
