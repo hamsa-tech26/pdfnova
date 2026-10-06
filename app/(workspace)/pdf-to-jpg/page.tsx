@@ -5,6 +5,7 @@ import PdfPageCard from "@/components/pdf/PdfPageCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import {
+  forEachRenderedPdfPage,
   renderPdfPages,
   type RenderedPdfPage,
 } from "@/lib/pdf/render";
@@ -63,7 +64,15 @@ export default function PdfToJpgPage() {
     setIsLoading(true);
 
     try {
-      const renderedPages = await renderPdfPages(selectedFile);
+      const renderedPages = await renderPdfPages(
+        selectedFile,
+        {
+          scale: 1.25,
+          quality: 0.84,
+          format: "jpeg",
+          maxDimension: 1800,
+        },
+      );
 
       setPages(renderedPages);
 
@@ -93,18 +102,65 @@ export default function PdfToJpgPage() {
     );
   }
 
-  function downloadPage(page: RenderedPdfPage) {
-    const imageBytes = dataUrlToBytes(page.dataUrl);
-    const fileName = `kukureku-page-${page.pageNumber}.jpg`;
+  async function downloadPage(page: RenderedPdfPage) {
+    if (!file) {
+      return;
+    }
 
-    downloadFile(imageBytes, fileName, "image/jpeg");
+    try {
+      const outputPages =
+        await renderPdfPages(
+          file,
+          {
+            pageNumbers: [
+              page.pageNumber,
+            ],
+            scale: 2,
+            quality: 0.92,
+            format: "jpeg",
+            maxDimension:
+              3200,
+          },
+        );
 
-    addRecentFile({
-      fileName,
-      toolName: "PDF to JPG",
-    });
+      const outputPage =
+        outputPages[0];
 
-    toast.success(`Page ${page.pageNumber} downloaded.`);
+      if (!outputPage) {
+        throw new Error(
+          "The selected page could not be rendered.",
+        );
+      }
+
+      const imageBytes =
+        dataUrlToBytes(
+          outputPage.dataUrl,
+        );
+
+      const fileName =
+        `kukureku-page-${page.pageNumber}.jpg`;
+
+      downloadFile(
+        imageBytes,
+        fileName,
+        "image/jpeg",
+      );
+
+      addRecentFile({
+        fileName,
+        toolName:
+          "PDF to JPG",
+      });
+
+      toast.success(
+        `Page ${page.pageNumber} downloaded.`,
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error(
+        `Page ${page.pageNumber} could not be rendered for download.`,
+      );
+    }
   }
 
   function selectAllPages() {
@@ -127,26 +183,60 @@ export default function PdfToJpgPage() {
     setIsCreatingZip(true);
 
     try {
-      const zip = new JSZip();
-
-      const pagesToDownload = pages.filter((page) =>
-        pageNumbers.includes(page.pageNumber),
-      );
-
-      for (const page of pagesToDownload) {
-        const imageBytes = dataUrlToBytes(page.dataUrl);
-        const imageFileName = `kukureku-page-${page.pageNumber}.jpg`;
-
-        zip.file(imageFileName, imageBytes);
+      if (!file) {
+        throw new Error(
+          "The source PDF is no longer available.",
+        );
       }
 
-      const zipBytes = await zip.generateAsync({
-        type: "uint8array",
-        compression: "DEFLATE",
-        compressionOptions: {
-          level: 6,
+      const zip = new JSZip();
+      let renderedCount = 0;
+
+      await forEachRenderedPdfPage(
+        file,
+        {
+          pageNumbers,
+          scale: 2,
+          quality: 0.92,
+          format: "jpeg",
+          maxDimension: 3200,
         },
-      });
+        (page) => {
+          const imageBytes =
+            dataUrlToBytes(
+              page.dataUrl,
+            );
+
+          const imageFileName =
+            `kukureku-page-${page.pageNumber}.jpg`;
+
+          zip.file(
+            imageFileName,
+            imageBytes,
+            {
+              compression:
+                "STORE",
+            },
+          );
+
+          renderedCount += 1;
+        },
+      );
+
+      if (
+        renderedCount !==
+        pageNumbers.length
+      ) {
+        throw new Error(
+          "One or more selected pages could not be rendered.",
+        );
+      }
+
+      const zipBytes =
+        await zip.generateAsync({
+          type: "uint8array",
+          compression: "STORE",
+        });
 
       downloadFile(zipBytes, zipFileName, "application/zip");
 
@@ -156,8 +246,8 @@ export default function PdfToJpgPage() {
       });
 
       toast.success(
-        `${pagesToDownload.length} ${
-          pagesToDownload.length === 1 ? "page" : "pages"
+        `${renderedCount} ${
+          renderedCount === 1 ? "page" : "pages"
         } added to ZIP successfully.`,
       );
 
@@ -348,7 +438,9 @@ export default function PdfToJpgPage() {
                       onToggleSelect={() =>
                         togglePageSelection(page.pageNumber)
                       }
-                      onDownload={() => downloadPage(page)}
+                      onDownload={() => {
+                        void downloadPage(page);
+                      }}
                     />
                   ))}
                 </div>
