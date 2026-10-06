@@ -65,6 +65,12 @@ export const TOOL_SEO = {
   "reverse-pdf": { name: "Reverse PDF Pages", title: "Reverse PDF Pages Online - Private, No Upload", description: "Reverse the complete page order of a PDF locally in your browser and download a new copy." },
   "remove-pdf-metadata": { name: "Remove PDF Metadata", title: "Remove PDF Metadata Online - Private", description: "Clear common PDF document metadata locally in your browser without uploading your file." },
   "add-page-numbers": { name: "Add Page Numbers", title: "Add Page Numbers to PDF Online - Private", description: "Add simple page numbers to every PDF page locally in your browser without uploading the document." },
+  "crop-pdf": {
+    name: "Crop PDF",
+    title: "Crop PDF Online - Private, No Upload",
+    description:
+      "Crop visible PDF page margins online in your browser. Trim top, right, bottom, and left edges without uploading your document.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
