@@ -26,6 +26,7 @@ const PUBLIC_ROUTES = [
   "/remove-pdf-metadata",
   "/add-page-numbers",
   "/watermark-pdf",
+  "/protect-pdf",
   "/unlock-pdf",
   "/about",
   "/press",

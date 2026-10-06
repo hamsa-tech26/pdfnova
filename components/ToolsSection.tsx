@@ -21,6 +21,7 @@ import {
   ArrowDownUp,
   Eraser,
   Hash,
+  LockKeyhole,
 } from "lucide-react";
 
 const tools = [
@@ -104,6 +105,13 @@ const tools = [
     accent: "bg-pink-50 text-pink-600",
   },
   {
+    title: "Protect PDF",
+    description: "Add AES-256 opening-password protection to a PDF locally.",
+    href: "/protect-pdf",
+    icon: LockKeyhole,
+    accent: "bg-blue-50 text-blue-700",
+  },
+  {
     title: "Unlock PDF",
     description: "Remove password protection using the correct password.",
     href: "/unlock-pdf",
@@ -126,7 +134,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
