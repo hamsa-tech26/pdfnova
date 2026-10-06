@@ -22,6 +22,7 @@ import {
   Eraser,
   Hash,
   LockKeyhole,
+  Crop,
 } from "lucide-react";
 
 const tools = [
@@ -98,6 +99,13 @@ const tools = [
   { title: "Remove PDF Metadata", description: "Clear common document metadata from a PDF copy.", href: "/remove-pdf-metadata", icon: Eraser, accent: "bg-emerald-50 text-emerald-700" },
   { title: "Add Page Numbers", description: "Add centered page numbers to every PDF page.", href: "/add-page-numbers", icon: Hash, accent: "bg-violet-50 text-violet-700" },
   {
+    title: "Crop PDF",
+    description: "Trim visible margins from every PDF page in your browser.",
+    href: "/crop-pdf",
+    icon: Crop,
+    accent: "bg-amber-50 text-amber-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
     href: "/watermark-pdf",
@@ -134,7 +142,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, protect, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
