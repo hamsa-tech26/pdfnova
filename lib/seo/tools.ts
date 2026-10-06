@@ -71,6 +71,12 @@ export const TOOL_SEO = {
     description:
       "Add text or image watermarks to PDF pages directly in your browser. Customize placement, opacity, and rotation without uploading your files.",
   },
+  "protect-pdf": {
+    name: "Protect PDF",
+    title: "Protect PDF Online - AES-256 Password Protection",
+    description:
+      "Password protect a PDF with AES-256 encryption directly in your browser. No upload or account required; your file and password stay on your device.",
+  },
   "unlock-pdf": {
     name: "Unlock PDF",
     title: "Unlock PDF - Remove Password Protection Privately",
