@@ -14,7 +14,7 @@ import {
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { RotateCcw, RotateCw, ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { degrees, PDFDocument } from "pdf-lib";
+import { degrees } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
