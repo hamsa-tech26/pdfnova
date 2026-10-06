@@ -268,9 +268,53 @@ export default function AddImageStampPdfPage() {
   }
 
   function endDrag(event: PointerEvent<HTMLDivElement>) {
-    if (!draggingRef.current) return;
+    if (
+      !draggingRef.current ||
+      !previewRef.current
+    ) {
+      return;
+    }
+
+    const rect =
+      previewRef.current.getBoundingClientRect();
+
+    setPosition({
+      x: clamp(
+        (event.clientX -
+          rect.left) /
+          rect.width -
+          dragOffsetRef.current.x,
+        0,
+        Math.max(
+          0,
+          1 - widthRatio,
+        ),
+      ),
+      y: clamp(
+        (event.clientY -
+          rect.top) /
+          rect.height -
+          dragOffsetRef.current.y,
+        0,
+        Math.max(
+          0,
+          1 - heightRatio,
+        ),
+      ),
+    });
+
     draggingRef.current = false;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) event.currentTarget.releasePointerCapture(event.pointerId);
+    resetResult();
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
   }
 
   async function applyImageStamp() {
