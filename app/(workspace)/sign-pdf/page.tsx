@@ -1194,6 +1194,10 @@ export default function SignPdfPage() {
                           mode
                         }
                         type="button"
+                        aria-pressed={
+                          signatureMode ===
+                          mode
+                        }
                         onClick={() =>
                           chooseMode(
                             mode,
