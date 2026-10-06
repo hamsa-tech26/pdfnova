@@ -19,7 +19,6 @@ import {
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { FilePenLine, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
