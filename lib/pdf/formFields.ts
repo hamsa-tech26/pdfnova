@@ -4,6 +4,7 @@ import {
   PDFDropdown,
   PDFOptionList,
   PDFRadioGroup,
+  PDFName,
   PDFTextField,
 } from "pdf-lib";
 
@@ -40,6 +41,7 @@ export function describePdfFormFields(
   fields: PdfFormFieldDescriptor[];
   hasXfa: boolean;
 } {
+  const hasXfa = pdf.catalog.AcroForm()?.has(PDFName.of("XFA")) ?? false;
   const form = pdf.getForm();
 
   const fields =
@@ -129,7 +131,7 @@ export function describePdfFormFields(
 
   return {
     fields,
-    hasXfa: form.hasXFA(),
+    hasXfa,
   };
 }
 
