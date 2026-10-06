@@ -35,6 +35,7 @@ import {
   ArrowDownUp,
   Eraser,
   Hash,
+  Crop,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -89,6 +90,14 @@ const availableTools = [
   { title: "Reverse PDF Pages", description: "Reverse the complete page order in one click.", href: "/reverse-pdf", category: "PDF Tools", icon: ArrowDownUp, accent: "bg-orange-50 text-orange-700" },
   { title: "Remove PDF Metadata", description: "Clear common document metadata from a PDF copy.", href: "/remove-pdf-metadata", category: "Security", icon: Eraser, accent: "bg-emerald-50 text-emerald-700" },
   { title: "Add Page Numbers", description: "Add centered page numbers to every PDF page.", href: "/add-page-numbers", category: "PDF Tools", icon: Hash, accent: "bg-violet-50 text-violet-700" },
+  {
+    title: "Crop PDF",
+    description: "Trim visible page margins from every PDF page.",
+    href: "/crop-pdf",
+    category: "PDF Tools",
+    icon: Crop,
+    accent: "bg-amber-50 text-amber-700",
+  },
   {
     title: "Watermark PDF",
     description: "Add custom text, logos, stamps, or signatures to PDF pages.",
