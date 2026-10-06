@@ -10,7 +10,54 @@ type RenderPdfPagesOptions = {
   quality?: number;
   pageNumbers?: number[];
   format?: "jpeg" | "png";
+  maxDimension?: number;
 };
+
+export function calculatePdfRenderScale({
+  pageWidth,
+  pageHeight,
+  requestedScale,
+  maxDimension,
+}: {
+  pageWidth: number;
+  pageHeight: number;
+  requestedScale: number;
+  maxDimension?: number;
+}) {
+  if (
+    pageWidth <= 0 ||
+    pageHeight <= 0 ||
+    requestedScale <= 0
+  ) {
+    throw new Error(
+      "PDF render dimensions and scale must be greater than zero.",
+    );
+  }
+
+  if (
+    maxDimension === undefined
+  ) {
+    return requestedScale;
+  }
+
+  if (maxDimension <= 0) {
+    throw new Error(
+      "PDF render maximum dimension must be greater than zero.",
+    );
+  }
+
+  const longestSide =
+    Math.max(
+      pageWidth,
+      pageHeight,
+    );
+
+  return Math.min(
+    requestedScale,
+    maxDimension /
+      longestSide,
+  );
+}
 
 export async function renderPdfPages(
   file: File,
@@ -34,6 +81,7 @@ export async function renderPdfPages(
   quality = 0.9,
   pageNumbers,
   format = "jpeg",
+  maxDimension,
 } = options;
 
   const fileBytes = await file.arrayBuffer();
@@ -61,7 +109,28 @@ export async function renderPdfPages(
       }
 
       const page = await pdf.getPage(pageNumber);
-      const viewport = page.getViewport({ scale });
+
+      const baseViewport =
+        page.getViewport({
+          scale: 1,
+        });
+
+      const effectiveScale =
+        calculatePdfRenderScale({
+          pageWidth:
+            baseViewport.width,
+          pageHeight:
+            baseViewport.height,
+          requestedScale:
+            scale,
+          maxDimension,
+        });
+
+      const viewport =
+        page.getViewport({
+          scale:
+            effectiveScale,
+        });
 
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
