@@ -404,14 +404,14 @@ export default function AddImageStampPdfPage() {
             <>
               <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <button type="button" onClick={() => { setMode("stamp"); refreshStamp(); }} className={mode === "stamp" ? "rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700" : "rounded-2xl border border-gray-200 p-4 font-bold"}><Stamp className="mr-2 inline" size={18} />Text stamp</button>
-                  <button type="button" onClick={() => { setMode("image"); setImageDataUrl(null); setImageName(""); resetResult(); }} className={mode === "image" ? "rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700" : "rounded-2xl border border-gray-200 p-4 font-bold"}><ImagePlus className="mr-2 inline" size={18} />Upload image</button>
+                  <button type="button" onClick={() => { setMode("stamp"); refreshStamp(); }} className={mode === "stamp" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><Stamp className="mr-2 inline" size={18} />Text stamp</button>
+                  <button type="button" onClick={() => { setMode("image"); setImageDataUrl(null); setImageName(""); resetResult(); }} className={mode === "image" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><ImagePlus className="mr-2 inline" size={18} />Upload image</button>
                 </div>
 
                 {mode === "stamp" ? (
                   <div className="mt-5 grid gap-4 md:grid-cols-[1fr_auto]">
                     <label className="text-sm font-semibold dark:text-white">Stamp text
-                      <input value={stampText} maxLength={18} onChange={(event) => { setStampText(event.target.value); const generated = createTextStamp(event.target.value, stampColor); setImageDataUrl(generated?.dataUrl ?? null); setImageAspect(generated?.aspect ?? 3.33); resetResult(); }} className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
+                      <input value={stampText} maxLength={18} onChange={(event) => { setStampText(event.target.value); const generated = createTextStamp(event.target.value, stampColor); setImageDataUrl(generated?.dataUrl ?? null); setImageAspect(generated?.aspect ?? 3.33); resetResult(); }} className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950" />
                     </label>
                     <label className="text-sm font-semibold dark:text-white">Color
                       <input type="color" value={stampColor} onChange={(event) => { setStampColor(event.target.value); const generated = createTextStamp(stampText, event.target.value); setImageDataUrl(generated?.dataUrl ?? null); setImageAspect(generated?.aspect ?? 3.33); resetResult(); }} className="mt-2 block h-12 w-24 rounded-xl border border-gray-300 p-1" />
@@ -421,7 +421,7 @@ export default function AddImageStampPdfPage() {
                   <div className="mt-5">
                     <input ref={imageInputRef} type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" className="hidden" onChange={handleImageUpload} />
                     <button type="button" onClick={() => imageInputRef.current?.click()} className="min-h-11 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 dark:focus-visible:ring-blue-950">Choose PNG/JPG</button>
-                    <p className="mt-2 text-sm text-gray-500">{imageName || "Transparent PNG is recommended · Maximum 5 MB"}</p>
+                    <p className="mt-2 text-sm text-gray-500 dark:text-slate-400">{imageName || "Transparent PNG is recommended · Maximum 5 MB"}</p>
                   </div>
                 )}
               </section>
@@ -429,11 +429,11 @@ export default function AddImageStampPdfPage() {
               <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                   <h2 className="text-lg font-bold dark:text-white">Place on PDF</h2>
-                  <div className="flex flex-wrap gap-3">
-                    <select value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="rounded-xl border border-gray-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                  <div className="grid w-full gap-3 sm:flex sm:w-auto sm:flex-wrap">
+                    <select aria-label="PDF page" value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950 sm:w-auto">
                       {Array.from({ length: pageCount }, (_, index) => <option key={index + 1} value={index + 1}>Page {index + 1}</option>)}
                     </select>
-                    <select value={scope} onChange={(event) => { setScope(event.target.value as ApplyScope); resetResult(); }} className="rounded-xl border border-gray-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                    <select aria-label="Apply image or stamp to" value={scope} onChange={(event) => { setScope(event.target.value as ApplyScope); resetResult(); }} className="min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950 sm:w-auto">
                       <option value="page">Selected page only</option>
                       <option value="all">All pages</option>
                     </select>
