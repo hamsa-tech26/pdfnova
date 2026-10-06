@@ -21,7 +21,6 @@ import {
 import {
   ChangeEvent,
   PointerEvent,
-  useEffect,
   useRef,
   useState,
 } from "react";
@@ -398,12 +397,10 @@ export default function SignPdfPage() {
     setErrorMessage,
   ] = useState("");
 
-  useEffect(() => {
-    if (!file) {
-      setPreview(null);
-      return;
-    }
-
+  async function renderSelectedPreview(
+    targetFile: File,
+    pageNumber: number,
+  ) {
     const requestId =
       ++previewRequestRef.current;
 
@@ -413,60 +410,61 @@ export default function SignPdfPage() {
 
     setErrorMessage("");
 
-    renderPdfPages(file, {
-      scale: 1.35,
-      quality: 0.88,
-      pageNumbers: [
-        selectedPage,
-      ],
-      format: "jpeg",
-    })
-      .then((pages) => {
-        if (
-          requestId !==
-          previewRequestRef.current
-        ) {
-          return;
-        }
-
-        const rendered =
-          pages[0];
-
-        if (!rendered) {
-          throw new Error(
-            "Unable to render the selected page.",
-          );
-        }
-
-        setPreview(rendered);
-      })
-      .catch((error) => {
-        if (
-          requestId !==
-          previewRequestRef.current
-        ) {
-          return;
-        }
-
-        console.error(error);
-
-        setPreview(null);
-
-        setErrorMessage(
-          "The selected page preview could not be created. The PDF may be damaged or unsupported.",
+    try {
+      const pages =
+        await renderPdfPages(
+          targetFile,
+          {
+            scale: 1.35,
+            quality: 0.88,
+            pageNumbers: [
+              pageNumber,
+            ],
+            format: "jpeg",
+          },
         );
-      })
-      .finally(() => {
-        if (
-          requestId ===
-          previewRequestRef.current
-        ) {
-          setIsRenderingPreview(
-            false,
-          );
-        }
-      });
-  }, [file, selectedPage]);
+
+      if (
+        requestId !==
+        previewRequestRef.current
+      ) {
+        return;
+      }
+
+      const rendered =
+        pages[0];
+
+      if (!rendered) {
+        throw new Error(
+          "Unable to render the selected page.",
+        );
+      }
+
+      setPreview(rendered);
+    } catch (error) {
+      if (
+        requestId !==
+        previewRequestRef.current
+      ) {
+        return;
+      }
+
+      console.error(error);
+      setPreview(null);
+      setErrorMessage(
+        "The selected page preview could not be created. The PDF may be damaged or unsupported.",
+      );
+    } finally {
+      if (
+        requestId ===
+        previewRequestRef.current
+      ) {
+        setIsRenderingPreview(
+          false,
+        );
+      }
+    }
+  }
 
   function resetResult() {
     setOutputBytes(null);
@@ -553,6 +551,10 @@ export default function SignPdfPage() {
       setSelectedPage(1);
       setPreview(null);
       resetSignature();
+      void renderSelectedPreview(
+        selectedFile,
+        1,
+      );
 
       toast.success(
         `${count} ${count === 1 ? "page" : "pages"} ready for signing.`,
@@ -570,6 +572,8 @@ export default function SignPdfPage() {
   }
 
   function startAgain() {
+    previewRequestRef.current += 1;
+    setIsRenderingPreview(false);
     setFile(null);
     setPageCount(0);
     setSelectedPage(1);
@@ -1313,14 +1317,25 @@ export default function SignPdfPage() {
                       onChange={(
                         event,
                       ) => {
-                        setSelectedPage(
+                        const pageNumber =
                           Number(
                             event
                               .target
                               .value,
-                          ),
+                          );
+
+                        setSelectedPage(
+                          pageNumber,
                         );
+                        setPreview(null);
                         resetPlacement();
+
+                        if (file) {
+                          void renderSelectedPreview(
+                            file,
+                            pageNumber,
+                          );
+                        }
                       }}
                       disabled={
                         isProcessing
