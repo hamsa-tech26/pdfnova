@@ -535,6 +535,7 @@ export default function SignPdfPage() {
       const pdf =
         await PDFDocument.load(
           await selectedFile.arrayBuffer(),
+          { updateMetadata: false },
         );
 
       const count =
@@ -877,13 +878,52 @@ export default function SignPdfPage() {
     event: PointerEvent<HTMLDivElement>,
   ) {
     if (
-      !isDraggingRef.current
+      !isDraggingRef.current ||
+      !previewContainerRef.current
     ) {
       return;
     }
 
+    const rect =
+      previewContainerRef.current.getBoundingClientRect();
+
+    const pointerX =
+      (event.clientX -
+        rect.left) /
+      rect.width;
+
+    const pointerY =
+      (event.clientY -
+        rect.top) /
+      rect.height;
+
+    setSignaturePosition({
+      x: clamp(
+        pointerX -
+          dragOffsetRef.current.x,
+        0,
+        Math.max(
+          0,
+          1 -
+            signatureWidthRatio,
+        ),
+      ),
+      y: clamp(
+        pointerY -
+          dragOffsetRef.current.y,
+        0,
+        Math.max(
+          0,
+          1 -
+            overlayHeightRatio,
+        ),
+      ),
+    });
+
     isDraggingRef.current =
       false;
+
+    resetResult();
 
     if (
       event.currentTarget.hasPointerCapture(
@@ -932,6 +972,7 @@ export default function SignPdfPage() {
       const pdf =
         await PDFDocument.load(
           await file.arrayBuffer(),
+          { updateMetadata: false },
         );
 
       const page =
