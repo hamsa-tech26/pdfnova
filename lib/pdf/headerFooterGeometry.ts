@@ -7,6 +7,13 @@ export type PdfHeaderFooterSlot =
   | "header"
   | "footer";
 
+export type PdfHeaderFooterBox = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+};
+
 export type PdfHeaderFooterPlacement = {
   x: number;
   y: number;
@@ -33,8 +40,8 @@ function normalizeRotation(
 }
 
 export function getVisibleHeaderFooterPageSize(
-  pageWidth: number,
-  pageHeight: number,
+  width: number,
+  height: number,
   rotationAngle: number,
 ) {
   const rotation =
@@ -45,14 +52,14 @@ export function getVisibleHeaderFooterPageSize(
     rotation === 270
   ) {
     return {
-      width: pageHeight,
-      height: pageWidth,
+      width: height,
+      height: width,
     };
   }
 
   return {
-    width: pageWidth,
-    height: pageHeight,
+    width,
+    height,
   };
 }
 
@@ -100,40 +107,58 @@ function getVisibleX(
 function visibleToPagePoint(
   visibleX: number,
   visibleY: number,
-  pageWidth: number,
-  pageHeight: number,
+  box: PdfHeaderFooterBox,
   rotation: 0 | 90 | 180 | 270,
 ) {
   switch (rotation) {
     case 90:
       return {
-        x: pageWidth - visibleY,
-        y: visibleX,
+        x:
+          box.x +
+          box.width -
+          visibleY,
+        y:
+          box.y +
+          visibleX,
       };
 
     case 180:
       return {
-        x: pageWidth - visibleX,
-        y: pageHeight - visibleY,
+        x:
+          box.x +
+          box.width -
+          visibleX,
+        y:
+          box.y +
+          box.height -
+          visibleY,
       };
 
     case 270:
       return {
-        x: visibleY,
-        y: pageHeight - visibleX,
+        x:
+          box.x +
+          visibleY,
+        y:
+          box.y +
+          box.height -
+          visibleX,
       };
 
     default:
       return {
-        x: visibleX,
-        y: visibleY,
+        x:
+          box.x +
+          visibleX,
+        y:
+          box.y +
+          visibleY,
       };
   }
 }
 
 export function calculateHeaderFooterPlacement({
-  pageWidth,
-  pageHeight,
+  box,
   rotationAngle,
   textWidth,
   fontSize,
@@ -141,8 +166,7 @@ export function calculateHeaderFooterPlacement({
   alignment,
   slot,
 }: {
-  pageWidth: number;
-  pageHeight: number;
+  box: PdfHeaderFooterBox;
   rotationAngle: number;
   textWidth: number;
   fontSize: number;
@@ -150,13 +174,22 @@ export function calculateHeaderFooterPlacement({
   alignment: PdfHeaderFooterAlignment;
   slot: PdfHeaderFooterSlot;
 }): PdfHeaderFooterPlacement {
+  if (
+    box.width <= 0 ||
+    box.height <= 0
+  ) {
+    throw new Error(
+      "The PDF page has invalid visible dimensions.",
+    );
+  }
+
   const rotation =
     normalizeRotation(rotationAngle);
 
   const visible =
     getVisibleHeaderFooterPageSize(
-      pageWidth,
-      pageHeight,
+      box.width,
+      box.height,
       rotation,
     );
 
@@ -180,15 +213,16 @@ export function calculateHeaderFooterPlacement({
   const point = visibleToPagePoint(
     visibleX,
     visibleY,
-    pageWidth,
-    pageHeight,
+    box,
     rotation,
   );
 
   return {
     ...point,
     rotation,
-    visibleWidth: visible.width,
-    visibleHeight: visible.height,
+    visibleWidth:
+      visible.width,
+    visibleHeight:
+      visible.height,
   };
 }
