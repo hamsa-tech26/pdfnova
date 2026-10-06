@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import { renderPdfPages } from "@/lib/pdf/render";
+import { forEachRenderedPdfPage } from "@/lib/pdf/render";
 
 export type CompressionLevel = "low" | "medium" | "high";
 
@@ -198,47 +198,47 @@ async function compressVisualPdf(
   const profile =
     getVisualCompressionProfile(level);
 
-  const renderedPages = await renderPdfPages(
+  const outputPdf = await PDFDocument.create();
+
+  await forEachRenderedPdfPage(
     file,
     {
       scale: profile.scale,
       quality: profile.quality,
       format: "jpeg",
+      maxDimension: 2800,
+    },
+    async (renderedPage) => {
+      const response = await fetch(
+        renderedPage.dataUrl,
+      );
+
+      const jpegBytes = new Uint8Array(
+        await response.arrayBuffer(),
+      );
+
+      const image =
+        await outputPdf.embedJpg(jpegBytes);
+
+      const pageWidth =
+        renderedPage.width / profile.scale;
+
+      const pageHeight =
+        renderedPage.height / profile.scale;
+
+      const page = outputPdf.addPage([
+        pageWidth,
+        pageHeight,
+      ]);
+
+      page.drawImage(image, {
+        x: 0,
+        y: 0,
+        width: pageWidth,
+        height: pageHeight,
+      });
     },
   );
-
-  const outputPdf = await PDFDocument.create();
-
-  for (const renderedPage of renderedPages) {
-    const response = await fetch(
-      renderedPage.dataUrl,
-    );
-
-    const jpegBytes = new Uint8Array(
-      await response.arrayBuffer(),
-    );
-
-    const image =
-      await outputPdf.embedJpg(jpegBytes);
-
-    const pageWidth =
-      renderedPage.width / profile.scale;
-
-    const pageHeight =
-      renderedPage.height / profile.scale;
-
-    const page = outputPdf.addPage([
-      pageWidth,
-      pageHeight,
-    ]);
-
-    page.drawImage(image, {
-      x: 0,
-      y: 0,
-      width: pageWidth,
-      height: pageHeight,
-    });
-  }
 
   return outputPdf.save({
     useObjectStreams: true,
