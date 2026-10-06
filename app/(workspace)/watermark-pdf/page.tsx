@@ -337,7 +337,7 @@ export default function WatermarkPdfPage() {
 
     try {
       const sourceBytes = await file.arrayBuffer();
-      const pdf = loadPdfWithoutMetadataMutation(sourceBytes);
+      const pdf = await loadPdfWithoutMetadataMutation(sourceBytes);
 
       await new Promise((resolve) =>
         setTimeout(resolve, 180),
