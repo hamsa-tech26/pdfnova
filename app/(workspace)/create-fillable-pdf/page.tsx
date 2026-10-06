@@ -13,7 +13,6 @@ import { getPdfFormProcessingError, hasPdfXfa } from "@/lib/pdf/formFields";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import {
   normalizeVisibleRect,
-  visibleRectToPdfPlacement,
   type VisibleRect,
 } from "@/lib/pdf/visibleRectGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
