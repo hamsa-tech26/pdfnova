@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import { renderPdfPages } from "@/lib/pdf/render";
+import { renderPdfPages } from "./render";
 
 export type RedactionRect = {
   x: number;
