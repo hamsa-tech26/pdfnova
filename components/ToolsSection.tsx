@@ -23,6 +23,7 @@ import {
   Hash,
   LockKeyhole,
   Crop,
+  PenLine,
 } from "lucide-react";
 
 const tools = [
@@ -120,6 +121,13 @@ const tools = [
     accent: "bg-indigo-50 text-indigo-700",
   },
   {
+    title: "Sign PDF",
+    description: "Draw, type, or upload a visual signature and place it on a PDF page.",
+    href: "/sign-pdf",
+    icon: PenLine,
+    accent: "bg-emerald-50 text-emerald-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
     href: "/watermark-pdf",
@@ -156,7 +164,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, add headers and page numbers, protect, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, add headers and page numbers, sign, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
