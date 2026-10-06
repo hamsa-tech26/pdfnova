@@ -47,6 +47,21 @@ describe("preview accessibility geometry", () => {
     });
   });
 
+  it("keeps a minimum usable rectangle at the bottom-right edge", () => {
+    const rect =
+      normalizedRectFromPercent({
+        x: 100,
+        y: 100,
+        width: 20,
+        height: 20,
+      });
+
+    expect(rect.x).toBe(0.995);
+    expect(rect.y).toBe(0.995);
+    expect(rect.width).toBeCloseTo(0.005, 8);
+    expect(rect.height).toBeCloseTo(0.005, 8);
+  });
+
   it("round-trips normalized rectangle values into readable percentages", () => {
     expect(
       normalizedRectToPercent({
