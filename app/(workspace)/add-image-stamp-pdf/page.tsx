@@ -140,7 +140,13 @@ export default function AddImageStampPdfPage() {
     const requestId = ++previewRequestRef.current;
     setIsRenderingPreview(true);
     try {
-      const pages = await renderPdfPages(targetFile, { scale: 1.35, quality: 0.9, pageNumbers: [pageNumber], format: "jpeg" });
+      const pages = await renderPdfPages(targetFile, {
+        scale: 1.35,
+        quality: 0.9,
+        pageNumbers: [pageNumber],
+        format: "jpeg",
+        maxDimension: 2400,
+      });
       if (requestId !== previewRequestRef.current) return;
       if (!pages[0]) throw new Error("Unable to render this page.");
       setPreview(pages[0]);
