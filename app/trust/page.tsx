@@ -202,13 +202,15 @@ export default function TrustPage() {
 
           <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7">
             <h2 className="text-2xl font-extrabold text-gray-950 dark:text-white">
-              Current tool processing matrix
+              Original launch processing matrix
             </h2>
 
             <p className="mt-3 max-w-3xl leading-7 text-gray-600 dark:text-slate-300">
-              The table below reflects the current public launch. Browser memory,
-              document complexity, and unsupported file features can still affect
-              whether a particular file completes successfully.
+              The table below documents Kukureku&apos;s original ten-tool launch
+              set. It is a historical processing summary, not a complete list of
+              every tool now implemented. Browser memory, document complexity,
+              and unsupported file features can still affect whether a particular
+              file completes successfully.
             </p>
 
             <div className="mt-6 overflow-x-auto">

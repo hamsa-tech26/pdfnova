@@ -34,13 +34,13 @@ const structuredData = {
       name: "Kukureku PDF Verification Report",
       url: `${SITE_URL}/trust/verification`,
       description:
-        "Controlled launch verification results for Kukureku PDF's ten current document tools.",
+        "Controlled launch verification results for ten original Kukureku PDF launch workflows.",
       isPartOf: {
         "@type": "WebSite",
         name: PRODUCT_NAME,
         url: SITE_URL,
       },
-      dateModified: "2026-10-04",
+      dateModified: "2026-10-07",
     },
     {
       "@type": "BreadcrumbList",
@@ -171,14 +171,16 @@ export default function VerificationPage() {
             </p>
 
             <h1 className="mt-4 max-w-4xl text-4xl font-extrabold tracking-tight sm:text-5xl">
-              Controlled launch tests for all 10 Kukureku PDF tools
+              Controlled launch tests for Kukureku's original 10-tool set
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-8 text-blue-100">
-              Before public launch, each current tool was exercised with a
-              controlled browser test designed to make page order, text
-              preservation, rotation, watermarking, encryption, or output size
-              easy to verify. These results document what was actually tested.
+              Before Kukureku expanded beyond its original launch set, each of
+              those ten workflows was exercised with a controlled browser test
+              designed to make page order, text preservation, rotation,
+              watermarking, encryption, or output size easy to verify. These
+              results document that historical test scope, not every tool that
+              has since been implemented.
             </p>
           </header>
 
