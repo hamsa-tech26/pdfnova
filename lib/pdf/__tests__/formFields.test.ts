@@ -10,9 +10,24 @@ import {
 import {
   applyPdfFormValues,
   describePdfFormFields,
+  getPdfFormProcessingError,
 } from "../formFields";
 
 describe("formFields", () => {
+  it("turns WinAnsi encoding failures into a clear compatibility message", () => {
+    const message =
+      getPdfFormProcessingError(
+        new Error(
+          'WinAnsi cannot encode "Ω" (0x03a9)',
+        ),
+        "fallback",
+      );
+
+    expect(message).toContain(
+      "WinAnsi/Latin",
+    );
+  });
+
   it("describes and fills common AcroForm fields", async () => {
     const pdf =
       await PDFDocument.create();
