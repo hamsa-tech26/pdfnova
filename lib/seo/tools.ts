@@ -60,6 +60,11 @@ export const TOOL_SEO = {
   "delete-pdf-pages": { name: "Delete PDF Pages", title: "Delete PDF Pages Online - Private, No Upload", description: "Remove unwanted pages from a PDF and download a new copy privately in your browser with no upload." },
   "pdf-to-text": { name: "PDF to Text", title: "PDF to Text Online - Private Text Extraction", description: "Extract selectable PDF text into a TXT file directly in your browser. No upload or account required." },
   "flatten-pdf": { name: "Flatten PDF", title: "Flatten PDF Forms Online - Private, No Upload", description: "Flatten supported interactive PDF form fields into page content privately in your browser without uploading the PDF." },
+  "ocr-pdf": { name: "OCR PDF", title: "OCR PDF Online - Private Scanned PDF to Text", description: "Recognize English text in scanned PDF pages locally in your browser and download the result as TXT without uploading the document." },
+  "reorder-pdf-pages": { name: "Reorder PDF Pages", title: "Reorder PDF Pages Online - Private, No Upload", description: "Rearrange PDF pages into a new order directly in your browser without uploading your document." },
+  "reverse-pdf": { name: "Reverse PDF Pages", title: "Reverse PDF Pages Online - Private, No Upload", description: "Reverse the complete page order of a PDF locally in your browser and download a new copy." },
+  "remove-pdf-metadata": { name: "Remove PDF Metadata", title: "Remove PDF Metadata Online - Private", description: "Clear common PDF document metadata locally in your browser without uploading your file." },
+  "add-page-numbers": { name: "Add Page Numbers", title: "Add Page Numbers to PDF Online - Private", description: "Add simple page numbers to every PDF page locally in your browser without uploading the document." },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
