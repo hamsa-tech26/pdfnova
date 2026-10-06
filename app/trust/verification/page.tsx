@@ -171,7 +171,7 @@ export default function VerificationPage() {
             </p>
 
             <h1 className="mt-4 max-w-4xl text-4xl font-extrabold tracking-tight sm:text-5xl">
-              Controlled launch tests for Kukureku's original 10-tool set
+              Controlled launch tests for Kukureku&apos;s original 10-tool set
             </h1>
 
             <p className="mt-6 max-w-3xl text-lg leading-8 text-blue-100">
