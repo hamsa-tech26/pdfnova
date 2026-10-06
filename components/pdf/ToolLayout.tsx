@@ -109,13 +109,13 @@ export default function ToolLayout({
       <div className={`mx-auto ${maxWidthClassName}`}>
         <Link
           href="/dashboard"
-          className="inline-flex items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-gray-600 transition hover:bg-white hover:text-blue-700 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white"
+          className="inline-flex min-h-11 items-center gap-2 rounded-xl px-3 py-2 text-sm font-semibold text-gray-600 outline-none transition hover:bg-white hover:text-blue-700 focus-visible:ring-4 focus-visible:ring-blue-100 dark:text-slate-400 dark:hover:bg-slate-900 dark:hover:text-white dark:focus-visible:ring-blue-950"
         >
           <ArrowLeft size={17} />
           Back to Dashboard
         </Link>
 
-        <section className="mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-7 text-white shadow-2xl md:p-10">
+        <section className="mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-5 text-white shadow-2xl sm:p-7 md:p-10">
           <div className="grid items-center gap-8 xl:grid-cols-[1.3fr_0.7fr]">
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
@@ -123,11 +123,11 @@ export default function ToolLayout({
                 {label}
               </div>
 
-              <h1 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight md:text-5xl">
+              <h1 className="mt-6 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
                 {title}
               </h1>
 
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">
+              <p className="mt-5 max-w-2xl text-base leading-7 text-blue-100 sm:text-lg sm:leading-8">
                 {description}
               </p>
             </div>
@@ -272,7 +272,7 @@ export default function ToolLayout({
                   key={faq.question}
                   className="group rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-950"
                 >
-                  <summary className="cursor-pointer list-none font-bold text-gray-950 dark:text-white">
+                  <summary className="cursor-pointer list-none rounded-lg font-bold text-gray-950 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:text-white dark:focus-visible:ring-blue-950">
                     <span className="flex items-center justify-between gap-4">
                       {faq.question}
 
@@ -310,7 +310,7 @@ export default function ToolLayout({
 
               <Link
                 href={guide.href}
-                className="inline-flex shrink-0 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700"
+                className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 dark:focus-visible:ring-blue-950"
               >
                 Read guide
               </Link>
