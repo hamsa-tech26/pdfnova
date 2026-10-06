@@ -191,7 +191,7 @@ test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async 
 
   const unlockedResult = await clickAndDownload(
     page,
-    "Retry Unlock",
+    "Unlock and Download PDF",
   );
 
   expect(unlockedResult.fileName).toBe(
