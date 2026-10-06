@@ -167,7 +167,4 @@ export async function addFillableFields(
     existingNames.add(name);
   }
 
-  form.updateFieldAppearances(
-    font,
-  );
 }
