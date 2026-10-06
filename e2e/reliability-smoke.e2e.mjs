@@ -179,9 +179,12 @@ test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async 
     .click();
 
   await expect(
-    page.getByText(
-      /The PDF could not be unlocked\. Check the password/,
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        /The PDF could not be unlocked\. Check the password/,
+      )
+      .first(),
   ).toBeVisible();
 
   await page.locator("#pdf-password").fill("Kukureku-123!");
@@ -283,8 +286,15 @@ test("Redact PDF exports an image-only page and resets cleanly for a second file
   const firstPdf = await expectOpenPdf(firstResult.bytes, 1);
   const resources = firstPdf.getPage(0).node.Resources();
 
-  expect(resources.get(PDFName.of("Font"))).toBeUndefined();
-  expect(resources.get(PDFName.of("XObject"))).toBeDefined();
+  const fontResources = resources.get(PDFName.of("Font"));
+  const xObjects = resources.get(PDFName.of("XObject"));
+
+  if (fontResources) {
+    expect(fontResources.keys()).toHaveLength(0);
+  }
+
+  expect(xObjects).toBeDefined();
+  expect(xObjects.keys().length).toBeGreaterThan(0);
   expect(firstPdf.getForm().getFields()).toHaveLength(0);
 
   await page
@@ -393,23 +403,20 @@ test("Create Fillable PDF places a field on a rotated CropBox page and preserves
     .getByLabel("Unique field name")
     .fill("browser_created");
 
-  const preview = previewImage.locator("..");
-  const box = await preview.boundingBox();
+  const areaControls = page.getByRole("group", {
+    name: "New form field area on page 1",
+  });
 
-  if (!box) {
-    throw new Error("Fillable PDF preview did not expose a bounding box.");
-  }
+  await areaControls.getByLabel("Left %").fill("15");
+  await areaControls.getByLabel("Top %").fill("20");
+  await areaControls.getByLabel("Width %").fill("40");
+  await areaControls.getByLabel("Height %").fill("10");
 
-  await page.mouse.move(
-    box.x + box.width * 0.15,
-    box.y + box.height * 0.2,
-  );
-  await page.mouse.down();
-  await page.mouse.move(
-    box.x + box.width * 0.55,
-    box.y + box.height * 0.3,
-  );
-  await page.mouse.up();
+  await page
+    .getByRole("button", {
+      name: "Use this field area",
+    })
+    .click();
 
   await expect(
     page.getByRole("button", {
