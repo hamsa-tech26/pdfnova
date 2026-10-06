@@ -113,22 +113,22 @@ export default function MergePdfPage() {
     }
 
     try {
-      const selectedFileInfo = await Promise.all(
-        selectedFiles.map(async (file) => {
-          const fileBytes = await file.arrayBuffer();
-          const pdf = await loadPdfWithoutMetadataMutation(fileBytes);
+      const selectedFileInfo: PdfFileInfo[] = [];
 
-          assertPageCopySafe(
-            pdf,
-            "Merge PDF",
-          );
+      for (const file of selectedFiles) {
+        const fileBytes = await file.arrayBuffer();
+        const pdf = await loadPdfWithoutMetadataMutation(fileBytes);
 
-          return {
-            file,
-            pageCount: pdf.getPageCount(),
-          };
-        }),
-      );
+        assertPageCopySafe(
+          pdf,
+          "Merge PDF",
+        );
+
+        selectedFileInfo.push({
+          file,
+          pageCount: pdf.getPageCount(),
+        });
+      }
 
       setFiles((currentFiles) => [
         ...currentFiles,
