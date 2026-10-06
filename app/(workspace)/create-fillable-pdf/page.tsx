@@ -371,7 +371,7 @@ export default function CreateFillablePdfPage() {
                 <div className="flex items-center gap-2"><FormInput size={21} className="text-blue-600" /><h2 className="text-lg font-bold dark:text-white">New field</h2></div>
 
                 <label className="mt-5 block text-sm font-semibold dark:text-white">Field type
-                  <select value={fieldType} onChange={(event) => { setFieldType(event.target.value as FieldType); resetResult(); }} className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950">
+                  <select value={fieldType} onChange={(event) => { setFieldType(event.target.value as FieldType); resetResult(); }} className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950">
                     <option value="text">Text field</option>
                     <option value="checkbox">Checkbox</option>
                     <option value="dropdown">Dropdown</option>
@@ -379,12 +379,12 @@ export default function CreateFillablePdfPage() {
                 </label>
 
                 <label className="mt-4 block text-sm font-semibold dark:text-white">Unique field name
-                  <input value={fieldName} onChange={(event) => { setFieldName(event.target.value); resetResult(); }} className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
+                  <input value={fieldName} onChange={(event) => { setFieldName(event.target.value); resetResult(); }} className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950" />
                 </label>
 
                 {fieldType === "dropdown" && (
                   <label className="mt-4 block text-sm font-semibold dark:text-white">Dropdown options
-                    <textarea rows={4} value={dropdownOptions} onChange={(event) => { setDropdownOptions(event.target.value); resetResult(); }} className="mt-2 w-full rounded-xl border border-gray-300 px-4 py-3 dark:border-slate-700 dark:bg-slate-950" />
+                    <textarea rows={4} value={dropdownOptions} onChange={(event) => { setDropdownOptions(event.target.value); resetResult(); }} className="mt-2 min-h-11 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950" />
                     <span className="mt-1 block text-xs text-gray-500">Separate options with commas, semicolons, or new lines.</span>
                   </label>
                 )}
@@ -411,7 +411,7 @@ export default function CreateFillablePdfPage() {
                     <h2 className="text-lg font-bold dark:text-white">Draw field area</h2>
                     <p className="text-sm text-gray-500 dark:text-slate-400">Drag on the page preview or use the percentage controls below, then click Add field to page.</p>
                   </div>
-                  <select value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="rounded-xl border border-gray-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
+                  <select aria-label="PDF page" value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="min-h-11 w-full rounded-xl border border-gray-300 bg-white px-3 py-2 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950 sm:w-auto">
                     {Array.from({ length: pageCount }, (_, index) => <option key={index + 1} value={index + 1}>Page {index + 1}</option>)}
                   </select>
                 </div>
