@@ -83,6 +83,12 @@ export const TOOL_SEO = {
     description:
       "Add custom headers, footers, and automatic page numbers to PDF files directly in your browser. No upload or account required.",
   },
+  "sign-pdf": {
+    name: "Sign PDF",
+    title: "Sign PDF Online - Add a Signature Privately",
+    description:
+      "Draw, type, or upload a visual signature, place it on a PDF page preview, and download the signed copy without uploading your document.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
