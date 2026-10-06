@@ -53,6 +53,14 @@ export function describePdfFormFields(
   hasXfa: boolean;
 } {
   const hasXfa = hasPdfXfa(pdf);
+
+  if (hasXfa) {
+    return {
+      fields: [],
+      hasXfa: true,
+    };
+  }
+
   const form = pdf.getForm();
 
   const fields =
