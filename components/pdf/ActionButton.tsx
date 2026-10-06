@@ -46,7 +46,8 @@ export default function ActionButton({
         type="button"
         onClick={onClick}
         disabled={isDisabled}
-        className={`group relative w-full overflow-hidden rounded-2xl px-6 py-4 text-left text-white shadow-lg outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-blue-200 ${
+        aria-busy={isLoading}
+        className={`group relative min-h-16 w-full overflow-hidden rounded-2xl px-5 py-4 text-left text-white shadow-lg outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-blue-200 sm:px-6 ${
           success
             ? "bg-emerald-600 hover:bg-emerald-700"
             : "bg-gradient-to-r from-slate-950 via-blue-900 to-blue-600 hover:-translate-y-0.5 hover:shadow-xl"
@@ -110,7 +111,14 @@ export default function ActionButton({
               )}
             </div>
 
-            <div className="mt-2 h-2 overflow-hidden rounded-full bg-white/15">
+            <div
+              role="progressbar"
+              aria-label="Processing progress"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={hasProgress ? Math.round(safeProgress) : undefined}
+              className="mt-2 h-2 overflow-hidden rounded-full bg-white/15"
+            >
               <div
                 className={`h-full rounded-full bg-white transition-all duration-300 ${
                   hasProgress
