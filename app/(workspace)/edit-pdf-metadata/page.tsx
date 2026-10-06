@@ -77,7 +77,7 @@ export default function EditPdfMetadataPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
       setFile(selectedFile);
       setMetadata(readPdfMetadata(pdf));
       resetResult();
@@ -106,7 +106,7 @@ export default function EditPdfMetadataPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
       applyPdfMetadata(pdf, metadata);
       const bytes = await pdf.save();
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
