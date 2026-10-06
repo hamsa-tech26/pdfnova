@@ -9,7 +9,6 @@ import {
 import {
   ChangeEvent,
   DragEvent,
-  KeyboardEvent,
   RefObject,
   useState,
 } from "react";
@@ -126,18 +125,6 @@ export default function FileUploader({
     );
   }
 
-  function handleKeyDown(
-    event: KeyboardEvent<HTMLDivElement>,
-  ) {
-    if (
-      event.key === "Enter" ||
-      event.key === " "
-    ) {
-      event.preventDefault();
-      openFilePicker();
-    }
-  }
-
   return (
     <>
       <input
@@ -151,22 +138,17 @@ export default function FileUploader({
       />
 
       <div
-        role="button"
-        tabIndex={disabled ? -1 : 0}
-        aria-disabled={disabled}
         aria-label={title}
-        onClick={openFilePicker}
-        onKeyDown={handleKeyDown}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         className={`group relative overflow-hidden rounded-3xl border-2 border-dashed px-6 py-14 text-center outline-none transition-all duration-300 sm:px-10 sm:py-16 ${
           disabled
-            ? "cursor-not-allowed border-gray-200 bg-gray-50 opacity-60"
+            ? "border-gray-200 bg-gray-50 opacity-60 dark:border-slate-800 dark:bg-slate-900"
             : isDragging
-              ? "scale-[1.01] cursor-copy border-blue-600 bg-blue-100 shadow-xl shadow-blue-100"
-              : "cursor-pointer border-blue-300 bg-blue-50 hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-100/70 hover:shadow-lg focus-visible:border-blue-600 focus-visible:ring-4 focus-visible:ring-blue-100"
+              ? "scale-[1.01] border-blue-600 bg-blue-100 shadow-xl shadow-blue-100 dark:bg-blue-950/50 dark:shadow-none"
+              : "border-blue-300 bg-blue-50 hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-100/70 hover:shadow-lg dark:border-blue-900 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
         }`}
       >
         <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-cyan-100/30 opacity-0 transition group-hover:opacity-100" />
@@ -188,7 +170,7 @@ export default function FileUploader({
             )}
           </div>
 
-          <h2 className="mt-6 text-2xl font-bold text-gray-900">
+          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
             {isDragging
               ? multiple
                 ? "Drop your files here"
@@ -196,16 +178,16 @@ export default function FileUploader({
               : title}
           </h2>
 
-          <p className="mx-auto mt-3 max-w-xl leading-7 text-gray-600">
+          <p className="mx-auto mt-3 max-w-xl leading-7 text-gray-600 dark:text-slate-400">
             {isDragging
               ? "Release now to add the selected file."
               : description}
           </p>
 
-          <div className="mt-5 flex items-center justify-center gap-3 text-sm font-medium text-gray-400">
-            <span className="h-px w-12 bg-gray-300" />
+          <div className="mt-5 flex items-center justify-center gap-3 text-sm font-medium text-gray-400 dark:text-slate-500">
+            <span className="h-px w-12 bg-gray-300 dark:bg-slate-700" />
             or
-            <span className="h-px w-12 bg-gray-300" />
+            <span className="h-px w-12 bg-gray-300 dark:bg-slate-700" />
           </div>
 
           <button
@@ -215,18 +197,18 @@ export default function FileUploader({
               openFilePicker();
             }}
             disabled={disabled}
-            className="mt-5 inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-200 transition hover:-translate-y-0.5 hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-60"
+            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-200 outline-none transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-none dark:focus-visible:ring-blue-900"
           >
             <FilePlus2 size={20} />
             {buttonText}
           </button>
 
-          <p className="mt-5 text-sm leading-6 text-gray-500">
+          <p className="mt-5 text-sm leading-6 text-gray-500 dark:text-slate-400">
             {helperText}
           </p>
 
-          <p className="mt-2 text-xs text-gray-400">
-            You can also press Enter or Space to browse files.
+          <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">
+            You can drag files here or use the browse button above.
           </p>
         </div>
       </div>
