@@ -33,7 +33,7 @@ describe("metadataEditor", () => {
     expect(after.keywords).toContain("report");
 
     const saved = await pdf.save();
-    const reloaded = await PDFDocument.load(saved);
+    const reloaded = await PDFDocument.load(saved, { updateMetadata: false });
     const persisted = readPdfMetadata(reloaded);
 
     expect(persisted.title).toBe("New title");
@@ -60,7 +60,7 @@ describe("metadataEditor", () => {
     });
 
     const saved = await pdf.save();
-    const reloaded = await PDFDocument.load(saved);
+    const reloaded = await PDFDocument.load(saved, { updateMetadata: false });
     const metadata = readPdfMetadata(reloaded);
 
     expect(metadata.title).toBe("");
