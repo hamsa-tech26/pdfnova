@@ -1202,7 +1202,7 @@ export default function SignPdfPage() {
                         disabled={
                           isProcessing
                         }
-                        className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-4 py-3 font-semibold transition ${
+                        className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-4 py-3 font-semibold outline-none transition focus-visible:ring-4 focus-visible:ring-blue-100 dark:focus-visible:ring-blue-950 ${
                           signatureMode ===
                           mode
                             ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300"
@@ -1302,7 +1302,7 @@ export default function SignPdfPage() {
                         disabled={
                           isProcessing
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-blue-950"
                       >
                         <ImagePlus
                           size={
@@ -1522,7 +1522,7 @@ export default function SignPdfPage() {
                         isProcessing ||
                         !signatureDataUrl
                       }
-                      className="mt-3 w-full"
+                      className="mt-3 w-full accent-blue-600"
                     />
                   </label>
 
