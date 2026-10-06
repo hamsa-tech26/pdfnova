@@ -1,0 +1,1 @@
+import PageSelectionTool from "@/components/pdf/PageSelectionTool";export default function Page(){return <PageSelectionTool mode="delete" label="Delete PDF Pages" title="Delete pages from PDF privately" description="Remove unwanted PDF pages or page ranges and download a clean copy without uploading your document."/>;}
