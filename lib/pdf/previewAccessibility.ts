@@ -59,22 +59,34 @@ export function normalizedRectFromPercent({
   width: number;
   height: number;
 }): NormalizedRect {
+  const minSize =
+    0.5 / 100;
+
   const normalizedX =
-    clamp(x / 100, 0, 1);
+    clamp(
+      x / 100,
+      0,
+      1 - minSize,
+    );
+
   const normalizedY =
-    clamp(y / 100, 0, 1);
+    clamp(
+      y / 100,
+      0,
+      1 - minSize,
+    );
 
   const normalizedWidth =
     clamp(
       width / 100,
-      0.5 / 100,
+      minSize,
       1 - normalizedX,
     );
 
   const normalizedHeight =
     clamp(
       height / 100,
-      0.5 / 100,
+      minSize,
       1 - normalizedY,
     );
 
