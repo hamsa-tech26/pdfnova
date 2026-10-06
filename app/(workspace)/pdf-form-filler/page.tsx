@@ -15,6 +15,7 @@ import {
   type PdfFormFieldValue,
   type PdfFormValues,
 } from "@/lib/pdf/formFields";
+import { savePdfWithoutFormAppearanceMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { FileInput, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -125,7 +126,7 @@ export default function PdfFormFillerPage() {
     try {
       const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
       applyPdfFormValues(pdf, values, flatten);
-      const bytes = await pdf.save({ updateFieldAppearances: true });
+      const bytes = await savePdfWithoutFormAppearanceMutation(pdf);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + (flatten ? "-filled-flattened.pdf" : "-filled.pdf");
       downloadFile(bytes, generatedFileName, "application/pdf");
