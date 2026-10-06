@@ -35,6 +35,10 @@ const faqs = [
   { question: "Is form data uploaded?", answer: "No. Your PDF and entered values stay inside your browser." },
 ];
 
+function fieldControlId(name: string) {
+  return "pdf-form-" + encodeURIComponent(name);
+}
+
 function initialValues(fields: PdfFormFieldDescriptor[]): PdfFormValues {
   return Object.fromEntries(fields.map((field) => [field.name, field.value]));
 }
@@ -192,41 +196,76 @@ export default function PdfFormFillerPage() {
                 {supportedFields.map((field) => (
                   <div key={field.name} className="rounded-2xl border border-gray-200 p-4 dark:border-slate-800">
                     <div className="mb-3 flex items-center justify-between gap-3">
-                      <label htmlFor={"field-" + field.name} className="break-all text-sm font-bold text-gray-950 dark:text-white">{field.name}</label>
+                      <label htmlFor={fieldControlId(field.name)} className="break-all text-sm font-bold text-gray-950 dark:text-white">{field.name}</label>
                       <span className="rounded-full bg-gray-100 px-2.5 py-1 text-xs font-semibold uppercase text-gray-500 dark:bg-slate-800">{field.kind}</span>
                     </div>
 
                     {field.kind === "text" && (field.multiline ? (
-                      <textarea id={"field-" + field.name} rows={4} value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                      <textarea id={fieldControlId(field.name)} rows={4} value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950" />
                     ) : (
-                      <input id={"field-" + field.name} type="text" value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+                      <input id={fieldControlId(field.name)} type="text" value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950" />
                     ))}
 
                     {field.kind === "checkbox" && (
                       <label className="inline-flex items-center gap-3 text-sm font-semibold dark:text-slate-200">
-                        <input id={"field-" + field.name} type="checkbox" checked={values[field.name] === true} onChange={(event) => updateValue(field.name, event.target.checked)} className="h-5 w-5 rounded" />
+                        <input id={fieldControlId(field.name)} type="checkbox" checked={values[field.name] === true} onChange={(event) => updateValue(field.name, event.target.checked)} className="h-5 w-5 rounded" />
                         Checked
                       </label>
                     )}
 
                     {(field.kind === "dropdown" || field.kind === "radio") && (
-                      <select id={"field-" + field.name} value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
+                      <select id={fieldControlId(field.name)} value={typeof values[field.name] === "string" ? values[field.name] as string : ""} onChange={(event) => updateValue(field.name, event.target.value)} className="w-full rounded-xl border border-gray-300 bg-white px-4 py-3 text-gray-950 outline-none focus:border-blue-500 focus:ring-4 focus:ring-blue-100 dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:focus:ring-blue-950">
                         <option value="">No selection</option>
                         {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
                       </select>
                     )}
 
                     {field.kind === "option-list" && (
-                      <select id={"field-" + field.name} multiple value={Array.isArray(values[field.name]) ? values[field.name] as string[] : []} onChange={(event) => updateValue(field.name, Array.from(event.target.selectedOptions, (option) => option.value))} className="min-h-32 w-full rounded-xl border border-gray-300 bg-white px-4 py-3 dark:border-slate-700 dark:bg-slate-950 dark:text-white">
-                        {field.options?.map((option) => <option key={option} value={option}>{option}</option>)}
-                      </select>
+                      <fieldset
+                        id={fieldControlId(field.name)}
+                        className="space-y-2"
+                      >
+                        <legend className="sr-only">
+                          {field.name} options
+                        </legend>
+
+                        {field.options?.map((option) => {
+                          const selected = Array.isArray(values[field.name])
+                            ? (values[field.name] as string[])
+                            : [];
+
+                          return (
+                            <label
+                              key={option}
+                              className="flex min-h-11 items-center gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2 text-sm font-medium text-gray-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+                            >
+                              <input
+                                type="checkbox"
+                                checked={selected.includes(option)}
+                                onChange={(event) => {
+                                  const next = event.target.checked
+                                    ? [...selected, option]
+                                    : selected.filter((value) => value !== option);
+
+                                  updateValue(field.name, next);
+                                }}
+                                className="h-5 w-5 rounded border-gray-300 accent-blue-600"
+                              />
+
+                              <span className="break-words">
+                                {option}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </fieldset>
                     )}
                   </div>
                 ))}
               </div>
 
               <label className="mt-5 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                <input type="checkbox" checked={flatten} onChange={(event) => { setFlatten(event.target.checked); resetResult(); }} disabled={isProcessing || unsupportedCount > 0} className="mt-1 h-5 w-5 rounded disabled:cursor-not-allowed disabled:opacity-50" />
+                <input type="checkbox" checked={flatten} onChange={(event) => { setFlatten(event.target.checked); resetResult(); }} disabled={isProcessing || unsupportedCount > 0} className="mt-1 h-5 w-5 rounded border-gray-300 accent-blue-600 disabled:cursor-not-allowed disabled:opacity-50" />
                 <span>
                   <span className="block font-bold dark:text-white">Flatten completed form</span>
                   <span className="mt-1 block text-sm text-gray-500 dark:text-slate-400">Remove interactive fields after their current appearance is written into the downloaded PDF. Disabled when unsupported field types are present.</span>
