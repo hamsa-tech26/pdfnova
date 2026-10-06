@@ -80,6 +80,7 @@ export async function createRasterRedactedPdf(
       quality: 0.92,
       pageNumbers: [index + 1],
       format: "jpeg",
+      maxDimension: 3200,
     });
 
     const renderedPage = rendered[0];
