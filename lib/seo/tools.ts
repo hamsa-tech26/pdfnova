@@ -77,6 +77,12 @@ export const TOOL_SEO = {
     description:
       "Resize PDF pages to A4, Letter, Legal, or A5 in your browser. Fit content proportionally, preserve page orientation, and keep your document on your device.",
   },
+  "header-footer-pdf": {
+    name: "Header & Footer PDF",
+    title: "Add Header, Footer & Page Numbers to PDF Online",
+    description:
+      "Add custom headers, footers, and automatic page numbers to PDF files directly in your browser. No upload or account required.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
