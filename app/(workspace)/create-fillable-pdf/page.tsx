@@ -290,7 +290,10 @@ export default function CreateFillablePdfPage() {
         fields,
       );
 
-      const bytes = await pdf.save({ updateFieldAppearances: true });
+      const bytes = await pdf.save({
+        updateFieldAppearances:
+          false,
+      });
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + "-fillable.pdf";
       downloadFile(bytes, generatedFileName, "application/pdf");
