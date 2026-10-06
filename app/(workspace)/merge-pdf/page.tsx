@@ -9,6 +9,11 @@ import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  assertPageCopySafe,
+  validatePdfBatch,
+} from "@/lib/pdf/pdfInputSafety";
+import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -94,31 +99,16 @@ export default function MergePdfPage() {
   ) {
     const selectedFiles = Array.from(
       event.target.files ?? [],
-    ).filter((file) => {
-      return (
-        file.type === "application/pdf" ||
-        file.name.toLowerCase().endsWith(".pdf")
-      );
-    });
-
-    if (selectedFiles.length === 0) {
-      const message = "Please select valid PDF files.";
-
-      setErrorMessage(message);
-      toast.error(message);
-      event.target.value = "";
-      return;
-    }
-
-    const oversizedFile = selectedFiles.find(
-      (file) => file.size > MAX_FILE_SIZE,
     );
 
-    if (oversizedFile) {
-      const message = `${oversizedFile.name} is larger than 25 MB.`;
+    const batchError = validatePdfBatch(
+      files.map((item) => item.file),
+      selectedFiles,
+    );
 
-      setErrorMessage(message);
-      toast.error(message);
+    if (batchError) {
+      setErrorMessage(batchError);
+      toast.error(batchError);
       event.target.value = "";
       return;
     }
@@ -127,7 +117,12 @@ export default function MergePdfPage() {
       const selectedFileInfo = await Promise.all(
         selectedFiles.map(async (file) => {
           const fileBytes = await file.arrayBuffer();
-          const pdf = await PDFDocument.load(fileBytes);
+          const pdf = await loadPdfWithoutMetadataMutation(fileBytes);
+
+          assertPageCopySafe(
+            pdf,
+            "Merge PDF",
+          );
 
           return {
             file,
@@ -270,7 +265,14 @@ export default function MergePdfPage() {
       for (let index = 0; index < files.length; index += 1) {
         const fileInfo = files[index];
         const fileBytes = await fileInfo.file.arrayBuffer();
-        const sourcePdf = await PDFDocument.load(fileBytes);
+        const sourcePdf = await loadPdfWithoutMetadataMutation(
+          fileBytes,
+        );
+
+        assertPageCopySafe(
+          sourcePdf,
+          "Merge PDF",
+        );
 
         const copiedPages = await mergedPdf.copyPages(
           sourcePdf,
@@ -334,7 +336,7 @@ export default function MergePdfPage() {
     <ToolLayout
       label="Merge PDF"
       title="Merge PDF files online, privately"
-      description="Add two or more PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file."
+      description="Add two or more non-form PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file and a 100 MB combined browser-processing limit."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
       howToTitle="How to merge PDF files online"
@@ -408,7 +410,8 @@ export default function MergePdfPage() {
               reasons={[
                 "One of the PDF files may be damaged.",
                 "A selected PDF may be password-protected.",
-                "Your browser may not have enough memory for the selected files.",
+                "Interactive PDF forms must be flattened before merging.",
+                "The selected files may exceed the browser-processing limits.",
               ]}
               onRetry={
                 files.length >= 2 ? mergePdfFiles : undefined
