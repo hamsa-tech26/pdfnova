@@ -24,6 +24,7 @@ const publicRoutes = [
   "/crop-pdf",
   "/resize-pdf-pages",
   "/header-footer-pdf",
+  "/sign-pdf",
   "/watermark-pdf",
   "/protect-pdf",
   "/unlock-pdf",
