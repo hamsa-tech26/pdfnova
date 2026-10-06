@@ -22,7 +22,7 @@ import {
   useRef,
   useState,
 } from "react";
-import { degrees, PDFDocument } from "pdf-lib";
+import { degrees } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
