@@ -32,7 +32,6 @@ import {
 } from "react";
 import {
   degrees,
-  PDFDocument,
   rgb,
   StandardFonts,
 } from "pdf-lib";
@@ -338,7 +337,7 @@ export default function WatermarkPdfPage() {
 
     try {
       const sourceBytes = await file.arrayBuffer();
-      const pdf = await PDFDocument.load(sourceBytes);
+      const pdf = loadPdfWithoutMetadataMutation(sourceBytes);
 
       await new Promise((resolve) =>
         setTimeout(resolve, 180),
