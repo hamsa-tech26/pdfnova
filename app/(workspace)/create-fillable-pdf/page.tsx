@@ -4,6 +4,7 @@ import ActionButton from "@/components/pdf/ActionButton";
 import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import RectPercentControls from "@/components/pdf/RectPercentControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
@@ -34,7 +35,7 @@ type FieldType = FillableFieldType;
 type FieldDefinition = FillableFieldDefinition;
 
 const tips = [
-  { title: "Draw fields visually", description: "Choose a field type, drag its area on the page preview, then add it to the form." },
+  { title: "Place fields visually or precisely", description: "Drag a field area on the preview or enter percentage coordinates for keyboard-friendly placement." },
   { title: "Use unique field names", description: "Every interactive field needs a unique name so PDF readers can store its value correctly." },
   { title: "Create common AcroForm fields", description: "Add text, checkbox, and dropdown fields. Text appearances currently use the standard PDF WinAnsi/Latin font set." },
 ];
@@ -343,7 +344,7 @@ export default function CreateFillablePdfPage() {
       howToTitle="How to create a fillable PDF"
       howToSteps={[
         { title: "Choose a PDF", description: "Select the document that will become your form." },
-        { title: "Draw form fields", description: "Choose a field type, drag its area on the preview, name it, and add it." },
+        { title: "Draw form fields", description: "Choose a field type, drag its area or enter percentage coordinates, name it, and add it." },
         { title: "Create the fillable copy", description: "Kukureku adds the interactive AcroForm fields and downloads the new PDF." },
       ]}
       maxWidthClassName="max-w-7xl"
@@ -388,7 +389,7 @@ export default function CreateFillablePdfPage() {
                   </label>
                 )}
 
-                <button type="button" onClick={addField} disabled={!pendingRect} className="mt-5 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white disabled:opacity-50">Add field to page</button>
+                <button type="button" onClick={addField} disabled={!pendingRect} className="mt-5 min-h-11 w-full rounded-xl bg-blue-600 px-4 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-blue-950">Add field to page</button>
 
                 <div className="mt-6 border-t border-gray-200 pt-5 dark:border-slate-800">
                   <h3 className="font-bold dark:text-white">Added fields</h3>
@@ -397,7 +398,7 @@ export default function CreateFillablePdfPage() {
                     {fields.map((field) => (
                       <div key={field.id} className="flex items-center justify-between gap-2 rounded-xl border border-gray-200 p-3 text-sm dark:border-slate-800">
                         <div className="min-w-0"><p className="truncate font-semibold">{field.name}</p><p className="text-xs text-gray-500">{field.type} · page {field.page}</p></div>
-                        <button type="button" onClick={() => removeField(field.id)} aria-label={"Remove " + field.name} className="rounded-lg p-2 text-red-600 hover:bg-red-50"><Trash2 size={16} /></button>
+                        <button type="button" onClick={() => removeField(field.id)} aria-label={"Remove " + field.name} className="inline-flex min-h-11 min-w-11 items-center justify-center rounded-lg p-2 text-red-600 outline-none transition hover:bg-red-50 focus-visible:ring-4 focus-visible:ring-red-100 dark:text-red-300 dark:hover:bg-red-950/30 dark:focus-visible:ring-red-950"><Trash2 size={16} /></button>
                       </div>
                     ))}
                   </div>
@@ -408,7 +409,7 @@ export default function CreateFillablePdfPage() {
                 <div className="flex flex-wrap items-end justify-between gap-3">
                   <div>
                     <h2 className="text-lg font-bold dark:text-white">Draw field area</h2>
-                    <p className="text-sm text-gray-500">Drag on the page preview, then click Add field to page.</p>
+                    <p className="text-sm text-gray-500 dark:text-slate-400">Drag on the page preview or use the percentage controls below, then click Add field to page.</p>
                   </div>
                   <select value={selectedPage} onChange={(event) => choosePage(Number(event.target.value))} className="rounded-xl border border-gray-300 px-3 py-2 dark:border-slate-700 dark:bg-slate-950">
                     {Array.from({ length: pageCount }, (_, index) => <option key={index + 1} value={index + 1}>Page {index + 1}</option>)}
@@ -432,6 +433,32 @@ export default function CreateFillablePdfPage() {
                     {pendingRect && overlay(pendingRect, "pending", true)}
                   </div>
                 )}
+
+                <div className="mt-5">
+                  <RectPercentControls
+                    label={"New form field area on page " + String(selectedPage)}
+                    value={
+                      pendingRect ?? {
+                        x: 0.1,
+                        y: 0.15,
+                        width: 0.4,
+                        height: 0.08,
+                      }
+                    }
+                    onChange={(rect) => {
+                      setPendingRect(rect);
+                      resetResult();
+                    }}
+                    onCommit={(rect) => {
+                      setPendingRect(
+                        normalizeVisibleRect(rect),
+                      );
+                      resetResult();
+                    }}
+                    commitLabel="Use this field area"
+                    disabled={isProcessing || isRenderingPreview || !preview}
+                  />
+                </div>
 
                 <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                   <TriangleAlert size={19} className="shrink-0" />
