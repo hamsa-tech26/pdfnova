@@ -458,10 +458,8 @@ export default function HeaderFooterPdfPage() {
               const placement =
                 calculateHeaderFooterPlacement(
                   {
-                    pageWidth:
-                      page.getWidth(),
-                    pageHeight:
-                      page.getHeight(),
+                    box:
+                      page.getCropBox(),
                     rotationAngle:
                       page.getRotation()
                         .angle,
