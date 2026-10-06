@@ -35,13 +35,24 @@ export type PdfFormValues = Record<
   PdfFormFieldValue
 >;
 
+export function hasPdfXfa(
+  pdf: PDFDocument,
+) {
+  return (
+    pdf.catalog
+      .AcroForm()
+      ?.has(PDFName.of("XFA")) ??
+    false
+  );
+}
+
 export function describePdfFormFields(
   pdf: PDFDocument,
 ): {
   fields: PdfFormFieldDescriptor[];
   hasXfa: boolean;
 } {
-  const hasXfa = pdf.catalog.AcroForm()?.has(PDFName.of("XFA")) ?? false;
+  const hasXfa = hasPdfXfa(pdf);
   const form = pdf.getForm();
 
   const fields =
