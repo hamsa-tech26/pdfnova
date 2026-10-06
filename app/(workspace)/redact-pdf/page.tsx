@@ -171,18 +171,57 @@ export default function RedactPdfPage() {
   }
 
   function endRedaction(event: PointerEvent<HTMLDivElement>) {
-    if (!dragStartRef.current || !draft) return;
-    dragStartRef.current = null;
-    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
-      event.currentTarget.releasePointerCapture(event.pointerId);
+    const start = dragStartRef.current;
+
+    if (!start || !previewRef.current) {
+      return;
     }
-    const normalized = normalizeRedactionRect(draft);
+
+    const point = pointRatio(
+      event,
+      previewRef.current,
+    );
+
+    dragStartRef.current = null;
+
+    if (
+      event.currentTarget.hasPointerCapture(
+        event.pointerId,
+      )
+    ) {
+      event.currentTarget.releasePointerCapture(
+        event.pointerId,
+      );
+    }
+
+    const normalized =
+      normalizeRedactionRect({
+        x: start.x,
+        y: start.y,
+        width: point.x - start.x,
+        height: point.y - start.y,
+      });
+
     setDraft(null);
-    if (!isUsefulRedactionRect(normalized)) return;
+
+    if (
+      !isUsefulRedactionRect(
+        normalized,
+      )
+    ) {
+      return;
+    }
+
     setRedactions((current) => ({
       ...current,
-      [selectedPage]: [...(current[selectedPage] ?? []), normalized],
+      [selectedPage]: [
+        ...(current[
+          selectedPage
+        ] ?? []),
+        normalized,
+      ],
     }));
+
     resetResult();
   }
 
