@@ -226,10 +226,10 @@ export default function PdfFormFillerPage() {
               </div>
 
               <label className="mt-5 flex items-start gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-950">
-                <input type="checkbox" checked={flatten} onChange={(event) => { setFlatten(event.target.checked); resetResult(); }} className="mt-1 h-5 w-5 rounded" />
+                <input type="checkbox" checked={flatten} onChange={(event) => { setFlatten(event.target.checked); resetResult(); }} disabled={isProcessing || unsupportedCount > 0} className="mt-1 h-5 w-5 rounded disabled:cursor-not-allowed disabled:opacity-50" />
                 <span>
                   <span className="block font-bold dark:text-white">Flatten completed form</span>
-                  <span className="mt-1 block text-sm text-gray-500 dark:text-slate-400">Remove interactive fields after their current appearance is written into the downloaded PDF.</span>
+                  <span className="mt-1 block text-sm text-gray-500 dark:text-slate-400">Remove interactive fields after their current appearance is written into the downloaded PDF. Disabled when unsupported field types are present.</span>
                 </span>
               </label>
 
