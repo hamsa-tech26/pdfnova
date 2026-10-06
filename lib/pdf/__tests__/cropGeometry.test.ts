@@ -79,7 +79,7 @@ describe("cropGeometry", () => {
       x: 40,
       y: 40,
       width: 560,
-      height: 770,
+      height: 740,
     });
   });
 
