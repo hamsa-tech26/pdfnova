@@ -23,6 +23,37 @@ function createOwnerPassword() {
   ).join("");
 }
 
+export function buildProtectQpdfArgs(
+  password: string,
+  ownerPassword: string,
+  inputName = "input.pdf",
+  outputName = "protected.pdf",
+) {
+  return [
+    "--encrypt",
+    `--user-password=${password}`,
+    `--owner-password=${ownerPassword}`,
+    "--bits=256",
+    "--",
+    inputName,
+    outputName,
+  ];
+}
+
+export function buildUnlockQpdfArgs(
+  password: string,
+  inputName = "protected.pdf",
+  outputName = "unlocked.pdf",
+) {
+  return [
+    `--password=${password}`,
+    "--decrypt",
+    "--",
+    inputName,
+    outputName,
+  ];
+}
+
 export async function protectPdf(
   file: File,
   password: string,
@@ -41,15 +72,12 @@ export async function protectPdf(
       input: inputBytes,
       inputName: "input.pdf",
       outputName: "protected.pdf",
-      args: [
-        "--encrypt",
-        `--user-password=${password}`,
-        `--owner-password=${ownerPassword}`,
-        "--bits=256",
-        "--",
+      args: buildProtectQpdfArgs(
+        password,
+        ownerPassword,
         "input.pdf",
         "protected.pdf",
-      ],
+      ),
     });
   } finally {
     await qpdf.destroy();
@@ -71,13 +99,11 @@ export async function unlockPdf(
       input: inputBytes,
       inputName: "protected.pdf",
       outputName: "unlocked.pdf",
-      args: [
-        `--password=${password}`,
-        "--decrypt",
-        "--",
+      args: buildUnlockQpdfArgs(
+        password,
         "protected.pdf",
         "unlocked.pdf",
-      ],
+      ),
     });
   } finally {
     await qpdf.destroy();
