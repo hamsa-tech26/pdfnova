@@ -10,6 +10,7 @@ import { downloadFile } from "@/lib/downloadFile";
 import {
   applyPdfFormValues,
   describePdfFormFields,
+  getPdfFormProcessingError,
   type PdfFormFieldDescriptor,
   type PdfFormFieldValue,
   type PdfFormValues,
@@ -25,7 +26,7 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const tips = [
   { title: "Standard AcroForm support", description: "Fill common text, checkbox, dropdown, option-list, and radio fields." },
   { title: "Editable or flattened", description: "Keep fields interactive or flatten the completed values into the saved copy." },
-  { title: "XFA limitation", description: "Dynamic XFA-only forms are not supported by this browser workflow." },
+  { title: "XFA and font limits", description: "Dynamic XFA forms are refused, and form appearances currently use the standard PDF WinAnsi/Latin font set." },
 ];
 
 const faqs = [
@@ -130,7 +131,12 @@ export default function PdfFormFillerPage() {
       toast.success("PDF form completed successfully.");
     } catch (error) {
       console.error(error);
-      setErrorMessage(error instanceof Error ? error.message : "The PDF form could not be saved.");
+      setErrorMessage(
+        getPdfFormProcessingError(
+          error,
+          "The PDF form could not be saved.",
+        ),
+      );
     } finally {
       setIsProcessing(false);
     }
