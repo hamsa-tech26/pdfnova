@@ -178,7 +178,7 @@ export default function AddImageStampPdfPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
       const count = pdf.getPageCount();
       setFile(selectedFile);
       setPageCount(count);
@@ -278,7 +278,7 @@ export default function AddImageStampPdfPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
       const bytes = dataUrlToBytes(imageDataUrl);
       const image = imageDataUrl.startsWith("data:image/jpeg") || imageDataUrl.startsWith("data:image/jpg") ? await pdf.embedJpg(bytes) : await pdf.embedPng(bytes);
       const targets = scope === "all" ? pdf.getPages().map((_, index) => index) : [selectedPage - 1];
