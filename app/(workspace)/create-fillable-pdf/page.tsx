@@ -7,6 +7,7 @@ import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { addFillableFields, type FillableFieldDefinition, type FillableFieldType } from "@/lib/pdf/formBuilder";
 import { hasPdfXfa } from "@/lib/pdf/formFields";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import {
@@ -23,25 +24,14 @@ import {
   useState,
 } from "react";
 import {
-  degrees,
   PDFDocument,
-  rgb,
-  StandardFonts,
 } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
-type FieldType = "text" | "checkbox" | "dropdown";
-
-type FieldDefinition = {
-  id: number;
-  name: string;
-  type: FieldType;
-  page: number;
-  rect: VisibleRect;
-  options: string[];
-};
+type FieldType = FillableFieldType;
+type FieldDefinition = FillableFieldDefinition;
 
 const tips = [
   { title: "Draw fields visually", description: "Choose a field type, drag its area on the page preview, then add it to the form." },
@@ -289,49 +279,11 @@ export default function CreateFillablePdfPage() {
         );
       }
 
-      const form = pdf.getForm();
-      const font = await pdf.embedFont(StandardFonts.Helvetica);
-      const existingNames = new Set(form.getFields().map((field) => field.getName()));
+      await addFillableFields(
+        pdf,
+        fields,
+      );
 
-      for (const definition of fields) {
-        if (existingNames.has(definition.name)) {
-          throw new Error("The PDF already contains a form field named " + definition.name + ". Rename the new field and try again.");
-        }
-
-        const page = pdf.getPage(definition.page - 1);
-        const placement = visibleRectToPdfPlacement(
-          page.getCropBox(),
-          page.getRotation().angle,
-          definition.rect,
-        );
-
-        const appearance = {
-          x: placement.x,
-          y: placement.y,
-          width: placement.width,
-          height: placement.height,
-          rotate: degrees(placement.rotation),
-          borderColor: rgb(0.25, 0.35, 0.5),
-          backgroundColor: rgb(1, 1, 1),
-          borderWidth: 1,
-        };
-
-        if (definition.type === "text") {
-          const field = form.createTextField(definition.name);
-          field.addToPage(page, { ...appearance, font });
-        } else if (definition.type === "checkbox") {
-          const field = form.createCheckBox(definition.name);
-          field.addToPage(page, appearance);
-        } else {
-          const field = form.createDropdown(definition.name);
-          field.setOptions(definition.options);
-          field.addToPage(page, { ...appearance, font });
-        }
-
-        existingNames.add(definition.name);
-      }
-
-      form.updateFieldAppearances(font);
       const bytes = await pdf.save({ updateFieldAppearances: true });
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + "-fillable.pdf";
