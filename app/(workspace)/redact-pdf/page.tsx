@@ -393,6 +393,13 @@ export default function RedactPdfPage() {
                 />
               </div>
 
+              <p
+                aria-live="polite"
+                className="mt-4 text-sm text-gray-500 dark:text-slate-400"
+              >
+                Page {selectedPage}: {currentRects.length} redaction {currentRects.length === 1 ? "area" : "areas"} marked.
+              </p>
+
               <div className="mt-5 flex flex-wrap gap-2">
                 <button type="button" onClick={removeLast} disabled={!currentRects.length || isProcessing} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus-visible:ring-blue-950">Remove last</button>
                 <button type="button" onClick={clearPage} disabled={!currentRects.length || isProcessing} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus-visible:ring-blue-950"><Eraser size={16} /> Clear this page</button>
