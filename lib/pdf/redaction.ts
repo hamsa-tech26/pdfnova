@@ -1,5 +1,5 @@
 import { PDFDocument } from "pdf-lib";
-import { renderPdfPages } from "./render";
+import { forEachRenderedPdfPage } from "./render";
 
 export type RedactionRect = {
   x: number;
@@ -74,69 +74,176 @@ export async function createRasterRedactedPdf(
 
   const output = await PDFDocument.create();
 
-  for (let index = 0; index < pageCount; index += 1) {
-    const rendered = await renderPdfPages(file, {
+  let renderedCount = 0;
+
+  await forEachRenderedPdfPage(
+    file,
+    {
       scale: 1.75,
       quality: 0.92,
-      pageNumbers: [index + 1],
       format: "jpeg",
       maxDimension: 3200,
-    });
+    },
+    async (renderedPage) => {
+      const index =
+        renderedPage.pageNumber -
+        1;
 
-    const renderedPage = rendered[0];
+      const sourcePage =
+        source.getPage(index);
 
-    if (!renderedPage) {
-      throw new Error(
-        `Page ${index + 1} could not be rendered for secure redaction.`,
-      );
-    }
+      const image =
+        await loadImage(
+          renderedPage.dataUrl,
+        );
 
-    const sourcePage = source.getPage(index);
-    const image = await loadImage(renderedPage.dataUrl);
+      const canvas =
+        document.createElement(
+          "canvas",
+        );
 
-    const canvas = document.createElement("canvas");
-    canvas.width = renderedPage.width;
-    canvas.height = renderedPage.height;
+      canvas.width =
+        renderedPage.width;
 
-    const context = canvas.getContext("2d");
-    if (!context) throw new Error("Canvas is not supported in this browser.");
+      canvas.height =
+        renderedPage.height;
 
-    context.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const context =
+        canvas.getContext("2d");
 
-    const rects = redactionsByPage[index + 1] ?? [];
-    context.fillStyle = "#000000";
+      if (!context) {
+        throw new Error(
+          "Canvas is not supported in this browser.",
+        );
+      }
 
-    for (const rawRect of rects) {
-      const rect = normalizeRedactionRect(rawRect);
-      if (!isUsefulRedactionRect(rect)) continue;
+      try {
+        context.drawImage(
+          image,
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+        );
 
-      context.fillRect(
-        Math.round(rect.x * canvas.width),
-        Math.round(rect.y * canvas.height),
-        Math.ceil(rect.width * canvas.width),
-        Math.ceil(rect.height * canvas.height),
-      );
-    }
+        const rects =
+          redactionsByPage[
+            renderedPage.pageNumber
+          ] ?? [];
 
-    const jpegDataUrl = canvas.toDataURL("image/jpeg", 0.93);
-    const embedded = await output.embedJpg(dataUrlToBytes(jpegDataUrl));
+        context.fillStyle =
+          "#000000";
 
-    const cropBox = sourcePage.getCropBox();
-    const rotation = ((sourcePage.getRotation().angle % 360) + 360) % 360;
-    const quarterTurn = rotation === 90 || rotation === 270;
-    const visibleWidth = quarterTurn ? cropBox.height : cropBox.width;
-    const visibleHeight = quarterTurn ? cropBox.width : cropBox.height;
+        for (
+          const rawRect of
+          rects
+        ) {
+          const rect =
+            normalizeRedactionRect(
+              rawRect,
+            );
 
-    const outputPage = output.addPage([visibleWidth, visibleHeight]);
-    outputPage.drawImage(embedded, {
-      x: 0,
-      y: 0,
-      width: visibleWidth,
-      height: visibleHeight,
-    });
+          if (
+            !isUsefulRedactionRect(
+              rect,
+            )
+          ) {
+            continue;
+          }
 
-    canvas.width = 0;
-    canvas.height = 0;
+          context.fillRect(
+            Math.round(
+              rect.x *
+                canvas.width,
+            ),
+            Math.round(
+              rect.y *
+                canvas.height,
+            ),
+            Math.ceil(
+              rect.width *
+                canvas.width,
+            ),
+            Math.ceil(
+              rect.height *
+                canvas.height,
+            ),
+          );
+        }
+
+        const jpegDataUrl =
+          canvas.toDataURL(
+            "image/jpeg",
+            0.93,
+          );
+
+        const embedded =
+          await output.embedJpg(
+            dataUrlToBytes(
+              jpegDataUrl,
+            ),
+          );
+
+        const cropBox =
+          sourcePage.getCropBox();
+
+        const rotation =
+          ((
+            sourcePage
+              .getRotation()
+              .angle %
+            360
+          ) +
+            360) %
+          360;
+
+        const quarterTurn =
+          rotation === 90 ||
+          rotation === 270;
+
+        const visibleWidth =
+          quarterTurn
+            ? cropBox.height
+            : cropBox.width;
+
+        const visibleHeight =
+          quarterTurn
+            ? cropBox.width
+            : cropBox.height;
+
+        const outputPage =
+          output.addPage([
+            visibleWidth,
+            visibleHeight,
+          ]);
+
+        outputPage.drawImage(
+          embedded,
+          {
+            x: 0,
+            y: 0,
+            width:
+              visibleWidth,
+            height:
+              visibleHeight,
+          },
+        );
+
+        renderedCount += 1;
+      } finally {
+        canvas.width = 0;
+        canvas.height = 0;
+      }
+    },
+  );
+
+  if (
+    renderedCount !==
+    pageCount
+  ) {
+    throw new Error(
+      "Not every PDF page could be rendered for secure redaction.",
+    );
   }
 
   return output.save();
