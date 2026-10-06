@@ -37,6 +37,7 @@ import {
   Eraser,
   Hash,
   Crop,
+  PenLine,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -114,6 +115,14 @@ const availableTools = [
     category: "PDF Tools",
     icon: FileText,
     accent: "bg-indigo-50 text-indigo-700",
+  },
+  {
+    title: "Sign PDF",
+    description: "Draw, type, or upload a visual signature and place it on a PDF page.",
+    href: "/sign-pdf",
+    category: "PDF Tools",
+    icon: PenLine,
+    accent: "bg-emerald-50 text-emerald-700",
   },
   {
     title: "Watermark PDF",
