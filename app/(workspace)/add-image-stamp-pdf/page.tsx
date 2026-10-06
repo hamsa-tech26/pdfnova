@@ -4,6 +4,7 @@ import ActionButton from "@/components/pdf/ActionButton";
 import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import PositionControls from "@/components/pdf/PositionControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
@@ -379,7 +380,7 @@ export default function AddImageStampPdfPage() {
       howToSteps={[
         { title: "Choose a PDF", description: "Select the PDF you want to mark." },
         { title: "Create or upload", description: "Create a text stamp or upload a PNG/JPG image." },
-        { title: "Place and download", description: "Drag and resize the item, choose one page or all pages, then save the PDF." },
+        { title: "Place and download", description: "Drag the item or use the keyboard-friendly position controls, resize it, choose one page or all pages, then save the PDF." },
       ]}
       maxWidthClassName="max-w-7xl"
     >
@@ -419,7 +420,7 @@ export default function AddImageStampPdfPage() {
                 ) : (
                   <div className="mt-5">
                     <input ref={imageInputRef} type="file" accept=".png,.jpg,.jpeg,image/png,image/jpeg" className="hidden" onChange={handleImageUpload} />
-                    <button type="button" onClick={() => imageInputRef.current?.click()} className="rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white">Choose PNG/JPG</button>
+                    <button type="button" onClick={() => imageInputRef.current?.click()} className="min-h-11 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 dark:focus-visible:ring-blue-950">Choose PNG/JPG</button>
                     <p className="mt-2 text-sm text-gray-500">{imageName || "Transparent PNG is recommended · Maximum 5 MB"}</p>
                   </div>
                 )}
@@ -446,6 +447,7 @@ export default function AddImageStampPdfPage() {
                     <img src={preview.dataUrl} alt={"PDF page " + String(selectedPage)} draggable={false} className="absolute inset-0 h-full w-full select-none object-fill" />
                     {imageDataUrl && (
                       <div
+                        aria-hidden="true"
                         onPointerDown={beginDrag}
                         onPointerMove={moveDrag}
                         onPointerUp={endDrag}
@@ -464,9 +466,40 @@ export default function AddImageStampPdfPage() {
                   </div>
                 )}
 
-                <label className="mt-5 block text-sm font-semibold dark:text-white">Width: {Math.round(widthRatio * 100)}%
-                  <input type="range" min="8" max="70" value={Math.round(widthRatio * 100)} onChange={(event) => { setWidthRatio(Number(event.target.value) / 100); resetResult(); }} disabled={!imageDataUrl} className="mt-2 w-full" />
+                <label className="mt-5 block text-sm font-semibold text-gray-900 dark:text-white">
+                  Width: {Math.round(widthRatio * 100)}%
+                  <input
+                    type="range"
+                    min="8"
+                    max="70"
+                    value={Math.round(widthRatio * 100)}
+                    onChange={(event) => {
+                      setWidthRatio(Number(event.target.value) / 100);
+                      resetResult();
+                    }}
+                    disabled={!imageDataUrl}
+                    className="mt-3 w-full accent-blue-600"
+                  />
                 </label>
+
+                {imageDataUrl && preview && (
+                  <div className="mt-5">
+                    <PositionControls
+                      label={mode === "stamp" ? "stamp" : "image"}
+                      position={{
+                        x: displayX,
+                        y: displayY,
+                      }}
+                      maxX={Math.max(0, 1 - widthRatio)}
+                      maxY={Math.max(0, 1 - heightRatio)}
+                      onChange={(nextPosition) => {
+                        setPosition(nextPosition);
+                        resetResult();
+                      }}
+                      disabled={isProcessing}
+                    />
+                  </div>
+                )}
               </section>
             </>
           )}
