@@ -85,6 +85,8 @@ export default function RedactPdfPage() {
         quality: 0.9,
         pageNumbers: [pageNumber],
         format: "jpeg",
+        maxDimension:
+          2400,
       });
       if (requestId !== previewRequestRef.current) return;
       if (!pages[0]) throw new Error("Unable to render the selected page.");
