@@ -138,6 +138,7 @@ export default function FileUploader({
       />
 
       <div
+        role="group"
         aria-label={title}
         onDragEnter={handleDragEnter}
         onDragOver={handleDragOver}
