@@ -50,7 +50,7 @@ export default function PdfFormFillerPage() {
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
 
-  const supportedFields = fields.filter((field) => field.kind !== "unsupported");
+  const supportedFields = hasXfa ? [] : fields.filter((field) => field.kind !== "unsupported");
   const unsupportedCount = fields.length - supportedFields.length;
 
   function resetResult() {
@@ -86,8 +86,10 @@ export default function PdfFormFillerPage() {
       setOutputBytes(null);
       setOutputFileName("");
       const count = described.fields.filter((field) => field.kind !== "unsupported").length;
-      if (count === 0) {
-        setErrorMessage(described.hasXfa ? "This appears to be an XFA form. No supported AcroForm fields were found." : "No supported interactive AcroForm fields were found.");
+      if (described.hasXfa) {
+        setErrorMessage("This PDF contains XFA form data. To avoid changing or disconnecting the XFA form structure, Kukureku does not modify this document.");
+      } else if (count === 0) {
+        setErrorMessage("No supported interactive AcroForm fields were found.");
       } else {
         setErrorMessage("");
         toast.success(String(count) + " supported form " + (count === 1 ? "field" : "fields") + " found.");
@@ -112,7 +114,7 @@ export default function PdfFormFillerPage() {
   }
 
   async function saveFilledForm() {
-    if (!file || supportedFields.length === 0) return;
+    if (!file || supportedFields.length === 0 || hasXfa) return;
     setIsProcessing(true);
     setErrorMessage("");
     try {
@@ -267,7 +269,7 @@ export default function PdfFormFillerPage() {
                 "Some custom widgets may not be supported.",
                 "The PDF may be password-protected or damaged.",
               ]}
-              onRetry={file && supportedFields.length > 0 ? saveFilledForm : undefined}
+              onRetry={file && supportedFields.length > 0 && !hasXfa ? saveFilledForm : undefined}
               onReset={startAgain}
               retryLabel="Retry Save"
               resetLabel="Choose Another PDF"
