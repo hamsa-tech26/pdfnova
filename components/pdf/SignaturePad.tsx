@@ -247,7 +247,6 @@ export default function SignaturePad({
             finishDrawing
           }
           className="aspect-[3/1] w-full touch-none cursor-crosshair"
-          aria-label="Signature drawing pad"
         />
       </div>
     </section>
