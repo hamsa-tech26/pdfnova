@@ -20,7 +20,6 @@ import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const mergePdfTips = [
   {
@@ -44,7 +43,7 @@ const mergePdfFaqs = [
   {
     question: "How many PDF files can I merge?",
     answer:
-      "You can add multiple PDF files, provided your browser has enough available memory to process them.",
+      "You can add up to 20 PDFs, with a 25 MB per-file limit and a 100 MB combined browser-processing limit.",
   },
   {
     question: "Can I change the file order?",
@@ -147,7 +146,9 @@ export default function MergePdfPage() {
       console.error(selectionError);
 
       const message =
-        "One of the selected PDF files is damaged or password-protected.";
+        selectionError instanceof Error
+          ? selectionError.message
+          : "One of the selected PDF files is damaged or password-protected.";
 
       setErrorMessage(message);
       toast.error(message);
@@ -323,7 +324,9 @@ export default function MergePdfPage() {
       console.error(mergeError);
 
       const message =
-        "The PDF files could not be merged. One of the files may be damaged or password-protected.";
+        mergeError instanceof Error
+          ? mergeError.message
+          : "The PDF files could not be merged. One of the files may be damaged or password-protected.";
 
       setErrorMessage(message);
       toast.error("Failed to merge PDF files.");
@@ -345,6 +348,11 @@ export default function MergePdfPage() {
           title: "Add your PDFs",
           description:
             "Choose two or more PDF files from your device. Each file can be up to 25 MB.",
+        },
+        {
+          title: "Use non-form PDFs",
+          description:
+            "Interactive PDF forms must be flattened before merging so form structure is not silently damaged.",
         },
         {
           title: "Set the file order",
