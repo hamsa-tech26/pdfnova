@@ -465,3 +465,83 @@ test("Create Fillable PDF places a field on a rotated CropBox page and preserves
   expect(rectangle.width).toBeGreaterThan(1);
   expect(rectangle.height).toBeGreaterThan(1);
 });
+
+
+test("Sign PDF uses keyboard placement on a rotated CropBox page and exports an openable PDF", async ({
+  page,
+}) => {
+  const source = await createTextPdf({
+    text: "ROTATED SIGNATURE TEST",
+    rotation: 90,
+    crop: true,
+  });
+
+  await page.goto("/sign-pdf");
+  await uploadPdf(page, source, "browser-sign.pdf");
+
+  await expect(
+    page.getByAltText("PDF page 1 preview"),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", {
+      name: "Type",
+    })
+    .click();
+
+  await page
+    .getByLabel("Signature name")
+    .fill("Kukureku QA");
+
+  await expect(
+    page.getByAltText("Typed signature preview"),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", {
+      name: "Center signature",
+    })
+    .click();
+
+  await page
+    .getByRole("button", {
+      name: "Move signature right",
+    })
+    .click();
+
+  await page
+    .getByRole("button", {
+      name: "Move signature down",
+    })
+    .click();
+
+  const result = await clickAndDownload(
+    page,
+    "Sign and Download PDF",
+  );
+
+  expect(result.fileName).toBe("browser-sign-signed.pdf");
+
+  const output = await expectOpenPdf(result.bytes, 1);
+  const outputPage = output.getPage(0);
+
+  expect(
+    ((outputPage.getRotation().angle % 360) + 360) % 360,
+  ).toBe(90);
+
+  const cropBox = outputPage.getCropBox();
+  expect(cropBox.x).toBeCloseTo(20, 4);
+  expect(cropBox.y).toBeCloseTo(30, 4);
+  expect(cropBox.width).toBeCloseTo(520, 4);
+  expect(cropBox.height).toBeCloseTo(700, 4);
+
+  const resources = outputPage.node.Resources();
+  const xObjects = resources.get(PDFName.of("XObject"));
+
+  expect(xObjects).toBeDefined();
+  expect(xObjects.keys().length).toBeGreaterThan(0);
+
+  await expect(
+    page.getByText("Your signed PDF is ready"),
+  ).toBeVisible();
+});
