@@ -20,6 +20,7 @@ import {
   MessageSquareText,
   Scissors,
   Search,
+  RotateCw,
   ShieldCheck,
   Sparkles,
   Trash2,
@@ -62,6 +63,14 @@ const availableTools = [
     category: "PDF Tools",
     icon: Layers3,
     accent: "bg-cyan-50 text-cyan-600",
+  },
+  {
+    title: "Rotate PDF",
+    description: "Rotate every PDF page clockwise, counter-clockwise, or 180 degrees.",
+    href: "/rotate-pdf",
+    category: "PDF Tools",
+    icon: RotateCw,
+    accent: "bg-indigo-50 text-indigo-600",
   },
   {
     title: "Watermark PDF",

@@ -15,6 +15,7 @@ const PUBLIC_ROUTES = [
   "/jpg-to-pdf",
   "/pdf-to-jpg",
   "/organize-pdf",
+  "/rotate-pdf",
   "/watermark-pdf",
   "/unlock-pdf",
   "/about",
