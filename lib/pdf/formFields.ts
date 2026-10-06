@@ -160,9 +160,41 @@ export function applyPdfFormValues(
   flatten: boolean,
 ) {
   const form = pdf.getForm();
+  const allFields =
+    form.getFields();
+
+  const unsupportedFields =
+    allFields.filter(
+      (field) =>
+        !(
+          field instanceof
+            PDFTextField ||
+          field instanceof
+            PDFCheckBox ||
+          field instanceof
+            PDFDropdown ||
+          field instanceof
+            PDFOptionList ||
+          field instanceof
+            PDFRadioGroup
+        ),
+    );
+
+  if (
+    flatten &&
+    unsupportedFields.length >
+      0
+  ) {
+    throw new Error(
+      "Flattening is unavailable because this PDF contains unsupported form field types. Save an editable copy instead.",
+    );
+  }
+
+  const font =
+    form.getDefaultFont();
 
   for (
-    const field of form.getFields()
+    const field of allFields
   ) {
     const name =
       field.getName();
@@ -184,6 +216,10 @@ export function applyPdfFormValues(
           ? value
           : "",
       );
+
+      field.defaultUpdateAppearances(
+        font,
+      );
       continue;
     }
 
@@ -196,6 +232,8 @@ export function applyPdfFormValues(
       } else {
         field.uncheck();
       }
+
+      field.defaultUpdateAppearances();
       continue;
     }
 
@@ -212,6 +250,10 @@ export function applyPdfFormValues(
       } else {
         field.clear();
       }
+
+      field.defaultUpdateAppearances(
+        font,
+      );
       continue;
     }
 
@@ -233,6 +275,10 @@ export function applyPdfFormValues(
       } else {
         field.clear();
       }
+
+      field.defaultUpdateAppearances(
+        font,
+      );
       continue;
     }
 
@@ -249,16 +295,16 @@ export function applyPdfFormValues(
       } else {
         field.clear();
       }
+
+      field.defaultUpdateAppearances();
     }
   }
 
   if (flatten) {
     form.flatten({
       updateFieldAppearances:
-        true,
+        false,
     });
-  } else {
-    form.updateFieldAppearances();
   }
 }
 
