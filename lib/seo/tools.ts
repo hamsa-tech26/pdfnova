@@ -50,6 +50,12 @@ export const TOOL_SEO = {
     description:
       "Organize PDF pages privately in your browser. Reorder, rotate, move, or delete pages and download a new PDF without uploading the original.",
   },
+  "rotate-pdf": {
+    name: "Rotate PDF",
+    title: "Rotate PDF Online Free - Private, No Upload",
+    description:
+      "Rotate PDF pages online for free in your browser. Turn every page clockwise, counter-clockwise, or 180 degrees without uploading your PDF.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
