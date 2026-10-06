@@ -4,6 +4,7 @@ import ActionButton from "@/components/pdf/ActionButton";
 import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import RectPercentControls from "@/components/pdf/RectPercentControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
@@ -29,7 +30,7 @@ import { toast } from "sonner";
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const tips = [
-  { title: "Drag over sensitive content", description: "Choose a page and drag one or more redaction boxes over the information you want removed." },
+  { title: "Mark sensitive content precisely", description: "Drag one or more redaction boxes, or enter percentage coordinates when using a keyboard or touch device." },
   { title: "Privacy-safe raster export", description: "The downloaded PDF is rebuilt from rendered page images after redaction, so original page text is not hidden underneath black boxes." },
   { title: "Review before sharing", description: "Check every page and every marked area before distributing the redacted copy." },
 ];
@@ -326,7 +327,7 @@ export default function RedactPdfPage() {
               <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
                 <div>
                   <h2 className="text-lg font-bold text-gray-950 dark:text-white">Mark redaction areas</h2>
-                  <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Drag directly over the page preview. Add as many boxes as needed.</p>
+                  <p className="mt-1 text-sm text-gray-500 dark:text-slate-400">Drag directly over the page preview, or use the percentage controls below for keyboard-friendly placement. Add as many boxes as needed.</p>
                 </div>
                 <label className="text-sm font-semibold dark:text-white">
                   Page
@@ -356,9 +357,45 @@ export default function RedactPdfPage() {
                 )}
               </div>
 
+              <div className="mt-5">
+                <RectPercentControls
+                  label={"Redaction area on page " + String(selectedPage)}
+                  value={
+                    draft ?? {
+                      x: 0.1,
+                      y: 0.1,
+                      width: 0.4,
+                      height: 0.1,
+                    }
+                  }
+                  onChange={(rect) => {
+                    setDraft(rect);
+                    resetResult();
+                  }}
+                  onCommit={(rect) => {
+                    const normalized = normalizeRedactionRect(rect);
+                    if (!isUsefulRedactionRect(normalized)) {
+                      setErrorMessage("Choose a larger redaction area.");
+                      return;
+                    }
+                    setRedactions((current) => ({
+                      ...current,
+                      [selectedPage]: [
+                        ...(current[selectedPage] ?? []),
+                        normalized,
+                      ],
+                    }));
+                    setDraft(null);
+                    resetResult();
+                  }}
+                  commitLabel="Add redaction area"
+                  disabled={isProcessing || isRenderingPreview || !preview}
+                />
+              </div>
+
               <div className="mt-5 flex flex-wrap gap-2">
-                <button type="button" onClick={removeLast} disabled={!currentRects.length || isProcessing} className="rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold disabled:opacity-50">Remove last</button>
-                <button type="button" onClick={clearPage} disabled={!currentRects.length || isProcessing} className="inline-flex items-center gap-2 rounded-xl border border-gray-300 px-4 py-2 text-sm font-semibold disabled:opacity-50"><Eraser size={16} /> Clear this page</button>
+                <button type="button" onClick={removeLast} disabled={!currentRects.length || isProcessing} className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus-visible:ring-blue-950">Remove last</button>
+                <button type="button" onClick={clearPage} disabled={!currentRects.length || isProcessing} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200 dark:focus-visible:ring-blue-950"><Eraser size={16} /> Clear this page</button>
               </div>
 
               <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
