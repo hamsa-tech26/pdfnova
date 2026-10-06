@@ -114,7 +114,7 @@ function assertToolLayouts(routes) {
     const layout = fs.readFileSync(layoutPath, "utf8");
 
     const metadataPattern = new RegExp(
-      `buildToolMetadata\\(\\s*["']${route}["']\\s*\\)`,
+      `buildToolMetadata\\(\\s*["']${route}["']\\s*,?\\s*\\)`,
     );
 
     if (!metadataPattern.test(layout)) {
