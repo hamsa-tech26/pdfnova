@@ -10,6 +10,10 @@ import ToolLayout from "@/components/pdf/ToolLayout";
 import ImageWatermarkUploader from "@/components/watermark/ImageWatermarkUploader";
 import { downloadFile } from "@/lib/downloadFile";
 import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
+import {
   calculateWatermarkPlacement,
   getVisibleWatermarkPageSize,
   type WatermarkPosition,
@@ -468,7 +472,7 @@ export default function WatermarkPdfPage() {
       setProgress(88);
       setCurrentStep(3);
 
-      const generatedBytes = await pdf.save();
+      const generatedBytes = await savePdfWithoutFormAppearanceMutation(pdf);
 
       const originalName =
         file.name.replace(/\.pdf$/i, "");
