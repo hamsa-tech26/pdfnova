@@ -79,6 +79,10 @@ export async function renderPdfPages(
         canvas,
         canvasContext: context,
         viewport,
+        background:
+          format === "jpeg"
+            ? "#FFFFFF"
+            : undefined,
       }).promise;
 
       const dataUrl =
