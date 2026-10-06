@@ -12,6 +12,7 @@ import {
   Bot,
   Clock3,
   FileImage,
+  FileOutput,
   FileText,
   Files,
   ImageIcon,
@@ -97,6 +98,14 @@ const availableTools = [
     category: "PDF Tools",
     icon: Crop,
     accent: "bg-amber-50 text-amber-700",
+  },
+  {
+    title: "Resize PDF Pages",
+    description: "Resize PDF pages to A4, Letter, Legal, or A5 proportionally.",
+    href: "/resize-pdf-pages",
+    category: "PDF Tools",
+    icon: FileOutput,
+    accent: "bg-sky-50 text-sky-700",
   },
   {
     title: "Watermark PDF",

@@ -106,6 +106,13 @@ const tools = [
     accent: "bg-amber-50 text-amber-700",
   },
   {
+    title: "Resize PDF Pages",
+    description: "Resize pages to A4, Letter, Legal, or A5 without stretching content.",
+    href: "/resize-pdf-pages",
+    icon: FileOutput,
+    accent: "bg-sky-50 text-sky-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
     href: "/watermark-pdf",
@@ -142,7 +149,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, protect, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
