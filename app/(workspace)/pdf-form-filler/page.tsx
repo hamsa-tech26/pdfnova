@@ -76,7 +76,7 @@ export default function PdfFormFillerPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
       const described = describePdfFormFields(pdf);
       setFile(selectedFile);
       setFields(described.fields);
@@ -118,7 +118,7 @@ export default function PdfFormFillerPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
       applyPdfFormValues(pdf, values, flatten);
       const bytes = await pdf.save({ updateFieldAppearances: true });
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
