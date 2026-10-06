@@ -8,6 +8,10 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
+import {
   calculateHeaderFooterPlacement,
   renderHeaderFooterTemplate,
   type PdfHeaderFooterAlignment,
@@ -522,7 +526,7 @@ export default function HeaderFooterPdfPage() {
         );
 
       const bytes =
-        await pdf.save();
+        await savePdfWithoutFormAppearanceMutation(pdf);
 
       const baseName =
         file.name.replace(
