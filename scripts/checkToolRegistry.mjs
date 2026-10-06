@@ -173,5 +173,5 @@ assertToolLayouts(liveRoutes);
 assertHomepageCount(liveRoutes.length);
 
 console.log(
-  `Tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sitemap, and IndexNow.`,
+  `Kukureku tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sitemap, and IndexNow.`,
 );
