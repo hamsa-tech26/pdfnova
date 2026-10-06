@@ -1,5 +1,6 @@
 import {
   PDFDocument,
+  StandardFonts,
 } from "pdf-lib";
 import {
   describe,
@@ -209,6 +210,133 @@ describe("formFields", () => {
     expect(
       described.fields.find((field) => field.name === "fruits")?.value,
     ).toEqual(["Apple", "Mango"]);
+  });
+
+  it("preserves unsupported fields when saving an editable copy", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    const page =
+      pdf.addPage([600, 800]);
+
+    const form =
+      pdf.getForm();
+
+    const font =
+      await pdf.embedFont(
+        StandardFonts.Helvetica,
+      );
+
+    const text =
+      form.createTextField(
+        "name",
+      );
+
+    text.addToPage(page, {
+      font,
+    });
+
+    const button =
+      form.createButton(
+        "action",
+      );
+
+    button.addToPage(
+      "Run",
+      page,
+      {
+        x: 20,
+        y: 20,
+        width: 80,
+        height: 30,
+        font,
+      },
+    );
+
+    applyPdfFormValues(
+      pdf,
+      {
+        name: "Updated",
+      },
+      false,
+    );
+
+    const saved =
+      await pdf.save({
+        updateFieldAppearances:
+          false,
+      });
+
+    const reloaded =
+      await PDFDocument.load(
+        saved,
+      );
+
+    expect(
+      reloaded
+        .getForm()
+        .getTextField(
+          "name",
+        )
+        .getText(),
+    ).toBe("Updated");
+
+    expect(
+      reloaded
+        .getForm()
+        .getButton(
+          "action",
+        )
+        .getName(),
+    ).toBe("action");
+  });
+
+  it("refuses flattening when unsupported field types are present", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    const page =
+      pdf.addPage([600, 800]);
+
+    const form =
+      pdf.getForm();
+
+    const font =
+      await pdf.embedFont(
+        StandardFonts.Helvetica,
+      );
+
+    form
+      .createTextField(
+        "name",
+      )
+      .addToPage(page, {
+        font,
+      });
+
+    form
+      .createButton(
+        "action",
+      )
+      .addToPage(
+        "Run",
+        page,
+        {
+          font,
+        },
+      );
+
+    expect(() =>
+      applyPdfFormValues(
+        pdf,
+        {
+          name: "Updated",
+        },
+        true,
+      ),
+    ).toThrow(
+      "Flattening is unavailable",
+    );
   });
 
   it("can flatten filled fields", async () => {
