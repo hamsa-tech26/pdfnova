@@ -125,7 +125,7 @@ export default function CreateFillablePdfPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
 
       if (hasPdfXfa(pdf)) {
         throw new Error(
@@ -271,7 +271,7 @@ export default function CreateFillablePdfPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
 
       if (hasPdfXfa(pdf)) {
         throw new Error(
