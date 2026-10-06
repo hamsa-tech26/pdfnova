@@ -98,6 +98,14 @@ const availableTools = [
     accent: "bg-pink-50 text-pink-600",
   },
   {
+    title: "Protect PDF",
+    description: "Add AES-256 opening-password protection to a PDF.",
+    href: "/protect-pdf",
+    category: "Security",
+    icon: LockKeyhole,
+    accent: "bg-blue-50 text-blue-700",
+  },
+  {
     title: "Unlock PDF",
     description: "Remove PDF password protection using the correct password.",
     href: "/unlock-pdf",
@@ -171,11 +179,6 @@ const quickActions = [
 ];
 
 const comingSoonTools = [
-  {
-    title: "Protect PDF",
-    description: "Add secure password protection and document permissions.",
-    icon: LockKeyhole,
-  },
   {
     title: "Kukureku AI Workspace",
     description: "Summarize, explain, translate, and chat with documents.",
