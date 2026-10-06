@@ -117,7 +117,7 @@ export default function ResizePdfPagesPage() {
     }
 
     try {
-      const pdf = loadPdfWithoutMetadataMutation(
+      const pdf = await loadPdfWithoutMetadataMutation(
         await selectedFile.arrayBuffer(),
       );
 
@@ -173,7 +173,7 @@ export default function ResizePdfPagesPage() {
     setOutputFileName("");
 
     try {
-      const pdf = loadPdfWithoutMetadataMutation(
+      const pdf = await loadPdfWithoutMetadataMutation(
         await file.arrayBuffer(),
       );
 
