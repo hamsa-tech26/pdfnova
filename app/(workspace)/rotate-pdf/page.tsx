@@ -7,6 +7,10 @@ import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { RotateCcw, RotateCw, ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -61,7 +65,7 @@ export default function RotatePdfPage() {
     }
 
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
       if (pdf.getPageCount() === 0) throw new Error("The PDF does not contain any pages.");
       setFile(selectedFile);
       resetResult();
@@ -86,12 +90,12 @@ export default function RotatePdfPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await loadPdfWithoutMetadataMutation(await file.arrayBuffer());
       for (const page of pdf.getPages()) {
         const current = page.getRotation().angle;
         page.setRotation(degrees((current + rotation) % 360));
       }
-      const bytes = await pdf.save();
+      const bytes = await savePdfWithoutFormAppearanceMutation(pdf);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const name = `${baseName}-rotated.pdf`;
       downloadFile(bytes, name, "application/pdf");
