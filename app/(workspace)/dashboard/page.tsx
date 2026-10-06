@@ -30,6 +30,11 @@ import {
   Copy,
   AlignLeft,
   PanelsTopLeft,
+  ScanText,
+  ListOrdered,
+  ArrowDownUp,
+  Eraser,
+  Hash,
 } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState, useSyncExternalStore } from "react";
@@ -79,6 +84,11 @@ const availableTools = [
   { title: "Delete PDF Pages", description: "Remove unwanted pages from a PDF copy.", href: "/delete-pdf-pages", category: "PDF Tools", icon: Trash2, accent: "bg-rose-50 text-rose-600" },
   { title: "PDF to Text", description: "Extract selectable PDF text into a TXT file.", href: "/pdf-to-text", category: "Office", icon: AlignLeft, accent: "bg-slate-100 text-slate-700" },
   { title: "Flatten PDF", description: "Flatten supported PDF form fields into page content.", href: "/flatten-pdf", category: "PDF Tools", icon: PanelsTopLeft, accent: "bg-fuchsia-50 text-fuchsia-600" },
+  { title: "OCR PDF", description: "Recognize English text in scanned PDF pages.", href: "/ocr-pdf", category: "Office", icon: ScanText, accent: "bg-blue-50 text-blue-700" },
+  { title: "Reorder PDF Pages", description: "Create a PDF with pages in your chosen order.", href: "/reorder-pdf-pages", category: "PDF Tools", icon: ListOrdered, accent: "bg-cyan-50 text-cyan-700" },
+  { title: "Reverse PDF Pages", description: "Reverse the complete page order in one click.", href: "/reverse-pdf", category: "PDF Tools", icon: ArrowDownUp, accent: "bg-orange-50 text-orange-700" },
+  { title: "Remove PDF Metadata", description: "Clear common document metadata from a PDF copy.", href: "/remove-pdf-metadata", category: "Security", icon: Eraser, accent: "bg-emerald-50 text-emerald-700" },
+  { title: "Add Page Numbers", description: "Add centered page numbers to every PDF page.", href: "/add-page-numbers", category: "PDF Tools", icon: Hash, accent: "bg-violet-50 text-violet-700" },
   {
     title: "Watermark PDF",
     description: "Add custom text, logos, stamps, or signatures to PDF pages.",

@@ -16,6 +16,11 @@ import {
   Copy,
   AlignLeft,
   PanelsTopLeft,
+  ScanText,
+  ListOrdered,
+  ArrowDownUp,
+  Eraser,
+  Hash,
 } from "lucide-react";
 
 const tools = [
@@ -86,6 +91,11 @@ const tools = [
   { title: "Delete PDF Pages", description: "Remove unwanted pages and download a clean PDF copy.", href: "/delete-pdf-pages", icon: Trash2, accent: "bg-rose-50 text-rose-600" },
   { title: "PDF to Text", description: "Extract selectable PDF text into a plain TXT file.", href: "/pdf-to-text", icon: AlignLeft, accent: "bg-slate-100 text-slate-700" },
   { title: "Flatten PDF", description: "Flatten supported PDF form fields into page content.", href: "/flatten-pdf", icon: PanelsTopLeft, accent: "bg-fuchsia-50 text-fuchsia-600" },
+  { title: "OCR PDF", description: "Recognize English text in scanned PDF pages locally.", href: "/ocr-pdf", icon: ScanText, accent: "bg-blue-50 text-blue-700" },
+  { title: "Reorder PDF Pages", description: "Create a PDF with pages in the exact order you choose.", href: "/reorder-pdf-pages", icon: ListOrdered, accent: "bg-cyan-50 text-cyan-700" },
+  { title: "Reverse PDF Pages", description: "Reverse the complete page order of a PDF in one click.", href: "/reverse-pdf", icon: ArrowDownUp, accent: "bg-orange-50 text-orange-700" },
+  { title: "Remove PDF Metadata", description: "Clear common document metadata from a PDF copy.", href: "/remove-pdf-metadata", icon: Eraser, accent: "bg-emerald-50 text-emerald-700" },
+  { title: "Add Page Numbers", description: "Add centered page numbers to every PDF page.", href: "/add-page-numbers", icon: Hash, accent: "bg-violet-50 text-violet-700" },
   {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
@@ -116,7 +126,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, rotate, extract, delete, flatten, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>

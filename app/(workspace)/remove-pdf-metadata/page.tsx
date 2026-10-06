@@ -1,0 +1,1 @@
+import SimplePdfTool from "@/components/pdf/SimplePdfTool";export default function Page(){return <SimplePdfTool mode="metadata"/>;}

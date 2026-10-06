@@ -73,7 +73,7 @@ export default function Home() {
                   </h1>
 
                   <p className="mt-6 max-w-2xl text-lg leading-8 text-blue-100">
-                    Merge, split, compress, convert, organize, rotate, extract, delete, flatten, watermark, and unlock PDFs directly in your browser. Current Kukureku tools keep supported files on your device.
+                    Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, watermark, and unlock PDFs directly in your browser. Current Kukureku tools keep supported files on your device.
                   </p>
 
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row">
