@@ -9,6 +9,11 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import ImageWatermarkUploader from "@/components/watermark/ImageWatermarkUploader";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  calculateWatermarkPlacement,
+  getVisibleWatermarkPageSize,
+  type WatermarkPosition,
+} from "@/lib/pdf/watermarkGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import {
   ImageIcon,
@@ -30,13 +35,6 @@ import {
 import { toast } from "sonner";
 
 type WatermarkMode = "text" | "image";
-
-type WatermarkPosition =
-  | "center"
-  | "top-left"
-  | "top-right"
-  | "bottom-left"
-  | "bottom-right";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const MAX_IMAGE_SIZE = 10 * 1024 * 1024;
@@ -103,48 +101,6 @@ function hexToRgb(hexColor: string) {
     green: Number.parseInt(cleanHex.slice(2, 4), 16) / 255,
     blue: Number.parseInt(cleanHex.slice(4, 6), 16) / 255,
   };
-}
-
-function getWatermarkPosition(
-  position: WatermarkPosition,
-  pageWidth: number,
-  pageHeight: number,
-  watermarkWidth: number,
-  watermarkHeight: number,
-) {
-  const margin = 32;
-
-  switch (position) {
-    case "top-left":
-      return {
-        x: margin,
-        y: pageHeight - watermarkHeight - margin,
-      };
-
-    case "top-right":
-      return {
-        x: pageWidth - watermarkWidth - margin,
-        y: pageHeight - watermarkHeight - margin,
-      };
-
-    case "bottom-left":
-      return {
-        x: margin,
-        y: margin,
-      };
-
-    case "bottom-right":
-      return {
-        x: pageWidth - watermarkWidth - margin,
-        y: margin,
-      };
-
-    default:
-      return {
-        x: (pageWidth - watermarkWidth) / 2,
-        y: (pageHeight - watermarkHeight) / 2,
-      };
-  }
 }
 
 export default function WatermarkPdfPage() {
@@ -397,8 +353,6 @@ export default function WatermarkPdfPage() {
         const watermarkRgb = hexToRgb(watermarkColor);
 
         pages.forEach((page, index) => {
-          const { width, height } = page.getSize();
-
           const textWidth = font.widthOfTextAtSize(
             watermarkText,
             fontSize,
@@ -407,17 +361,23 @@ export default function WatermarkPdfPage() {
           const textHeight =
             font.heightAtSize(fontSize);
 
-          const { x, y } = getWatermarkPosition(
-            position,
-            width,
-            height,
-            textWidth,
-            textHeight,
-          );
+          const placement =
+            calculateWatermarkPlacement({
+              box: page.getCropBox(),
+              pageRotation:
+                page.getRotation().angle,
+              watermarkRotation:
+                rotation,
+              elementWidth:
+                textWidth,
+              elementHeight:
+                textHeight,
+              position,
+            });
 
           page.drawText(watermarkText, {
-            x,
-            y,
+            x: placement.x,
+            y: placement.y,
             size: fontSize,
             font,
             color: rgb(
@@ -426,7 +386,9 @@ export default function WatermarkPdfPage() {
               watermarkRgb.blue,
             ),
             opacity,
-            rotate: degrees(rotation),
+            rotate: degrees(
+              placement.drawRotation,
+            ),
           });
 
           const pageProgress =
@@ -447,32 +409,50 @@ export default function WatermarkPdfPage() {
             : await pdf.embedJpg(imageBytes);
 
         pages.forEach((page, index) => {
-          const { width, height } = page.getSize();
+          const box =
+            page.getCropBox();
+
+          const visible =
+            getVisibleWatermarkPageSize(
+              box,
+              page.getRotation().angle,
+            );
 
           const targetWidth =
-            width * (imageSize / 100);
+            visible.width *
+            (imageSize / 100);
 
           const scale =
-            targetWidth / embeddedImage.width;
+            targetWidth /
+            embeddedImage.width;
 
           const targetHeight =
-            embeddedImage.height * scale;
+            embeddedImage.height *
+            scale;
 
-          const { x, y } = getWatermarkPosition(
-            position,
-            width,
-            height,
-            targetWidth,
-            targetHeight,
-          );
+          const placement =
+            calculateWatermarkPlacement({
+              box,
+              pageRotation:
+                page.getRotation().angle,
+              watermarkRotation:
+                rotation,
+              elementWidth:
+                targetWidth,
+              elementHeight:
+                targetHeight,
+              position,
+            });
 
           page.drawImage(embeddedImage, {
-            x,
-            y,
+            x: placement.x,
+            y: placement.y,
             width: targetWidth,
             height: targetHeight,
             opacity,
-            rotate: degrees(rotation),
+            rotate: degrees(
+              placement.drawRotation,
+            ),
           });
 
           const pageProgress =

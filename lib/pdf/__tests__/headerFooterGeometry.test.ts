@@ -10,6 +10,13 @@ import {
   renderHeaderFooterTemplate,
 } from "../headerFooterGeometry";
 
+const box = {
+  x: 0,
+  y: 0,
+  width: 600,
+  height: 800,
+};
+
 describe("headerFooterGeometry", () => {
   it("renders page and total tokens", () => {
     expect(
@@ -47,8 +54,7 @@ describe("headerFooterGeometry", () => {
   it("centers a footer on an unrotated page", () => {
     const placement =
       calculateHeaderFooterPlacement({
-        pageWidth: 600,
-        pageHeight: 800,
+        box,
         rotationAngle: 0,
         textWidth: 100,
         fontSize: 12,
@@ -71,8 +77,7 @@ describe("headerFooterGeometry", () => {
   it("maps a visible left footer through a 90 degree rotation", () => {
     const placement =
       calculateHeaderFooterPlacement({
-        pageWidth: 600,
-        pageHeight: 800,
+        box,
         rotationAngle: 90,
         textWidth: 100,
         fontSize: 12,
@@ -92,11 +97,56 @@ describe("headerFooterGeometry", () => {
     expect(placement.rotation).toBe(90);
   });
 
+  it("preserves CropBox offsets", () => {
+    const placement =
+      calculateHeaderFooterPlacement({
+        box: {
+          x: 25,
+          y: 40,
+          width: 550,
+          height: 720,
+        },
+        rotationAngle: 0,
+        textWidth: 100,
+        fontSize: 12,
+        margin: 30,
+        alignment: "left",
+        slot: "footer",
+      });
+
+    expect(placement.x).toBe(55);
+    expect(placement.y).toBe(70);
+  });
+
+  it("preserves CropBox offsets on a 90 degree rotated page", () => {
+    const placement =
+      calculateHeaderFooterPlacement({
+        box: {
+          x: 25,
+          y: 40,
+          width: 550,
+          height: 720,
+        },
+        rotationAngle: 90,
+        textWidth: 100,
+        fontSize: 12,
+        margin: 30,
+        alignment: "left",
+        slot: "footer",
+      });
+
+    expect(placement.x).toBe(
+      25 + 550 - 30,
+    );
+    expect(placement.y).toBe(
+      40 + 30,
+    );
+  });
+
   it("maps a right header through a 270 degree rotation", () => {
     const placement =
       calculateHeaderFooterPlacement({
-        pageWidth: 600,
-        pageHeight: 800,
+        box,
         rotationAngle: 270,
         textWidth: 100,
         fontSize: 12,

@@ -7,6 +7,7 @@ import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { calculateVisibleCropBox } from "@/lib/pdf/cropGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { Crop, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
@@ -196,24 +197,41 @@ export default function CropPdfPage() {
 
       pdf.getPages().forEach((page, index) => {
         const box = page.getCropBox();
-        const newWidth = box.width - left - right;
-        const newHeight = box.height - top - bottom;
 
-        if (
-          newWidth < MIN_VISIBLE_POINTS ||
-          newHeight < MIN_VISIBLE_POINTS
-        ) {
-          throw new Error(
-            `The crop margins are too large for page ${index + 1}. Reduce the margins and try again.`,
+        try {
+          const cropped =
+            calculateVisibleCropBox(
+              box,
+              page.getRotation().angle,
+              {
+                top,
+                right,
+                bottom,
+                left,
+              },
+              MIN_VISIBLE_POINTS,
+            );
+
+          page.setCropBox(
+            cropped.x,
+            cropped.y,
+            cropped.width,
+            cropped.height,
           );
-        }
+        } catch (error) {
+          if (
+            error instanceof Error &&
+            error.message.includes(
+              "too little visible page area",
+            )
+          ) {
+            throw new Error(
+              `The crop margins are too large for page ${index + 1}. Reduce the margins and try again.`,
+            );
+          }
 
-        page.setCropBox(
-          box.x + left,
-          box.y + bottom,
-          newWidth,
-          newHeight,
-        );
+          throw error;
+        }
       });
 
       const bytes = await pdf.save();
