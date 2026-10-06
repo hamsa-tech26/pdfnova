@@ -71,6 +71,12 @@ export const TOOL_SEO = {
     description:
       "Crop visible PDF page margins online in your browser. Trim top, right, bottom, and left edges without uploading your document.",
   },
+  "resize-pdf-pages": {
+    name: "Resize PDF Pages",
+    title: "Resize PDF Pages Online - A4, Letter, Legal & A5",
+    description:
+      "Resize PDF pages to A4, Letter, Legal, or A5 in your browser. Fit content proportionally, preserve page orientation, and keep your document on your device.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
