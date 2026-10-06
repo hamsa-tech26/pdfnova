@@ -8,7 +8,7 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { addFillableFields, type FillableFieldDefinition, type FillableFieldType } from "@/lib/pdf/formBuilder";
-import { hasPdfXfa } from "@/lib/pdf/formFields";
+import { getPdfFormProcessingError, hasPdfXfa } from "@/lib/pdf/formFields";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import {
   normalizeVisibleRect,
@@ -36,7 +36,7 @@ type FieldDefinition = FillableFieldDefinition;
 const tips = [
   { title: "Draw fields visually", description: "Choose a field type, drag its area on the page preview, then add it to the form." },
   { title: "Use unique field names", description: "Every interactive field needs a unique name so PDF readers can store its value correctly." },
-  { title: "Create text, checkbox, and dropdown fields", description: "This first form-builder workflow focuses on the most common field types and keeps the result editable." },
+  { title: "Create common AcroForm fields", description: "Add text, checkbox, and dropdown fields. Text appearances currently use the standard PDF WinAnsi/Latin font set." },
 ];
 
 const faqs = [
@@ -54,10 +54,16 @@ function pointRatio(event: PointerEvent<HTMLDivElement>, element: HTMLDivElement
 }
 
 function parseOptions(value: string) {
-  return value
-    .split(/[\n,;]+/)
-    .map((option) => option.trim())
-    .filter(Boolean);
+  return [
+    ...new Set(
+      value
+        .split(/[\n,;]+/)
+        .map((option) =>
+          option.trim(),
+        )
+        .filter(Boolean),
+    ),
+  ];
 }
 
 export default function CreateFillablePdfPage() {
@@ -294,7 +300,12 @@ export default function CreateFillablePdfPage() {
       toast.success("Fillable PDF created successfully.");
     } catch (error) {
       console.error(error);
-      setErrorMessage(error instanceof Error ? error.message : "The fillable PDF could not be created.");
+      setErrorMessage(
+        getPdfFormProcessingError(
+          error,
+          "The fillable PDF could not be created.",
+        ),
+      );
     } finally {
       setIsProcessing(false);
     }
