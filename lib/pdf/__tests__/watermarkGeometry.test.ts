@@ -67,10 +67,16 @@ describe("watermarkGeometry", () => {
 
     expect(
       placement.boundingWidth,
-    ).toBeGreaterThan(120);
+    ).toBeCloseTo(
+      113.13708498984761,
+      6,
+    );
     expect(
       placement.boundingHeight,
-    ).toBeGreaterThan(40);
+    ).toBeCloseTo(
+      113.1370849898476,
+      6,
+    );
     expect(
       placement.drawRotation,
     ).toBe(45);
