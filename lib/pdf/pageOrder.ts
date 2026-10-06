@@ -86,6 +86,67 @@ export function reversePdfPagesInPlace(
 }
 
 
+function prepareFormForPageRemoval(
+  pdf: PDFDocument,
+  deletedPageRefs: Set<string>,
+) {
+  if (!pdf.catalog.AcroForm()) {
+    return;
+  }
+
+  const form = pdf.getForm();
+
+  for (const field of form.getFields()) {
+    const widgets =
+      field.acroField.getWidgets();
+
+    if (widgets.length === 0) {
+      continue;
+    }
+
+    const widgetPageRefs =
+      widgets.map((widget) =>
+        widget.P()?.toString(),
+      );
+
+    if (
+      widgetPageRefs.some(
+        (pageRef) => !pageRef,
+      )
+    ) {
+      throw new Error(
+        `Form field ${field.getName()} has a widget without an explicit page reference. Kukureku will not delete pages because that could leave a broken form field.`,
+      );
+    }
+
+    const deletedWidgetCount =
+      widgetPageRefs.filter(
+        (pageRef) =>
+          deletedPageRefs.has(
+            pageRef as string,
+          ),
+      ).length;
+
+    if (
+      deletedWidgetCount === 0
+    ) {
+      continue;
+    }
+
+    if (
+      deletedWidgetCount ===
+      widgetPageRefs.length
+    ) {
+      form.removeField(field);
+      continue;
+    }
+
+    throw new Error(
+      `Form field ${field.getName()} spans both deleted and retained pages. Kukureku will not delete those pages because that could leave a broken form field.`,
+    );
+  }
+}
+
 export function removePdfPagesInPlace(
   pdf: PDFDocument,
   indices: number[],
@@ -139,41 +200,10 @@ export function removePdfPagesInPlace(
       ),
     );
 
-  if (pdf.catalog.AcroForm()) {
-    const form =
-      pdf.getForm();
-
-    for (
-      const field of
-      form.getFields()
-    ) {
-      const widgetPageRefs =
-        field.acroField
-          .getWidgets()
-          .map((widget) =>
-            widget.P()?.toString(),
-          )
-          .filter(
-            (
-              value,
-            ): value is string =>
-              Boolean(value),
-          );
-
-      if (
-        widgetPageRefs.length >
-          0 &&
-        widgetPageRefs.every(
-          (pageRef) =>
-            deletedPageRefs.has(
-              pageRef,
-            ),
-        )
-      ) {
-        form.removeField(field);
-      }
-    }
-  }
+  prepareFormForPageRemoval(
+    pdf,
+    deletedPageRefs,
+  );
 
   unique
     .sort((a, b) => b - a)
@@ -224,6 +254,25 @@ export function organizePdfPagesInPlace(
     );
   }
 
+  for (const entry of entries) {
+    const delta =
+      entry.rotationDelta ??
+      0;
+
+    if (
+      !Number.isFinite(delta) ||
+      delta % 90 !== 0
+    ) {
+      throw new Error(
+        "Page rotations must use 90-degree steps.",
+      );
+    }
+  }
+
+  const originalPages = [
+    ...pdf.getPages(),
+  ];
+
   const kept =
     new Set(
       requestedIndices,
@@ -244,70 +293,65 @@ export function organizePdfPagesInPlace(
   if (
     deletedIndices.length > 0
   ) {
-    removePdfPagesInPlace(
+    if (hasPdfXfa(pdf)) {
+      throw new Error(
+        "This PDF contains XFA form data. Page deletion is disabled because changing the page tree could disconnect the XFA structure.",
+      );
+    }
+
+    const deletedPageRefs =
+      new Set(
+        deletedIndices.map(
+          (index) =>
+            originalPages[
+              index
+            ].ref.toString(),
+        ),
+      );
+
+    prepareFormForPageRemoval(
       pdf,
-      deletedIndices,
+      deletedPageRefs,
     );
   }
 
-  const remainingOriginalIndices =
-    Array.from(
-      {
-        length:
-          originalPageCount,
-      },
-      (_, index) => index,
-    ).filter((index) =>
-      kept.has(index),
-    );
-
-  const order =
-    requestedIndices.map(
-      (originalIndex) =>
-        remainingOriginalIndices.indexOf(
-          originalIndex,
-        ),
-    );
-
-  reorderPdfPagesInPlace(
-    pdf,
-    order,
-  );
+  for (
+    let index =
+      originalPageCount - 1;
+    index >= 0;
+    index -= 1
+  ) {
+    pdf.removePage(index);
+  }
 
   entries.forEach(
-    (entry, index) => {
+    (entry) => {
+      const page =
+        originalPages[
+          entry.originalPageIndex
+        ];
+
       const delta =
         entry.rotationDelta ??
         0;
 
-      if (
-        !Number.isFinite(delta) ||
-        delta % 90 !== 0
-      ) {
-        throw new Error(
-          "Page rotations must use 90-degree steps.",
+      if (delta !== 0) {
+        const current =
+          page.getRotation()
+            .angle;
+
+        page.setRotation(
+          degrees(
+            ((current + delta) %
+              360 +
+              360) %
+              360,
+          ),
         );
       }
 
-      if (delta === 0) {
-        return;
-      }
-
-      const page =
-        pdf.getPage(index);
-
-      const current =
-        page.getRotation()
-          .angle;
-
-      page.setRotation(
-        degrees(
-          ((current + delta) %
-            360 +
-            360) %
-            360,
-        ),
-      );
+      pdf.addPage(page);
     },
   );
 }
+
