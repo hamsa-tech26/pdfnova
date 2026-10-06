@@ -421,6 +421,8 @@ export default function SignPdfPage() {
               pageNumber,
             ],
             format: "jpeg",
+            maxDimension:
+              2400,
           },
         );
 
