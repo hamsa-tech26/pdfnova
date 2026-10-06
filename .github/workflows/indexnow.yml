@@ -25,7 +25,7 @@ jobs:
         run: sleep 90
 
       - name: Notify IndexNow
-        run: node scripts/submitIndexNow.mjs
+        run: node scripts/submitIndexNowSafe.mjs
         env:
           INDEXNOW_BEFORE_SHA: ${{ github.event.before }}
           INDEXNOW_AFTER_SHA: ${{ github.sha }}

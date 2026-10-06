@@ -128,6 +128,41 @@ const tools = [
     accent: "bg-emerald-50 text-emerald-700",
   },
   {
+    title: "PDF Form Filler",
+    description: "Fill existing interactive PDF form fields and save an editable or flattened copy.",
+    href: "/pdf-form-filler",
+    icon: FileText,
+    accent: "bg-blue-50 text-blue-700",
+  },
+  {
+    title: "Redact PDF",
+    description: "Permanently remove sensitive page content with a privacy-safe rasterized export.",
+    href: "/redact-pdf",
+    icon: Eraser,
+    accent: "bg-red-50 text-red-700",
+  },
+  {
+    title: "Edit PDF Metadata",
+    description: "Review and edit common PDF title, author, subject, keywords, creator, and producer fields.",
+    href: "/edit-pdf-metadata",
+    icon: FileText,
+    accent: "bg-slate-100 text-slate-700",
+  },
+  {
+    title: "Add Image / Stamp PDF",
+    description: "Place a logo, image, seal, or text stamp on one page or every page.",
+    href: "/add-image-stamp-pdf",
+    icon: ImageIcon,
+    accent: "bg-fuchsia-50 text-fuchsia-700",
+  },
+  {
+    title: "Create Fillable PDF",
+    description: "Draw interactive text fields, checkboxes, and dropdowns onto PDF pages.",
+    href: "/create-fillable-pdf",
+    icon: PanelsTopLeft,
+    accent: "bg-teal-50 text-teal-700",
+  },
+  {
     title: "Watermark PDF",
     description: "Add custom text or a watermark to PDF pages.",
     href: "/watermark-pdf",
@@ -164,7 +199,7 @@ export default function ToolsSection() {
           </h2>
 
           <p className="mt-5 text-lg leading-8 text-gray-600">
-            Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, add headers and page numbers, sign, protect, watermark, and unlock PDFs
+            Merge, split, compress, convert, organize, OCR, reorder, number, fill forms, redact, edit metadata, crop, resize, add images and stamps, create fillable forms, sign, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>

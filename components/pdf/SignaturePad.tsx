@@ -220,7 +220,7 @@ export default function SignaturePad({
           type="button"
           onClick={clearPad}
           disabled={disabled}
-          className="inline-flex shrink-0 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+          className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-xl border border-gray-300 bg-white px-3 py-2 text-sm font-semibold text-gray-700 outline-none transition hover:border-red-300 hover:bg-red-50 hover:text-red-700 focus-visible:ring-4 focus-visible:ring-red-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus-visible:ring-red-950"
         >
           <Eraser size={16} />
           Clear
@@ -230,6 +230,8 @@ export default function SignaturePad({
       <div className="mt-5 overflow-hidden rounded-2xl border border-dashed border-gray-300 bg-white dark:border-slate-700 dark:bg-slate-900">
         <canvas
           ref={canvasRef}
+          role="img"
+          aria-label="Signature drawing area. Mouse, touch, or stylus drawing only; use Type or Upload mode for keyboard-only signing."
           width={900}
           height={300}
           onPointerDown={
@@ -245,7 +247,6 @@ export default function SignaturePad({
             finishDrawing
           }
           className="aspect-[3/1] w-full touch-none cursor-crosshair"
-          aria-label="Signature drawing pad"
         />
       </div>
     </section>

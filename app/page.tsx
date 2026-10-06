@@ -73,7 +73,7 @@ export default function Home() {
                   </h1>
 
                   <p className="mt-6 max-w-2xl text-lg leading-8 text-blue-100">
-                    Merge, split, compress, convert, organize, OCR, reorder, number, clean metadata, crop, resize, add headers and page numbers, sign, protect, watermark, and unlock PDFs directly in your browser. Current Kukureku tools keep supported files on your device.
+                    Merge, split, compress, convert, organize, OCR, reorder, number, fill forms, redact sensitive content, edit metadata, crop, resize, add images and stamps, create fillable forms, sign, protect, watermark, and unlock PDFs directly in your browser. Current Kukureku tools keep supported files on your device.
                   </p>
 
                   <div className="mt-8 flex flex-col gap-3 sm:flex-row">
@@ -123,7 +123,7 @@ export default function Home() {
                   </div>
 
                   <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
-                    <p className="font-bold">25 working tools</p>
+                    <p className="font-bold">30 working tools</p>
                     <p className="mt-2 text-sm leading-6 text-blue-100">
                       Ready for common PDF workflows.
                     </p>

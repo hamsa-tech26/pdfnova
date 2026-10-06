@@ -137,7 +137,7 @@ export default function FileCard({
     : 0;
 
   return (
-    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5">
+    <div className="rounded-2xl border border-gray-200 bg-gray-50 p-5 dark:border-slate-800 dark:bg-slate-900">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex min-w-0 items-start gap-4">
           <div
@@ -147,11 +147,11 @@ export default function FileCard({
           </div>
 
           <div className="min-w-0">
-            <p className="break-all font-semibold text-gray-900">
+            <p className="break-all font-semibold text-gray-900 dark:text-white">
               {file.name}
             </p>
 
-            <p className="mt-1 text-sm font-medium text-gray-500">
+            <p className="mt-1 text-sm font-medium text-gray-500 dark:text-slate-400">
               {details.label}
             </p>
           </div>
@@ -162,7 +162,7 @@ export default function FileCard({
             type="button"
             onClick={onRemove}
             aria-label={removeLabel}
-            className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 sm:w-auto"
+            className="inline-flex min-h-11 w-full items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 outline-none transition hover:bg-red-50 focus-visible:ring-4 focus-visible:ring-red-100 sm:w-auto dark:border-red-900 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30 dark:focus-visible:ring-red-950"
           >
             <Trash2 size={17} />
             Remove
@@ -170,23 +170,23 @@ export default function FileCard({
         )}
       </div>
 
-      <div className="mt-5 grid gap-4 rounded-xl border border-gray-200 bg-white p-4 sm:grid-cols-2">
+      <div className="mt-5 grid gap-4 rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-950 sm:grid-cols-2">
         <div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             File size
           </p>
 
-          <p className="mt-1 font-semibold text-gray-900">
+          <p className="mt-1 font-semibold text-gray-900 dark:text-white">
             {formatFileSize(file.size)}
           </p>
         </div>
 
         <div>
-          <p className="text-sm text-gray-500">
+          <p className="text-sm text-gray-500 dark:text-slate-400">
             Last modified
           </p>
 
-          <p className="mt-1 font-semibold text-gray-900">
+          <p className="mt-1 font-semibold text-gray-900 dark:text-white">
             {formatModifiedDate(file.lastModified)}
           </p>
         </div>
@@ -204,7 +204,14 @@ export default function FileCard({
             </p>
           </div>
 
-          <div className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200">
+          <div
+            role="progressbar"
+            aria-label="Processing progress"
+            aria-valuemin={0}
+            aria-valuemax={100}
+            aria-valuenow={Math.round(safeProgress)}
+            className="mt-2 h-2 overflow-hidden rounded-full bg-gray-200 dark:bg-slate-800"
+          >
             <div
               className="h-full rounded-full bg-blue-600 transition-all duration-300"
               style={{
@@ -215,7 +222,7 @@ export default function FileCard({
         </div>
       )}
 
-      <div className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700">
+      <div aria-live="polite" className="mt-5 flex items-center gap-2 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-300">
         <CheckCircle2 size={18} className="shrink-0" />
         {statusText}
       </div>

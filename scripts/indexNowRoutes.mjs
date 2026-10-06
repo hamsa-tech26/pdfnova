@@ -1,8 +1,8 @@
-import { SITE_URL } from "@/lib/site";
-import type { MetadataRoute } from "next";
+export const ORIGIN = "https://kukureku.com";
+export const HOST = "kukureku.com";
 
-const publicRoutes = [
-  "",
+export const PUBLIC_ROUTES = [
+  "/",
   "/merge-pdf",
   "/split-pdf",
   "/compress-pdf",
@@ -46,22 +46,15 @@ const publicRoutes = [
   "/terms",
 ];
 
-export default function sitemap(): MetadataRoute.Sitemap {
-  return publicRoutes.map((route) => ({
-    url: `${SITE_URL}${route}`,
-    changeFrequency: route === "" ? "weekly" : "monthly",
-    priority:
-      route === ""
-        ? 1
-        : route === "/guides" ||
-            route.startsWith("/guides/") ||
-            route === "/trust" ||
-            route === "/trust/verification"
-          ? 0.7
-          : route === "/about" || route === "/press"
-            ? 0.6
-            : route === "/privacy" || route === "/terms"
-            ? 0.3
-            : 0.8,
-  }));
-}
+export const TOOL_ROUTES = PUBLIC_ROUTES.filter(
+  (route) =>
+    route !== "/" &&
+    route !== "/about" &&
+    route !== "/press" &&
+    route !== "/trust" &&
+    route !== "/trust/verification" &&
+    route !== "/guides" &&
+    !route.startsWith("/guides/") &&
+    route !== "/privacy" &&
+    route !== "/terms",
+);

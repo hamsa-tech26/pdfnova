@@ -79,7 +79,7 @@ export default function ErrorCard({
                 <button
                   type="button"
                   onClick={onRetry}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-semibold text-white transition hover:-translate-y-0.5 hover:bg-red-700"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-red-600 px-5 py-3 font-semibold text-white outline-none transition hover:-translate-y-0.5 hover:bg-red-700 focus-visible:ring-4 focus-visible:ring-red-200 dark:focus-visible:ring-red-950"
                 >
                   <RefreshCcw size={18} />
                   {retryLabel}
@@ -90,7 +90,7 @@ export default function ErrorCard({
                 <button
                   type="button"
                   onClick={onReset}
-                  className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
+                  className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300 dark:hover:bg-slate-800 dark:hover:text-white"
                 >
                   <RotateCcw size={18} />
                   {resetLabel}

@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import path from "node:path";
+import { TOOL_ROUTES } from "./indexNowRoutes.mjs";
 
 const ROOT = process.cwd();
 const WORKSPACE = path.join(ROOT, "app", "(workspace)");
@@ -25,10 +26,9 @@ function toolRoutesFromWorkspace() {
       .map((entry) => entry.name)
       .filter((name) => !INTERNAL_ROUTES.has(name))
       .filter((name) =>
-        fs.existsSync(
-          path.join(WORKSPACE, name, "page.tsx"),
-        ),
-      ),
+        fs.existsSync(path.join(WORKSPACE, name, "page.tsx")),
+      )
+      .map((name) => `/${name}`),
   );
 }
 
@@ -37,8 +37,8 @@ function seoRoutes() {
 
   return sorted(
     [...source.matchAll(/^\s+"?([a-z0-9-]+)"?:\s+\{/gm)]
-      .map((match) => match[1])
-      .filter((name) => name.includes("-")),
+      .map((match) => `/${match[1]}`)
+      .filter((route) => route.includes("-")),
   );
 }
 
@@ -47,49 +47,31 @@ function hrefRoutes(relativePath) {
 
   return sorted(
     [...source.matchAll(/href:\s*"\/([a-z0-9-]+)"/g)]
-      .map((match) => match[1])
-      .filter((name) => !INTERNAL_ROUTES.has(name)),
+      .map((match) => `/${match[1]}`)
+      .filter((route) => !INTERNAL_ROUTES.has(route.slice(1))),
   );
 }
 
-function routeArray(relativePath) {
-  const source = read(relativePath);
+function sitemapRoutes() {
+  const source = read("app/sitemap.ts");
 
   return sorted(
     [...source.matchAll(/"\/([a-z0-9-]+)"/g)]
-      .map((match) => match[1])
-      .filter(
-        (name) =>
-          ![
-            "about",
-            "press",
-            "trust",
-            "guides",
-            "privacy",
-            "terms",
-          ].includes(name),
-      ),
+      .map((match) => `/${match[1]}`)
+      .filter((route) => TOOL_ROUTES.includes(route)),
   );
 }
 
 function assertSame(label, expected, actual) {
-  const missing = expected.filter(
-    (value) => !actual.includes(value),
-  );
-  const extra = actual.filter(
-    (value) => !expected.includes(value),
-  );
+  const missing = expected.filter((value) => !actual.includes(value));
+  const extra = actual.filter((value) => !expected.includes(value));
 
   if (missing.length || extra.length) {
     throw new Error(
       [
         `${label} does not match the live tool routes.`,
-        missing.length
-          ? `Missing: ${missing.join(", ")}`
-          : "",
-        extra.length
-          ? `Extra: ${extra.join(", ")}`
-          : "",
+        missing.length ? `Missing: ${missing.join(", ")}` : "",
+        extra.length ? `Extra: ${extra.join(", ")}` : "",
       ]
         .filter(Boolean)
         .join("\n"),
@@ -99,27 +81,21 @@ function assertSame(label, expected, actual) {
 
 function assertToolLayouts(routes) {
   for (const route of routes) {
-    const layoutPath = path.join(
-      WORKSPACE,
-      route,
-      "layout.tsx",
-    );
+    const slug = route.slice(1);
+    const layoutPath = path.join(WORKSPACE, slug, "layout.tsx");
 
     if (!fs.existsSync(layoutPath)) {
-      throw new Error(
-        `Missing layout.tsx for /${route}.`,
-      );
+      throw new Error(`Missing layout.tsx for ${route}.`);
     }
 
     const layout = fs.readFileSync(layoutPath, "utf8");
-
     const metadataPattern = new RegExp(
-      `buildToolMetadata\\(\\s*["']${route}["']\\s*,?\\s*\\)`,
+      `buildToolMetadata\\(\\s*["']${slug}["']\\s*,?\\s*\\)`,
     );
 
     if (!metadataPattern.test(layout)) {
       throw new Error(
-        `/${route} layout does not call buildToolMetadata("${route}").`,
+        `${route} layout does not call buildToolMetadata("${slug}").`,
       );
     }
   }
@@ -127,9 +103,7 @@ function assertToolLayouts(routes) {
 
 function assertHomepageCount(expectedCount) {
   const homepage = read("app/page.tsx");
-  const match = homepage.match(
-    /(\d+) working tools/,
-  );
+  const match = homepage.match(/(\d+) working tools/);
 
   if (!match) {
     throw new Error(
@@ -147,22 +121,14 @@ function assertHomepageCount(expectedCount) {
 }
 
 const liveRoutes = toolRoutesFromWorkspace();
+const indexNowRoutes = sorted(TOOL_ROUTES);
 
 const registries = [
   ["SEO registry", seoRoutes()],
-  [
-    "Homepage tool cards",
-    hrefRoutes("components/ToolsSection.tsx"),
-  ],
-  [
-    "Dashboard tool cards",
-    hrefRoutes("app/(workspace)/dashboard/page.tsx"),
-  ],
-  ["Sitemap", routeArray("app/sitemap.ts")],
-  [
-    "IndexNow route list",
-    routeArray("scripts/submitIndexNow.mjs"),
-  ],
+  ["Homepage tool cards", hrefRoutes("components/ToolsSection.tsx")],
+  ["Dashboard tool cards", hrefRoutes("app/(workspace)/dashboard/page.tsx")],
+  ["Sitemap", sitemapRoutes()],
+  ["IndexNow route registry", indexNowRoutes],
 ];
 
 for (const [label, routes] of registries) {
@@ -173,5 +139,5 @@ assertToolLayouts(liveRoutes);
 assertHomepageCount(liveRoutes.length);
 
 console.log(
-  `Kukureku tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sitemap, and IndexNow.`,
+  `Tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sitemap, and IndexNow.`,
 );

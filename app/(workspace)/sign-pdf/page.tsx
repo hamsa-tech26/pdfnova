@@ -4,6 +4,7 @@ import ActionButton from "@/components/pdf/ActionButton";
 import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import PositionControls from "@/components/pdf/PositionControls";
 import SignaturePad from "@/components/pdf/SignaturePad";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
@@ -421,6 +422,8 @@ export default function SignPdfPage() {
               pageNumber,
             ],
             format: "jpeg",
+            maxDimension:
+              2400,
           },
         );
 
@@ -535,6 +538,7 @@ export default function SignPdfPage() {
       const pdf =
         await PDFDocument.load(
           await selectedFile.arrayBuffer(),
+          { updateMetadata: false },
         );
 
       const count =
@@ -877,13 +881,52 @@ export default function SignPdfPage() {
     event: PointerEvent<HTMLDivElement>,
   ) {
     if (
-      !isDraggingRef.current
+      !isDraggingRef.current ||
+      !previewContainerRef.current
     ) {
       return;
     }
 
+    const rect =
+      previewContainerRef.current.getBoundingClientRect();
+
+    const pointerX =
+      (event.clientX -
+        rect.left) /
+      rect.width;
+
+    const pointerY =
+      (event.clientY -
+        rect.top) /
+      rect.height;
+
+    setSignaturePosition({
+      x: clamp(
+        pointerX -
+          dragOffsetRef.current.x,
+        0,
+        Math.max(
+          0,
+          1 -
+            signatureWidthRatio,
+        ),
+      ),
+      y: clamp(
+        pointerY -
+          dragOffsetRef.current.y,
+        0,
+        Math.max(
+          0,
+          1 -
+            overlayHeightRatio,
+        ),
+      ),
+    });
+
     isDraggingRef.current =
       false;
+
+    resetResult();
 
     if (
       event.currentTarget.hasPointerCapture(
@@ -932,6 +975,7 @@ export default function SignPdfPage() {
       const pdf =
         await PDFDocument.load(
           await file.arrayBuffer(),
+          { updateMetadata: false },
         );
 
       const page =
@@ -1071,7 +1115,7 @@ export default function SignPdfPage() {
           title:
             "Place and download",
           description:
-            "Choose the page, drag and resize the signature on the preview, then create the signed PDF copy.",
+            "Choose the page, drag or use the keyboard-friendly position controls, resize the signature, then create the signed PDF copy.",
         },
       ]}
       maxWidthClassName="max-w-7xl"
@@ -1150,6 +1194,10 @@ export default function SignPdfPage() {
                           mode
                         }
                         type="button"
+                        aria-pressed={
+                          signatureMode ===
+                          mode
+                        }
                         onClick={() =>
                           chooseMode(
                             mode,
@@ -1158,7 +1206,7 @@ export default function SignPdfPage() {
                         disabled={
                           isProcessing
                         }
-                        className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-4 py-3 font-semibold transition ${
+                        className={`inline-flex min-h-14 items-center justify-center gap-2 rounded-2xl border px-4 py-3 font-semibold outline-none transition focus-visible:ring-4 focus-visible:ring-blue-100 dark:focus-visible:ring-blue-950 ${
                           signatureMode ===
                           mode
                             ? "border-blue-500 bg-blue-50 text-blue-700 ring-2 ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300"
@@ -1258,7 +1306,7 @@ export default function SignPdfPage() {
                         disabled={
                           isProcessing
                         }
-                        className="inline-flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
+                        className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white outline-none transition hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-50 dark:focus-visible:ring-blue-950"
                       >
                         <ImagePlus
                           size={
@@ -1407,11 +1455,7 @@ export default function SignPdfPage() {
 
                         {signatureDataUrl && (
                           <div
-                            role="button"
-                            tabIndex={
-                              0
-                            }
-                            aria-label="Drag signature to position it"
+                            aria-hidden="true"
                             onPointerDown={
                               beginSignatureDrag
                             }
@@ -1482,7 +1526,7 @@ export default function SignPdfPage() {
                         isProcessing ||
                         !signatureDataUrl
                       }
-                      className="mt-3 w-full"
+                      className="mt-3 w-full accent-blue-600"
                     />
                   </label>
 
@@ -1495,11 +1539,42 @@ export default function SignPdfPage() {
                       isProcessing ||
                       !signatureDataUrl
                     }
-                    className="rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+                    className="min-h-11 rounded-xl border border-gray-300 bg-white px-4 py-2.5 text-sm font-semibold text-gray-700 outline-none transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 focus-visible:ring-4 focus-visible:ring-blue-100 disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:focus-visible:ring-blue-950"
                   >
                     Reset position
                   </button>
                 </div>
+
+                {signatureDataUrl && preview && (
+                  <div className="mt-5">
+                    <PositionControls
+                      label="signature"
+                      position={{
+                        x: displayX,
+                        y: displayY,
+                      }}
+                      maxX={Math.max(
+                        0,
+                        1 -
+                          signatureWidthRatio,
+                      )}
+                      maxY={Math.max(
+                        0,
+                        1 -
+                          overlayHeightRatio,
+                      )}
+                      onChange={(position) => {
+                        setSignaturePosition(
+                          position,
+                        );
+                        resetResult();
+                      }}
+                      disabled={
+                        isProcessing
+                      }
+                    />
+                  </div>
+                )}
 
                 {!signatureDataUrl && (
                   <p className="mt-5 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">

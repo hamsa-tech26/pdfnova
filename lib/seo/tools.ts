@@ -89,6 +89,36 @@ export const TOOL_SEO = {
     description:
       "Draw, type, or upload a visual signature, place it on a PDF page preview, and download the signed copy without uploading your document.",
   },
+  "pdf-form-filler": {
+    name: "PDF Form Filler",
+    title: "Fill PDF Forms Online - Private AcroForm Filler",
+    description:
+      "Fill standard interactive PDF form fields in your browser, keep them editable or flatten the completed copy, and avoid uploading your form data.",
+  },
+  "redact-pdf": {
+    name: "Redact PDF",
+    title: "Redact PDF Online - Permanent Private Redaction",
+    description:
+      "Mark sensitive PDF content and create a privacy-safe rasterized copy where the original page content is not hidden underneath black boxes.",
+  },
+  "edit-pdf-metadata": {
+    name: "Edit PDF Metadata",
+    title: "Edit PDF Metadata Online - Private Document Properties",
+    description:
+      "Inspect and edit common PDF title, author, subject, keywords, creator, and producer metadata locally in your browser.",
+  },
+  "add-image-stamp-pdf": {
+    name: "Add Image / Stamp PDF",
+    title: "Add Image or Stamp to PDF Online - Private",
+    description:
+      "Create a text stamp or upload a PNG/JPG, then drag, resize, and place it on one PDF page or every page without uploading your files.",
+  },
+  "create-fillable-pdf": {
+    name: "Create Fillable PDF",
+    title: "Create Fillable PDF Forms Online - Private",
+    description:
+      "Draw interactive text fields, checkboxes, and dropdowns on PDF page previews and download a standard fillable AcroForm PDF locally.",
+  },
   "watermark-pdf": {
     name: "Watermark PDF",
     title: "Watermark PDF - Add Text or Image Privately",
