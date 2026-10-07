@@ -332,11 +332,10 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
   ).toBeVisible();
 
   await expect(
-    page
-      .getByRole("main")
-      .getByText(
+    page.getByRole("heading", {
+      name:
         "browser-magic-drop-metadata-removed.pdf",
-      ),
+    }),
   ).toBeVisible();
 
   await expect(
