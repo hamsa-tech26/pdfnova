@@ -2,12 +2,15 @@ import {
   clearWorkflowRecipeProgress,
 } from "./workflowProgress";
 import {
+  createBranchLineage,
+  createCompositionLineage,
   createDerivedLineage,
   createSourceLineage,
   isSameWorkspaceFileFingerprint,
   normalizeWorkspaceLineage,
   type WorkspaceFileRole,
   type WorkspaceOperationDescriptor,
+  type WorkspaceRelationKind,
 } from "./workspaceLineage";
 
 export type WorkspaceFileSummary = {
@@ -19,7 +22,11 @@ export type WorkspaceFileSummary = {
   savedAt: string;
   role: WorkspaceFileRole;
   parentId: string | null;
+  parentIds: string[];
   rootId: string;
+  rootIds: string[];
+  documentId: string;
+  relationKind: WorkspaceRelationKind;
   operationId: string | null;
   operationLabel: string | null;
   version: number;
@@ -43,7 +50,7 @@ const SUMMARY_STORE = "summaries";
 const META_STORE = "meta";
 const ACTIVE_FILE_KEY =
   "active-file-id";
-const DB_VERSION = 2;
+const DB_VERSION = 3;
 
 export const WORKSPACE_CHANGE_EVENT =
   "kukureku-workspace-change";
@@ -136,7 +143,17 @@ function toSummary(
     role: normalized.role,
     parentId:
       normalized.parentId,
+    parentIds: [
+      ...normalized.parentIds,
+    ],
     rootId: normalized.rootId,
+    rootIds: [
+      ...normalized.rootIds,
+    ],
+    documentId:
+      normalized.documentId,
+    relationKind:
+      normalized.relationKind,
     operationId:
       normalized.operationId,
     operationLabel:
@@ -220,7 +237,7 @@ function openWorkspaceDatabase(): Promise<IDBDatabase> {
 
           if (
             event.oldVersion > 0 &&
-            event.oldVersion < 2 &&
+            event.oldVersion < 3 &&
             fileStore
           ) {
             const summaryStore =
@@ -258,11 +275,17 @@ function openWorkspaceDatabase(): Promise<IDBDatabase> {
                     normalized,
                   ),
                 );
-                metaStore.put({
-                  key: ACTIVE_FILE_KEY,
-                  value:
-                    normalized.id,
-                });
+
+                if (
+                  event.oldVersion <
+                  2
+                ) {
+                  metaStore.put({
+                    key: ACTIVE_FILE_KEY,
+                    value:
+                      normalized.id,
+                  });
+                }
 
                 cursor.continue();
               };
@@ -319,13 +342,10 @@ async function readAllSummaries(
         summary,
       ),
     }))
-    .sort(
-      (left, right) =>
-        left.version -
-          right.version ||
-        left.savedAt.localeCompare(
-          right.savedAt,
-        ),
+    .sort((left, right) =>
+      left.savedAt.localeCompare(
+        right.savedAt,
+      ),
     );
 }
 
@@ -371,9 +391,55 @@ async function writeActiveFileId(
   );
 }
 
-export async function saveActiveWorkspaceFile(
+async function writeWorkspaceRecord(
+  db: IDBDatabase,
+  record: WorkspaceFileRecord,
+  activate: boolean,
+) {
+  const stores = activate
+    ? [
+        FILE_STORE,
+        SUMMARY_STORE,
+        META_STORE,
+      ]
+    : [
+        FILE_STORE,
+        SUMMARY_STORE,
+      ];
+  const transaction =
+    db.transaction(
+      stores,
+      "readwrite",
+    );
+
+  transaction
+    .objectStore(FILE_STORE)
+    .put(record);
+  transaction
+    .objectStore(
+      SUMMARY_STORE,
+    )
+    .put(
+      toSummary(record),
+    );
+
+  if (activate) {
+    transaction
+      .objectStore(META_STORE)
+      .put({
+        key: ACTIVE_FILE_KEY,
+        value: record.id,
+      });
+  }
+
+  await transactionComplete(
+    transaction,
+  );
+}
+
+export async function findWorkspaceFileSummaryByFingerprint(
   file: File,
-): Promise<WorkspaceFileSummary> {
+): Promise<WorkspaceFileSummary | null> {
   const db =
     await openWorkspaceDatabase();
 
@@ -381,24 +447,54 @@ export async function saveActiveWorkspaceFile(
     const summaries =
       await readAllSummaries(db);
 
+    return (
+      summaries.find(
+        (summary) =>
+          isSameWorkspaceFileFingerprint(
+            summary,
+            file,
+          ),
+      ) ?? null
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export async function ensureWorkspaceSourceFile(
+  file: File,
+  options: {
+    activate?: boolean;
+  } = {},
+): Promise<WorkspaceFileSummary> {
+  const activate =
+    options.activate ?? false;
+  const db =
+    await openWorkspaceDatabase();
+
+  try {
+    const summaries =
+      await readAllSummaries(db);
     const existing =
-      summaries.find((summary) =>
-        isSameWorkspaceFileFingerprint(
-          summary,
-          file,
-        ),
+      summaries.find(
+        (summary) =>
+          isSameWorkspaceFileFingerprint(
+            summary,
+            file,
+          ),
       );
 
     if (existing) {
-      await writeActiveFileId(
-        db,
-        existing.id,
-      );
-      notifyWorkspaceChanged();
+      if (activate) {
+        await writeActiveFileId(
+          db,
+          existing.id,
+        );
+        notifyWorkspaceChanged();
+      }
+
       return existing;
     }
-
-    clearWorkflowRecipeProgress();
 
     const id =
       crypto.randomUUID();
@@ -419,52 +515,31 @@ export async function saveActiveWorkspaceFile(
         ),
         blob: file,
       };
-    const summary =
-      toSummary(record);
 
-    const transaction =
-      db.transaction(
-        [
-          FILE_STORE,
-          SUMMARY_STORE,
-          META_STORE,
-        ],
-        "readwrite",
-      );
-
-    transaction
-      .objectStore(FILE_STORE)
-      .clear();
-    transaction
-      .objectStore(
-        SUMMARY_STORE,
-      )
-      .clear();
-    transaction
-      .objectStore(FILE_STORE)
-      .put(record);
-    transaction
-      .objectStore(
-        SUMMARY_STORE,
-      )
-      .put(summary);
-    transaction
-      .objectStore(META_STORE)
-      .put({
-        key: ACTIVE_FILE_KEY,
-        value: id,
-      });
-
-    await transactionComplete(
-      transaction,
+    await writeWorkspaceRecord(
+      db,
+      record,
+      activate,
     );
-
     notifyWorkspaceChanged();
 
-    return summary;
+    return toSummary(
+      record,
+    );
   } finally {
     db.close();
   }
+}
+
+export async function saveActiveWorkspaceFile(
+  file: File,
+): Promise<WorkspaceFileSummary> {
+  return ensureWorkspaceSourceFile(
+    file,
+    {
+      activate: true,
+    },
+  );
 }
 
 export async function saveDerivedWorkspaceFile(
@@ -493,27 +568,22 @@ export async function saveDerivedWorkspaceFile(
     }
 
     const nextVersion =
-      summaries.reduce(
-        (highest, summary) =>
-          Math.max(
-            highest,
-            summary.version,
-          ),
-        0,
-      ) + 1;
+      summaries
+        .filter(
+          (summary) =>
+            summary.documentId ===
+            parent.documentId,
+        )
+        .reduce(
+          (highest, summary) =>
+            Math.max(
+              highest,
+              summary.version,
+            ),
+          0,
+        ) + 1;
     const id =
       crypto.randomUUID();
-    const lineage =
-      createDerivedLineage(
-        parent,
-        nextVersion,
-        {
-          operationId:
-            options.operationId,
-          operationLabel:
-            options.operationLabel,
-        },
-      );
     const record: WorkspaceFileRecord =
       {
         id,
@@ -526,44 +596,191 @@ export async function saveDerivedWorkspaceFile(
           file.lastModified,
         savedAt:
           new Date().toISOString(),
-        ...lineage,
+        ...createDerivedLineage(
+          parent,
+          nextVersion,
+          {
+            operationId:
+              options.operationId,
+            operationLabel:
+              options.operationLabel,
+          },
+        ),
         blob: file,
       };
-    const summary =
-      toSummary(record);
 
-    const transaction =
-      db.transaction(
-        [
-          FILE_STORE,
-          SUMMARY_STORE,
-          META_STORE,
-        ],
-        "readwrite",
-      );
-
-    transaction
-      .objectStore(FILE_STORE)
-      .put(record);
-    transaction
-      .objectStore(
-        SUMMARY_STORE,
-      )
-      .put(summary);
-    transaction
-      .objectStore(META_STORE)
-      .put({
-        key: ACTIVE_FILE_KEY,
-        value: id,
-      });
-
-    await transactionComplete(
-      transaction,
+    await writeWorkspaceRecord(
+      db,
+      record,
+      true,
     );
-
     notifyWorkspaceChanged();
 
-    return summary;
+    return toSummary(
+      record,
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export async function saveBranchedWorkspaceFile(
+  file: File,
+  options: {
+    parentId: string;
+  } & WorkspaceOperationDescriptor,
+): Promise<WorkspaceFileSummary> {
+  const db =
+    await openWorkspaceDatabase();
+
+  try {
+    const summaries =
+      await readAllSummaries(db);
+    const parent =
+      summaries.find(
+        (summary) =>
+          summary.id ===
+          options.parentId,
+      );
+
+    if (!parent) {
+      throw new Error(
+        "The parent browser workspace document is no longer available.",
+      );
+    }
+
+    const id =
+      crypto.randomUUID();
+    const record: WorkspaceFileRecord =
+      {
+        id,
+        name: file.name,
+        type:
+          file.type ||
+          "application/pdf",
+        size: file.size,
+        lastModified:
+          file.lastModified,
+        savedAt:
+          new Date().toISOString(),
+        ...createBranchLineage(
+          parent,
+          id,
+          {
+            operationId:
+              options.operationId,
+            operationLabel:
+              options.operationLabel,
+          },
+        ),
+        blob: file,
+      };
+
+    await writeWorkspaceRecord(
+      db,
+      record,
+      true,
+    );
+    notifyWorkspaceChanged();
+
+    return toSummary(
+      record,
+    );
+  } finally {
+    db.close();
+  }
+}
+
+export async function saveComposedWorkspaceFile(
+  file: File,
+  options: {
+    parentIds: string[];
+  } & WorkspaceOperationDescriptor,
+): Promise<WorkspaceFileSummary> {
+  const uniqueParentIds =
+    [
+      ...new Set(
+        options.parentIds,
+      ),
+    ];
+
+  if (
+    uniqueParentIds.length < 2
+  ) {
+    throw new Error(
+      "A composed workspace document requires at least two parent documents.",
+    );
+  }
+
+  const db =
+    await openWorkspaceDatabase();
+
+  try {
+    const summaries =
+      await readAllSummaries(db);
+    const byId =
+      new Map(
+        summaries.map(
+          (summary) => [
+            summary.id,
+            summary,
+          ],
+        ),
+      );
+    const parents =
+      uniqueParentIds.map(
+        (id) =>
+          byId.get(id),
+      );
+
+    if (
+      parents.some(
+        (parent) =>
+          !parent,
+      )
+    ) {
+      throw new Error(
+        "One or more parent browser workspace documents are no longer available.",
+      );
+    }
+
+    const id =
+      crypto.randomUUID();
+    const record: WorkspaceFileRecord =
+      {
+        id,
+        name: file.name,
+        type:
+          file.type ||
+          "application/pdf",
+        size: file.size,
+        lastModified:
+          file.lastModified,
+        savedAt:
+          new Date().toISOString(),
+        ...createCompositionLineage(
+          parents as WorkspaceFileSummary[],
+          id,
+          {
+            operationId:
+              options.operationId,
+            operationLabel:
+              options.operationLabel,
+          },
+        ),
+        blob: file,
+      };
+
+    await writeWorkspaceRecord(
+      db,
+      record,
+      true,
+    );
+    notifyWorkspaceChanged();
+
+    return toSummary(
+      record,
+    );
   } finally {
     db.close();
   }
@@ -687,7 +904,7 @@ export async function setActiveWorkspaceFile(
 
     if (!summary) {
       throw new Error(
-        "This browser workspace version is no longer available.",
+        "This browser workspace document is no longer available.",
       );
     }
 
@@ -709,9 +926,13 @@ export async function getActiveWorkspaceFileSummary(): Promise<
 
   try {
     const activeId =
-      await readActiveFileId(db);
+      await readActiveFileId(
+        db,
+      );
     const summaries =
-      await readAllSummaries(db);
+      await readAllSummaries(
+        db,
+      );
 
     if (!summaries.length) {
       return null;

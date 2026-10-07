@@ -1,6 +1,10 @@
 import {
+  ensureWorkspaceSourceFile,
+  findWorkspaceFileSummaryByFingerprint,
   getActiveWorkspaceFileSummary,
   getWorkspaceFileSummary,
+  saveBranchedWorkspaceFile,
+  saveComposedWorkspaceFile,
   saveDerivedWorkspaceFile,
   type WorkspaceFileSummary,
 } from "./workspaceFiles";
@@ -60,7 +64,43 @@ async function resolveParent(
     return active;
   }
 
-  return null;
+  return findWorkspaceFileSummaryByFingerprint(
+    sourceFile,
+  );
+}
+
+async function resolveOrCreateParent(
+  sourceFile: File,
+) {
+  return (
+    (await resolveParent(
+      sourceFile,
+    )) ??
+    ensureWorkspaceSourceFile(
+      sourceFile,
+      {
+        activate: false,
+      },
+    )
+  );
+}
+
+function outputFileFromBytes(
+  outputBytes: Uint8Array,
+  outputFileName: string,
+) {
+  const bytes =
+    outputBytes.slice();
+
+  return new File(
+    [bytes.buffer],
+    outputFileName,
+    {
+      type: "application/pdf",
+      lastModified:
+        Date.now(),
+    },
+  );
 }
 
 export async function saveDerivedPdfToWorkspace(
@@ -80,22 +120,12 @@ export async function saveDerivedPdfToWorkspace(
       return null;
     }
 
-    const bytes =
-      options.outputBytes.slice();
-    const outputFile =
-      new File(
-        [bytes.buffer],
-        options.outputFileName,
-        {
-          type: "application/pdf",
-          lastModified:
-            Date.now(),
-        },
-      );
-
     const saved =
       await saveDerivedWorkspaceFile(
-        outputFile,
+        outputFileFromBytes(
+          options.outputBytes,
+          options.outputFileName,
+        ),
         {
           parentId: parent.id,
           operationId:
@@ -125,6 +155,92 @@ export async function saveDerivedPdfToWorkspace(
   } catch (error) {
     console.warn(
       "Kukureku could not persist the derived browser workspace version.",
+      error,
+    );
+    return null;
+  }
+}
+
+export async function saveBranchedPdfToWorkspace(
+  options: {
+    sourceFile: File;
+    outputBytes: Uint8Array;
+    outputFileName: string;
+  } & WorkspaceOperationDescriptor,
+): Promise<WorkspaceFileSummary | null> {
+  try {
+    const parent =
+      await resolveOrCreateParent(
+        options.sourceFile,
+      );
+
+    return await saveBranchedWorkspaceFile(
+      outputFileFromBytes(
+        options.outputBytes,
+        options.outputFileName,
+      ),
+      {
+        parentId: parent.id,
+        operationId:
+          options.operationId,
+        operationLabel:
+          options.operationLabel,
+      },
+    );
+  } catch (error) {
+    console.warn(
+      "Kukureku could not persist the branched browser workspace document.",
+      error,
+    );
+    return null;
+  }
+}
+
+export async function saveComposedPdfToWorkspace(
+  options: {
+    sourceFiles: File[];
+    outputBytes: Uint8Array;
+    outputFileName: string;
+  } & WorkspaceOperationDescriptor,
+): Promise<WorkspaceFileSummary | null> {
+  if (
+    options.sourceFiles.length <
+    2
+  ) {
+    return null;
+  }
+
+  try {
+    const parents =
+      await Promise.all(
+        options.sourceFiles.map(
+          (file) =>
+            resolveOrCreateParent(
+              file,
+            ),
+        ),
+      );
+
+    return await saveComposedWorkspaceFile(
+      outputFileFromBytes(
+        options.outputBytes,
+        options.outputFileName,
+      ),
+      {
+        parentIds:
+          parents.map(
+            (parent) =>
+              parent.id,
+          ),
+        operationId:
+          options.operationId,
+        operationLabel:
+          options.operationLabel,
+      },
+    );
+  } catch (error) {
+    console.warn(
+      "Kukureku could not persist the composed browser workspace document.",
       error,
     );
     return null;
