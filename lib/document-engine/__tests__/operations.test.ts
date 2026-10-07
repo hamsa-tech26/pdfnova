@@ -9,12 +9,33 @@ import {
 } from "../operations/registry";
 
 describe("operation registry", () => {
-  it("registers the first five representative Kukureku operations with unique ids", () => {
+  it("registers the recipe and continuity operations with unique ids", () => {
     const operations =
       listKukurekuOperations();
 
     expect(operations).toHaveLength(
-      5,
+      11,
+    );
+
+    expect(
+      operations.map(
+        (operation) =>
+          operation.id,
+      ),
+    ).toEqual(
+      expect.arrayContaining([
+        "remove-metadata",
+        "flatten-form",
+        "compress-pdf",
+        "redact-pdf",
+        "protect-pdf",
+        "add-image-stamp-pdf",
+        "crop-pdf",
+        "edit-pdf-metadata",
+        "reorder-pdf-pages",
+        "resize-pdf-pages",
+        "rotate-pdf",
+      ]),
     );
 
     expect(
@@ -88,7 +109,7 @@ describe("operation registry", () => {
     );
   });
 
-  it("does not claim shared encryption verification before it exists", () => {
+  it("registers encryption as a verifiable protected-output effect", () => {
     const operation =
       getKukurekuOperation(
         "protect-pdf",
@@ -105,7 +126,7 @@ describe("operation registry", () => {
       operation?.effectProfiles[0]
         .risks.join(" "),
     ).toContain(
-      "does not yet claim encryption verification",
+      "Encryption is verified with the browser QPDF runtime",
     );
   });
 });

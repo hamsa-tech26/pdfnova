@@ -93,17 +93,29 @@ function hasOnlyImageXObjects(
   const resources =
     page.node.Resources();
 
+  if (!resources) {
+    return false;
+  }
+
+  const hasEntries = (
+    name: string,
+  ) => {
+    const dictionary =
+      resources.lookupMaybe(
+        PDFName.of(name),
+        PDFDict,
+      );
+
+    return Boolean(
+      dictionary &&
+        dictionary.size() > 0,
+    );
+  };
+
   if (
-    !resources ||
-    resources.has(
-      PDFName.of("Font"),
-    ) ||
-    resources.has(
-      PDFName.of("Pattern"),
-    ) ||
-    resources.has(
-      PDFName.of("Shading"),
-    )
+    hasEntries("Font") ||
+    hasEntries("Pattern") ||
+    hasEntries("Shading")
   ) {
     return false;
   }
