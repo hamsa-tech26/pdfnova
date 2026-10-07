@@ -209,7 +209,7 @@ test("Unified Document Inspector reports facts, findings, and explicit coverage 
 
   await expect(
     page.getByText(
-      "1 standard form field detected; 1 currently contain values.",
+      "1 standard form field detected; 1 currently contains a value.",
     ),
   ).toBeVisible();
 
