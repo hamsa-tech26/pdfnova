@@ -167,3 +167,48 @@ The internal Workspace comparison view shows:
 - optional safe handoff to Merge PDF when the files are not exact duplicates.
 
 No document content is uploaded by this workflow.
+
+## Visual Document Graph V1
+
+The Dashboard now renders browser-local document states as generation-based graph nodes. Each node shows its relationship type, version, parent count, and known parent names. Selecting a node makes that exact stored state current.
+
+Graph placement is driven only by stored lineage metadata. It does not imply semantic document similarity.
+
+## Workspace Findings Center
+
+The Findings Center consolidates Workspace Intelligence findings, Smart Relationship Actions, and Cross-Document Verification V1 in one browser-local review surface.
+
+## Cross-Document Verification V1
+
+Relationship verification deterministically checks:
+
+- whether every stored parent reference resolves;
+- whether revision parents belong to the same stable document identity and precede the child version;
+- whether branch nodes retain stored parent provenance;
+- whether composition nodes retain at least two stored parents.
+
+This verifies graph consistency, not the semantic correctness of PDF content.
+
+## Sensitive Information Detection Foundation
+
+Safe Share uses pattern-based selectable-text scanning for:
+
+- email addresses;
+- Indian phone-number patterns;
+- Aadhaar-like 12-digit patterns;
+- PAN-like identifiers;
+- labeled date-of-birth patterns;
+- broad long numeric identifiers.
+
+Matched values are not returned in the report. Pattern matching can produce false positives and false negatives. Image-only text is not OCR-scanned by this check, and semantic postal-address detection is not claimed.
+
+## Safe Share Preparation V1
+
+Safe Share combines:
+
+- common document-information metadata inspection;
+- interactive form/XFA inspection;
+- selectable-text sensitive-pattern detection;
+- explicit Inspector coverage limits.
+
+It can recommend existing Remove Metadata, Flatten, or Redact workflows, but never executes them automatically. A clean result is described only as no current findings in the checks that ran; Kukureku never guarantees that a PDF is safe to share.

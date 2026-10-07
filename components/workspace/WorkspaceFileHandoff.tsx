@@ -16,6 +16,8 @@ const MULTI_QUERY_KEY =
 const DIRECT_WORKSPACE_ROUTES = [
   "/workflow-recipes",
   "/compare-documents",
+  "/workspace-findings",
+  "/safe-share",
 ];
 
 function findFileInput() {

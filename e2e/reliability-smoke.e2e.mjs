@@ -757,17 +757,15 @@ test("Multi-document workspace records merge composition and split/extract child
 
   await expect(
     page.getByText(
-      /3 documents stored locally/,
+      "Visual Document Graph V1",
     ),
   ).toBeVisible();
 
   await expect(
-    page.getByText(
-      "Parent documents",
-      {
-        exact: true,
-      },
-    ),
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged.pdf",
+    }),
   ).toBeVisible();
 
   await expect(
@@ -828,35 +826,24 @@ test("Multi-document workspace records merge composition and split/extract child
   );
 
   await expect(
-    page.getByText(
-      /4 documents stored locally/,
-    ),
-  ).toBeVisible();
-
-  await expect(
     page.getByRole("heading", {
       name:
         "kukureku-merged-extracted.pdf",
     }),
   ).toBeVisible();
 
-  const splitParentPanel =
-    page
-      .getByText(
-        "Parent documents",
-        {
-          exact: true,
-        },
-      )
-      .locator("..");
+  await expect(
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged.pdf",
+    }),
+  ).toBeVisible();
 
   await expect(
-    splitParentPanel.getByText(
-      "kukureku-merged.pdf",
-      {
-        exact: true,
-      },
-    ),
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged-extracted.pdf",
+    }),
   ).toBeVisible();
 
   await page
@@ -894,15 +881,16 @@ test("Multi-document workspace records merge composition and split/extract child
   );
 
   await expect(
-    page.getByText(
-      /5 documents stored locally/,
-    ),
-  ).toBeVisible();
-
-  await expect(
     page.getByRole("heading", {
       name:
         "kukureku-merged-extracted-extracted.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged-extracted-extracted.pdf",
     }),
   ).toBeVisible();
 
@@ -975,6 +963,60 @@ test("Multi-document workspace records merge composition and split/extract child
     page.getByRole("heading", {
       name:
         "kukureku-merged-extracted.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Visual Document Graph V1",
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name: "Findings Center",
+      exact: true,
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Review what Kukureku knows—and what it does not",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Cross-Document Verification V1",
+    }),
+  ).toBeVisible();
+
+  await page.goto("/dashboard");
+
+  await page
+    .getByRole("link", {
+      name: "Safe Share Review",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Review before sharing",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Safe Share Preparation V1",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Sensitive Information Detection Foundation",
     }),
   ).toBeVisible();
 });
