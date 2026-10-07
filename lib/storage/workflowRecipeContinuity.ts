@@ -12,16 +12,16 @@ import {
   type WorkflowRecipePlan,
   type WorkflowRecipeProgress,
   type WorkflowRecipeProgressStepState,
-} from "@/lib/document-engine";
+} from "../document-engine";
 import {
   getActiveWorkflowRecipeProgress,
   saveActiveWorkflowRecipeProgress,
-} from "@/lib/storage/workflowProgress";
+} from "./workflowProgress";
 import {
   getWorkspaceFile,
   getWorkspaceFileSummary,
   type WorkspaceFileSummary,
-} from "@/lib/storage/workspaceFiles";
+} from "./workspaceFiles";
 
 function parseRecipeContext() {
   if (
@@ -146,9 +146,7 @@ function verificationRequestsFor(
     "remove-metadata"
   ) {
     return [
-      {
-        kind: "pdf-openable",
-      },
+      { kind: "pdf-openable" },
       {
         kind:
           "page-count-equals",
@@ -167,9 +165,7 @@ function verificationRequestsFor(
     "flatten-form"
   ) {
     return [
-      {
-        kind: "pdf-openable",
-      },
+      { kind: "pdf-openable" },
       {
         kind:
           "page-count-equals",
@@ -188,9 +184,7 @@ function verificationRequestsFor(
     "compress-pdf"
   ) {
     return [
-      {
-        kind: "pdf-openable",
-      },
+      { kind: "pdf-openable" },
       {
         kind:
           "page-count-equals",
@@ -211,9 +205,7 @@ function verificationRequestsFor(
     "redact-pdf"
   ) {
     return [
-      {
-        kind: "pdf-openable",
-      },
+      { kind: "pdf-openable" },
       {
         kind:
           "page-count-equals",

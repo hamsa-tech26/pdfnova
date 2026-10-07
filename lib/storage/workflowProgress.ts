@@ -1,6 +1,6 @@
 import type {
   WorkflowRecipeProgress,
-} from "@/lib/document-engine";
+} from "../document-engine";
 
 const STORAGE_KEY =
   "kukureku-workflow-progress-v1";
