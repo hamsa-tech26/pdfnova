@@ -128,7 +128,7 @@ function hasOnlyImageXObjects(
 
   if (
     !xObjects ||
-    xObjects.size() === 0
+    xObjects.keys().length === 0
   ) {
     return false;
   }
