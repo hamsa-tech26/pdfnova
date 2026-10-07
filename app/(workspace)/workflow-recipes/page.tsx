@@ -479,7 +479,7 @@ function WorkflowRecipesContent() {
               No browser workspace PDF is active
             </h2>
             <p className="mt-3 max-w-3xl leading-7 text-gray-600 dark:text-slate-400">
-              Workflow Recipes V1 works with Kukureku's local version graph. Magic Drop a PDF first, then return here without re-uploading it.
+              Workflow Recipes V1 works with Kukureku&apos;s local version graph. Magic Drop a PDF first, then return here without re-uploading it.
             </p>
             <Link
               href="/magic-drop"

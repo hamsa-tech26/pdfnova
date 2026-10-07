@@ -12,46 +12,23 @@ import {
   GitBranch,
 } from "lucide-react";
 import Link from "next/link";
-import {
-  useEffect,
-  useState,
-} from "react";
 
 export default function WorkspaceDerivedOutputNotice({
   file,
 }: Readonly<{
   file: WorkspaceFileSummary | null;
 }>) {
-  const [
-    recipeContinuationHref,
-    setRecipeContinuationHref,
-  ] = useState<string | null>(
-    null,
-  );
-
-  useEffect(() => {
-    if (
-      !file ||
-      typeof window ===
-        "undefined"
-    ) {
-      setRecipeContinuationHref(
-        null,
-      );
-      return;
-    }
-
-    setRecipeContinuationHref(
-      getWorkflowContinuationHref(
-        window.location.search,
-        file.id,
-      ),
-    );
-  }, [file]);
-
   if (!file) {
     return null;
   }
+
+  const recipeContinuationHref =
+    typeof window !== "undefined"
+      ? getWorkflowContinuationHref(
+          window.location.search,
+          file.id,
+        )
+      : null;
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/20">
