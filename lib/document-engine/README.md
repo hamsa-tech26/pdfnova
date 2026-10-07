@@ -243,3 +243,47 @@ The comparison target is selected deterministically in this order when available
 Every answer includes evidence and can return only safe preparation actions such as switching the current version, opening Compare Documents, opening Safe Share, opening Findings Center, or inspecting a document. It does not automatically merge, delete, redact, share, or rewrite a file.
 
 Copilot V1 is intentionally not semantic AI. It does not infer legal meaning, hidden intent, or scanned/image-only text beyond existing declared coverage. A later opt-in semantic layer can consume this evidence contract without weakening the privacy or verification model.
+
+## Semantic Workspace Intelligence V1
+
+Workspace Copilot V2 expands the deterministic local evidence layer across the browser workspace.
+
+### Cross-Document Search & Retrieval V1
+
+- selectable text is indexed page-by-page and split into bounded evidence chunks;
+- local retrieval uses deterministic hashed token/bigram vectors plus exact token overlap;
+- results cite the exact stored workspace node, filename, version, and page number;
+- the V1 in-memory index is capped at 10 stored states, 160 pages, and 480 chunks to keep browser work bounded;
+- image-only text is not OCR-expanded by this index.
+
+### Evidence-Cited Copilot V2
+
+Free-form workspace questions return either a structured-fact answer with citations, a contradiction result with citations, a page-difference answer with citations, or the best matching evidence without inventing a conclusion.
+
+### Page-Level Difference Intelligence V1
+
+Related documents can be compared page-by-page for unchanged, changed, added, removed, or text-unverifiable pages; added/removed text fragments; and numeric/date-like changes. V1 compares the same page numbers and does not automatically align reordered pages.
+
+### Document Facts Extraction V1
+
+The local fact layer extracts supported patterns for amounts, dates, emails, phone numbers, PAN-like values, Aadhaar-like values, labeled document numbers, labeled person names, and labeled organizations.
+
+### Contradiction & Conflict Detection V1
+
+Kukureku flags different values for the same labeled amount/date/document-number field only when the values occur across multiple document identities. The result is evidence for human review, not a declaration that one value is wrong.
+
+### Workspace Brief V1
+
+The Copilot generates a deterministic brief summarizing workspace identities/states, indexed evidence coverage, relationship findings, verification state, conflicts, Safe Share attention, and the highest-priority next action.
+
+### Privacy Architecture for AI
+
+Local Evidence Mode is the default and only active intelligence mode in this release: cloud AI is off, document upload for intelligence is off, no cloud provider is configured, and any future cloud semantic layer must require explicit opt-in plus disclosure of the exact extracted content leaving the browser.
+
+### Copilot Action Planner V1
+
+The planner converts verified findings into an ordered sequence of preparation actions. Every step requires explicit user confirmation. Automatic execution is disabled.
+
+### Semantic Workspace Benchmark
+
+The validation suite includes a deterministic benchmark for local retrieval accuracy, fact extraction, contradiction detection, cited answers, page-level changes, approval-only planning, Workspace Brief behavior, and privacy defaults.

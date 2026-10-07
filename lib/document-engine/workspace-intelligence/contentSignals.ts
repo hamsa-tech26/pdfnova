@@ -1,3 +1,10 @@
+export type PdfPageContentSignal = {
+  pageNumber: number;
+  text: string;
+  normalizedText: string;
+  selectableTextChars: number;
+};
+
 export type PdfContentSignal = {
   fileName: string;
   fileSize: number;
@@ -5,6 +12,7 @@ export type PdfContentSignal = {
   pageCount: number;
   selectableTextChars: number;
   rawText?: string;
+  pages?: PdfPageContentSignal[];
   normalizedText: string;
   normalizedLines: string[];
 };
@@ -315,6 +323,24 @@ export async function createPdfContentSignal(
     await task.destroy();
   }
 
+  const pages =
+    pageTexts.map(
+      (text, index) => {
+        const normalizedText =
+          normalizeComparableText(
+            text,
+          );
+
+        return {
+          pageNumber:
+            index + 1,
+          text,
+          normalizedText,
+          selectableTextChars:
+            normalizedText.length,
+        };
+      },
+    );
   const rawText =
     pageTexts.join("\n");
   const normalizedText =
@@ -340,6 +366,7 @@ export async function createPdfContentSignal(
     selectableTextChars:
       normalizedText.length,
     rawText,
+    pages,
     normalizedText,
     normalizedLines:
       [

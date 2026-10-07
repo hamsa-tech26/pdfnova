@@ -1032,7 +1032,7 @@ test("Multi-document workspace records merge composition and split/extract child
   await expect(
     page.getByRole("heading", {
       name:
-        "Ask the workspace what to do next",
+        "Ask across the entire workspace",
     }),
   ).toBeVisible();
 
@@ -1066,8 +1066,52 @@ test("Multi-document workspace records merge composition and split/extract child
 
   await expect(
     page.getByText(
-      "Browser-local evidence",
+      "Local Evidence Mode",
     ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Ask a question across local PDFs",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByPlaceholder(
+      "Example: What is the final contract amount?",
+    )
+    .fill(
+      "MULTI DOCUMENT FIRST",
+    );
+
+  await page
+    .getByRole("button", {
+      name:
+        "Search evidence",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Best matching workspace evidence",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page
+      .getByText(
+        /multi-first\.pdf · Page 1/,
+      )
+      .first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Copilot Action Planner V1",
+    }),
   ).toBeVisible();
 });
 
