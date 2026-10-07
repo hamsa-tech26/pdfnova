@@ -157,6 +157,19 @@ export default function WorkspaceDerivedOutputNotice({
         )
       : null;
 
+  const savedLabel =
+    file.relationKind ===
+    "composition"
+      ? "Saved as a new composed document in this browser workspace"
+      : file.relationKind ===
+          "branch"
+        ? "Saved as a new child document in this browser workspace"
+        : "Saved as Version " +
+          String(
+            file.version,
+          ) +
+          " in this browser workspace";
+
   return (
     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/20">
       <div className="flex items-start gap-3">
@@ -167,11 +180,11 @@ export default function WorkspaceDerivedOutputNotice({
 
         <div className="min-w-0 flex-1">
           <p className="font-extrabold text-blue-950 dark:text-blue-100">
-            Saved as Version {file.version} in this browser workspace
+            {savedLabel}
           </p>
 
           <p className="mt-2 text-sm leading-6 text-blue-900 dark:text-blue-200">
-            This result is now the current local workspace version. Your original remains available in version history, and no document was uploaded.
+            This result is now the current local workspace document. Its parent relationships are retained in the local graph, and no document was uploaded.
           </p>
 
           {verification &&

@@ -23,6 +23,27 @@ import {
   type WorkspaceFileSummary,
 } from "./workspaceFiles";
 
+function progressMatchesDocument(
+  progress: WorkflowRecipeProgress,
+  summary: WorkspaceFileSummary,
+) {
+  if (
+    progress.documentId
+  ) {
+    return (
+      progress.documentId ===
+      summary.documentId
+    );
+  }
+
+  return (
+    progress.rootId ===
+      summary.rootId &&
+    summary.documentId ===
+      summary.rootId
+  );
+}
+
 function parseRecipeContext() {
   if (
     typeof window === "undefined"
@@ -70,8 +91,10 @@ export async function ensureWorkflowRecipeProgress(
 
   if (
     existing &&
-    existing.rootId ===
-      summary.rootId &&
+    progressMatchesDocument(
+      existing,
+      summary,
+    ) &&
     existing.recipeId ===
       recipe.id
   ) {
@@ -92,6 +115,8 @@ export async function ensureWorkflowRecipeProgress(
       {
         rootId:
           summary.rootId,
+        documentId:
+          summary.documentId,
         workspaceFileId:
           summary.id,
       },
@@ -331,9 +356,10 @@ export async function recordWorkflowDerivedOutput(
 
   if (
     !progress ||
-    progress.rootId !==
-      options.sourceSummary
-        .rootId ||
+    !progressMatchesDocument(
+      progress,
+      options.sourceSummary,
+    ) ||
     progress.recipeId !==
       recipe.id
   ) {
@@ -410,8 +436,10 @@ export async function getWorkflowProgressForWorkspace(
 
   if (
     !progress ||
-    progress.rootId !==
-      summary.rootId
+    !progressMatchesDocument(
+      progress,
+      summary,
+    )
   ) {
     return null;
   }

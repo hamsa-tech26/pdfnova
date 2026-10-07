@@ -1,5 +1,9 @@
 "use client";
 
+import WorkspaceGraphOverview from "@/components/workspace/WorkspaceGraphOverview";
+import {
+  groupWorkspaceDocuments,
+} from "@/lib/storage/workspaceGraph";
 import {
   buildWorkflowRecipesHref,
   type WorkflowRecipeProgress,
@@ -100,6 +104,18 @@ const continueActions = [
     route: "/add-image-stamp-pdf",
   },
   {
+    label: "Merge",
+    route: "/merge-pdf",
+  },
+  {
+    label: "Split",
+    route: "/split-pdf",
+  },
+  {
+    label: "Extract Pages",
+    route: "/extract-pdf-pages",
+  },
+  {
     label: "Inspector",
     route:
       "/document-inspector",
@@ -140,6 +156,14 @@ export default function ActiveWorkspaceFileCard() {
         ]);
         const nextProgress =
           getActiveWorkflowRecipeProgress();
+        const progressFile =
+          nextProgress
+            ? nextVersions.find(
+                (version) =>
+                  version.id ===
+                  nextProgress.currentWorkspaceFileId,
+              ) ?? null
+            : null;
 
         if (!cancelled) {
           setActive(nextActive);
@@ -148,8 +172,9 @@ export default function ActiveWorkspaceFileCard() {
           );
           setRecipeProgress(
             nextActive &&
-              nextProgress?.rootId ===
-                nextActive.rootId
+              nextProgress &&
+              progressFile?.documentId ===
+                nextActive.documentId
               ? nextProgress
               : null,
           );
@@ -207,6 +232,32 @@ export default function ActiveWorkspaceFileCard() {
     [versions],
   );
 
+  const documents =
+    useMemo(
+      () =>
+        groupWorkspaceDocuments(
+          versions,
+        ),
+      [versions],
+    );
+
+  const activeVersions =
+    useMemo(
+      () =>
+        active
+          ? documents.find(
+              (document) =>
+                document.documentId ===
+                active.documentId,
+            )?.versions ??
+            []
+          : [],
+      [
+        active,
+        documents,
+      ],
+    );
+
   async function forgetWorkspace() {
     try {
       await clearWorkspaceFiles();
@@ -252,7 +303,7 @@ export default function ActiveWorkspaceFileCard() {
           No active browser workspace file
         </h3>
         <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
-          Magic Drop can keep one local document workspace in this browser, including derived PDF versions and their parent history.
+          Magic Drop can keep multiple local PDF documents in this browser, including versions, branches and multi-parent relationships.
         </p>
         <Link
           href="/magic-drop"
@@ -274,7 +325,7 @@ export default function ActiveWorkspaceFileCard() {
 
           <div className="min-w-0">
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
-              Active browser workspace
+              Active workspace document
             </p>
             <h3 className="mt-2 break-all text-lg font-extrabold text-gray-950 dark:text-white">
               {active.name}
@@ -321,6 +372,14 @@ export default function ActiveWorkspaceFileCard() {
           Full Inspector
         </Link>
       </div>
+
+      <WorkspaceGraphOverview
+        active={active}
+        summaries={versions}
+        onMakeCurrent={(id) =>
+          void makeCurrent(id)
+        }
+      />
 
       {recipeProgress && (
         <section
@@ -434,17 +493,17 @@ export default function ActiveWorkspaceFileCard() {
               Version history
             </p>
             <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
-              {versions.length}{" "}
-              {versions.length === 1
+              {activeVersions.length}{" "}
+              {activeVersions.length === 1
                 ? "version"
                 : "versions"}{" "}
-              saved locally. Earlier versions remain available when a tool creates a derived PDF.
+              saved for this document. Other workspace documents and branches stay separate in the graph above.
             </p>
           </div>
         </div>
 
         <div className="mt-4 space-y-3">
-          {[...versions]
+          {[...activeVersions]
             .reverse()
             .map((version) => {
               const parent =
@@ -494,12 +553,20 @@ export default function ActiveWorkspaceFileCard() {
                           ? "Original workspace source"
                           : version.operationLabel ||
                             "Derived PDF"}
-                        {parent
-                          ? " · from Version " +
+                        {version.parentIds
+                          .length > 1
+                          ? " · from " +
                             String(
-                              parent.version,
-                            )
-                          : ""}
+                              version.parentIds
+                                .length,
+                            ) +
+                            " parent documents"
+                          : parent
+                            ? " · from Version " +
+                              String(
+                                parent.version,
+                              )
+                            : ""}
                         {" · "}
                         {formatSize(
                           version.size,

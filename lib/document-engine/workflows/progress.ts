@@ -37,6 +37,7 @@ export type WorkflowRecipeProgress = {
   recipeId: WorkflowRecipeId;
   recipeTitle: string;
   rootId: string;
+  documentId?: string;
   currentWorkspaceFileId: string;
   currentStep: number;
   status: WorkflowRecipeProgressStatus;
@@ -49,6 +50,7 @@ export function createWorkflowRecipeProgress(
   recipe: WorkflowRecipePlan,
   options: {
     rootId: string;
+    documentId?: string;
     workspaceFileId: string;
     now?: number;
   },
@@ -61,6 +63,9 @@ export function createWorkflowRecipeProgress(
     recipeId: recipe.id,
     recipeTitle: recipe.title,
     rootId: options.rootId,
+    documentId:
+      options.documentId ??
+      options.rootId,
     currentWorkspaceFileId:
       options.workspaceFileId,
     currentStep: 0,

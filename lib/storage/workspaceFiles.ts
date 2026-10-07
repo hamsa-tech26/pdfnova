@@ -697,15 +697,8 @@ export async function saveComposedWorkspaceFile(
     parentIds: string[];
   } & WorkspaceOperationDescriptor,
 ): Promise<WorkspaceFileSummary> {
-  const uniqueParentIds =
-    [
-      ...new Set(
-        options.parentIds,
-      ),
-    ];
-
   if (
-    uniqueParentIds.length < 2
+    options.parentIds.length < 2
   ) {
     throw new Error(
       "A composed workspace document requires at least two parent documents.",
@@ -728,7 +721,7 @@ export async function saveComposedWorkspaceFile(
         ),
       );
     const parents =
-      uniqueParentIds.map(
+      options.parentIds.map(
         (id) =>
           byId.get(id),
       );

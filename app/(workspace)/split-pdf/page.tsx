@@ -7,10 +7,17 @@ import FileUploader from "@/components/pdf/FileUploader";
 import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import { assertPageCopySafe } from "@/lib/pdf/pdfInputSafety";
 import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import {
+  saveBranchedPdfToWorkspace,
+} from "@/lib/storage/workspaceContinuity";
+import type {
+  WorkspaceFileSummary,
+} from "@/lib/storage/workspaceFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
@@ -150,6 +157,12 @@ export default function SplitPdfPage() {
     useState<Uint8Array | null>(null);
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [
+    workspaceOutput,
+    setWorkspaceOutput,
+  ] = useState<WorkspaceFileSummary | null>(
+    null,
+  );
 
   function resetResultState() {
     setOutputBytes(null);
@@ -157,6 +170,7 @@ export default function SplitPdfPage() {
     setErrorMessage("");
     setProgress(0);
     setCurrentStep(1);
+    setWorkspaceOutput(null);
   }
 
   async function handleFileSelection(
@@ -348,6 +362,24 @@ export default function SplitPdfPage() {
         fileName: generatedFileName,
         toolName: "Split PDF",
       });
+
+      const savedWorkspaceDocument =
+        await saveBranchedPdfToWorkspace(
+          {
+            sourceFile: file,
+            outputBytes:
+              splitPdfBytes,
+            outputFileName:
+              generatedFileName,
+            operationId:
+              "split-pdf",
+            operationLabel:
+              "Split PDF",
+          },
+        );
+      setWorkspaceOutput(
+        savedWorkspaceDocument,
+      );
 
       toast.success("PDF pages extracted successfully!");
 
