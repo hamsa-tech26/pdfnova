@@ -1,6 +1,7 @@
 export * from "./artifact";
 export * from "./inspection/types";
 export * from "./inspection/inspectPdf";
+export * from "./inspection/createInspectorChecks";
 export * from "./findings/types";
 export * from "./findings/createFindings";
 export * from "./operations/types";
