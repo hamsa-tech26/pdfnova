@@ -288,17 +288,21 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
   );
 
   await expect(
-    page.getByText(
-      "browser-magic-drop.pdf",
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
   ).toBeVisible();
 
   await page.reload();
 
   await expect(
-    page.getByText(
-      "browser-magic-drop.pdf",
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
   ).toBeVisible();
 
   await page.goto("/dashboard");
@@ -310,9 +314,11 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
   ).toBeVisible();
 
   await expect(
-    page.getByText(
-      "browser-magic-drop.pdf",
-    ),
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
   ).toBeVisible();
 
   await expect(
