@@ -212,3 +212,34 @@ Safe Share combines:
 - explicit Inspector coverage limits.
 
 It can recommend existing Remove Metadata, Flatten, or Redact workflows, but never executes them automatically. A clean result is described only as no current findings in the checks that ran; Kukureku never guarantees that a PDF is safe to share.
+
+## Workspace Copilot V1
+
+Workspace Copilot V1 is an evidence-backed local guidance layer. It does not send PDF content to a cloud model.
+
+It answers four bounded workspace questions:
+
+- Which version should I use?
+- What changed?
+- What needs attention before sharing?
+- What should I do next?
+
+The answer engine combines:
+
+- stable document identity and saved-version ordering;
+- Workspace Intelligence findings;
+- deterministic relationship verification;
+- local SHA-256 and selectable-text comparison against the most relevant stored document;
+- Safe Share status and coverage limits.
+
+The comparison target is selected deterministically in this order when available:
+
+1. a stored parent;
+2. another saved version of the same document;
+3. a sibling branch;
+4. a shared-ancestry document;
+5. a possible duplicate candidate.
+
+Every answer includes evidence and can return only safe preparation actions such as switching the current version, opening Compare Documents, opening Safe Share, opening Findings Center, or inspecting a document. It does not automatically merge, delete, redact, share, or rewrite a file.
+
+Copilot V1 is intentionally not semantic AI. It does not infer legal meaning, hidden intent, or scanned/image-only text beyond existing declared coverage. A later opt-in semantic layer can consume this evidence contract without weakening the privacy or verification model.
