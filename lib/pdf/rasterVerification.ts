@@ -280,7 +280,7 @@ function hasOnlyRasterOperators(
         " ",
       )
       .replace(
-        /<[^>]*>/gs,
+        /<[\s\S]*?>/g,
         " ",
       )
       .replace(
