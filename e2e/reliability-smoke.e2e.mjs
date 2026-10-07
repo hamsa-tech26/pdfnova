@@ -403,7 +403,8 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       .getByRole("main")
       .getByText(
         "browser-magic-drop.pdf",
-      ),
+      )
+      .first(),
   ).toBeVisible();
 
   const metadataResult =
@@ -791,11 +792,10 @@ test("Multi-document workspace records merge composition and split/extract child
     .click();
 
   await expect(
-    page
-      .getByRole("main")
-      .getByText(
+    page.getByRole("heading", {
+      name:
         "kukureku-merged.pdf",
-      ),
+    }),
   ).toBeVisible();
 
   await page
