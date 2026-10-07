@@ -93,6 +93,8 @@ export function createWorkspaceRelationshipActions(
       : null;
   };
 
+  const resolvedActiveNodeId =
+    active.id;
   const actions: WorkspaceRelationshipAction[] =
     [];
   const seen = new Set<string>();
@@ -108,7 +110,7 @@ export function createWorkspaceRelationshipActions(
 
     if (
       action.targetNodeId ===
-        active.id ||
+        resolvedActiveNodeId ||
       seen.has(key)
     ) {
       return;
