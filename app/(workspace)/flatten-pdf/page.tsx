@@ -6,6 +6,7 @@ import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import {
   flattenStandardPdfForm,
@@ -17,6 +18,8 @@ import {
   savePdfWithoutFormAppearanceMutation,
 } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
+import type { WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -80,11 +83,18 @@ export default function FlattenPdfPage() {
 
   const [errorMessage, setErrorMessage] =
     useState("");
+  const [
+    workspaceOutput,
+    setWorkspaceOutput,
+  ] = useState<WorkspaceFileSummary | null>(
+    null,
+  );
 
   function resetResult() {
     setOutputBytes(null);
     setOutputFileName("");
     setErrorMessage("");
+    setWorkspaceOutput(null);
   }
 
   async function handleFileSelection(
@@ -216,6 +226,21 @@ export default function FlattenPdfPage() {
         toolName: "Flatten PDF",
       });
 
+      setWorkspaceOutput(
+        await saveDerivedPdfToWorkspace(
+          {
+            sourceFile: file,
+            outputBytes: bytes,
+            outputFileName:
+              generatedFileName,
+            operationId:
+              "flatten-form",
+            operationLabel:
+              "Flatten PDF",
+          },
+        ),
+      );
+
       toast.success(
         `${flattenedCount} ${flattenedCount === 1 ? "field" : "fields"} flattened successfully.`,
       );
@@ -344,6 +369,15 @@ export default function FlattenPdfPage() {
                 }
                 downloadLabel="Download Flattened PDF Again"
                 resetLabel="Flatten Another PDF"
+              />
+            )}
+
+          {!isProcessing &&
+            workspaceOutput && (
+              <WorkspaceDerivedOutputNotice
+                file={
+                  workspaceOutput
+                }
               />
             )}
 

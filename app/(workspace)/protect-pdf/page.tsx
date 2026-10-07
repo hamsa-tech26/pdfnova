@@ -7,9 +7,12 @@ import FileUploader from "@/components/pdf/FileUploader";
 import PasswordInput from "@/components/pdf/PasswordInput";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import { protectPdf } from "@/lib/pdf/qpdf";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
+import type { WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -61,11 +64,13 @@ export default function ProtectPdfPage() {
   const [outputBytes, setOutputBytes] = useState<Uint8Array | null>(null);
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [workspaceOutput, setWorkspaceOutput] = useState<WorkspaceFileSummary | null>(null);
 
   function resetResult() {
     setOutputBytes(null);
     setOutputFileName("");
     setErrorMessage("");
+    setWorkspaceOutput(null);
   }
 
   function resetAll() {
@@ -152,6 +157,16 @@ export default function ProtectPdfPage() {
         fileName: generatedFileName,
         toolName: "Protect PDF",
       });
+
+      setWorkspaceOutput(
+        await saveDerivedPdfToWorkspace({
+          sourceFile: file,
+          outputBytes: protectedBytes,
+          outputFileName: generatedFileName,
+          operationId: "protect-pdf",
+          operationLabel: "Protect PDF",
+        }),
+      );
 
       toast.success("PDF protected successfully.");
     } catch (error) {
@@ -268,6 +283,12 @@ export default function ProtectPdfPage() {
               onStartAgain={resetAll}
               downloadLabel="Download Protected PDF Again"
               resetLabel="Protect Another PDF"
+            />
+          )}
+
+          {!isProtecting && workspaceOutput && (
+            <WorkspaceDerivedOutputNotice
+              file={workspaceOutput}
             />
           )}
 

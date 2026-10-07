@@ -305,11 +305,42 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       ),
   ).toBeVisible();
 
+  const metadataResult =
+    await clickAndDownload(
+      page,
+      "Remove Metadata and Download",
+    );
+
+  expect(
+    metadataResult.fileName,
+  ).toBe(
+    "browser-magic-drop-metadata-removed.pdf",
+  );
+
+  await expect(
+    page.getByText(
+      "Saved as Version 2 in this browser workspace",
+    ),
+  ).toBeVisible();
+
   await page.goto("/dashboard");
 
   await expect(
     page.getByText(
       "Active browser workspace",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "browser-magic-drop-metadata-removed.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      /2 versions saved locally/,
     ),
   ).toBeVisible();
 

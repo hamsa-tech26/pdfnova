@@ -7,6 +7,7 @@ import FileUploader from "@/components/pdf/FileUploader";
 import RectPercentControls from "@/components/pdf/RectPercentControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import {
@@ -17,6 +18,8 @@ import {
   type RedactionsByPage,
 } from "@/lib/pdf/redaction";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
+import type { WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { Eraser, ShieldCheck, TriangleAlert } from "lucide-react";
 import {
   ChangeEvent,
@@ -66,6 +69,7 @@ export default function RedactPdfPage() {
   const [outputBytes, setOutputBytes] = useState<Uint8Array | null>(null);
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [workspaceOutput, setWorkspaceOutput] = useState<WorkspaceFileSummary | null>(null);
 
   const currentRects = redactions[selectedPage] ?? [];
   const totalRedactions = Object.values(redactions).reduce((sum, rects) => sum + rects.length, 0);
@@ -74,6 +78,7 @@ export default function RedactPdfPage() {
     setOutputBytes(null);
     setOutputFileName("");
     setErrorMessage("");
+    setWorkspaceOutput(null);
   }
 
   async function renderSelectedPreview(targetFile: File, pageNumber: number) {
@@ -261,6 +266,15 @@ export default function RedactPdfPage() {
       setOutputBytes(bytes);
       setOutputFileName(generatedFileName);
       addRecentFile({ fileName: generatedFileName, toolName: "Redact PDF" });
+      setWorkspaceOutput(
+        await saveDerivedPdfToWorkspace({
+          sourceFile: file,
+          outputBytes: bytes,
+          outputFileName: generatedFileName,
+          operationId: "redact-pdf",
+          operationLabel: "Redact PDF",
+        }),
+      );
       toast.success("Redacted PDF created successfully.");
     } catch (error) {
       console.error(error);
@@ -433,6 +447,12 @@ export default function RedactPdfPage() {
               onStartAgain={startAgain}
               downloadLabel="Download Redacted PDF Again"
               resetLabel="Redact Another PDF"
+            />
+          )}
+
+          {!isProcessing && workspaceOutput && (
+            <WorkspaceDerivedOutputNotice
+              file={workspaceOutput}
             />
           )}
 

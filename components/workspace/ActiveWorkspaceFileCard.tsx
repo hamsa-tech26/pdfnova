@@ -4,17 +4,22 @@ import {
   buildWorkspaceHandoffHref,
   clearWorkspaceFiles,
   getActiveWorkspaceFileSummary,
+  listWorkspaceFileSummaries,
+  setActiveWorkspaceFile,
   WORKSPACE_CHANGE_EVENT,
   type WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
 import {
+  Check,
   FileText,
   FolderClock,
+  GitBranch,
   Trash2,
 } from "lucide-react";
 import Link from "next/link";
 import {
   useEffect,
+  useMemo,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -36,11 +41,50 @@ function formatSize(bytes: number) {
   );
 }
 
+const continueActions = [
+  {
+    label: "Magic Drop",
+    route: "/magic-drop",
+  },
+  {
+    label: "Compress",
+    route: "/compress-pdf",
+  },
+  {
+    label: "Remove Metadata",
+    route:
+      "/remove-pdf-metadata",
+  },
+  {
+    label: "Flatten",
+    route: "/flatten-pdf",
+  },
+  {
+    label: "Protect",
+    route: "/protect-pdf",
+  },
+  {
+    label: "Redact",
+    route: "/redact-pdf",
+  },
+  {
+    label: "Inspector",
+    route:
+      "/document-inspector",
+  },
+];
+
 export default function ActiveWorkspaceFileCard() {
   const [active, setActive] =
     useState<WorkspaceFileSummary | null>(
       null,
     );
+  const [
+    versions,
+    setVersions,
+  ] = useState<
+    WorkspaceFileSummary[]
+  >([]);
   const [loaded, setLoaded] =
     useState(false);
 
@@ -49,16 +93,25 @@ export default function ActiveWorkspaceFileCard() {
 
     async function refresh() {
       try {
-        const next =
-          await getActiveWorkspaceFileSummary();
+        const [
+          nextActive,
+          nextVersions,
+        ] = await Promise.all([
+          getActiveWorkspaceFileSummary(),
+          listWorkspaceFileSummaries(),
+        ]);
 
         if (!cancelled) {
-          setActive(next);
+          setActive(nextActive);
+          setVersions(
+            nextVersions,
+          );
           setLoaded(true);
         }
       } catch {
         if (!cancelled) {
           setActive(null);
+          setVersions([]);
           setLoaded(true);
         }
       }
@@ -83,15 +136,45 @@ export default function ActiveWorkspaceFileCard() {
     };
   }, []);
 
-  async function forgetFile() {
+  const byId = useMemo(
+    () =>
+      new Map(
+        versions.map(
+          (version) => [
+            version.id,
+            version,
+          ],
+        ),
+      ),
+    [versions],
+  );
+
+  async function forgetWorkspace() {
     try {
       await clearWorkspaceFiles();
       toast.success(
-        "Browser workspace file removed.",
+        "Browser workspace removed.",
       );
     } catch {
       toast.error(
-        "The browser workspace file could not be removed.",
+        "The browser workspace could not be removed.",
+      );
+    }
+  }
+
+  async function makeCurrent(
+    id: string,
+  ) {
+    try {
+      await setActiveWorkspaceFile(
+        id,
+      );
+      toast.success(
+        "Current workspace version updated.",
+      );
+    } catch {
+      toast.error(
+        "This browser workspace version is no longer available.",
       );
     }
   }
@@ -111,7 +194,7 @@ export default function ActiveWorkspaceFileCard() {
           No active browser workspace file
         </h3>
         <p className="mt-2 text-sm leading-6 text-gray-600 dark:text-slate-400">
-          Magic Drop can keep one active PDF locally in this browser so supported tools can receive it without another file picker.
+          Magic Drop can keep one local document workspace in this browser, including derived PDF versions and their parent history.
         </p>
         <Link
           href="/magic-drop"
@@ -139,9 +222,10 @@ export default function ActiveWorkspaceFileCard() {
               {active.name}
             </h3>
             <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
+              Version {active.version} ·{" "}
               {formatSize(
                 active.size,
-              )} · saved locally in this browser
+              )} · saved locally
             </p>
           </div>
         </div>
@@ -149,12 +233,12 @@ export default function ActiveWorkspaceFileCard() {
         <button
           type="button"
           onClick={() =>
-            void forgetFile()
+            void forgetWorkspace()
           }
           className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 dark:border-red-900 dark:bg-slate-950 dark:text-red-300 dark:hover:bg-red-950/30"
         >
           <Trash2 size={16} />
-          Forget file
+          Forget workspace
         </button>
       </div>
 
@@ -179,6 +263,136 @@ export default function ActiveWorkspaceFileCard() {
           Full Inspector
         </Link>
       </div>
+
+      <section className="mt-6 rounded-2xl border border-blue-200 bg-white/80 p-5 dark:border-blue-900 dark:bg-slate-950/40">
+        <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
+          Continue with current version
+        </p>
+
+        <div className="mt-3 flex flex-wrap gap-2">
+          {continueActions.map(
+            (action) => (
+              <Link
+                key={
+                  action.route
+                }
+                href={buildWorkspaceHandoffHref(
+                  action.route,
+                  active.id,
+                )}
+                className="rounded-lg border border-gray-200 bg-white px-3 py-2 text-xs font-bold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
+              >
+                {action.label}
+              </Link>
+            ),
+          )}
+        </div>
+      </section>
+
+      <section className="mt-6 rounded-2xl border border-blue-200 bg-white/80 p-5 dark:border-blue-900 dark:bg-slate-950/40">
+        <div className="flex items-start gap-3">
+          <GitBranch
+            size={20}
+            className="mt-0.5 shrink-0 text-blue-700 dark:text-blue-300"
+          />
+
+          <div>
+            <p className="font-extrabold text-gray-950 dark:text-white">
+              Version history
+            </p>
+            <p className="mt-1 text-sm text-gray-600 dark:text-slate-400">
+              {versions.length}{" "}
+              {versions.length === 1
+                ? "version"
+                : "versions"}{" "}
+              saved locally. Earlier versions remain available when a tool creates a derived PDF.
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-4 space-y-3">
+          {[...versions]
+            .reverse()
+            .map((version) => {
+              const parent =
+                version.parentId
+                  ? byId.get(
+                      version.parentId,
+                    )
+                  : null;
+              const isActive =
+                active.id ===
+                version.id;
+
+              return (
+                <div
+                  key={version.id}
+                  className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+                >
+                  <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
+                    <div className="min-w-0">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-extrabold text-gray-950 dark:text-white">
+                          Version{" "}
+                          {
+                            version.version
+                          }
+                        </span>
+
+                        {isActive && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
+                            <Check
+                              size={
+                                12
+                              }
+                            />
+                            Current
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="mt-2 break-all text-sm font-semibold text-gray-800 dark:text-slate-200">
+                        {version.name}
+                      </p>
+
+                      <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-slate-400">
+                        {version.role ===
+                        "source"
+                          ? "Original workspace source"
+                          : version.operationLabel ||
+                            "Derived PDF"}
+                        {parent
+                          ? " · from Version " +
+                            String(
+                              parent.version,
+                            )
+                          : ""}
+                        {" · "}
+                        {formatSize(
+                          version.size,
+                        )}
+                      </p>
+                    </div>
+
+                    {!isActive && (
+                      <button
+                        type="button"
+                        onClick={() =>
+                          void makeCurrent(
+                            version.id,
+                          )
+                        }
+                        className="shrink-0 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs font-bold text-blue-700 transition hover:bg-blue-100 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-300"
+                      >
+                        Make current
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+        </div>
+      </section>
     </div>
   );
 }

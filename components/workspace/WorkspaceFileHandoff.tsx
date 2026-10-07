@@ -2,6 +2,7 @@
 
 import {
   getWorkspaceFile,
+  setActiveWorkspaceFile,
 } from "@/lib/storage/workspaceFiles";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
@@ -98,6 +99,15 @@ export default function WorkspaceFileHandoff() {
               input,
               file,
             );
+
+            void setActiveWorkspaceFile(
+              workspaceFileId!,
+            ).catch((error) => {
+              console.warn(
+                "Kukureku could not update the current workspace version.",
+                error,
+              );
+            });
 
             toast(
               "Loaded from browser workspace",
