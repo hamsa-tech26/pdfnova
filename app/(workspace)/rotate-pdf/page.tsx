@@ -12,6 +12,7 @@ import {
   savePdfWithoutFormAppearanceMutation,
 } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import { RotateCcw, RotateCw, ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { degrees } from "pdf-lib";
@@ -102,6 +103,14 @@ export default function RotatePdfPage() {
       setOutputBytes(bytes);
       setOutputFileName(name);
       addRecentFile({ fileName: name, toolName: "Rotate PDF" });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: bytes,
+        outputFileName: name,
+        operationId: "rotate-pdf",
+        operationLabel: "Rotate PDF",
+      });
       toast.success("PDF rotated successfully.");
     } catch {
       const message = "The PDF could not be rotated. It may be damaged or password-protected.";

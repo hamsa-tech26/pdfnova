@@ -44,6 +44,7 @@ describe("qpdf security command builders", () => {
     );
   });
 
+
   it("builds the expected unlock command", () => {
     expect(
       buildUnlockQpdfArgs(

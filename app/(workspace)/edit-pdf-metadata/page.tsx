@@ -17,6 +17,7 @@ import {
   type PdfMetadataValues,
 } from "@/lib/pdf/metadataEditor";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import { FilePenLine, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -118,6 +119,14 @@ export default function EditPdfMetadataPage() {
       setOutputBytes(bytes);
       setOutputFileName(generatedFileName);
       addRecentFile({ fileName: generatedFileName, toolName: "Edit PDF Metadata" });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: bytes,
+        outputFileName: generatedFileName,
+        operationId: "edit-pdf-metadata",
+        operationLabel: "Edit PDF Metadata",
+      });
       toast.success("PDF metadata updated successfully.");
     } catch (error) {
       console.error(error);

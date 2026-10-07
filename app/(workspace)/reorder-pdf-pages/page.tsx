@@ -15,6 +15,7 @@ import {
   savePdfWithoutFormAppearanceMutation,
 } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -236,6 +237,14 @@ export default function ReorderPdfPagesPage() {
           generatedFileName,
         toolName:
           "Reorder PDF Pages",
+      });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: bytes,
+        outputFileName: generatedFileName,
+        operationId: "reorder-pdf-pages",
+        operationLabel: "Reorder PDF Pages",
       });
 
       toast.success(

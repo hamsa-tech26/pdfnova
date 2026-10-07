@@ -193,7 +193,33 @@ describe("shared PDF verification", () => {
     );
   });
 
-  it("uses NOT_VERIFIED instead of pretending encryption was proven", async () => {
+  it("fails encryption verification for an ordinary unencrypted PDF", async () => {
+    const bytes =
+      await createReliabilityPdfBytes();
+
+    const report =
+      await verifyPdfArtifact(
+        artifactFromBytes(
+          "unencrypted",
+          bytes,
+        ),
+        [
+          {
+            kind:
+              "encryption-applied",
+          },
+        ],
+      );
+
+    expect(report.status).toBe(
+      "FAILED",
+    );
+    expect(
+      report.checks[0].actual,
+    ).toBe(false);
+  });
+
+  it("uses NOT_VERIFIED instead of pretending encryption was proven for unreadable bytes", async () => {
     const artifact =
       createDocumentArtifact(
         new Blob(["not inspected"]),
@@ -223,7 +249,7 @@ describe("shared PDF verification", () => {
     ).toBe("NOT_VERIFIED");
   });
 
-  it("uses PASS_WITH_WARNING when deterministic checks pass but another requested outcome is not yet verifiable", async () => {
+  it("fails rasterized-pages verification when ordinary PDF content is still present", async () => {
     const bytes =
       await createReliabilityPdfBytes();
 
@@ -244,7 +270,7 @@ describe("shared PDF verification", () => {
       );
 
     expect(report.status).toBe(
-      "PASS_WITH_WARNING",
+      "FAILED",
     );
 
     expect(
@@ -253,7 +279,7 @@ describe("shared PDF verification", () => {
       ),
     ).toEqual([
       "PASS",
-      "NOT_VERIFIED",
+      "FAILED",
     ]);
   });
 

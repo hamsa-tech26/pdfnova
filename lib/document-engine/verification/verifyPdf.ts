@@ -1,3 +1,7 @@
+import { inspectRasterizedPages } from "../../pdf/rasterVerification";
+import {
+  PDFDocument,
+} from "pdf-lib";
 import type { DocumentArtifact } from "../artifact";
 import { inspectPdfArtifact } from "../inspection/inspectPdf";
 import type { InspectionReport } from "../inspection/types";
@@ -105,12 +109,41 @@ export async function verifyPdfArtifact(
       request.kind ===
       "encryption-applied"
     ) {
-      checks.push({
-        kind: request.kind,
-        status: "NOT_VERIFIED",
-        message:
-          "Encryption verification is not implemented in the foundation engine yet. Browser QPDF roundtrip tests exist, but this shared verifier will not claim encryption from file bytes alone.",
-      });
+      try {
+        const pdf =
+          await PDFDocument.load(
+            await artifact.blob.arrayBuffer(),
+            {
+              ignoreEncryption:
+                true,
+              updateMetadata:
+                false,
+            },
+          );
+        const encrypted =
+          pdf.isEncrypted;
+
+        checks.push({
+          kind: request.kind,
+          status: encrypted
+            ? "PASS"
+            : "FAILED",
+          message: encrypted
+            ? "An independent PDF parser confirms that the output contains an encryption dictionary."
+            : "An independent PDF parser confirms that the output is not encrypted.",
+          expected: true,
+          actual: encrypted,
+        });
+      } catch {
+        checks.push({
+          kind: request.kind,
+          status:
+            "NOT_VERIFIED",
+          message:
+            "The independent PDF parser could not determine the encryption state of this output.",
+        });
+      }
+
       continue;
     }
 
@@ -118,11 +151,28 @@ export async function verifyPdfArtifact(
       request.kind ===
       "rasterized-pages"
     ) {
+      const raster =
+        await inspectRasterizedPages(
+          artifact.blob,
+        );
+      const passed =
+        raster.pageCount > 0 &&
+        raster.imageOnlyPageCount ===
+          raster.pageCount;
+
       checks.push({
         kind: request.kind,
-        status: "NOT_VERIFIED",
-        message:
-          "Raster-only page verification is not implemented in the foundation engine yet.",
+        status: passed
+          ? "PASS"
+          : "FAILED",
+        message: passed
+          ? "Every page has a strict image-only page structure with no text, font, pattern, shading, or vector-painting operators detected."
+          : raster.reason ??
+            "The PDF could not be verified as image-only.",
+        expected:
+          raster.pageCount,
+        actual:
+          raster.imageOnlyPageCount,
       });
       continue;
     }

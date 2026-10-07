@@ -15,6 +15,7 @@ import {
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import { calculateSignaturePdfPlacement } from "@/lib/pdf/signaturePlacementGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import { ImagePlus, ShieldCheck, Stamp } from "lucide-react";
 import {
   ChangeEvent,
@@ -364,6 +365,14 @@ export default function AddImageStampPdfPage() {
       setOutputBytes(output);
       setOutputFileName(generatedFileName);
       addRecentFile({ fileName: generatedFileName, toolName: "Add Image / Stamp PDF" });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: output,
+        outputFileName: generatedFileName,
+        operationId: "add-image-stamp-pdf",
+        operationLabel: "Add Image / Stamp PDF",
+      });
       toast.success("Image or stamp added successfully.");
     } catch (error) {
       console.error(error);

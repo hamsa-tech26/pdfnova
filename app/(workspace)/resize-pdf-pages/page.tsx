@@ -19,6 +19,7 @@ import {
   type PdfResizeOrientation,
 } from "@/lib/pdf/resizePageGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import {
   FileOutput,
   ShieldCheck,
@@ -229,6 +230,14 @@ export default function ResizePdfPagesPage() {
       addRecentFile({
         fileName: generatedFileName,
         toolName: "Resize PDF Pages",
+      });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: bytes,
+        outputFileName: generatedFileName,
+        operationId: "resize-pdf-pages",
+        operationLabel: "Resize PDF Pages",
       });
 
       toast.success(

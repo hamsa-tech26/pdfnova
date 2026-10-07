@@ -533,33 +533,58 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     }),
   ).toBeVisible();
 
+  const protectRecipeLink =
+    page.getByRole("link", {
+      name: "Open Protect PDF",
+    });
+
+  await expect(
+    protectRecipeLink,
+  ).toHaveAttribute(
+    "href",
+    /\/protect-pdf\?workspaceFile=.*recipe=prepare-for-sharing&recipeStep=2/,
+  );
+
+  await protectRecipeLink.click();
+
   await page
-    .getByRole("button", {
-      name:
-        "Record skip and continue",
-    })
-    .click();
+    .locator("#protect-password")
+    .fill("Recipe-Protect-123!");
+  await page
+    .locator("#protect-password-confirm")
+    .fill("Recipe-Protect-123!");
 
-  await expect(
-    page.getByRole("heading", {
-      name:
-        "Recipe sequence reached its final checkpoint",
-    }),
-  ).toBeVisible();
+  const protectedRecipeResult =
+    await clickAndDownload(
+      page,
+      "Protect and Download PDF",
+    );
+
+  expect(
+    protectedRecipeResult.fileName,
+  ).toBe(
+    "browser-magic-drop-metadata-removed-protected.pdf",
+  );
 
   await expect(
     page.getByText(
-      "Verification: PASS",
+      "Saved as Version 3 in this browser workspace",
     ),
   ).toBeVisible();
 
   await expect(
     page.getByText(
-      "Recorded state: SKIPPED",
+      "Verification PASS",
     ),
-  ).toHaveCount(2);
+  ).toBeVisible();
 
   await page.goto("/dashboard");
+
+  await expect(
+    page.getByText(
+      /3 versions saved locally/,
+    ),
+  ).toBeVisible();
 
   await expect(
     page.getByRole("link", {
@@ -576,6 +601,80 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     "href",
     /\/magic-drop\?workspaceFile=/,
   );
+});
+
+test("Rotate PDF persists a derived workspace version from a Dashboard handoff", async ({
+  page,
+}) => {
+  const source = await createTextPdf({
+    text:
+      "KUKUREKU CONTINUITY ROTATE TEST",
+    pageCount: 2,
+  });
+
+  await page.goto("/magic-drop");
+  await uploadPdf(
+    page,
+    source,
+    "browser-rotate-continuity.pdf",
+  );
+
+  await page.goto("/dashboard");
+
+  const rotateLink =
+    page.getByRole("link", {
+      name: "Rotate",
+      exact: true,
+    });
+
+  await expect(
+    rotateLink,
+  ).toHaveAttribute(
+    "href",
+    /\/rotate-pdf\?workspaceFile=/,
+  );
+
+  await rotateLink.click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "browser-rotate-continuity.pdf",
+    }),
+  ).toBeVisible();
+
+  const rotatedResult =
+    await clickAndDownload(
+      page,
+      "Rotate and Download PDF",
+    );
+
+  expect(
+    rotatedResult.fileName,
+  ).toBe(
+    "browser-rotate-continuity-rotated.pdf",
+  );
+
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "browser-rotate-continuity-rotated.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      /2 versions saved locally/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      /Rotate PDF · from Version 1/,
+    ),
+  ).toBeVisible();
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
