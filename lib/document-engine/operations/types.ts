@@ -11,7 +11,10 @@ export type KukurekuOperationId =
   | "edit-pdf-metadata"
   | "reorder-pdf-pages"
   | "resize-pdf-pages"
-  | "rotate-pdf";
+  | "rotate-pdf"
+  | "merge-pdf"
+  | "split-pdf"
+  | "extract-pdf-pages";
 
 export type DocumentFeature =
   | "page-count"

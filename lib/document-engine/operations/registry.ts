@@ -6,6 +6,123 @@ import type {
 const operations: KukurekuOperationDescriptor[] =
   [
     {
+      id: "merge-pdf",
+      title: "Merge PDF",
+      route: "/merge-pdf",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: [
+        "two-or-more-valid-pdfs",
+        "page-copy-safe",
+      ],
+      effectProfiles: [
+        {
+          mode: "multi-parent-composition",
+          description:
+            "Combines pages from two or more source PDFs into a new workspace document with multiple recorded parents.",
+          preserves: [
+            "page-content",
+            "page-geometry",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-count",
+            "page-order",
+            "pdf-structure",
+          ],
+          destroys: [
+            "common-metadata",
+          ],
+          risks: [
+            "Document-level metadata and navigation structures from individual source PDFs are not merged into one equivalent document-level structure.",
+            "Interactive forms must be flattened before merging.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+          ],
+        },
+      ],
+    },
+    {
+      id: "split-pdf",
+      title: "Split PDF",
+      route: "/split-pdf",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: [
+        "valid-pdf",
+        "page-selection",
+        "page-copy-safe",
+      ],
+      effectProfiles: [
+        {
+          mode: "branch-document",
+          description:
+            "Copies the selected source pages into a new child workspace document while preserving the parent source.",
+          preserves: [
+            "page-content",
+            "page-geometry",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-count",
+            "pdf-structure",
+          ],
+          destroys: [
+            "common-metadata",
+          ],
+          risks: [
+            "Document-level navigation structures may not preserve their original meaning in the extracted child document.",
+            "Interactive forms must be flattened before page extraction.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+          ],
+        },
+      ],
+    },
+    {
+      id: "extract-pdf-pages",
+      title: "Extract PDF Pages",
+      route: "/extract-pdf-pages",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: [
+        "valid-pdf",
+        "page-selection",
+        "page-copy-safe",
+      ],
+      effectProfiles: [
+        {
+          mode: "branch-document",
+          description:
+            "Creates a new child workspace document from selected pages while keeping the original document and its lineage intact.",
+          preserves: [
+            "page-content",
+            "page-geometry",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-count",
+            "pdf-structure",
+          ],
+          destroys: [
+            "common-metadata",
+          ],
+          risks: [
+            "Document-level navigation structures may not preserve their original meaning in the extracted child document.",
+            "Interactive forms must be flattened before page extraction.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+          ],
+        },
+      ],
+    },
+    {
       id: "add-image-stamp-pdf",
       title: "Add Image / Stamp PDF",
       route: "/add-image-stamp-pdf",

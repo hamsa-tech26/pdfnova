@@ -7,10 +7,17 @@ import FileUploader from "@/components/pdf/FileUploader";
 import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import { assertPageCopySafe } from "@/lib/pdf/pdfInputSafety";
 import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import {
+  saveBranchedPdfToWorkspace,
+} from "@/lib/storage/workspaceContinuity";
+import type {
+  WorkspaceFileSummary,
+} from "@/lib/storage/workspaceFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
@@ -141,6 +148,12 @@ export default function SplitPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pageRange, setPageRange] = useState("");
+  const [
+    sourceWorkspaceFileId,
+    setSourceWorkspaceFileId,
+  ] = useState<string | null>(
+    null,
+  );
 
   const [isSplitting, setIsSplitting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -150,6 +163,12 @@ export default function SplitPdfPage() {
     useState<Uint8Array | null>(null);
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [
+    workspaceOutput,
+    setWorkspaceOutput,
+  ] = useState<WorkspaceFileSummary | null>(
+    null,
+  );
 
   function resetResultState() {
     setOutputBytes(null);
@@ -157,12 +176,20 @@ export default function SplitPdfPage() {
     setErrorMessage("");
     setProgress(0);
     setCurrentStep(1);
+    setWorkspaceOutput(null);
   }
 
   async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const selectedFile = event.target.files?.[0];
+    const workspaceFileId =
+      event.currentTarget.dataset
+        .workspaceFileId ??
+      null;
+
+    delete event.currentTarget
+      .dataset.workspaceFileId;
 
     if (
       !selectedFile ||
@@ -197,6 +224,9 @@ export default function SplitPdfPage() {
       );
 
       setFile(selectedFile);
+      setSourceWorkspaceFileId(
+        workspaceFileId,
+      );
       setPageCount(pdf.getPageCount());
       setPageRange("");
       resetResultState();
@@ -219,6 +249,9 @@ export default function SplitPdfPage() {
 
   function removeFile() {
     setFile(null);
+    setSourceWorkspaceFileId(
+      null,
+    );
     setPageCount(0);
     setPageRange("");
     resetResultState();
@@ -228,6 +261,9 @@ export default function SplitPdfPage() {
 
   function startAgain() {
     setFile(null);
+    setSourceWorkspaceFileId(
+      null,
+    );
     setPageCount(0);
     setPageRange("");
     resetResultState();
@@ -348,6 +384,26 @@ export default function SplitPdfPage() {
         fileName: generatedFileName,
         toolName: "Split PDF",
       });
+
+      const savedWorkspaceDocument =
+        await saveBranchedPdfToWorkspace(
+          {
+            sourceFile: file,
+            outputBytes:
+              splitPdfBytes,
+            outputFileName:
+              generatedFileName,
+            parentWorkspaceFileId:
+              sourceWorkspaceFileId,
+            operationId:
+              "split-pdf",
+            operationLabel:
+              "Split PDF",
+          },
+        );
+      setWorkspaceOutput(
+        savedWorkspaceDocument,
+      );
 
       toast.success("PDF pages extracted successfully!");
 
@@ -473,15 +529,22 @@ export default function SplitPdfPage() {
           )}
 
           {!isSplitting && outputBytes && (
-            <SuccessCard
-              title="Your extracted PDF is ready"
-              description="The selected pages were copied into a new PDF and downloaded successfully."
-              fileName={outputFileName}
-              onDownloadAgain={downloadResultAgain}
-              onStartAgain={startAgain}
-              downloadLabel="Download Extracted PDF Again"
-              resetLabel="Split Another PDF"
-            />
+            <>
+              <SuccessCard
+                title="Your extracted PDF is ready"
+                description="The selected pages were copied into a new PDF and downloaded successfully."
+                fileName={outputFileName}
+                onDownloadAgain={downloadResultAgain}
+                onStartAgain={startAgain}
+                downloadLabel="Download Extracted PDF Again"
+                resetLabel="Split Another PDF"
+              />
+              <WorkspaceDerivedOutputNotice
+                file={
+                  workspaceOutput
+                }
+              />
+            </>
           )}
 
           {!isSplitting && errorMessage && (

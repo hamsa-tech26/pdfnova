@@ -14,7 +14,7 @@ describe("operation registry", () => {
       listKukurekuOperations();
 
     expect(operations).toHaveLength(
-      11,
+      14,
     );
 
     expect(
@@ -35,6 +35,9 @@ describe("operation registry", () => {
         "reorder-pdf-pages",
         "resize-pdf-pages",
         "rotate-pdf",
+        "merge-pdf",
+        "split-pdf",
+        "extract-pdf-pages",
       ]),
     );
 

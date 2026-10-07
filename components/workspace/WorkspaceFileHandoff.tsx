@@ -23,12 +23,15 @@ function findFileInput() {
 function injectFile(
   input: HTMLInputElement,
   file: File,
+  workspaceFileId: string,
 ) {
   const transfer =
     new DataTransfer();
 
   transfer.items.add(file);
   input.files = transfer.files;
+  input.dataset.workspaceFileId =
+    workspaceFileId;
 
   input.dispatchEvent(
     new Event("change", {
@@ -114,6 +117,7 @@ export default function WorkspaceFileHandoff() {
             injectFile(
               input,
               file,
+              workspaceFileId!,
             );
 
             void setActiveWorkspaceFile(

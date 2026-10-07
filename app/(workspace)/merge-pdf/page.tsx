@@ -8,6 +8,8 @@ import type { PdfFileInfo } from "@/components/pdf/PdfFileInfo";
 import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
+import WorkspaceMergeSources from "@/components/workspace/WorkspaceMergeSources";
 import { downloadFile } from "@/lib/downloadFile";
 import {
   assertPageCopySafe,
@@ -15,6 +17,12 @@ import {
 } from "@/lib/pdf/pdfInputSafety";
 import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import {
+  saveComposedPdfToWorkspace,
+} from "@/lib/storage/workspaceContinuity";
+import type {
+  WorkspaceFileSummary,
+} from "@/lib/storage/workspaceFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
@@ -84,6 +92,12 @@ export default function MergePdfPage() {
     useState<Uint8Array | null>(null);
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [
+    workspaceOutput,
+    setWorkspaceOutput,
+  ] = useState<WorkspaceFileSummary | null>(
+    null,
+  );
 
   function resetResultState() {
     setOutputBytes(null);
@@ -91,6 +105,7 @@ export default function MergePdfPage() {
     setErrorMessage("");
     setProgress(0);
     setCurrentStep(1);
+    setWorkspaceOutput(null);
   }
 
   async function handleFileSelection(
@@ -315,6 +330,28 @@ export default function MergePdfPage() {
         toolName: "Merge PDF",
       });
 
+      const savedWorkspaceDocument =
+        await saveComposedPdfToWorkspace(
+          {
+            sourceFiles:
+              files.map(
+                (item) =>
+                  item.file,
+              ),
+            outputBytes:
+              mergedPdfBytes,
+            outputFileName:
+              generatedFileName,
+            operationId:
+              "merge-pdf",
+            operationLabel:
+              "Merge PDF",
+          },
+        );
+      setWorkspaceOutput(
+        savedWorkspaceDocument,
+      );
+
       toast.success("PDFs merged successfully!");
 
       toast("Download started", {
@@ -379,6 +416,15 @@ export default function MergePdfPage() {
         disabled={isMerging}
       />
 
+      <WorkspaceMergeSources
+        fileInputRef={
+          fileInputRef
+        }
+        selectedFiles={files.map(
+          (item) => item.file,
+        )}
+      />
+
       <FileList
         files={files}
         onRemove={removeFile}
@@ -400,15 +446,22 @@ export default function MergePdfPage() {
           )}
 
           {!isMerging && outputBytes && (
-            <SuccessCard
-              title="Your merged PDF is ready"
-              description="The selected PDF files were merged successfully and downloaded to your device."
-              fileName={outputFileName}
-              onDownloadAgain={downloadResultAgain}
-              onStartAgain={startAgain}
-              downloadLabel="Download Merged PDF Again"
-              resetLabel="Merge Another Set"
-            />
+            <>
+              <SuccessCard
+                title="Your merged PDF is ready"
+                description="The selected PDF files were merged successfully and downloaded to your device."
+                fileName={outputFileName}
+                onDownloadAgain={downloadResultAgain}
+                onStartAgain={startAgain}
+                downloadLabel="Download Merged PDF Again"
+                resetLabel="Merge Another Set"
+              />
+              <WorkspaceDerivedOutputNotice
+                file={
+                  workspaceOutput
+                }
+              />
+            </>
           )}
 
           {!isMerging && errorMessage && (
