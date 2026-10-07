@@ -54,6 +54,92 @@ export function buildUnlockQpdfArgs(
   ];
 }
 
+export function buildIsEncryptedQpdfArgs(
+  inputName = "input.pdf",
+) {
+  return [
+    "--is-encrypted",
+    inputName,
+  ];
+}
+
+export type PdfEncryptionStatus =
+  | "encrypted"
+  | "not-encrypted"
+  | "unknown";
+
+export async function inspectPdfEncryption(
+  input:
+    | Blob
+    | Uint8Array
+    | ArrayBuffer,
+): Promise<PdfEncryptionStatus> {
+  const qpdf =
+    await createBrowserQpdfRunner();
+
+  try {
+    const bytes =
+      input instanceof Blob
+        ? new Uint8Array(
+            await input.arrayBuffer(),
+          )
+        : input instanceof
+            Uint8Array
+          ? input
+          : new Uint8Array(input);
+
+    try {
+      const result =
+        await qpdf.run({
+          inputs: {
+            "input.pdf":
+              bytes,
+          },
+          args:
+            buildIsEncryptedQpdfArgs(
+              "input.pdf",
+            ),
+        });
+
+      return result.exitCode === 0
+        ? "encrypted"
+        : result.exitCode === 2
+          ? "not-encrypted"
+          : "unknown";
+    } catch (error) {
+      const exitCode =
+        typeof error ===
+          "object" &&
+        error !== null &&
+        "exitCode" in error &&
+        typeof (
+          error as {
+            exitCode?: unknown;
+          }
+        ).exitCode ===
+          "number"
+          ? (
+              error as {
+                exitCode: number;
+              }
+            ).exitCode
+          : null;
+
+      if (exitCode === 0) {
+        return "encrypted";
+      }
+
+      if (exitCode === 2) {
+        return "not-encrypted";
+      }
+
+      return "unknown";
+    }
+  } finally {
+    await qpdf.destroy();
+  }
+}
+
 export async function protectPdf(
   file: File,
   password: string,
