@@ -5,24 +5,24 @@ import {
 } from "vitest";
 import {
   createDocumentArtifact,
-} from "@/lib/document-engine/artifact";
+} from "../artifact";
 import {
   verifyPdfArtifact,
-} from "@/lib/document-engine/verification/verifyPdf";
+} from "../verification/verifyPdf";
 import {
   flattenStandardPdfForm,
-} from "@/lib/pdf/formFields";
+} from "../../pdf/formFields";
 import {
   applyPdfMetadata,
-} from "@/lib/pdf/metadataEditor";
+} from "../../pdf/metadataEditor";
 import {
   createReliabilityPdfBytes,
   RELIABILITY_FIXTURE_PAGE_COUNT,
-} from "@/lib/pdf/__tests__/fixtures/reliabilityFixture";
+} from "../../pdf/__tests__/fixtures/reliabilityFixture";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
-} from "@/lib/pdf/safeDocument";
+} from "../../pdf/safeDocument";
 
 function artifactFromBytes(
   id: string,

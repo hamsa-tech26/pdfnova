@@ -5,17 +5,17 @@ import {
 } from "vitest";
 import {
   createDocumentArtifact,
-} from "@/lib/document-engine/artifact";
+} from "../artifact";
 import {
   createDocumentFindings,
-} from "@/lib/document-engine/findings/createFindings";
+} from "../findings/createFindings";
 import {
   inspectPdfArtifact,
-} from "@/lib/document-engine/inspection/inspectPdf";
+} from "../inspection/inspectPdf";
 import {
   createReliabilityPdfBytes,
   RELIABILITY_FIXTURE_PAGE_COUNT,
-} from "@/lib/pdf/__tests__/fixtures/reliabilityFixture";
+} from "../../pdf/__tests__/fixtures/reliabilityFixture";
 
 describe("document inspection", () => {
   it("extracts reliable structural facts from the shared PDF fixture", async () => {

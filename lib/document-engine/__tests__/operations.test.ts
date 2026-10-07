@@ -6,7 +6,7 @@ import {
 import {
   getKukurekuOperation,
   listKukurekuOperations,
-} from "@/lib/document-engine/operations/registry";
+} from "../operations/registry";
 
 describe("operation registry", () => {
   it("registers the first five representative Kukureku operations with unique ids", () => {

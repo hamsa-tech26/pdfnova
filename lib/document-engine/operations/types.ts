@@ -1,4 +1,4 @@
-import type { VerificationCheckKind } from "@/lib/document-engine/verification/types";
+import type { VerificationCheckKind } from "../verification/types";
 
 export type KukurekuOperationId =
   | "remove-metadata"

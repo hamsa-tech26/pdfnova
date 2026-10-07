@@ -1,12 +1,12 @@
-import type { DocumentArtifact } from "@/lib/document-engine/artifact";
+import type { DocumentArtifact } from "../artifact";
 import {
   describePdfFormFields,
   type PdfFormFieldKind,
   type PdfFormFieldValue,
-} from "@/lib/pdf/formFields";
-import { readPdfMetadata } from "@/lib/pdf/metadataEditor";
-import { hasAcroFormDictionary } from "@/lib/pdf/pdfInputSafety";
-import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
+} from "../../pdf/formFields";
+import { readPdfMetadata } from "../../pdf/metadataEditor";
+import { hasAcroFormDictionary } from "../../pdf/pdfInputSafety";
+import { loadPdfWithoutMetadataMutation } from "../../pdf/safeDocument";
 import type {
   DocumentFacts,
   InspectionReport,

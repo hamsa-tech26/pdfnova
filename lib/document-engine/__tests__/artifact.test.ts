@@ -6,7 +6,7 @@ import {
 import {
   createDerivedArtifact,
   createDocumentArtifact,
-} from "@/lib/document-engine/artifact";
+} from "../artifact";
 
 describe("document artifacts", () => {
   it("keeps Blob-backed artifacts without copying them into another byte representation", () => {

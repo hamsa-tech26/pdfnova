@@ -1,6 +1,6 @@
-import type { DocumentArtifact } from "@/lib/document-engine/artifact";
-import { inspectPdfArtifact } from "@/lib/document-engine/inspection/inspectPdf";
-import type { InspectionReport } from "@/lib/document-engine/inspection/types";
+import type { DocumentArtifact } from "../artifact";
+import { inspectPdfArtifact } from "../inspection/inspectPdf";
+import type { InspectionReport } from "../inspection/types";
 import type {
   VerificationCheckResult,
   VerificationReport,

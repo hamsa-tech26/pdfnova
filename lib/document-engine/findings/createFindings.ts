@@ -1,4 +1,4 @@
-import type { InspectionReport } from "@/lib/document-engine/inspection/types";
+import type { InspectionReport } from "../inspection/types";
 import type { DocumentFinding } from "./types";
 
 export function createDocumentFindings(
