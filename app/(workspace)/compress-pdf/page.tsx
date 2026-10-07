@@ -7,12 +7,15 @@ import FileUploader from "@/components/pdf/FileUploader";
 import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import { downloadFile } from "@/lib/downloadFile";
 import {
   compressPdf,
   type CompressionLevel,
 } from "@/lib/pdf/compress";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
+import type { WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { ShieldCheck, TrendingDown } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -130,12 +133,15 @@ export default function CompressPdfPage() {
 
   const [outputFileName, setOutputFileName] = useState("");
   const [errorMessage, setErrorMessage] = useState("");
+  const [workspaceOutput, setWorkspaceOutput] =
+    useState<WorkspaceFileSummary | null>(null);
 
   function resetResultState() {
     setResult(null);
     setOutputBytes(null);
     setOutputFileName("");
     setErrorMessage("");
+    setWorkspaceOutput(null);
     setProgress(0);
     setCurrentStep(1);
   }
@@ -287,6 +293,16 @@ export default function CompressPdfPage() {
         fileName: generatedFileName,
         toolName: "Compress PDF",
       });
+
+      setWorkspaceOutput(
+        await saveDerivedPdfToWorkspace({
+          sourceFile: file,
+          outputBytes: compressedResult.bytes,
+          outputFileName: generatedFileName,
+          operationId: "compress-pdf",
+          operationLabel: "Compress PDF",
+        }),
+      );
 
       if (
         compressedResult.compressedSize <
@@ -511,6 +527,12 @@ export default function CompressPdfPage() {
                 downloadLabel="Download PDF Again"
                 resetLabel="Compress Another PDF"
               />
+
+              {workspaceOutput && (
+                <WorkspaceDerivedOutputNotice
+                  file={workspaceOutput}
+                />
+              )}
             </>
           )}
 
