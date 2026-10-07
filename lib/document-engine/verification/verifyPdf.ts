@@ -1,6 +1,5 @@
 import { inspectRasterizedPages } from "../../pdf/rasterVerification";
 import {
-  EncryptedPDFError,
   PDFDocument,
 } from "pdf-lib";
 import type { DocumentArtifact } from "../artifact";
@@ -111,43 +110,38 @@ export async function verifyPdfArtifact(
       "encryption-applied"
     ) {
       try {
-        await PDFDocument.load(
-          await artifact.blob.arrayBuffer(),
-          {
-            updateMetadata: false,
-          },
-        );
+        const pdf =
+          await PDFDocument.load(
+            await artifact.blob.arrayBuffer(),
+            {
+              ignoreEncryption:
+                true,
+              updateMetadata:
+                false,
+            },
+          );
+        const encrypted =
+          pdf.isEncrypted;
 
         checks.push({
           kind: request.kind,
-          status: "FAILED",
-          message:
-            "An independent PDF parser opened the output without reporting encryption.",
+          status: encrypted
+            ? "PASS"
+            : "FAILED",
+          message: encrypted
+            ? "An independent PDF parser confirms that the output contains an encryption dictionary."
+            : "An independent PDF parser confirms that the output is not encrypted.",
           expected: true,
-          actual: false,
+          actual: encrypted,
         });
-      } catch (error) {
-        if (
-          error instanceof
-          EncryptedPDFError
-        ) {
-          checks.push({
-            kind: request.kind,
-            status: "PASS",
-            message:
-              "An independent PDF parser confirms that the output is encrypted.",
-            expected: true,
-            actual: true,
-          });
-        } else {
-          checks.push({
-            kind: request.kind,
-            status:
-              "NOT_VERIFIED",
-            message:
-              "The independent PDF parser could not determine the encryption state of this output.",
-          });
-        }
+      } catch {
+        checks.push({
+          kind: request.kind,
+          status:
+            "NOT_VERIFIED",
+          message:
+            "The independent PDF parser could not determine the encryption state of this output.",
+        });
       }
 
       continue;

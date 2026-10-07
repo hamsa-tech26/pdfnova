@@ -193,7 +193,33 @@ describe("shared PDF verification", () => {
     );
   });
 
-  it("uses NOT_VERIFIED instead of pretending encryption was proven", async () => {
+  it("fails encryption verification for an ordinary unencrypted PDF", async () => {
+    const bytes =
+      await createReliabilityPdfBytes();
+
+    const report =
+      await verifyPdfArtifact(
+        artifactFromBytes(
+          "unencrypted",
+          bytes,
+        ),
+        [
+          {
+            kind:
+              "encryption-applied",
+          },
+        ],
+      );
+
+    expect(report.status).toBe(
+      "FAILED",
+    );
+    expect(
+      report.checks[0].actual,
+    ).toBe(false);
+  });
+
+  it("uses NOT_VERIFIED instead of pretending encryption was proven for unreadable bytes", async () => {
     const artifact =
       createDocumentArtifact(
         new Blob(["not inspected"]),

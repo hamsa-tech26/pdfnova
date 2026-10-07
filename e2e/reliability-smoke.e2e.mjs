@@ -672,7 +672,7 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
 
   await expect(
     page.getByText(
-      "Rotate PDF",
+      /Rotate PDF · from Version 1/,
     ),
   ).toBeVisible();
 });
