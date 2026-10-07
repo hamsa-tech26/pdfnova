@@ -87,3 +87,14 @@ Current document state
 ```
 
 V1 only establishes the contracts needed to make that future possible without implementing the planner now.
+
+## Workspace Intelligence V2 extension
+
+The first V2 workspace-intelligence layer consumes the browser-local document graph without reading PDF content. It:
+
+- reports known compositions, branches, version chains, shared ancestry, and branch divergence;
+- flags broken parent references as attention findings;
+- can mark two independent document heads as possible duplicates only when filename, MIME type, size, and browser modification timestamp all match;
+- keeps duplicate signals non-authoritative because it does not compare bytes or compute a content hash.
+
+The report exposes explicit coverage metadata so UI surfaces can distinguish proven graph relationships from heuristic metadata signals. Content-aware similarity, cryptographic duplicate confirmation, and cross-document semantic reasoning remain future work.
