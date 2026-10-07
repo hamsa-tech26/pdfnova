@@ -840,9 +840,22 @@ test("Multi-document workspace records merge composition and split/extract child
     }),
   ).toBeVisible();
 
+  const splitParentPanel =
+    page
+      .getByText(
+        "Parent documents",
+        {
+          exact: true,
+        },
+      )
+      .locator("..");
+
   await expect(
-    page.getByText(
+    splitParentPanel.getByText(
       "kukureku-merged.pdf",
+      {
+        exact: true,
+      },
     ),
   ).toBeVisible();
 
