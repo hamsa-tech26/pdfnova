@@ -20,13 +20,22 @@ function getOverallStatus(
     return "FAILED";
   }
 
-  if (
-    checks.some(
+  const notVerifiedCount =
+    checks.filter(
       (check) =>
         check.status ===
         "NOT_VERIFIED",
-    )
+    ).length;
+
+  if (
+    notVerifiedCount > 0 &&
+    notVerifiedCount ===
+      checks.length
   ) {
+    return "NOT_VERIFIED";
+  }
+
+  if (notVerifiedCount > 0) {
     return "PASS_WITH_WARNING";
   }
 

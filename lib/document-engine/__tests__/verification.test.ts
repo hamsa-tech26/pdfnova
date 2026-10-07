@@ -215,12 +215,46 @@ describe("shared PDF verification", () => {
       );
 
     expect(report.status).toBe(
-      "PASS_WITH_WARNING",
+      "NOT_VERIFIED",
     );
 
     expect(
       report.checks[0].status,
     ).toBe("NOT_VERIFIED");
+  });
+
+  it("uses PASS_WITH_WARNING when deterministic checks pass but another requested outcome is not yet verifiable", async () => {
+    const bytes =
+      await createReliabilityPdfBytes();
+
+    const report =
+      await verifyPdfArtifact(
+        artifactFromBytes(
+          "mixed-verification",
+          bytes,
+        ),
+        [
+          {
+            kind: "pdf-openable",
+          },
+          {
+            kind: "rasterized-pages",
+          },
+        ],
+      );
+
+    expect(report.status).toBe(
+      "PASS_WITH_WARNING",
+    );
+
+    expect(
+      report.checks.map(
+        (check) => check.status,
+      ),
+    ).toEqual([
+      "PASS",
+      "NOT_VERIFIED",
+    ]);
   });
 
   it("reports invalid PDFs as failed openability instead of throwing away the verification report", async () => {
