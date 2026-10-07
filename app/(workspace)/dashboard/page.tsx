@@ -33,6 +33,7 @@ import {
   AlignLeft,
   PanelsTopLeft,
   ScanText,
+  ListChecks,
   ListOrdered,
   ArrowDownUp,
   Eraser,
@@ -230,6 +231,13 @@ const quickActions = [
     href: "/magic-drop",
     icon: Sparkles,
     accent: "bg-violet-50 text-violet-700",
+  },
+  {
+    title: "Workflow Recipes",
+    description: "Guided multi-step PDF flows",
+    href: "/workflow-recipes",
+    icon: ListChecks,
+    accent: "bg-blue-50 text-blue-700",
   },
   {
     title: "Merge PDF",

@@ -8,6 +8,7 @@ import {
   FileText,
   Images,
   LayoutDashboard,
+  ListChecks,
   ScanSearch,
   Scissors,
   Sparkles,
@@ -43,7 +44,12 @@ const navigationGroups: SidebarGroup[] = [
         label: "Magic Drop",
         href: "/magic-drop",
         icon: Sparkles,
-        badge: "New",
+      },
+      {
+        label: "Workflow Recipes",
+        href: "/workflow-recipes",
+        icon: ListChecks,
+        badge: "V1",
       },
       {
         label: "Document Inspector",

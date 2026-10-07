@@ -10,6 +10,7 @@ const INTERNAL_ROUTES = new Set([
   "engine-inspector",
   "document-inspector",
   "magic-drop",
+  "workflow-recipes",
 ]);
 
 function read(relativePath) {

@@ -1,6 +1,9 @@
 "use client";
 
 import {
+  getWorkflowContinuationHref,
+} from "@/lib/document-engine";
+import {
   buildWorkspaceHandoffHref,
   type WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
@@ -18,6 +21,14 @@ export default function WorkspaceDerivedOutputNotice({
   if (!file) {
     return null;
   }
+
+  const recipeContinuationHref =
+    typeof window !== "undefined"
+      ? getWorkflowContinuationHref(
+          window.location.search,
+          file.id,
+        )
+      : null;
 
   return (
     <section className="rounded-2xl border border-blue-200 bg-blue-50 p-5 dark:border-blue-900 dark:bg-blue-950/20">
@@ -37,6 +48,20 @@ export default function WorkspaceDerivedOutputNotice({
           </p>
 
           <div className="mt-4 flex flex-wrap gap-3">
+            {recipeContinuationHref && (
+              <Link
+                href={
+                  recipeContinuationHref
+                }
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"
+              >
+                Continue Recipe
+                <ArrowRight
+                  size={15}
+                />
+              </Link>
+            )}
+
             <Link
               href="/dashboard"
               className="inline-flex items-center justify-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700"

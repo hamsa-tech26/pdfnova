@@ -10,6 +10,10 @@ import { toast } from "sonner";
 
 const QUERY_KEY = "workspaceFile";
 
+const DIRECT_WORKSPACE_ROUTES = [
+  "/workflow-recipes",
+];
+
 function findFileInput() {
   return document.querySelector(
     'input[type="file"]:not([disabled])',
@@ -39,6 +43,18 @@ export default function WorkspaceFileHandoff() {
     useRef<string | null>(null);
 
   useEffect(() => {
+    if (
+      DIRECT_WORKSPACE_ROUTES.some(
+        (route) =>
+          pathname === route ||
+          pathname.startsWith(
+            route + "/",
+          ),
+      )
+    ) {
+      return;
+    }
+
     const params =
       new URLSearchParams(
         window.location.search,
