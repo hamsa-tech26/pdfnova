@@ -348,10 +348,10 @@ export default function DashboardPage() {
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/word-to-pdf"
+                  href="/document-inspector"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200"
                 >
-                  Convert Word to PDF
+                  Inspect a PDF
                   <ArrowRight size={18} />
                 </Link>
 
