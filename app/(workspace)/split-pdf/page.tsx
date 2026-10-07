@@ -529,15 +529,22 @@ export default function SplitPdfPage() {
           )}
 
           {!isSplitting && outputBytes && (
-            <SuccessCard
-              title="Your extracted PDF is ready"
-              description="The selected pages were copied into a new PDF and downloaded successfully."
-              fileName={outputFileName}
-              onDownloadAgain={downloadResultAgain}
-              onStartAgain={startAgain}
-              downloadLabel="Download Extracted PDF Again"
-              resetLabel="Split Another PDF"
-            />
+            <>
+              <SuccessCard
+                title="Your extracted PDF is ready"
+                description="The selected pages were copied into a new PDF and downloaded successfully."
+                fileName={outputFileName}
+                onDownloadAgain={downloadResultAgain}
+                onStartAgain={startAgain}
+                downloadLabel="Download Extracted PDF Again"
+                resetLabel="Split Another PDF"
+              />
+              <WorkspaceDerivedOutputNotice
+                file={
+                  workspaceOutput
+                }
+              />
+            </>
           )}
 
           {!isSplitting && errorMessage && (

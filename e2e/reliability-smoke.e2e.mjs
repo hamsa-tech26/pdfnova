@@ -585,7 +585,7 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
 
   await expect(
     page.getByText(
-      /3 versions saved locally/,
+      /3 versions saved for this document/,
     ),
   ).toBeVisible();
 
