@@ -13,6 +13,9 @@ import {
   inspectPdfArtifact,
 } from "../inspection/inspectPdf";
 import {
+  createInspectorChecks,
+} from "../inspection/createInspectorChecks";
+import {
   createReliabilityPdfBytes,
   RELIABILITY_FIXTURE_PAGE_COUNT,
 } from "../../pdf/__tests__/fixtures/reliabilityFixture";
@@ -149,5 +152,73 @@ describe("document inspection", () => {
     ).toContain(
       "does not claim forensic",
     );
+
+    const checks =
+      createInspectorChecks(
+        report,
+      );
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "page-geometry",
+      )?.status,
+    ).toBe("ISSUE_FOUND");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "common-metadata",
+      )?.status,
+    ).toBe("ISSUE_FOUND");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "acroform",
+      )?.status,
+    ).toBe("ISSUE_FOUND");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id === "xfa",
+      )?.status,
+    ).toBe("CHECKED");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "attachments",
+      )?.status,
+    ).toBe("NOT_CHECKED");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "digital-signatures",
+      )?.status,
+    ).toBe("NOT_CHECKED");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "javascript-actions",
+      )?.status,
+    ).toBe("NOT_CHECKED");
+
+    expect(
+      checks.find(
+        (check) =>
+          check.id ===
+          "forensic-metadata",
+      )?.status,
+    ).toBe("NOT_SUPPORTED");
   });
 });
