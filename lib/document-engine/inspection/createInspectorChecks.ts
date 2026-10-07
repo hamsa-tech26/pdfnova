@@ -106,21 +106,25 @@ function checkedSummary(
         : "No common document-information metadata fields were found.";
 
     case "acroform":
-      return facts.form.fieldCount > 0
-        ? String(
-            facts.form.fieldCount,
-          ) +
-            " standard form " +
-            (facts.form.fieldCount === 1
-              ? "field"
-              : "fields") +
-            " detected; " +
-            String(
+      if (facts.form.fieldCount === 0) {
+        return "No standard AcroForm fields were detected.";
+      }
+
+      return (
+        String(facts.form.fieldCount) +
+        " standard form " +
+        (facts.form.fieldCount === 1
+          ? "field"
+          : "fields") +
+        " detected; " +
+        (facts.form.filledFieldCount === 1
+          ? "1 currently contains a value."
+          : String(
               facts.form
                 .filledFieldCount,
             ) +
-            " currently contain values."
-        : "No standard AcroForm fields were detected.";
+            " currently contain values.")
+      );
 
     case "xfa":
       return facts.form.hasXfa
