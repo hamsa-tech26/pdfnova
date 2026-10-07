@@ -174,7 +174,8 @@ export default function WorkspaceDerivedOutputNotice({
             This result is now the current local workspace version. Your original remains available in version history, and no document was uploaded.
           </p>
 
-          {verificationUi && (
+          {verification &&
+            verificationUi && (
             <div
               className={
                 "mt-4 rounded-xl border p-4 " +
