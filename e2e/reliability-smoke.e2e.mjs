@@ -677,6 +677,214 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
   ).toBeVisible();
 });
 
+test("Multi-document workspace records merge composition and split/extract child documents", async ({
+  page,
+}) => {
+  const first =
+    await createTextPdf({
+      text:
+        "MULTI DOCUMENT FIRST",
+      pageCount: 2,
+    });
+  const second =
+    await createTextPdf({
+      text:
+        "MULTI DOCUMENT SECOND",
+      pageCount: 1,
+    });
+
+  await page.goto(
+    "/merge-pdf",
+  );
+
+  await page
+    .locator(
+      'input[type="file"]',
+    )
+    .first()
+    .setInputFiles([
+      {
+        name:
+          "multi-first.pdf",
+        mimeType:
+          "application/pdf",
+        buffer: first,
+      },
+      {
+        name:
+          "multi-second.pdf",
+        mimeType:
+          "application/pdf",
+        buffer: second,
+      },
+    ]);
+
+  const merged =
+    await clickAndDownload(
+      page,
+      "Merge and Download PDF",
+    );
+
+  expect(
+    merged.fileName,
+  ).toBe(
+    "kukureku-merged.pdf",
+  );
+  await expectOpenPdf(
+    merged.bytes,
+    3,
+  );
+
+  await expect(
+    page.getByText(
+      "Saved as a new composed document in this browser workspace",
+    ),
+  ).toBeVisible();
+
+  await page.goto(
+    "/dashboard",
+  );
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "kukureku-merged.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      /3 documents stored locally/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Parent documents",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "multi-first.pdf",
+    ),
+  ).toBeVisible();
+  await expect(
+    page.getByText(
+      "multi-second.pdf",
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name: "Split",
+      exact: true,
+    })
+    .click();
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "kukureku-merged.pdf",
+      ),
+  ).toBeVisible();
+
+  await page
+    .locator(
+      "#page-range",
+    )
+    .fill("1-2");
+
+  const split =
+    await clickAndDownload(
+      page,
+      "Extract and Download PDF",
+    );
+
+  expect(
+    split.fileName,
+  ).toBe(
+    "kukureku-merged-extracted.pdf",
+  );
+
+  await expect(
+    page.getByText(
+      "Saved as a new child document in this browser workspace",
+    ),
+  ).toBeVisible();
+
+  await page.goto(
+    "/dashboard",
+  );
+
+  await expect(
+    page.getByText(
+      /4 documents stored locally/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "kukureku-merged-extracted.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "kukureku-merged.pdf",
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name:
+        "Extract Pages",
+      exact: true,
+    })
+    .click();
+
+  await page
+    .locator("#pages")
+    .fill("1");
+
+  const extracted =
+    await clickAndDownload(
+      page,
+      "Extract and Download Pages",
+    );
+
+  expect(
+    extracted.fileName,
+  ).toBe(
+    "kukureku-merged-extracted-extracted.pdf",
+  );
+
+  await expect(
+    page.getByText(
+      "Saved as a new child document in this browser workspace",
+    ),
+  ).toBeVisible();
+
+  await page.goto(
+    "/dashboard",
+  );
+
+  await expect(
+    page.getByText(
+      /5 documents stored locally/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "kukureku-merged-extracted-extracted.pdf",
+    }),
+  ).toBeVisible();
+});
+
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
   page,
 }) => {
