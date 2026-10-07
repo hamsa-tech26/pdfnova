@@ -463,7 +463,7 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
 
   await expect(
     page.getByText(
-      "Active browser workspace",
+      "Active workspace document",
     ),
   ).toBeVisible();
 
@@ -476,7 +476,7 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
 
   await expect(
     page.getByText(
-      /2 versions saved locally/,
+      /2 versions saved for this document/,
     ),
   ).toBeVisible();
 
@@ -761,6 +761,9 @@ test("Multi-document workspace records merge composition and split/extract child
   await expect(
     page.getByText(
       "Parent documents",
+      {
+        exact: true,
+      },
     ),
   ).toBeVisible();
 
