@@ -76,6 +76,30 @@ const continueActions = [
     route: "/redact-pdf",
   },
   {
+    label: "Crop",
+    route: "/crop-pdf",
+  },
+  {
+    label: "Edit Metadata",
+    route: "/edit-pdf-metadata",
+  },
+  {
+    label: "Reorder Pages",
+    route: "/reorder-pdf-pages",
+  },
+  {
+    label: "Resize Pages",
+    route: "/resize-pdf-pages",
+  },
+  {
+    label: "Rotate",
+    route: "/rotate-pdf",
+  },
+  {
+    label: "Add Stamp",
+    route: "/add-image-stamp-pdf",
+  },
+  {
     label: "Inspector",
     route:
       "/document-inspector",

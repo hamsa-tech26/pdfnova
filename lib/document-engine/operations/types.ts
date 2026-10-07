@@ -5,12 +5,19 @@ export type KukurekuOperationId =
   | "flatten-form"
   | "compress-pdf"
   | "redact-pdf"
-  | "protect-pdf";
+  | "protect-pdf"
+  | "add-image-stamp-pdf"
+  | "crop-pdf"
+  | "edit-pdf-metadata"
+  | "reorder-pdf-pages"
+  | "resize-pdf-pages"
+  | "rotate-pdf";
 
 export type DocumentFeature =
   | "page-count"
   | "page-geometry"
   | "page-content"
+  | "page-order"
   | "pdf-structure"
   | "file-size"
   | "common-metadata"

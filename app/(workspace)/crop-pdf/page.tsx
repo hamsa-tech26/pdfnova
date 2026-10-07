@@ -13,6 +13,7 @@ import {
 } from "@/lib/pdf/safeDocument";
 import { calculateVisibleCropBox } from "@/lib/pdf/cropGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import { Crop, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -249,6 +250,14 @@ export default function CropPdfPage() {
       addRecentFile({
         fileName: generatedFileName,
         toolName: "Crop PDF",
+      });
+
+      await saveDerivedPdfToWorkspace({
+        sourceFile: file,
+        outputBytes: bytes,
+        outputFileName: generatedFileName,
+        operationId: "crop-pdf",
+        operationLabel: "Crop PDF",
       });
 
       toast.success("PDF cropped successfully.");

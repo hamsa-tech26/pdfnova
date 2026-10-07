@@ -6,6 +6,218 @@ import type {
 const operations: KukurekuOperationDescriptor[] =
   [
     {
+      id: "add-image-stamp-pdf",
+      title: "Add Image / Stamp PDF",
+      route: "/add-image-stamp-pdf",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf", "stamp-or-image"],
+      effectProfiles: [
+        {
+          mode: "page-overlay",
+          description:
+            "Adds a user-selected image or generated stamp onto one or more PDF pages.",
+          preserves: [
+            "page-count",
+            "page-geometry",
+            "common-metadata",
+            "interactive-forms",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-content",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
+      id: "crop-pdf",
+      title: "Crop PDF",
+      route: "/crop-pdf",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf", "crop-margins"],
+      effectProfiles: [
+        {
+          mode: "visible-crop-box",
+          description:
+            "Changes visible page crop geometry while retaining the underlying page content.",
+          preserves: [
+            "page-count",
+            "page-content",
+            "common-metadata",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-geometry",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "Cropping can hide content outside the visible CropBox without deleting the underlying page objects.",
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
+      id: "edit-pdf-metadata",
+      title: "Edit PDF Metadata",
+      route: "/edit-pdf-metadata",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf"],
+      effectProfiles: [
+        {
+          mode: "common-metadata",
+          description:
+            "Updates common document-information metadata fields in a derived PDF copy.",
+          preserves: [
+            "page-count",
+            "page-geometry",
+            "page-content",
+            "interactive-forms",
+            "selectable-text",
+          ],
+          modifies: [
+            "common-metadata",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "This does not claim to edit every XMP or forensic metadata location.",
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
+      id: "reorder-pdf-pages",
+      title: "Reorder PDF Pages",
+      route: "/reorder-pdf-pages",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf", "page-order"],
+      effectProfiles: [
+        {
+          mode: "page-order",
+          description:
+            "Rebuilds the page tree using the user-selected page sequence.",
+          preserves: [
+            "page-count",
+            "page-geometry",
+            "page-content",
+            "common-metadata",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-order",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "Document-level navigation structures may not preserve their original semantics after page reordering.",
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
+      id: "resize-pdf-pages",
+      title: "Resize PDF Pages",
+      route: "/resize-pdf-pages",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf", "target-page-size"],
+      effectProfiles: [
+        {
+          mode: "proportional-fit",
+          description:
+            "Resizes page geometry and proportionally fits existing content into the selected target page size.",
+          preserves: [
+            "page-count",
+            "common-metadata",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-geometry",
+            "page-content",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "Page geometry changes can affect print layout and annotation positioning.",
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
+      id: "rotate-pdf",
+      title: "Rotate PDF",
+      route: "/rotate-pdf",
+      inputMimeTypes: ["application/pdf"],
+      localProcessing: true,
+      reversible: false,
+      requirements: ["valid-pdf", "rotation"],
+      effectProfiles: [
+        {
+          mode: "page-rotation",
+          description:
+            "Changes the rotation entry for every page in a derived PDF copy.",
+          preserves: [
+            "page-count",
+            "page-content",
+            "common-metadata",
+            "interactive-forms",
+            "selectable-text",
+          ],
+          modifies: [
+            "page-geometry",
+            "pdf-structure",
+          ],
+          destroys: [],
+          risks: [
+            "Rewriting a signed PDF can invalidate cryptographic signatures.",
+          ],
+          verifiableEffects: [
+            "pdf-openable",
+            "page-count-equals",
+          ],
+        },
+      ],
+    },
+    {
       id: "remove-metadata",
       title: "Remove PDF Metadata",
       route: "/remove-pdf-metadata",
@@ -243,7 +455,7 @@ const operations: KukurekuOperationDescriptor[] =
           destroys: [],
           risks: [
             "A rewritten PDF can invalidate existing cryptographic signatures.",
-            "Encryption is verified with the browser QPDF runtime after the protected output is created.",
+            "The shared foundation verifier does not yet claim encryption verification from file bytes alone.",
           ],
           verifiableEffects: [
             "encryption-applied",
