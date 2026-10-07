@@ -18,6 +18,7 @@ const DIRECT_WORKSPACE_ROUTES = [
   "/compare-documents",
   "/workspace-findings",
   "/safe-share",
+  "/workspace-copilot",
 ];
 
 function findFileInput() {

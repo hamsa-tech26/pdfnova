@@ -1019,6 +1019,56 @@ test("Multi-document workspace records merge composition and split/extract child
         "Sensitive Information Detection Foundation",
     }),
   ).toBeVisible();
+
+  await page.goto("/dashboard");
+
+  await page
+    .getByRole("link", {
+      name:
+        "Open Workspace Copilot",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Ask the workspace what to do next",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        /Which version should I use\?/,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        /What changed\?/,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        /What needs attention before sharing\?/,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        /What should I do next\?/,
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Browser-local evidence",
+    ),
+  ).toBeVisible();
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({

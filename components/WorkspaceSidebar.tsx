@@ -4,6 +4,7 @@ import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
+  Bot,
   FileImage,
   FileText,
   Images,
@@ -74,6 +75,12 @@ const navigationGroups: SidebarGroup[] = [
         label: "Safe Share",
         href: "/safe-share",
         icon: ShieldCheck,
+        badge: "V1",
+      },
+      {
+        label: "Workspace Copilot",
+        href: "/workspace-copilot",
+        icon: Bot,
         badge: "V1",
       },
     ],
