@@ -227,6 +227,30 @@ export async function inspectPdfArtifact(
         id: "xfa",
         status: "checked",
       },
+      {
+        id: "attachments",
+        status: "not-checked",
+        note:
+          "Embedded file and attachment enumeration is outside Unified Document Inspector V1.",
+      },
+      {
+        id: "digital-signatures",
+        status: "not-checked",
+        note:
+          "Digital-signature discovery and cryptographic validation are outside Unified Document Inspector V1.",
+      },
+      {
+        id: "javascript-actions",
+        status: "not-checked",
+        note:
+          "JavaScript, launch actions, and other action dictionaries are not inspected in Unified Document Inspector V1.",
+      },
+      {
+        id: "forensic-metadata",
+        status: "not-supported",
+        note:
+          "Kukureku currently inspects common document-information metadata only and does not claim forensic XMP, hidden-object, or sanitization coverage.",
+      },
     ],
     inspectedAt: Date.now(),
   };
