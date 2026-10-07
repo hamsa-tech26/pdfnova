@@ -165,6 +165,12 @@ export default function PageSelectionTool({
     );
   const [total, setTotal] =
     useState(0);
+  const [
+    sourceWorkspaceFileId,
+    setSourceWorkspaceFileId,
+  ] = useState<string | null>(
+    null,
+  );
   const [pages, setPages] =
     useState("");
   const [busy, setBusy] =
@@ -186,6 +192,9 @@ export default function PageSelectionTool({
 
   function reset() {
     setFile(null);
+    setSourceWorkspaceFileId(
+      null,
+    );
     setTotal(0);
     setPages("");
     setOut(null);
@@ -206,7 +215,13 @@ export default function PageSelectionTool({
   ) {
     const selectedFile =
       event.target.files?.[0];
+    const workspaceFileId =
+      event.currentTarget.dataset
+        .workspaceFileId ??
+      null;
 
+    delete event.currentTarget
+      .dataset.workspaceFileId;
     event.target.value =
       "";
 
@@ -252,6 +267,9 @@ export default function PageSelectionTool({
 
       setFile(
         selectedFile,
+      );
+      setSourceWorkspaceFileId(
+        workspaceFileId,
       );
       setTotal(
         pdf.getPageCount(),
@@ -377,6 +395,8 @@ export default function PageSelectionTool({
                 bytes,
               outputFileName:
                 output,
+              parentWorkspaceFileId:
+                sourceWorkspaceFileId,
               operationId:
                 "extract-pdf-pages",
               operationLabel:

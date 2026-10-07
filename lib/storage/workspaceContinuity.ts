@@ -71,7 +71,19 @@ async function resolveParent(
 
 async function resolveOrCreateParent(
   sourceFile: File,
+  explicitParentId?: string | null,
 ) {
+  if (explicitParentId) {
+    const explicit =
+      await getWorkspaceFileSummary(
+        explicitParentId,
+      );
+
+    if (explicit) {
+      return explicit;
+    }
+  }
+
   return (
     (await resolveParent(
       sourceFile,
@@ -166,12 +178,14 @@ export async function saveBranchedPdfToWorkspace(
     sourceFile: File;
     outputBytes: Uint8Array;
     outputFileName: string;
+    parentWorkspaceFileId?: string | null;
   } & WorkspaceOperationDescriptor,
 ): Promise<WorkspaceFileSummary | null> {
   try {
     const parent =
       await resolveOrCreateParent(
         options.sourceFile,
+        options.parentWorkspaceFileId,
       );
 
     return await saveBranchedWorkspaceFile(

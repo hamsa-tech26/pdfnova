@@ -487,7 +487,8 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       .getByRole("main")
       .getByText(
         "browser-magic-drop.pdf",
-      ),
+      )
+      .last(),
   ).toBeVisible();
 
   const resumeStepTwo =

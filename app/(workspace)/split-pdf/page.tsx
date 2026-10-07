@@ -148,6 +148,12 @@ export default function SplitPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
   const [pageRange, setPageRange] = useState("");
+  const [
+    sourceWorkspaceFileId,
+    setSourceWorkspaceFileId,
+  ] = useState<string | null>(
+    null,
+  );
 
   const [isSplitting, setIsSplitting] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -177,6 +183,13 @@ export default function SplitPdfPage() {
     event: ChangeEvent<HTMLInputElement>,
   ) {
     const selectedFile = event.target.files?.[0];
+    const workspaceFileId =
+      event.currentTarget.dataset
+        .workspaceFileId ??
+      null;
+
+    delete event.currentTarget
+      .dataset.workspaceFileId;
 
     if (
       !selectedFile ||
@@ -211,6 +224,9 @@ export default function SplitPdfPage() {
       );
 
       setFile(selectedFile);
+      setSourceWorkspaceFileId(
+        workspaceFileId,
+      );
       setPageCount(pdf.getPageCount());
       setPageRange("");
       resetResultState();
@@ -233,6 +249,9 @@ export default function SplitPdfPage() {
 
   function removeFile() {
     setFile(null);
+    setSourceWorkspaceFileId(
+      null,
+    );
     setPageCount(0);
     setPageRange("");
     resetResultState();
@@ -242,6 +261,9 @@ export default function SplitPdfPage() {
 
   function startAgain() {
     setFile(null);
+    setSourceWorkspaceFileId(
+      null,
+    );
     setPageCount(0);
     setPageRange("");
     resetResultState();
@@ -371,6 +393,8 @@ export default function SplitPdfPage() {
               splitPdfBytes,
             outputFileName:
               generatedFileName,
+            parentWorkspaceFileId:
+              sourceWorkspaceFileId,
             operationId:
               "split-pdf",
             operationLabel:
