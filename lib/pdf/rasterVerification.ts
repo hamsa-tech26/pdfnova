@@ -276,7 +276,7 @@ function hasOnlyRasterOperators(
   const withoutStrings =
     withoutComments
       .replace(
-        /\((?:\\.|[^\\)])*\)/gs,
+        /\((?:\\.|[\s\S])*?\)/g,
         " ",
       )
       .replace(
