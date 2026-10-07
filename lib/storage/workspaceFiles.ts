@@ -154,9 +154,37 @@ export async function saveActiveWorkspaceFile(
     await openWorkspaceDatabase();
 
   try {
+    const readTransaction =
+      db.transaction(
+        STORE_NAME,
+        "readonly",
+      );
+    const currentRecords =
+      (await requestValue(
+        readTransaction
+          .objectStore(STORE_NAME)
+          .getAll(),
+      )) as WorkspaceFileRecord[];
+    const current =
+      currentRecords[0];
+
+    const isSameSource =
+      Boolean(current) &&
+      current.name === file.name &&
+      current.size === file.size &&
+      current.lastModified ===
+        file.lastModified &&
+      current.type ===
+        (file.type ||
+          "application/pdf");
+
     const record: WorkspaceFileRecord =
       {
-        id: crypto.randomUUID(),
+        id:
+          isSameSource &&
+          current
+            ? current.id
+            : crypto.randomUUID(),
         name: file.name,
         type:
           file.type ||
@@ -165,7 +193,10 @@ export async function saveActiveWorkspaceFile(
         lastModified:
           file.lastModified,
         savedAt:
-          new Date().toISOString(),
+          isSameSource &&
+          current
+            ? current.savedAt
+            : new Date().toISOString(),
         blob: file,
       };
 
