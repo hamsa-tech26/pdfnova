@@ -919,6 +919,64 @@ test("Multi-document workspace records merge composition and split/extract child
       )
       .first(),
   ).toBeVisible();
+
+  const compareWithParent =
+    page.getByRole("link", {
+      name:
+        "Compare with parent",
+    });
+
+  await expect(
+    compareWithParent,
+  ).toHaveAttribute(
+    "href",
+    /\/compare-documents\?workspaceFiles=/,
+  );
+
+  await compareWithParent.click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Compare two workspace documents",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Comparison ready",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      /Probable document revision|Related document content|Exact duplicate confirmed/,
+    ),
+  ).toBeVisible();
+
+  await page.goBack();
+
+  const reviewParentAction =
+    page.getByRole("button", {
+      name:
+        "Review parent document",
+    });
+
+  await expect(
+    reviewParentAction,
+  ).toBeVisible();
+
+  await reviewParentAction.click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "kukureku-merged-extracted.pdf",
+    }),
+  ).toBeVisible();
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({

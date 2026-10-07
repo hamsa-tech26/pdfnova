@@ -385,6 +385,9 @@ export default function ActiveWorkspaceFileCard() {
       <WorkspaceIntelligencePanel
         active={active}
         summaries={versions}
+        onMakeCurrent={(id) =>
+          void makeCurrent(id)
+        }
       />
 
       {recipeProgress && (

@@ -98,3 +98,72 @@ The first V2 workspace-intelligence layer consumes the browser-local document gr
 - keeps duplicate signals non-authoritative because it does not compare bytes or compute a content hash.
 
 The report exposes explicit coverage metadata so UI surfaces can distinguish proven graph relationships from heuristic metadata signals. Content-aware similarity, cryptographic duplicate confirmation, and cross-document semantic reasoning remain future work.
+
+## Smart Relationship Actions V1
+
+Workspace Intelligence findings can now expose safe, deterministic actions without automatically modifying a PDF.
+
+Current action types are intentionally non-destructive:
+
+- review a known parent document by making that stored node current;
+- switch an older document state to the newest saved version;
+- inspect a related document with shared ancestry;
+- inspect a possible duplicate before making any deletion or merge decision;
+- inspect known parents of a composition;
+- inspect a sibling or child branch when the graph has diverged.
+
+Actions are generated only when their target node is actually present in the browser-local workspace. Missing-parent findings deliberately do not invent a recovery action.
+
+Automatic merging, deletion, semantic comparison, and other document-changing actions remain outside this milestone.
+
+## Smart Action Orchestration V2
+
+Workspace Intelligence can now prepare safe multi-document actions from deterministic findings.
+
+The orchestration layer supports:
+
+- local comparison of a branch with its parent;
+- comparison of older and latest saved versions;
+- exact-duplicate confirmation through Compare Documents;
+- comparison of related documents with shared ancestry;
+- comparison of sibling branches;
+- preparation of a branch merge with both browser-local files preloaded;
+- comparison of composition parents.
+
+Multi-document actions carry exact workspace node IDs through the `workspaceFiles` handoff parameter. They prepare context only. Merge PDF still requires the user to review file order and explicitly confirm the operation.
+
+## Local Exact Duplicate Detection V1
+
+Compare Documents computes SHA-256 locally in the browser. Matching SHA-256 values are treated as byte-identical exact duplicates.
+
+This is distinct from the metadata-only possible-duplicate signal in Workspace Intelligence.
+
+## Version Recognition V1
+
+Compare Documents also extracts selectable text locally and computes deterministic text-shingle overlap.
+
+Current interpretation:
+
+- exact SHA-256 match → exact duplicate;
+- strong selectable-text overlap → probable revision;
+- moderate overlap → related;
+- low overlap → distinct;
+- insufficient selectable text → text relationship not verified.
+
+This is not semantic AI. Scanned PDFs without selectable text remain unverified for revision similarity unless another supported OCR workflow is used first.
+
+## Compare Documents V1
+
+The internal Workspace comparison view shows:
+
+- exact-byte status;
+- full local SHA-256 hashes;
+- page counts and page-count delta;
+- selectable-text character counts;
+- deterministic text similarity;
+- shared and unique normalized line counts;
+- relationship classification;
+- links to inspect either source;
+- optional safe handoff to Merge PDF when the files are not exact duplicates.
+
+No document content is uploaded by this workflow.

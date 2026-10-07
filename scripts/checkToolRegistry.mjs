@@ -9,6 +9,7 @@ const INTERNAL_ROUTES = new Set([
   "dev-layout",
   "engine-inspector",
   "document-inspector",
+  "compare-documents",
   "magic-drop",
   "workflow-recipes",
 ]);

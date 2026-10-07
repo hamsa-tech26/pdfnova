@@ -2,10 +2,13 @@
 
 import {
   createWorkspaceIntelligenceReport,
+  createWorkspaceRelationshipActions,
   type WorkspaceIntelligenceConfidence,
 } from "@/lib/document-engine";
-import type {
-  WorkspaceFileSummary,
+import {
+  buildWorkspaceHandoffHref,
+  buildWorkspaceMultiHandoffHref,
+  type WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
 import {
   Files,
@@ -13,11 +16,13 @@ import {
   ShieldCheck,
   Sparkles,
 } from "lucide-react";
+import Link from "next/link";
 import { useMemo } from "react";
 
 type WorkspaceIntelligencePanelProps = {
   active: WorkspaceFileSummary;
   summaries: WorkspaceFileSummary[];
+  onMakeCurrent: (id: string) => void;
 };
 
 const confidenceLabel: Record<
@@ -32,6 +37,7 @@ const confidenceLabel: Record<
 export default function WorkspaceIntelligencePanel({
   active,
   summaries,
+  onMakeCurrent,
 }: WorkspaceIntelligencePanelProps) {
   const report = useMemo(
     () =>
@@ -40,6 +46,20 @@ export default function WorkspaceIntelligencePanel({
         active.id,
       ),
     [active.id, summaries],
+  );
+
+  const smartActions = useMemo(
+    () =>
+      createWorkspaceRelationshipActions(
+        summaries,
+        report,
+        active.id,
+      ),
+    [
+      active.id,
+      report,
+      summaries,
+    ],
   );
 
   const relevantFindings = useMemo(() => {
@@ -166,42 +186,134 @@ export default function WorkspaceIntelligencePanel({
         ) : (
           <div className="space-y-3">
             {relevantFindings.map(
-              (finding) => (
-                <article
-                  key={finding.id}
-                  className={
-                    "rounded-xl border p-4 " +
-                    (finding.severity ===
-                    "attention"
-                      ? "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"
-                      : "border-gray-200 bg-gray-50 dark:border-slate-800 dark:bg-slate-950")
-                  }
-                >
-                  <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
-                    <div>
-                      <p className="font-bold text-gray-950 dark:text-white">
-                        {finding.title}
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-400">
-                        {finding.detail}
-                      </p>
-                    </div>
-                    <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
-                      {
-                        confidenceLabel[
-                          finding.confidence
-                        ]
-                      }
-                    </span>
-                  </div>
+              (finding) => {
+                const findingActions =
+                  smartActions.filter(
+                    (action) =>
+                      action.sourceFindingId ===
+                      finding.id,
+                  );
 
-                  {finding.nextStep && (
-                    <p className="mt-3 text-xs font-medium leading-5 text-gray-500 dark:text-slate-400">
-                      {finding.nextStep}
-                    </p>
-                  )}
-                </article>
-              ),
+                return (
+                  <article
+                    key={finding.id}
+                    className={
+                      "rounded-xl border p-4 " +
+                      (finding.severity ===
+                      "attention"
+                        ? "border-amber-200 bg-amber-50 dark:border-amber-900 dark:bg-amber-950/20"
+                        : "border-gray-200 bg-gray-50 dark:border-slate-800 dark:bg-slate-950")
+                    }
+                  >
+                    <div className="flex flex-col justify-between gap-2 sm:flex-row sm:items-start">
+                      <div>
+                        <p className="font-bold text-gray-950 dark:text-white">
+                          {finding.title}
+                        </p>
+                        <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-400">
+                          {finding.detail}
+                        </p>
+                      </div>
+                      <span className="shrink-0 rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-gray-600 shadow-sm dark:bg-slate-900 dark:text-slate-300">
+                        {
+                          confidenceLabel[
+                            finding.confidence
+                          ]
+                        }
+                      </span>
+                    </div>
+
+                    {finding.nextStep && (
+                      <p className="mt-3 text-xs font-medium leading-5 text-gray-500 dark:text-slate-400">
+                        {finding.nextStep}
+                      </p>
+                    )}
+
+                    {findingActions.length >
+                      0 && (
+                      <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-200 pt-3 dark:border-slate-800">
+                        {findingActions.map(
+                          (action) => {
+                            if (
+                              action.kind ===
+                              "make-current"
+                            ) {
+                              return (
+                                <button
+                                  key={
+                                    action.id
+                                  }
+                                  type="button"
+                                  title={
+                                    action.detail
+                                  }
+                                  onClick={() =>
+                                    onMakeCurrent(
+                                      action.targetNodeId,
+                                    )
+                                  }
+                                  className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-700"
+                                >
+                                  {
+                                    action.label
+                                  }
+                                </button>
+                              );
+                            }
+
+                            const multiTargets =
+                              action.targetNodeIds?.length
+                                ? action.targetNodeIds
+                                : [
+                                    active.id,
+                                    action.targetNodeId,
+                                  ];
+                            const href =
+                              action.kind ===
+                              "compare-documents"
+                                ? buildWorkspaceMultiHandoffHref(
+                                    "/compare-documents",
+                                    multiTargets,
+                                  )
+                                : action.kind ===
+                                    "prepare-merge"
+                                  ? buildWorkspaceMultiHandoffHref(
+                                      "/merge-pdf",
+                                      multiTargets,
+                                    )
+                                  : buildWorkspaceHandoffHref(
+                                      "/document-inspector",
+                                      action.targetNodeId,
+                                    );
+
+                            return (
+                              <Link
+                                key={
+                                  action.id
+                                }
+                                title={
+                                  action.detail
+                                }
+                                href={href}
+                                className={
+                                  action.kind ===
+                                  "prepare-merge"
+                                    ? "rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+                                    : "rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300 dark:hover:bg-violet-950/30"
+                                }
+                              >
+                                {
+                                  action.label
+                                }
+                              </Link>
+                            );
+                          },
+                        )}
+                      </div>
+                    )}
+                  </article>
+                );
+              },
             )}
           </div>
         )}

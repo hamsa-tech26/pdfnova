@@ -1009,3 +1009,32 @@ export function buildWorkspaceHandoffHref(
     )
   );
 }
+
+export function buildWorkspaceMultiHandoffHref(
+  route: string,
+  workspaceFileIds: string[],
+) {
+  const uniqueIds = [
+    ...new Set(
+      workspaceFileIds.filter(
+        Boolean,
+      ),
+    ),
+  ];
+
+  if (uniqueIds.length === 0) {
+    return route;
+  }
+
+  const separator =
+    route.includes("?") ? "&" : "?";
+
+  return (
+    route +
+    separator +
+    "workspaceFiles=" +
+    encodeURIComponent(
+      uniqueIds.join(","),
+    )
+  );
+}
