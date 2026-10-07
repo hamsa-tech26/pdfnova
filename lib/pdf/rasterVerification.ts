@@ -248,11 +248,19 @@ function hasOnlyRasterOperators(
     );
 
   const withoutComments =
-    text.replace(
-      /%[^
-]*/g,
-      " ",
-    );
+    text
+      .split(
+        String.fromCharCode(
+          10,
+        ),
+      )
+      .map((line) =>
+        line.replace(
+          /%.*/,
+          " ",
+        ),
+      )
+      .join(" ");
   const withoutStrings =
     withoutComments
       .replace(
