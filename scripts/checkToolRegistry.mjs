@@ -8,6 +8,7 @@ const INTERNAL_ROUTES = new Set([
   "dashboard",
   "dev-layout",
   "engine-inspector",
+  "document-inspector",
 ]);
 
 function read(relativePath) {
