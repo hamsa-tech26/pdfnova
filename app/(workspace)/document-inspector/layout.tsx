@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import type { ReactNode } from "react";
 
 export const metadata: Metadata = {
-  title: "Document Inspector | Kukureku PDF",
+  title: "Document Inspector",
   description:
     "Inspect PDF page geometry, common metadata, form fields, XFA presence, and clearly declared coverage limits locally in your browser.",
   robots: {
