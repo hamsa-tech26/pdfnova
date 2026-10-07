@@ -771,6 +771,10 @@ export default function WorkspaceCopilotPage() {
               <button
                 key={prompt}
                 type="button"
+                aria-label={
+                  "Search evidence: " +
+                  prompt
+                }
                 onClick={() => {
                   setQuery(prompt);
                   setQueryAnswer(
