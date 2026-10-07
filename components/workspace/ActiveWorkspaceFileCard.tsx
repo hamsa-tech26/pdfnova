@@ -1,6 +1,7 @@
 "use client";
 
 import WorkspaceGraphOverview from "@/components/workspace/WorkspaceGraphOverview";
+import WorkspaceIntelligencePanel from "@/components/workspace/WorkspaceIntelligencePanel";
 import {
   groupWorkspaceDocuments,
 } from "@/lib/storage/workspaceGraph";
@@ -379,6 +380,11 @@ export default function ActiveWorkspaceFileCard() {
         onMakeCurrent={(id) =>
           void makeCurrent(id)
         }
+      />
+
+      <WorkspaceIntelligencePanel
+        active={active}
+        summaries={versions}
       />
 
       {recipeProgress && (

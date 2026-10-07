@@ -905,6 +905,20 @@ test("Multi-document workspace records merge composition and split/extract child
         "kukureku-merged-extracted-extracted.pdf",
     }),
   ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Workspace Intelligence V2",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page
+      .getByText(
+        "This document is a child branch",
+      )
+      .first(),
+  ).toBeVisible();
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
