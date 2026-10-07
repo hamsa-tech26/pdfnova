@@ -1,4 +1,7 @@
 import {
+  clearWorkflowRecipeProgress,
+} from "./workflowProgress";
+import {
   createDerivedLineage,
   createSourceLineage,
   isSameWorkspaceFileFingerprint,
@@ -395,6 +398,8 @@ export async function saveActiveWorkspaceFile(
       return existing;
     }
 
+    clearWorkflowRecipeProgress();
+
     const id =
       crypto.randomUUID();
     const record: WorkspaceFileRecord =
@@ -736,6 +741,8 @@ export async function getActiveWorkspaceFileSummary(): Promise<
 }
 
 export async function clearWorkspaceFiles() {
+  clearWorkflowRecipeProgress();
+
   const db =
     await openWorkspaceDatabase();
 

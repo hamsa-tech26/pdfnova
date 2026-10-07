@@ -335,6 +335,40 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     }),
   ).toBeVisible();
 
+  await page.goto("/dashboard");
+
+  const resumeRecipe =
+    page.getByRole("link", {
+      name: "Resume Recipe",
+    });
+
+  await expect(
+    resumeRecipe,
+  ).toHaveAttribute(
+    "href",
+    /\/workflow-recipes\?workspaceFile=.*recipe=prepare-for-sharing&recipeStep=0/,
+  );
+
+  await page.reload();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Resume Recipe",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name: "Resume Recipe",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Step 1 of 3",
+    }),
+  ).toBeVisible();
+
   const recipeMetadataLink =
     page.getByRole("link", {
       name: "Open Remove PDF Metadata",
@@ -386,6 +420,12 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
   await expect(
     page.getByText(
       "Saved as Version 2 in this browser workspace",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Verification PASS",
     ),
   ).toBeVisible();
 
@@ -446,6 +486,86 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       .getByText(
         "browser-magic-drop.pdf",
       ),
+  ).toBeVisible();
+
+  const resumeStepTwo =
+    page.getByRole("link", {
+      name: "Resume Recipe",
+    });
+
+  await expect(
+    resumeStepTwo,
+  ).toHaveAttribute(
+    "href",
+    /recipe=prepare-for-sharing&recipeStep=1/,
+  );
+
+  await page.reload();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Resume Recipe",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name: "Resume Recipe",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Step 2 of 3",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", {
+      name:
+        "Record skip and continue",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Step 3 of 3",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", {
+      name:
+        "Record skip and continue",
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Recipe sequence reached its final checkpoint",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Verification: PASS",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Recorded state: SKIPPED",
+    ),
+  ).toHaveCount(2);
+
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByRole("link", {
+      name:
+        "View Recipe Summary",
+    }),
   ).toBeVisible();
 
   await expect(
