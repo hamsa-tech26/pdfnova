@@ -1,5 +1,6 @@
 "use client";
 
+import ActiveWorkspaceFileCard from "@/components/workspace/ActiveWorkspaceFileCard";
 import {
   clearRecentFiles,
   getRecentFiles,
@@ -402,6 +403,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mt-8">
+          <ActiveWorkspaceFileCard />
         </section>
 
         <section className="mt-8">

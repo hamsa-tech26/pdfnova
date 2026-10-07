@@ -257,24 +257,47 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     ),
   ).toBeVisible();
 
-  await expect(
+  const metadataLink =
     page.getByRole("link", {
       name: "Open Remove PDF Metadata",
-    }),
+    });
+
+  await expect(
+    metadataLink,
   ).toHaveAttribute(
     "href",
-    "/remove-pdf-metadata",
+    /\/remove-pdf-metadata\?workspaceFile=/,
   );
 
   await expect(
     page.getByText(
-      /Magic Drop does not move your PDF into the next tool yet/,
+      /This source PDF is saved locally in this browser/,
     ),
   ).toBeVisible();
 
   await expect(
     page.getByText(
       "No file changes made",
+    ),
+  ).toBeVisible();
+
+  await metadataLink.click();
+
+  await expect(page).toHaveURL(
+    /\/remove-pdf-metadata\?workspaceFile=/,
+  );
+
+  await expect(
+    page.getByText(
+      "browser-magic-drop.pdf",
+    ),
+  ).toBeVisible();
+
+  await page.reload();
+
+  await expect(
+    page.getByText(
+      "browser-magic-drop.pdf",
     ),
   ).toBeVisible();
 });

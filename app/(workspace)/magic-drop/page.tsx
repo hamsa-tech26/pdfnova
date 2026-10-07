@@ -29,6 +29,10 @@ import {
   useRef,
   useState,
 } from "react";
+import {
+  buildWorkspaceHandoffHref,
+  saveActiveWorkspaceFile,
+} from "@/lib/storage/workspaceFiles";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE =
@@ -175,6 +179,16 @@ export default function MagicDropPage() {
     errorMessage,
     setErrorMessage,
   ] = useState("");
+  const [
+    workspaceFileId,
+    setWorkspaceFileId,
+  ] = useState<string | null>(
+    null,
+  );
+  const [
+    workspaceStorageError,
+    setWorkspaceStorageError,
+  ] = useState("");
 
   async function runMagicDrop(
     selectedFile: File,
@@ -183,6 +197,8 @@ export default function MagicDropPage() {
     setReport(null);
     setPlan(null);
     setErrorMessage("");
+    setWorkspaceFileId(null);
+    setWorkspaceStorageError("");
     setIsInspecting(true);
 
     try {
@@ -210,6 +226,26 @@ export default function MagicDropPage() {
 
       setReport(nextReport);
       setPlan(nextPlan);
+
+      try {
+        const stored =
+          await saveActiveWorkspaceFile(
+            selectedFile,
+          );
+
+        setWorkspaceFileId(
+          stored.id,
+        );
+      } catch (
+        storageError
+      ) {
+        console.error(
+          storageError,
+        );
+        setWorkspaceStorageError(
+          "Magic Drop completed, but this browser could not persist the PDF for automatic handoff. You can still open a tool and choose the file manually.",
+        );
+      }
 
       toast.success(
         "Magic Drop plan is ready.",
@@ -282,6 +318,8 @@ export default function MagicDropPage() {
     setReport(null);
     setPlan(null);
     setErrorMessage("");
+    setWorkspaceFileId(null);
+    setWorkspaceStorageError("");
     setIsInspecting(false);
 
     if (fileInputRef.current) {
@@ -611,7 +649,12 @@ export default function MagicDropPage() {
                                     "BLOCKED" && (
                                     <Link
                                       href={
-                                        recommendation.route
+                                        workspaceFileId
+                                          ? buildWorkspaceHandoffHref(
+                                              recommendation.route,
+                                              workspaceFileId,
+                                            )
+                                          : recommendation.route
                                       }
                                       className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
                                     >
@@ -801,7 +844,12 @@ export default function MagicDropPage() {
                             action.href
                           }
                           href={
-                            action.href
+                            workspaceFileId
+                              ? buildWorkspaceHandoffHref(
+                                  action.href,
+                                  workspaceFileId,
+                                )
+                              : action.href
                           }
                           className="group rounded-2xl border border-gray-200 bg-gray-50 p-5 transition hover:-translate-y-0.5 hover:border-blue-300 hover:bg-blue-50 dark:border-slate-700 dark:bg-slate-950 dark:hover:border-blue-800 dark:hover:bg-blue-950/20"
                         >
@@ -830,9 +878,12 @@ export default function MagicDropPage() {
 
                   <div className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-200">
                     <strong>
-                      V1 handoff limitation:
+                      Browser workspace handoff:
                     </strong>{" "}
-                    Magic Drop does not move your PDF into the next tool yet. When you open a tool, you will select the same PDF again. Persistent file handoff belongs to the future Workspace/version-graph milestone.
+                    {workspaceFileId
+                      ? "This source PDF is saved locally in this browser. Supported next-step links carry it into the destination tool automatically, without uploading it or asking you to pick the file again."
+                      : workspaceStorageError ||
+                        "Preparing the local browser workspace for file handoff."}
                   </div>
 
                   <button
