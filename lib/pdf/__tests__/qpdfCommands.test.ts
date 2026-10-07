@@ -5,7 +5,6 @@ import {
 } from "vitest";
 
 import {
-  buildIsEncryptedQpdfArgs,
   buildProtectQpdfArgs,
   buildUnlockQpdfArgs,
 } from "../qpdf";
@@ -45,14 +44,6 @@ describe("qpdf security command builders", () => {
     );
   });
 
-  it("builds the encryption inspection command", () => {
-    expect(
-      buildIsEncryptedQpdfArgs(),
-    ).toEqual([
-      "--is-encrypted",
-      "input.pdf",
-    ]);
-  });
 
   it("builds the expected unlock command", () => {
     expect(

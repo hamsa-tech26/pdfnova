@@ -637,11 +637,10 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
   await rotateLink.click();
 
   await expect(
-    page
-      .getByRole("main")
-      .getByText(
+    page.getByRole("heading", {
+      name:
         "browser-rotate-continuity.pdf",
-      ),
+    }),
   ).toBeVisible();
 
   const rotatedResult =

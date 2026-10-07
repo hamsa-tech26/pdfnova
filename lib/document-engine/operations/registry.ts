@@ -455,7 +455,7 @@ const operations: KukurekuOperationDescriptor[] =
           destroys: [],
           risks: [
             "A rewritten PDF can invalidate existing cryptographic signatures.",
-            "Encryption is verified with the browser QPDF runtime after the protected output is created.",
+            "Encryption is verified after creation with an independent PDF parser that rejects encrypted documents.",
           ],
           verifiableEffects: [
             "encryption-applied",

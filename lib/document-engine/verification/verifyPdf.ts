@@ -1,5 +1,8 @@
-import { inspectPdfEncryption } from "../../pdf/qpdf";
 import { inspectRasterizedPages } from "../../pdf/rasterVerification";
+import {
+  EncryptedPDFError,
+  PDFDocument,
+} from "pdf-lib";
 import type { DocumentArtifact } from "../artifact";
 import { inspectPdfArtifact } from "../inspection/inspectPdf";
 import type { InspectionReport } from "../inspection/types";
@@ -107,50 +110,46 @@ export async function verifyPdfArtifact(
       request.kind ===
       "encryption-applied"
     ) {
-      if (
-        typeof window ===
-        "undefined"
-      ) {
-        checks.push({
-          kind: request.kind,
-          status: "NOT_VERIFIED",
-          message:
-            "Encryption verification requires the browser QPDF runtime.",
-        });
-        continue;
-      }
-
-      const encryption =
-        await inspectPdfEncryption(
-          artifact.blob,
+      try {
+        await PDFDocument.load(
+          await artifact.blob.arrayBuffer(),
+          {
+            updateMetadata: false,
+          },
         );
 
-      checks.push({
-        kind: request.kind,
-        status:
-          encryption ===
-          "encrypted"
-            ? "PASS"
-            : encryption ===
-                "not-encrypted"
-              ? "FAILED"
-              : "NOT_VERIFIED",
-        message:
-          encryption ===
-          "encrypted"
-            ? "QPDF confirms that the output PDF is encrypted."
-            : encryption ===
-                "not-encrypted"
-              ? "QPDF confirms that the output PDF is not encrypted."
-              : "QPDF could not determine the PDF encryption state.",
-        expected: true,
-        actual:
-          encryption ===
-          "unknown"
-            ? undefined
-            : encryption ===
-                "encrypted",
-      });
+        checks.push({
+          kind: request.kind,
+          status: "FAILED",
+          message:
+            "An independent PDF parser opened the output without reporting encryption.",
+          expected: true,
+          actual: false,
+        });
+      } catch (error) {
+        if (
+          error instanceof
+          EncryptedPDFError
+        ) {
+          checks.push({
+            kind: request.kind,
+            status: "PASS",
+            message:
+              "An independent PDF parser confirms that the output is encrypted.",
+            expected: true,
+            actual: true,
+          });
+        } else {
+          checks.push({
+            kind: request.kind,
+            status:
+              "NOT_VERIFIED",
+            message:
+              "The independent PDF parser could not determine the encryption state of this output.",
+          });
+        }
+      }
+
       continue;
     }
 
