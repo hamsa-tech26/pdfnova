@@ -1039,28 +1039,32 @@ test("Multi-document workspace records merge composition and split/extract child
   await expect(
     page.getByRole("button", {
       name:
-        /Which version should I use\?/,
+        "Which version should I use?",
+      exact: true,
     }),
   ).toBeVisible();
 
   await expect(
     page.getByRole("button", {
       name:
-        /What changed\?/,
+        "What changed?",
+      exact: true,
     }),
   ).toBeVisible();
 
   await expect(
     page.getByRole("button", {
       name:
-        /What needs attention before sharing\?/,
+        "What needs attention before sharing?",
+      exact: true,
     }),
   ).toBeVisible();
 
   await expect(
     page.getByRole("button", {
       name:
-        /What should I do next\?/,
+        "What should I do next?",
+      exact: true,
     }),
   ).toBeVisible();
 
