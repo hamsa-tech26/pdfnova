@@ -224,6 +224,61 @@ test("Unified Document Inspector reports facts, findings, and explicit coverage 
   ).toBeVisible();
 });
 
+
+test("Magic Drop creates evidence-based recommendations without automatic edits", async ({
+  page,
+}) => {
+  const source = await createInspectorPdf();
+
+  await page.goto("/magic-drop");
+  await uploadPdf(page, source, "browser-magic-drop.pdf");
+
+  await expect(
+    page.getByText(
+      "2 fact-derived next steps found",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Remove PDF Metadata",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Flatten PDF",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Some PDF structures were not checked",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Open Remove PDF Metadata",
+    }),
+  ).toHaveAttribute(
+    "href",
+    "/remove-pdf-metadata",
+  );
+
+  await expect(
+    page.getByText(
+      /Magic Drop does not move your PDF into the next tool yet/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "No file changes made",
+    ),
+  ).toBeVisible();
+});
+
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
   page,
 }) => {

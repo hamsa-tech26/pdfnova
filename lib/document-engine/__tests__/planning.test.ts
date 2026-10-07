@@ -155,12 +155,10 @@ describe("Magic Drop planning", () => {
       fieldKinds: {
         text: 0,
         checkbox: 0,
-        radio: 0,
         dropdown: 0,
-        optionList: 0,
-        button: 0,
-        signature: 0,
-        unknown: 0,
+        "option-list": 0,
+        radio: 0,
+        unsupported: 0,
       },
     };
     report.facts.size = 1024;
