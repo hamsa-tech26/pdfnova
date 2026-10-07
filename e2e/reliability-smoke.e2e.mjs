@@ -300,6 +300,29 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       "browser-magic-drop.pdf",
     ),
   ).toBeVisible();
+
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByText(
+      "Active browser workspace",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "browser-magic-drop.pdf",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Reopen in Magic Drop",
+    }),
+  ).toHaveAttribute(
+    "href",
+    /\/magic-drop\?workspaceFile=/,
+  );
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
