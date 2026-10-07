@@ -224,6 +224,113 @@ test("Unified Document Inspector reports facts, findings, and explicit coverage 
   ).toBeVisible();
 });
 
+
+test("Magic Drop creates evidence-based recommendations without automatic edits", async ({
+  page,
+}) => {
+  const source = await createInspectorPdf();
+
+  await page.goto("/magic-drop");
+  await uploadPdf(page, source, "browser-magic-drop.pdf");
+
+  await expect(
+    page.getByText(
+      "2 fact-derived next steps found",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Remove PDF Metadata",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Flatten PDF",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Some PDF structures were not checked",
+    ),
+  ).toBeVisible();
+
+  const metadataLink =
+    page.getByRole("link", {
+      name: "Open Remove PDF Metadata",
+    });
+
+  await expect(
+    metadataLink,
+  ).toHaveAttribute(
+    "href",
+    /\/remove-pdf-metadata\?workspaceFile=/,
+  );
+
+  await expect(
+    page.getByText(
+      /This source PDF is saved locally in this browser/,
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "No file changes made",
+    ),
+  ).toBeVisible();
+
+  await metadataLink.click();
+
+  await expect(page).toHaveURL(
+    /\/remove-pdf-metadata\?workspaceFile=/,
+  );
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
+  ).toBeVisible();
+
+  await page.reload();
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
+  ).toBeVisible();
+
+  await page.goto("/dashboard");
+
+  await expect(
+    page.getByText(
+      "Active browser workspace",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page
+      .getByRole("main")
+      .getByText(
+        "browser-magic-drop.pdf",
+      ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("link", {
+      name: "Reopen in Magic Drop",
+    }),
+  ).toHaveAttribute(
+    "href",
+    /\/magic-drop\?workspaceFile=/,
+  );
+});
+
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
   page,
 }) => {

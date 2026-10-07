@@ -1,5 +1,6 @@
 "use client";
 
+import ActiveWorkspaceFileCard from "@/components/workspace/ActiveWorkspaceFileCard";
 import {
   clearRecentFiles,
   getRecentFiles,
@@ -224,6 +225,13 @@ const availableTools = [
 
 const quickActions = [
   {
+    title: "Magic Drop",
+    description: "Inspect first, then choose",
+    href: "/magic-drop",
+    icon: Sparkles,
+    accent: "bg-violet-50 text-violet-700",
+  },
+  {
     title: "Merge PDF",
     description: "Combine documents",
     href: "/merge-pdf",
@@ -243,13 +251,6 @@ const quickActions = [
     href: "/watermark-pdf",
     icon: WandSparkles,
     accent: "bg-pink-50 text-pink-600",
-  },
-  {
-    title: "Unlock PDF",
-    description: "Remove a password",
-    href: "/unlock-pdf",
-    icon: UnlockKeyhole,
-    accent: "bg-emerald-50 text-emerald-600",
   },
 ];
 
@@ -334,32 +335,31 @@ export default function DashboardPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
                 <Zap size={16} />
-                Kukureku Workspace
+                Magic Drop
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight md:text-5xl">
-                Beautiful, fast and private document tools
+                Drop a PDF. Kukureku finds what matters first.
               </h2>
 
               <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">
-                Convert, organize, and manage PDFs without leaving your
-                browser. Your supported files stay on your device.
+                Inspect supported document facts before choosing a tool. Magic Drop recommends only what the file evidence supports, and it never edits automatically.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/document-inspector"
+                  href="/magic-drop"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200"
                 >
-                  Inspect a PDF
+                  Magic Drop a PDF
                   <ArrowRight size={18} />
                 </Link>
 
                 <Link
-                  href="/merge-pdf"
+                  href="/document-inspector"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur transition hover:bg-white/20"
                 >
-                  Merge PDF files
+                  Inspect a PDF
                 </Link>
               </div>
             </div>
@@ -403,6 +403,10 @@ export default function DashboardPage() {
               </div>
             </div>
           </div>
+        </section>
+
+        <section className="mt-8">
+          <ActiveWorkspaceFileCard />
         </section>
 
         <section className="mt-8">

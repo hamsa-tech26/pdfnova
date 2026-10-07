@@ -1,3 +1,4 @@
+import WorkspaceFileHandoff from "@/components/workspace/WorkspaceFileHandoff";
 import WorkspaceSidebar from "@/components/WorkspaceSidebar";
 import type { ReactNode } from "react";
 
@@ -14,6 +15,7 @@ export default function WorkspaceLayout({
 
       <div className="min-w-0 flex-1">
         {children}
+        <WorkspaceFileHandoff />
       </div>
     </div>
   );

@@ -8,3 +8,5 @@ export * from "./operations/types";
 export * from "./operations/registry";
 export * from "./verification/types";
 export * from "./verification/verifyPdf";
+export * from "./planning/types";
+export * from "./planning/createMagicDropPlan";

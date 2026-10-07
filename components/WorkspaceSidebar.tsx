@@ -40,10 +40,15 @@ const navigationGroups: SidebarGroup[] = [
         icon: LayoutDashboard,
       },
       {
+        label: "Magic Drop",
+        href: "/magic-drop",
+        icon: Sparkles,
+        badge: "New",
+      },
+      {
         label: "Document Inspector",
         href: "/document-inspector",
         icon: ScanSearch,
-        badge: "New",
       },
     ],
   },
