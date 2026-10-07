@@ -5,6 +5,9 @@ import {
   type WorkspaceFileSummary,
 } from "./workspaceFiles";
 import {
+  recordWorkflowDerivedOutput,
+} from "./workflowRecipeContinuity";
+import {
   isSameWorkspaceFileFingerprint,
   type WorkspaceOperationDescriptor,
 } from "./workspaceLineage";
@@ -90,16 +93,35 @@ export async function saveDerivedPdfToWorkspace(
         },
       );
 
-    return await saveDerivedWorkspaceFile(
-      outputFile,
-      {
-        parentId: parent.id,
-        operationId:
-          options.operationId,
-        operationLabel:
-          options.operationLabel,
-      },
-    );
+    const saved =
+      await saveDerivedWorkspaceFile(
+        outputFile,
+        {
+          parentId: parent.id,
+          operationId:
+            options.operationId,
+          operationLabel:
+            options.operationLabel,
+        },
+      );
+
+    try {
+      await recordWorkflowDerivedOutput(
+        {
+          sourceSummary:
+            parent,
+          outputSummary:
+            saved,
+        },
+      );
+    } catch (recipeError) {
+      console.warn(
+        "Kukureku could not update recipe progress for this derived PDF.",
+        recipeError,
+      );
+    }
+
+    return saved;
   } catch (error) {
     console.warn(
       "Kukureku could not persist the derived browser workspace version.",

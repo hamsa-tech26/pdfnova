@@ -1,6 +1,14 @@
 "use client";
 
 import {
+  buildWorkflowRecipesHref,
+  type WorkflowRecipeProgress,
+} from "@/lib/document-engine";
+import {
+  getActiveWorkflowRecipeProgress,
+  WORKFLOW_PROGRESS_CHANGE_EVENT,
+} from "@/lib/storage/workflowProgress";
+import {
   buildWorkspaceHandoffHref,
   clearWorkspaceFiles,
   getActiveWorkspaceFileSummary,
@@ -87,6 +95,12 @@ export default function ActiveWorkspaceFileCard() {
   >([]);
   const [loaded, setLoaded] =
     useState(false);
+  const [
+    recipeProgress,
+    setRecipeProgress,
+  ] = useState<WorkflowRecipeProgress | null>(
+    null,
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -100,11 +114,20 @@ export default function ActiveWorkspaceFileCard() {
           getActiveWorkspaceFileSummary(),
           listWorkspaceFileSummaries(),
         ]);
+        const nextProgress =
+          getActiveWorkflowRecipeProgress();
 
         if (!cancelled) {
           setActive(nextActive);
           setVersions(
             nextVersions,
+          );
+          setRecipeProgress(
+            nextActive &&
+              nextProgress?.rootId ===
+                nextActive.rootId
+              ? nextProgress
+              : null,
           );
           setLoaded(true);
         }
@@ -112,6 +135,9 @@ export default function ActiveWorkspaceFileCard() {
         if (!cancelled) {
           setActive(null);
           setVersions([]);
+          setRecipeProgress(
+            null,
+          );
           setLoaded(true);
         }
       }
@@ -126,11 +152,19 @@ export default function ActiveWorkspaceFileCard() {
       WORKSPACE_CHANGE_EVENT,
       onChange,
     );
+    window.addEventListener(
+      WORKFLOW_PROGRESS_CHANGE_EVENT,
+      onChange,
+    );
 
     return () => {
       cancelled = true;
       window.removeEventListener(
         WORKSPACE_CHANGE_EVENT,
+        onChange,
+      );
+      window.removeEventListener(
+        WORKFLOW_PROGRESS_CHANGE_EVENT,
         onChange,
       );
     };
@@ -263,6 +297,81 @@ export default function ActiveWorkspaceFileCard() {
           Full Inspector
         </Link>
       </div>
+
+      {recipeProgress && (
+        <section
+          className={
+            "mt-6 rounded-2xl border p-5 " +
+            (recipeProgress.status ===
+            "BLOCKED_BY_VERIFICATION"
+              ? "border-red-200 bg-red-50 dark:border-red-900 dark:bg-red-950/20"
+              : recipeProgress.status ===
+                  "COMPLETED"
+                ? "border-emerald-200 bg-emerald-50 dark:border-emerald-900 dark:bg-emerald-950/20"
+                : "border-violet-200 bg-violet-50 dark:border-violet-900 dark:bg-violet-950/20")
+          }
+        >
+          <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-gray-500 dark:text-slate-400">
+            Workflow recipe
+          </p>
+          <div className="mt-2 flex flex-col justify-between gap-4 sm:flex-row sm:items-start">
+            <div>
+              <p className="font-extrabold text-gray-950 dark:text-white">
+                {
+                  recipeProgress.recipeTitle
+                }
+              </p>
+              <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-300">
+                {recipeProgress.status ===
+                "COMPLETED"
+                  ? "Recipe sequence completed. Open the summary to review recorded decisions and verification limits."
+                  : recipeProgress.status ===
+                      "BLOCKED_BY_VERIFICATION"
+                    ? "Recipe paused because a deterministic verification check failed."
+                    : "Step " +
+                      String(
+                        Math.min(
+                          recipeProgress.currentStep +
+                            1,
+                          recipeProgress.steps.length,
+                        ),
+                      ) +
+                      " of " +
+                      String(
+                        recipeProgress.steps.length,
+                      ) +
+                      " is ready to resume."}
+              </p>
+            </div>
+
+            <Link
+              href={buildWorkflowRecipesHref(
+                recipeProgress.currentWorkspaceFileId,
+                recipeProgress.recipeId,
+                recipeProgress.currentStep,
+              )}
+              className={
+                "inline-flex shrink-0 items-center justify-center rounded-xl px-4 py-2.5 text-sm font-semibold text-white transition " +
+                (recipeProgress.status ===
+                "BLOCKED_BY_VERIFICATION"
+                  ? "bg-red-600 hover:bg-red-700"
+                  : recipeProgress.status ===
+                      "COMPLETED"
+                    ? "bg-emerald-700 hover:bg-emerald-800"
+                    : "bg-violet-600 hover:bg-violet-700")
+              }
+            >
+              {recipeProgress.status ===
+              "COMPLETED"
+                ? "View Recipe Summary"
+                : recipeProgress.status ===
+                    "BLOCKED_BY_VERIFICATION"
+                  ? "Review Recipe"
+                  : "Resume Recipe"}
+            </Link>
+          </div>
+        </section>
+      )}
 
       <section className="mt-6 rounded-2xl border border-blue-200 bg-white/80 p-5 dark:border-blue-900 dark:bg-slate-950/40">
         <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">

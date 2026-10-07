@@ -10,8 +10,16 @@ import {
   isWorkflowRecipeId,
   type WorkflowRecipeAvailability,
   type WorkflowRecipePlan,
+  type WorkflowRecipeProgress,
   type WorkflowRecipeStepKind,
 } from "@/lib/document-engine";
+import {
+  ensureWorkflowRecipeProgress,
+  recordWorkflowStepDecision,
+} from "@/lib/storage/workflowRecipeContinuity";
+import {
+  getActiveWorkflowRecipeProgress,
+} from "@/lib/storage/workflowProgress";
 import {
   buildWorkspaceHandoffHref,
   getActiveWorkspaceFileSummary,
@@ -41,6 +49,7 @@ import {
   useState,
 } from "react";
 import {
+  useRouter,
   useSearchParams,
 } from "next/navigation";
 
@@ -48,6 +57,7 @@ type LoadedWorkspace = {
   summary: WorkspaceFileSummary;
   recipes: WorkflowRecipePlan[];
   operationHistory: string[];
+  progress: WorkflowRecipeProgress | null;
 };
 
 const availabilityConfig: Record<
@@ -163,6 +173,8 @@ function operationHistoryFor(
 }
 
 function WorkflowRecipesContent() {
+  const router =
+    useRouter();
   const searchParams =
     useSearchParams();
   const queryString =
@@ -264,6 +276,35 @@ function WorkflowRecipesContent() {
           );
         const summaries =
           await listWorkspaceFileSummaries();
+        const existingProgress =
+          getActiveWorkflowRecipeProgress();
+        const recipeForProgress =
+          selectedRecipeId
+            ? recipes.find(
+                (recipe) =>
+                  recipe.id ===
+                  selectedRecipeId,
+              ) ?? null
+            : null;
+        const canRestoreProgress =
+          Boolean(
+            recipeForProgress &&
+              existingProgress &&
+              existingProgress.rootId ===
+                summary.rootId &&
+              existingProgress.recipeId ===
+                recipeForProgress.id,
+          );
+        const progress =
+          recipeForProgress &&
+          (recipeForProgress.availability ===
+            "AVAILABLE" ||
+            canRestoreProgress)
+            ? await ensureWorkflowRecipeProgress(
+                recipeForProgress,
+                summary,
+              )
+            : null;
 
         await setActiveWorkspaceFile(
           summary.id,
@@ -278,6 +319,7 @@ function WorkflowRecipesContent() {
                 summaries,
                 summary.id,
               ),
+            progress,
           });
           setLoaded(true);
         }
@@ -327,12 +369,16 @@ function WorkflowRecipesContent() {
       ? Math.min(
           selectedRecipe.steps
             .length,
-          Number.isInteger(
-            requestedStep,
-          ) &&
-            requestedStep >= 0
-            ? requestedStep
-            : 0,
+          workspace?.progress?.recipeId ===
+          selectedRecipe.id
+            ? workspace.progress
+                .currentStep
+            : Number.isInteger(
+                  requestedStep,
+                ) &&
+                requestedStep >= 0
+              ? requestedStep
+              : 0,
         )
       : 0;
 
@@ -346,13 +392,59 @@ function WorkflowRecipesContent() {
         ),
     );
 
+  const verificationBlocked =
+    workspace?.progress?.status ===
+      "BLOCKED_BY_VERIFICATION";
+
   const recipeCanProceed =
     Boolean(
       selectedRecipe &&
+        !verificationBlocked &&
         (selectedRecipe.availability ===
           "AVAILABLE" ||
           verifiedFormContinuation),
     );
+
+  async function advanceWithoutOperation(
+    stepIndex: number,
+    state:
+      | "SKIPPED"
+      | "NOT_NEEDED",
+  ) {
+    if (
+      !selectedRecipe ||
+      !workspace
+    ) {
+      return;
+    }
+
+    const nextProgress =
+      await recordWorkflowStepDecision(
+        {
+          recipe:
+            selectedRecipe,
+          summary:
+            workspace.summary,
+          stepIndex,
+          state,
+        },
+      );
+
+    setWorkspace({
+      ...workspace,
+      progress:
+        nextProgress,
+    });
+
+    router.push(
+      buildWorkflowRecipesHref(
+        nextProgress
+          .currentWorkspaceFileId,
+        nextProgress.recipeId,
+        nextProgress.currentStep,
+      ),
+    );
+  }
 
   return (
     <ToolLayout
@@ -746,7 +838,28 @@ function WorkflowRecipesContent() {
                   )}
                 </section>
 
-                {!recipeCanProceed && (
+                {verificationBlocked &&
+                  workspace.progress && (
+                    <section className="rounded-3xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/20">
+                      <div className="flex items-start gap-4">
+                        <CircleOff
+                          size={24}
+                          className="mt-0.5 text-red-600"
+                        />
+                        <div>
+                          <h3 className="text-lg font-extrabold text-red-950 dark:text-red-100">
+                            Recipe paused by verification
+                          </h3>
+                          <p className="mt-2 text-sm leading-6 text-red-800 dark:text-red-200">
+                            Kukureku did not advance this recipe because a deterministic post-operation check failed. The failed verification is recorded on the current step below.
+                          </p>
+                        </div>
+                      </div>
+                    </section>
+                  )}
+
+                {!recipeCanProceed &&
+                  !verificationBlocked && (
                   <section className="rounded-3xl border border-red-200 bg-red-50 p-6 dark:border-red-900 dark:bg-red-950/20">
                     <div className="flex items-start gap-4">
                       <CircleOff
@@ -782,8 +895,52 @@ function WorkflowRecipesContent() {
                             Recipe sequence reached its final checkpoint
                           </h3>
                           <p className="mt-2 max-w-3xl text-sm leading-6 text-emerald-800 dark:text-emerald-200">
-                            Kukureku has reached the end of this guided sequence. This is not a forensic clean certificate; review the current version and the visible recipe boundaries before sharing it.
+                            Kukureku has reached the end of this guided sequence. This is not a forensic clean certificate; review the recorded decisions and verification limits before sharing it.
                           </p>
+
+                          {workspace.progress && (
+                            <div className="mt-5 space-y-3">
+                              {workspace.progress.steps.map(
+                                (
+                                  progressStep,
+                                ) => (
+                                  <div
+                                    key={
+                                      progressStep.index
+                                    }
+                                    className="rounded-xl border border-emerald-200 bg-white/80 p-4 text-sm dark:border-emerald-900 dark:bg-slate-950/40"
+                                  >
+                                    <p className="font-extrabold text-emerald-950 dark:text-emerald-100">
+                                      Step{" "}
+                                      {progressStep.index +
+                                        1}
+                                      :{" "}
+                                      {
+                                        progressStep.title
+                                      }
+                                    </p>
+                                    <p className="mt-1 text-emerald-800 dark:text-emerald-200">
+                                      Recorded state:{" "}
+                                      {
+                                        progressStep.state
+                                      }
+                                    </p>
+                                    {progressStep.verification && (
+                                      <p className="mt-1 text-emerald-800 dark:text-emerald-200">
+                                        Verification:{" "}
+                                        {
+                                          progressStep
+                                            .verification
+                                            .status
+                                        }
+                                      </p>
+                                    )}
+                                  </div>
+                                ),
+                              )}
+                            </div>
+                          )}
+
                           <div className="mt-5 flex flex-wrap gap-3">
                             <Link
                               href={buildWorkspaceHandoffHref(
@@ -808,7 +965,8 @@ function WorkflowRecipesContent() {
                     </section>
                   )}
 
-                {recipeCanProceed &&
+                {(recipeCanProceed ||
+                  verificationBlocked) &&
                   currentStep <
                     selectedRecipe.steps
                       .length && (
@@ -843,6 +1001,10 @@ function WorkflowRecipesContent() {
                             const isEarlier =
                               step.index <
                               currentStep;
+                            const recordedStep =
+                              workspace.progress?.steps[
+                                step.index
+                              ] ?? null;
 
                             return (
                               <article
@@ -895,6 +1057,7 @@ function WorkflowRecipesContent() {
                                   </div>
 
                                   {isCurrent &&
+                                    !verificationBlocked &&
                                     step.kind !==
                                       "BLOCKED" &&
                                     step.kind !==
@@ -985,55 +1148,109 @@ function WorkflowRecipesContent() {
                                   )}
                                 </div>
 
+                                {recordedStep &&
+                                  recordedStep.state !==
+                                    "PENDING" && (
+                                    <div
+                                      className={
+                                        "mt-4 rounded-xl border p-4 text-sm " +
+                                        (recordedStep.state ===
+                                        "FAILED_VERIFICATION"
+                                          ? "border-red-200 bg-red-50 text-red-800 dark:border-red-900 dark:bg-red-950/20 dark:text-red-200"
+                                          : "border-emerald-200 bg-emerald-50 text-emerald-800 dark:border-emerald-900 dark:bg-emerald-950/20 dark:text-emerald-200")
+                                      }
+                                    >
+                                      <p className="font-extrabold">
+                                        Recorded:{" "}
+                                        {
+                                          recordedStep.state
+                                        }
+                                      </p>
+                                      {recordedStep.verification && (
+                                        <div className="mt-2 space-y-1">
+                                          <p>
+                                            Verification:{" "}
+                                            {
+                                              recordedStep
+                                                .verification
+                                                .status
+                                            }
+                                          </p>
+                                          {recordedStep.verification.checks.map(
+                                            (
+                                              check,
+                                            ) => (
+                                              <p
+                                                key={
+                                                  check.kind
+                                                }
+                                                className="text-xs leading-5"
+                                              >
+                                                •{" "}
+                                                {
+                                                  check.status
+                                                }
+                                                :{" "}
+                                                {
+                                                  check.message
+                                                }
+                                              </p>
+                                            ),
+                                          )}
+                                        </div>
+                                      )}
+                                    </div>
+                                  )}
+
                                 {isCurrent &&
+                                  !verificationBlocked &&
                                   step.kind ===
                                     "NOT_NEEDED" && (
                                     <div className="mt-4">
-                                      <Link
-                                        href={buildWorkflowRecipesHref(
-                                          workspace
-                                            .summary
-                                            .id,
-                                          selectedRecipe.id,
-                                          step.index +
-                                            1,
-                                        )}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void advanceWithoutOperation(
+                                            step.index,
+                                            "NOT_NEEDED",
+                                          )
+                                        }
                                         className="inline-flex items-center gap-2 rounded-xl bg-emerald-700 px-5 py-3 text-sm font-semibold text-white"
                                       >
-                                        Continue to next step
+                                        Record not needed and continue
                                         <ArrowRight
                                           size={
                                             16
                                           }
                                         />
-                                      </Link>
+                                      </button>
                                     </div>
                                   )}
 
                                 {isCurrent &&
+                                  !verificationBlocked &&
                                   (step.kind ===
                                     "OPTIONAL" ||
                                     step.kind ===
                                       "USER_DECISION") && (
                                     <div className="mt-4">
-                                      <Link
-                                        href={buildWorkflowRecipesHref(
-                                          workspace
-                                            .summary
-                                            .id,
-                                          selectedRecipe.id,
-                                          step.index +
-                                            1,
-                                        )}
+                                      <button
+                                        type="button"
+                                        onClick={() =>
+                                          void advanceWithoutOperation(
+                                            step.index,
+                                            "SKIPPED",
+                                          )
+                                        }
                                         className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-5 py-3 text-sm font-semibold text-gray-700 hover:bg-gray-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200"
                                       >
-                                        Skip this step
+                                        Record skip and continue
                                         <ArrowRight
                                           size={
                                             16
                                           }
                                         />
-                                      </Link>
+                                      </button>
                                     </div>
                                   )}
 
