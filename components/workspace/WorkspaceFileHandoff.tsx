@@ -8,10 +8,14 @@ import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
-const QUERY_KEY = "workspaceFile";
+const QUERY_KEY =
+  "workspaceFile";
+const MULTI_QUERY_KEY =
+  "workspaceFiles";
 
 const DIRECT_WORKSPACE_ROUTES = [
   "/workflow-recipes",
+  "/compare-documents",
 ];
 
 function findFileInput() {
@@ -20,18 +24,31 @@ function findFileInput() {
   ) as HTMLInputElement | null;
 }
 
-function injectFile(
+function injectFiles(
   input: HTMLInputElement,
-  file: File,
-  workspaceFileId: string,
+  files: File[],
+  workspaceFileIds: string[],
 ) {
   const transfer =
     new DataTransfer();
 
-  transfer.items.add(file);
-  input.files = transfer.files;
-  input.dataset.workspaceFileId =
-    workspaceFileId;
+  for (const file of files) {
+    transfer.items.add(file);
+  }
+
+  input.files =
+    transfer.files;
+
+  if (
+    workspaceFileIds.length ===
+    1
+  ) {
+    input.dataset.workspaceFileId =
+      workspaceFileIds[0];
+  } else {
+    input.dataset.workspaceFileIds =
+      workspaceFileIds.join(",");
+  }
 
   input.dispatchEvent(
     new Event("change", {
@@ -40,10 +57,41 @@ function injectFile(
   );
 }
 
+function parseWorkspaceFileIds() {
+  const params =
+    new URLSearchParams(
+      window.location.search,
+    );
+  const multi =
+    (params.get(
+      MULTI_QUERY_KEY,
+    ) ?? "")
+      .split(",")
+      .map((value) =>
+        value.trim(),
+      )
+      .filter(Boolean);
+  const single =
+    params.get(QUERY_KEY);
+
+  if (multi.length > 0) {
+    return [
+      ...new Set(multi),
+    ];
+  }
+
+  return single
+    ? [single]
+    : [];
+}
+
 export default function WorkspaceFileHandoff() {
-  const pathname = usePathname();
+  const pathname =
+    usePathname();
   const loadedRef =
-    useRef<string | null>(null);
+    useRef<string | null>(
+      null,
+    );
 
   useEffect(() => {
     if (
@@ -58,20 +106,18 @@ export default function WorkspaceFileHandoff() {
       return;
     }
 
-    const params =
-      new URLSearchParams(
-        window.location.search,
-      );
-    const workspaceFileId =
-      params.get(QUERY_KEY);
-
+    const workspaceFileIds =
+      parseWorkspaceFileIds();
     const loadKey =
       pathname +
       ":" +
-      (workspaceFileId ?? "");
+      workspaceFileIds.join(
+        ",",
+      );
 
     if (
-      !workspaceFileId ||
+      workspaceFileIds.length ===
+        0 ||
       loadedRef.current ===
         loadKey
     ) {
@@ -89,71 +135,114 @@ export default function WorkspaceFileHandoff() {
 
     async function loadAndInject() {
       try {
-        const file =
-          await getWorkspaceFile(
-            workspaceFileId!,
+        const loadedFiles =
+          await Promise.all(
+            workspaceFileIds.map(
+              (id) =>
+                getWorkspaceFile(
+                  id,
+                ),
+            ),
           );
 
         if (cancelled) {
           return;
         }
 
-        if (!file) {
+        if (
+          loadedFiles.some(
+            (file) => !file,
+          )
+        ) {
           toast.error(
-            "This browser workspace file is no longer available.",
+            workspaceFileIds.length >
+              1
+              ? "One or more browser workspace documents are no longer available."
+              : "This browser workspace file is no longer available.",
           );
           return;
         }
 
-        const tryInject = () => {
-          if (cancelled) {
-            return;
-          }
-
-          const input =
-            findFileInput();
-
-          if (input) {
-            injectFile(
-              input,
+        const files =
+          loadedFiles.filter(
+            (
               file,
-              workspaceFileId!,
-            );
+            ): file is File =>
+              Boolean(file),
+          );
 
-            void setActiveWorkspaceFile(
-              workspaceFileId!,
-            ).catch((error) => {
-              console.warn(
-                "Kukureku could not update the current workspace version.",
-                error,
+        const tryInject =
+          () => {
+            if (cancelled) {
+              return;
+            }
+
+            const input =
+              findFileInput();
+
+            if (input) {
+              injectFiles(
+                input,
+                files,
+                workspaceFileIds,
               );
-            });
 
-            toast(
-              "Loaded from browser workspace",
-              {
-                description:
-                  file.name,
-              },
-            );
-            return;
-          }
+              if (
+                workspaceFileIds.length ===
+                1
+              ) {
+                void setActiveWorkspaceFile(
+                  workspaceFileIds[0],
+                ).catch(
+                  (error) => {
+                    console.warn(
+                      "Kukureku could not update the current workspace version.",
+                      error,
+                    );
+                  },
+                );
+              }
 
-          attempts += 1;
+              toast(
+                workspaceFileIds.length >
+                  1
+                  ? `Loaded ${files.length} browser workspace documents`
+                  : "Loaded from browser workspace",
+                workspaceFileIds.length >
+                  1
+                  ? {
+                      description:
+                        "Review the selected documents before running the operation.",
+                    }
+                  : {
+                      description:
+                        files[0]
+                          ?.name,
+                    },
+              );
+              return;
+            }
 
-          if (attempts >= 20) {
-            toast.error(
-              "This page could not accept the browser workspace file automatically.",
-            );
-            return;
-          }
+            attempts += 1;
 
-          timeoutId =
-            window.setTimeout(
-              tryInject,
-              50,
-            );
-        };
+            if (
+              attempts >= 20
+            ) {
+              toast.error(
+                workspaceFileIds.length >
+                  1
+                  ? "This page could not accept the browser workspace documents automatically."
+                  : "This page could not accept the browser workspace file automatically.",
+              );
+              return;
+            }
+
+            timeoutId =
+              window.setTimeout(
+                tryInject,
+                50,
+              );
+          };
 
         window.requestAnimationFrame(
           tryInject,
@@ -175,7 +264,8 @@ export default function WorkspaceFileHandoff() {
       cancelled = true;
 
       if (
-        timeoutId !== undefined
+        timeoutId !==
+        undefined
       ) {
         window.clearTimeout(
           timeoutId,

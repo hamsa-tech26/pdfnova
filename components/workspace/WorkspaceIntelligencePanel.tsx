@@ -7,6 +7,7 @@ import {
 } from "@/lib/document-engine";
 import {
   buildWorkspaceHandoffHref,
+  buildWorkspaceMultiHandoffHref,
   type WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
 import {
@@ -232,29 +233,60 @@ export default function WorkspaceIntelligencePanel({
                       0 && (
                       <div className="mt-4 flex flex-wrap gap-2 border-t border-gray-200 pt-3 dark:border-slate-800">
                         {findingActions.map(
-                          (action) =>
-                            action.kind ===
-                            "make-current" ? (
-                              <button
-                                key={
-                                  action.id
-                                }
-                                type="button"
-                                title={
-                                  action.detail
-                                }
-                                onClick={() =>
-                                  onMakeCurrent(
+                          (action) => {
+                            if (
+                              action.kind ===
+                              "make-current"
+                            ) {
+                              return (
+                                <button
+                                  key={
+                                    action.id
+                                  }
+                                  type="button"
+                                  title={
+                                    action.detail
+                                  }
+                                  onClick={() =>
+                                    onMakeCurrent(
+                                      action.targetNodeId,
+                                    )
+                                  }
+                                  className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-700"
+                                >
+                                  {
+                                    action.label
+                                  }
+                                </button>
+                              );
+                            }
+
+                            const multiTargets =
+                              action.targetNodeIds?.length
+                                ? action.targetNodeIds
+                                : [
+                                    active.id,
                                     action.targetNodeId,
+                                  ];
+                            const href =
+                              action.kind ===
+                              "compare-documents"
+                                ? buildWorkspaceMultiHandoffHref(
+                                    "/compare-documents",
+                                    multiTargets,
                                   )
-                                }
-                                className="rounded-lg bg-violet-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-violet-700"
-                              >
-                                {
-                                  action.label
-                                }
-                              </button>
-                            ) : (
+                                : action.kind ===
+                                    "prepare-merge"
+                                  ? buildWorkspaceMultiHandoffHref(
+                                      "/merge-pdf",
+                                      multiTargets,
+                                    )
+                                  : buildWorkspaceHandoffHref(
+                                      "/document-inspector",
+                                      action.targetNodeId,
+                                    );
+
+                            return (
                               <Link
                                 key={
                                   action.id
@@ -262,17 +294,20 @@ export default function WorkspaceIntelligencePanel({
                                 title={
                                   action.detail
                                 }
-                                href={buildWorkspaceHandoffHref(
-                                  "/document-inspector",
-                                  action.targetNodeId,
-                                )}
-                                className="rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300 dark:hover:bg-violet-950/30"
+                                href={href}
+                                className={
+                                  action.kind ===
+                                  "prepare-merge"
+                                    ? "rounded-lg bg-blue-600 px-3 py-2 text-xs font-bold text-white transition hover:bg-blue-700"
+                                    : "rounded-lg border border-violet-200 bg-white px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-50 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300 dark:hover:bg-violet-950/30"
+                                }
                               >
                                 {
                                   action.label
                                 }
                               </Link>
-                            ),
+                            );
+                          },
                         )}
                       </div>
                     )}

@@ -68,7 +68,7 @@ function actionsFor(
 }
 
 describe("workspace relationship actions", () => {
-  it("offers the known parent for a child branch", () => {
+  it("offers the known parent and a local comparison for a child branch", () => {
     const parent = node({
       id: "parent",
     });
@@ -98,9 +98,21 @@ describe("workspace relationship actions", () => {
           parent.id,
       }),
     );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "compare-documents",
+        label:
+          "Compare with parent",
+        targetNodeIds: [
+          child.id,
+          parent.id,
+        ],
+      }),
+    );
   });
 
-  it("offers the newest saved version when an older revision is active", () => {
+  it("offers the newest saved version and a version comparison when an older revision is active", () => {
     const first = node({
       id: "v1",
       documentId: "doc",
@@ -134,9 +146,17 @@ describe("workspace relationship actions", () => {
           second.id,
       }),
     );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "compare-documents",
+        label:
+          "Compare versions",
+      }),
+    );
   });
 
-  it("offers inspection for a possible duplicate instead of making a destructive decision", () => {
+  it("offers inspection and local duplicate confirmation for a possible duplicate", () => {
     const first = node({
       id: "first",
       name: "report.pdf",
@@ -165,9 +185,21 @@ describe("workspace relationship actions", () => {
           second.id,
       }),
     );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "compare-documents",
+        label:
+          "Confirm duplicate locally",
+        targetNodeIds: [
+          first.id,
+          second.id,
+        ],
+      }),
+    );
   });
 
-  it("offers inspection of composition parents without changing them", () => {
+  it("offers inspection and comparison of composition parents without changing them", () => {
     const left = node({
       id: "left",
     });
@@ -211,9 +243,21 @@ describe("workspace relationship actions", () => {
         }),
       ]),
     );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "compare-documents",
+        label:
+          "Compare composition parents",
+        targetNodeIds: [
+          left.id,
+          right.id,
+        ],
+      }),
+    );
   });
 
-  it("offers another branch for review when sibling branches diverge", () => {
+  it("offers comparison and merge preparation when sibling branches diverge", () => {
     const parent = node({
       id: "parent",
     });
@@ -253,6 +297,26 @@ describe("workspace relationship actions", () => {
           "Inspect sibling branch",
         targetNodeId:
           second.id,
+      }),
+    );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "compare-documents",
+        label:
+          "Compare sibling branches",
+      }),
+    );
+    expect(actions).toContainEqual(
+      expect.objectContaining({
+        kind:
+          "prepare-merge",
+        label:
+          "Prepare branch merge",
+        targetNodeIds: [
+          first.id,
+          second.id,
+        ],
       }),
     );
   });

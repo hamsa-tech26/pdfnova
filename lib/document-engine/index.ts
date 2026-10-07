@@ -13,6 +13,7 @@ export * from "./planning/createMagicDropPlan";
 export * from "./workspace-intelligence/types";
 export * from "./workspace-intelligence/analyzeWorkspace";
 export * from "./workspace-intelligence/actions";
+export * from "./workspace-intelligence/contentSignals";
 
 export * from "./workflows/types";
 export * from "./workflows/createWorkflowRecipes";

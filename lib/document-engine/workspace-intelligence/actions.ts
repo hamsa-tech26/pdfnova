@@ -6,7 +6,9 @@ import type {
 
 export type WorkspaceRelationshipActionKind =
   | "make-current"
-  | "inspect-document";
+  | "inspect-document"
+  | "compare-documents"
+  | "prepare-merge";
 
 export type WorkspaceRelationshipAction = {
   id: string;
@@ -15,6 +17,7 @@ export type WorkspaceRelationshipAction = {
   detail: string;
   sourceFindingId: string;
   targetNodeId: string;
+  targetNodeIds?: string[];
 };
 
 function selectDocumentHead(
@@ -73,6 +76,7 @@ export function createWorkspaceRelationshipActions(
       byDocument.get(
         node.documentId,
       ) ?? [];
+
     current.push(node);
     byDocument.set(
       node.documentId,
@@ -102,15 +106,24 @@ export function createWorkspaceRelationshipActions(
   function addAction(
     action: WorkspaceRelationshipAction,
   ) {
+    const targets =
+      action.targetNodeIds?.length
+        ? action.targetNodeIds
+        : [
+            action.targetNodeId,
+          ];
     const key = [
       action.kind,
-      action.targetNodeId,
+      ...targets,
       action.sourceFindingId,
     ].join(":");
 
     if (
-      action.targetNodeId ===
-        resolvedActiveNodeId ||
+      targets.every(
+        (id) =>
+          id ===
+          resolvedActiveNodeId,
+      ) ||
       seen.has(key)
     ) {
       return;
@@ -118,6 +131,29 @@ export function createWorkspaceRelationshipActions(
 
     seen.add(key);
     actions.push(action);
+  }
+
+  function addCompareAction(
+    finding: WorkspaceIntelligenceFinding,
+    target: WorkspaceIntelligenceNode,
+    label: string,
+    detail: string,
+  ) {
+    addAction({
+      id: `compare:${finding.id}:${resolvedActiveNodeId}:${target.id}`,
+      kind:
+        "compare-documents",
+      label,
+      detail,
+      sourceFindingId:
+        finding.id,
+      targetNodeId:
+        target.id,
+      targetNodeIds: [
+        resolvedActiveNodeId,
+        target.id,
+      ],
+    });
   }
 
   for (const finding of report.findings) {
@@ -146,13 +182,22 @@ export function createWorkspaceRelationshipActions(
         addAction({
           id: `latest-version:${finding.id}:${head.id}`,
           kind: "make-current",
-          label: "Use latest version",
+          label:
+            "Use latest version",
           detail:
             "Switch the active workspace document to its newest saved version.",
           sourceFindingId:
             finding.id,
-          targetNodeId: head.id,
+          targetNodeId:
+            head.id,
         });
+
+        addCompareAction(
+          finding,
+          head,
+          "Compare versions",
+          "Compare this saved state with the newest version using local SHA-256 and selectable-text overlap.",
+        );
       }
 
       continue;
@@ -197,6 +242,13 @@ export function createWorkspaceRelationshipActions(
           targetNodeId:
             parent.id,
         });
+
+        addCompareAction(
+          finding,
+          parent,
+          "Compare with parent",
+          "Compare this child branch with its known parent without modifying either document.",
+        );
       }
 
       continue;
@@ -218,18 +270,25 @@ export function createWorkspaceRelationshipActions(
               node.documentId ===
                 active.documentId,
           );
+      const parents =
+        (
+          compositionNode?.parentIds ??
+          []
+        )
+          .map((id) =>
+            byId.get(id),
+          )
+          .filter(
+            (
+              node,
+            ): node is WorkspaceIntelligenceNode =>
+              Boolean(node),
+          );
 
-      for (const parentId of (
-        compositionNode?.parentIds ??
-        []
-      ).slice(0, 3)) {
-        const parent =
-          byId.get(parentId);
-
-        if (!parent) {
-          continue;
-        }
-
+      for (const parent of parents.slice(
+        0,
+        3,
+      )) {
         addAction({
           id: `inspect-parent:${finding.id}:${parent.id}`,
           kind:
@@ -241,6 +300,28 @@ export function createWorkspaceRelationshipActions(
             finding.id,
           targetNodeId:
             parent.id,
+        });
+      }
+
+      if (
+        parents.length >= 2
+      ) {
+        addAction({
+          id: `compare-composition-parents:${finding.id}`,
+          kind:
+            "compare-documents",
+          label:
+            "Compare composition parents",
+          detail:
+            "Compare the first two known parent documents locally.",
+          sourceFindingId:
+            finding.id,
+          targetNodeId:
+            parents[0].id,
+          targetNodeIds: [
+            parents[0].id,
+            parents[1].id,
+          ],
         });
       }
 
@@ -286,6 +367,19 @@ export function createWorkspaceRelationshipActions(
           targetNodeId:
             target.id,
         });
+
+        addCompareAction(
+          finding,
+          target,
+          finding.kind ===
+            "possible-duplicate"
+            ? "Confirm duplicate locally"
+            : "Compare related documents",
+          finding.kind ===
+            "possible-duplicate"
+            ? "Run local SHA-256 and selectable-text comparison before treating these files as duplicates."
+            : "Compare these related workspace documents locally without changing either one.",
+        );
       }
 
       continue;
@@ -336,6 +430,39 @@ export function createWorkspaceRelationshipActions(
           targetNodeId:
             target.id,
         });
+
+        addCompareAction(
+          finding,
+          target,
+          active.documentId ===
+            parentDocumentId
+            ? "Compare child branch"
+            : "Compare sibling branches",
+          "Compare branch content locally before deciding whether to keep the branches separate.",
+        );
+
+        if (
+          active.documentId !==
+          parentDocumentId
+        ) {
+          addAction({
+            id: `prepare-branch-merge:${finding.id}:${target.id}`,
+            kind:
+              "prepare-merge",
+            label:
+              "Prepare branch merge",
+            detail:
+              "Open Merge PDF with both branches preloaded. Kukureku will still require you to review order and explicitly confirm the merge.",
+            sourceFindingId:
+              finding.id,
+            targetNodeId:
+              target.id,
+            targetNodeIds: [
+              resolvedActiveNodeId,
+              target.id,
+            ],
+          });
+        }
       }
     }
   }
