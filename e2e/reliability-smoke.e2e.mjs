@@ -392,7 +392,8 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
       .getByRole("main")
       .getByText(
         "browser-magic-drop.pdf",
-      ),
+      )
+      .first(),
   ).toBeVisible();
 
   await page.reload();
@@ -666,7 +667,7 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
 
   await expect(
     page.getByText(
-      /2 versions saved locally/,
+      /2 versions saved for this document/,
     ),
   ).toBeVisible();
 
@@ -768,14 +769,18 @@ test("Multi-document workspace records merge composition and split/extract child
   ).toBeVisible();
 
   await expect(
-    page.getByText(
-      "multi-first.pdf",
-    ),
+    page
+      .getByText(
+        "multi-first.pdf",
+      )
+      .first(),
   ).toBeVisible();
   await expect(
-    page.getByText(
-      "multi-second.pdf",
-    ),
+    page
+      .getByText(
+        "multi-second.pdf",
+      )
+      .first(),
   ).toBeVisible();
 
   await page
