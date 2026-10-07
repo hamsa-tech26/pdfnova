@@ -48,11 +48,18 @@ export type InspectionCapabilityId =
   | "page-geometry"
   | "common-metadata"
   | "acroform"
-  | "xfa";
+  | "xfa"
+  | "attachments"
+  | "digital-signatures"
+  | "javascript-actions"
+  | "forensic-metadata";
 
 export type InspectionCapability = {
   id: InspectionCapabilityId;
-  status: "checked" | "not-supported";
+  status:
+    | "checked"
+    | "not-checked"
+    | "not-supported";
   note?: string;
 };
 
