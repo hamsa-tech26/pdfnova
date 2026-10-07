@@ -98,3 +98,20 @@ The first V2 workspace-intelligence layer consumes the browser-local document gr
 - keeps duplicate signals non-authoritative because it does not compare bytes or compute a content hash.
 
 The report exposes explicit coverage metadata so UI surfaces can distinguish proven graph relationships from heuristic metadata signals. Content-aware similarity, cryptographic duplicate confirmation, and cross-document semantic reasoning remain future work.
+
+## Smart Relationship Actions V1
+
+Workspace Intelligence findings can now expose safe, deterministic actions without automatically modifying a PDF.
+
+Current action types are intentionally non-destructive:
+
+- review a known parent document by making that stored node current;
+- switch an older document state to the newest saved version;
+- inspect a related document with shared ancestry;
+- inspect a possible duplicate before making any deletion or merge decision;
+- inspect known parents of a composition;
+- inspect a sibling or child branch when the graph has diverged.
+
+Actions are generated only when their target node is actually present in the browser-local workspace. Missing-parent findings deliberately do not invent a recovery action.
+
+Automatic merging, deletion, semantic comparison, and other document-changing actions remain outside this milestone.

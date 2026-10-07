@@ -919,6 +919,25 @@ test("Multi-document workspace records merge composition and split/extract child
       )
       .first(),
   ).toBeVisible();
+
+  const reviewParentAction =
+    page.getByRole("button", {
+      name:
+        "Review parent document",
+    });
+
+  await expect(
+    reviewParentAction,
+  ).toBeVisible();
+
+  await reviewParentAction.click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "kukureku-merged-extracted.pdf",
+    }),
+  ).toBeVisible();
 });
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
