@@ -126,7 +126,7 @@ describe("operation registry", () => {
       operation?.effectProfiles[0]
         .risks.join(" "),
     ).toContain(
-      "Encryption is verified with the browser QPDF runtime",
+      "Encryption is verified after creation with an independent PDF parser",
     );
   });
 });
