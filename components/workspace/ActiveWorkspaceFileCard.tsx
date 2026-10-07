@@ -372,6 +372,23 @@ export default function ActiveWorkspaceFileCard() {
         >
           Full Inspector
         </Link>
+
+        <Link
+          href="/workspace-findings"
+          className="inline-flex rounded-xl border border-violet-200 bg-white px-5 py-2.5 text-sm font-semibold text-violet-700 transition hover:bg-violet-50 dark:border-violet-900 dark:bg-slate-950 dark:text-violet-300"
+        >
+          Findings Center
+        </Link>
+
+        <Link
+          href={buildWorkspaceHandoffHref(
+            "/safe-share",
+            active.id,
+          )}
+          className="inline-flex rounded-xl border border-emerald-200 bg-white px-5 py-2.5 text-sm font-semibold text-emerald-700 transition hover:bg-emerald-50 dark:border-emerald-900 dark:bg-slate-950 dark:text-emerald-300"
+        >
+          Safe Share Review
+        </Link>
       </div>
 
       <WorkspaceGraphOverview

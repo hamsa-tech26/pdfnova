@@ -14,6 +14,9 @@ export * from "./workspace-intelligence/types";
 export * from "./workspace-intelligence/analyzeWorkspace";
 export * from "./workspace-intelligence/actions";
 export * from "./workspace-intelligence/contentSignals";
+export * from "./workspace-intelligence/verification";
+export * from "./workspace-intelligence/sensitiveSignals";
+export * from "./workspace-intelligence/safeShare";
 
 export * from "./workflows/types";
 export * from "./workflows/createWorkflowRecipes";

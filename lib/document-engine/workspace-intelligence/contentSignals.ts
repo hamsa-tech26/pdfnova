@@ -4,6 +4,7 @@ export type PdfContentSignal = {
   sha256: string;
   pageCount: number;
   selectableTextChars: number;
+  rawText?: string;
   normalizedText: string;
   normalizedLines: string[];
 };
@@ -338,6 +339,7 @@ export async function createPdfContentSignal(
       pageTexts.length,
     selectableTextChars:
       normalizedText.length,
+    rawText,
     normalizedText,
     normalizedLines:
       [

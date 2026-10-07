@@ -1,19 +1,16 @@
 "use client";
 
 import {
-  getWorkspaceChildren,
-  getWorkspaceParents,
-  groupWorkspaceDocuments,
-} from "@/lib/storage/workspaceGraph";
+  ArrowRight,
+  Check,
+  FileText,
+  GitBranch,
+  GitMerge,
+  Network,
+} from "lucide-react";
 import type {
   WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
-import {
-  Check,
-  Files,
-  GitFork,
-  GitMerge,
-} from "lucide-react";
 
 function relationLabel(
   summary: WorkspaceFileSummary,
@@ -22,27 +19,44 @@ function relationLabel(
     summary.relationKind ===
     "composition"
   ) {
-    return "Composed document";
+    return "Composition";
   }
 
   if (
     summary.relationKind ===
     "branch"
   ) {
-    return "Child document";
+    return "Branch";
   }
 
   if (
     summary.relationKind ===
     "revision"
   ) {
-    return (
-      summary.operationLabel ??
-      "Derived version"
-    );
+    return "Revision";
   }
 
-  return "Source document";
+  return "Source";
+}
+
+function relationIcon(
+  summary: WorkspaceFileSummary,
+) {
+  if (
+    summary.relationKind ===
+    "composition"
+  ) {
+    return GitMerge;
+  }
+
+  if (
+    summary.relationKind ===
+    "branch"
+  ) {
+    return GitBranch;
+  }
+
+  return FileText;
 }
 
 export default function WorkspaceGraphOverview({
@@ -56,195 +70,243 @@ export default function WorkspaceGraphOverview({
     id: string,
   ) => void;
 }>) {
-  const documents =
-    groupWorkspaceDocuments(
-      summaries,
+  const generations =
+    [...new Set(
+      summaries.map(
+        (summary) =>
+          summary.generation,
+      ),
+    )].sort(
+      (left, right) =>
+        left - right,
     );
-  const parents =
-    getWorkspaceParents(
-      active,
-      summaries,
+
+  const byGeneration =
+    generations.map(
+      (generation) => ({
+        generation,
+        nodes: summaries
+          .filter(
+            (summary) =>
+              summary.generation ===
+              generation,
+          )
+          .sort((left, right) =>
+            left.savedAt.localeCompare(
+              right.savedAt,
+            ),
+          ),
+      }),
     );
-  const children =
-    getWorkspaceChildren(
-      active,
-      summaries,
-    );
+
+  const byId = new Map(
+    summaries.map(
+      (summary) => [
+        summary.id,
+        summary,
+      ],
+    ),
+  );
 
   return (
-    <section className="mt-6 rounded-2xl border border-violet-200 bg-white/80 p-5 dark:border-violet-900 dark:bg-slate-950/40">
-      <div className="flex items-start gap-3">
-        <Files
-          size={20}
-          className="mt-0.5 shrink-0 text-violet-700 dark:text-violet-300"
-        />
-        <div>
-          <p className="font-extrabold text-gray-950 dark:text-white">
-            Documents in workspace
-          </p>
-          <p className="mt-1 text-sm leading-6 text-gray-600 dark:text-slate-400">
-            {documents.length}{" "}
-            {documents.length === 1
-              ? "document"
-              : "documents"}{" "}
-            stored locally. Each document can have its own versions while Merge, Split and Extract preserve graph relationships.
-          </p>
+    <section className="mt-6 overflow-hidden rounded-2xl border border-violet-200 bg-white/80 dark:border-violet-900 dark:bg-slate-950/40">
+      <div className="border-b border-violet-100 bg-violet-50/70 p-5 dark:border-violet-950 dark:bg-violet-950/20">
+        <div className="flex items-start gap-3">
+          <Network
+            size={21}
+            className="mt-0.5 shrink-0 text-violet-700 dark:text-violet-300"
+          />
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <p className="font-extrabold text-gray-950 dark:text-white">
+                Visual Document Graph V1
+              </p>
+              <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-violet-700 shadow-sm dark:bg-slate-950 dark:text-violet-300">
+                Browser-local
+              </span>
+            </div>
+            <p className="mt-1 max-w-3xl text-sm leading-6 text-gray-600 dark:text-slate-400">
+              Each node is a stored document state. Columns represent graph generations; parent labels preserve provenance across revisions, branches, and multi-parent compositions.
+            </p>
+          </div>
         </div>
       </div>
 
-      <div className="mt-4 grid gap-3 lg:grid-cols-2">
-        {documents.map(
-          (document) => {
-            const isActive =
-              document.documentId ===
-              active.documentId;
-
-            return (
+      <div className="overflow-x-auto p-5">
+        <div className="flex min-w-max items-start gap-4">
+          {byGeneration.map(
+            (
+              column,
+              columnIndex,
+            ) => (
               <div
                 key={
-                  document.documentId
+                  column.generation
                 }
-                className="rounded-xl border border-gray-200 bg-white p-4 dark:border-slate-800 dark:bg-slate-900"
+                className="flex items-start gap-4"
               >
-                <div className="flex flex-col justify-between gap-3 sm:flex-row sm:items-start">
-                  <div className="min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-xs font-extrabold uppercase tracking-wide text-violet-700 dark:text-violet-300">
-                        {
-                          relationLabel(
-                            document.head,
-                          )
-                        }
-                      </span>
-                      {isActive && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-1 text-[10px] font-extrabold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300">
-                          <Check
-                            size={12}
-                          />
-                          Current
-                        </span>
-                      )}
-                    </div>
-
-                    <p className="mt-2 max-w-full truncate text-sm font-extrabold text-gray-950 dark:text-white">
-                      {
-                        document.head
-                          .name
-                      }
-                    </p>
-                    <p className="mt-1 text-xs leading-5 text-gray-500 dark:text-slate-400">
-                      {
-                        document.versions
-                          .length
-                      }{" "}
-                      {document.versions
-                        .length ===
-                      1
-                        ? "version"
-                        : "versions"}
-                      {" · "}
-                      {
-                        document.head
-                          .rootIds
-                          .length
-                      }{" "}
-                      {document.head
-                        .rootIds
-                        .length ===
-                      1
-                        ? "source root"
-                        : "source roots"}
-                    </p>
+                {columnIndex >
+                  0 && (
+                  <div className="mt-16 flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-violet-200 bg-violet-50 text-violet-600 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-300">
+                    <ArrowRight
+                      size={17}
+                    />
                   </div>
+                )}
 
-                  {!isActive && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        onMakeCurrent(
-                          document.head
-                            .id,
-                        )
-                      }
-                      className="shrink-0 rounded-lg border border-violet-200 bg-violet-50 px-3 py-2 text-xs font-bold text-violet-700 transition hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/30 dark:text-violet-300"
-                    >
-                      Make current
-                    </button>
-                  )}
+                <div className="w-72 shrink-0">
+                  <p className="mb-3 text-xs font-extrabold uppercase tracking-[0.16em] text-gray-400 dark:text-slate-500">
+                    Generation{" "}
+                    {
+                      column.generation
+                    }
+                  </p>
+
+                  <div className="space-y-3">
+                    {column.nodes.map(
+                      (node) => {
+                        const Icon =
+                          relationIcon(
+                            node,
+                          );
+                        const isActive =
+                          node.id ===
+                          active.id;
+                        const parents =
+                          node.parentIds
+                            .map(
+                              (id) =>
+                                byId.get(
+                                  id,
+                                ),
+                            )
+                            .filter(
+                              (
+                                item,
+                              ): item is WorkspaceFileSummary =>
+                                Boolean(
+                                  item,
+                                ),
+                            );
+
+                        return (
+                          <button
+                            key={
+                              node.id
+                            }
+                            type="button"
+                            onClick={() =>
+                              onMakeCurrent(
+                                node.id,
+                              )
+                            }
+                            aria-label={
+                              "Open graph node " +
+                              node.name
+                            }
+                            className={
+                              "block w-full rounded-2xl border p-4 text-left transition " +
+                              (isActive
+                                ? "border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/20"
+                                : "border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-violet-800")
+                            }
+                          >
+                            <div className="flex items-start gap-3">
+                              <div
+                                className={
+                                  "flex h-9 w-9 shrink-0 items-center justify-center rounded-xl " +
+                                  (isActive
+                                    ? "bg-emerald-600 text-white"
+                                    : "bg-violet-100 text-violet-700 dark:bg-violet-950/40 dark:text-violet-300")
+                                }
+                              >
+                                <Icon
+                                  size={
+                                    17
+                                  }
+                                />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <span className="text-[10px] font-extrabold uppercase tracking-wide text-violet-700 dark:text-violet-300">
+                                    {
+                                      relationLabel(
+                                        node,
+                                      )
+                                    }
+                                  </span>
+                                  {isActive && (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-[9px] font-extrabold uppercase tracking-wide text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300">
+                                      <Check
+                                        size={
+                                          10
+                                        }
+                                      />
+                                      Current
+                                    </span>
+                                  )}
+                                </div>
+
+                                <p className="mt-2 truncate text-sm font-extrabold text-gray-950 dark:text-white">
+                                  {
+                                    node.name
+                                  }
+                                </p>
+                                <p className="mt-1 text-xs text-gray-500 dark:text-slate-400">
+                                  V
+                                  {
+                                    node.version
+                                  }{" "}
+                                  ·{" "}
+                                  {
+                                    node.parentIds
+                                      .length
+                                  }{" "}
+                                  {node.parentIds
+                                    .length ===
+                                  1
+                                    ? "parent"
+                                    : "parents"}
+                                </p>
+
+                                {parents.length >
+                                  0 && (
+                                  <div className="mt-3 border-t border-gray-200 pt-2 dark:border-slate-800">
+                                    <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                      From
+                                    </p>
+                                    <p className="mt-1 truncate text-xs font-semibold text-gray-600 dark:text-slate-300">
+                                      {parents
+                                        .map(
+                                          (
+                                            parent,
+                                          ) =>
+                                            parent.name,
+                                        )
+                                        .join(
+                                          " + ",
+                                        )}
+                                    </p>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </button>
+                        );
+                      },
+                    )}
+                  </div>
                 </div>
               </div>
-            );
-          },
-        )}
-      </div>
-
-      {(parents.length > 0 ||
-        children.length >
-          0) && (
-        <div className="mt-5 grid gap-3 lg:grid-cols-2">
-          {parents.length >
-            0 && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-              <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-gray-600 dark:text-slate-300">
-                <GitMerge
-                  size={15}
-                />
-                Parent documents
-              </p>
-              <div className="mt-3 space-y-2">
-                {parents.map(
-                  (parent) => (
-                    <p
-                      key={
-                        parent.id
-                      }
-                      className="truncate text-sm font-semibold text-gray-800 dark:text-slate-200"
-                    >
-                      {
-                        parent.name
-                      }
-                    </p>
-                  ),
-                )}
-              </div>
-            </div>
-          )}
-
-          {children.length >
-            0 && (
-            <div className="rounded-xl border border-gray-200 bg-gray-50 p-4 dark:border-slate-800 dark:bg-slate-900">
-              <p className="flex items-center gap-2 text-xs font-extrabold uppercase tracking-wide text-gray-600 dark:text-slate-300">
-                <GitFork
-                  size={15}
-                />
-                Child documents
-              </p>
-              <div className="mt-3 space-y-2">
-                {children.map(
-                  (child) => (
-                    <button
-                      key={
-                        child.id
-                      }
-                      type="button"
-                      onClick={() =>
-                        onMakeCurrent(
-                          child.id,
-                        )
-                      }
-                      className="block max-w-full truncate text-left text-sm font-semibold text-blue-700 hover:underline dark:text-blue-300"
-                    >
-                      {
-                        child.name
-                      }
-                    </button>
-                  ),
-                )}
-              </div>
-            </div>
+            ),
           )}
         </div>
-      )}
+      </div>
+
+      <div className="border-t border-gray-200 px-5 py-4 text-xs leading-5 text-gray-500 dark:border-slate-800 dark:text-slate-400">
+        Graph position reflects stored lineage metadata, not inferred semantic similarity. Clicking a node makes that exact browser-local state current.
+      </div>
     </section>
   );
 }
