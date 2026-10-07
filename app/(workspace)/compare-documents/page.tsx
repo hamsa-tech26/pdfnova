@@ -165,6 +165,10 @@ export default function CompareDocumentsPage() {
         ) {
           setLeftId(valid[0]);
           setRightId(valid[1]);
+          void compareIds(
+            valid[0],
+            valid[1],
+          );
           return;
         }
 
@@ -230,11 +234,15 @@ export default function CompareDocumentsPage() {
     byId.get(rightId) ??
     null;
 
-  async function compare() {
+  async function compareIds(
+    selectedLeftId: string,
+    selectedRightId: string,
+  ) {
     if (
-      !leftId ||
-      !rightId ||
-      leftId === rightId
+      !selectedLeftId ||
+      !selectedRightId ||
+      selectedLeftId ===
+        selectedRightId
     ) {
       setError(
         "Choose two different workspace documents.",
@@ -252,10 +260,10 @@ export default function CompareDocumentsPage() {
         rightFile,
       ] = await Promise.all([
         getWorkspaceFile(
-          leftId,
+          selectedLeftId,
         ),
         getWorkspaceFile(
-          rightId,
+          selectedRightId,
         ),
       ]);
 
@@ -303,35 +311,12 @@ export default function CompareDocumentsPage() {
     }
   }
 
-  useEffect(() => {
-    if (
-      leftId &&
-      rightId &&
-      leftId !== rightId &&
-      summaries.length > 0 &&
-      !result &&
-      !busy
-    ) {
-      const params =
-        new URLSearchParams(
-          window.location.search,
-        );
-
-      if (
-        params.get(
-          "workspaceFiles",
-        )
-      ) {
-        void compare();
-      }
-    }
-    // compare is intentionally triggered only after URL-backed workspace IDs resolve.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    leftId,
-    rightId,
-    summaries.length,
-  ]);
+  async function compare() {
+    await compareIds(
+      leftId,
+      rightId,
+    );
+  }
 
   const relationship =
     result
