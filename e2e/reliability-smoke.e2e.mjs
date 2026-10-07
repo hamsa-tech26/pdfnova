@@ -42,6 +42,49 @@ async function createTextPdf({
   );
 }
 
+async function createInspectorPdf() {
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+
+  pdf.setTitle("Inspector browser fixture");
+  pdf.setAuthor("Kukureku QA");
+
+  const firstPage = pdf.addPage([600, 800]);
+  firstPage.drawText("Kukureku Inspector fixture", {
+    x: 72,
+    y: 720,
+    size: 20,
+    font,
+  });
+
+  const form = pdf.getForm();
+  const field = form.createTextField("inspector.name");
+  field.setText("Inspector Value");
+  field.addToPage(firstPage, {
+    x: 72,
+    y: 620,
+    width: 240,
+    height: 32,
+    font,
+  });
+
+  const secondPage = pdf.addPage([612, 792]);
+  secondPage.setRotation(degrees(90));
+  secondPage.setCropBox(20, 30, 520, 700);
+  secondPage.drawText("Rotated cropped page", {
+    x: 72,
+    y: 650,
+    size: 18,
+    font,
+  });
+
+  return Buffer.from(
+    await pdf.save({
+      updateFieldAppearances: false,
+    }),
+  );
+}
+
 async function createFormPdf() {
   const pdf = await PDFDocument.create();
   const page = pdf.addPage([600, 800]);
@@ -133,6 +176,53 @@ async function expectOpenPdf(bytes, expectedPageCount) {
 
   return pdf;
 }
+
+test("Unified Document Inspector reports facts, findings, and explicit coverage limits", async ({
+  page,
+}) => {
+  const source = await createInspectorPdf();
+
+  await page.goto("/document-inspector");
+  await uploadPdf(page, source, "browser-inspector.pdf");
+
+  await expect(
+    page.getByText(
+      "What Kukureku checked — and what it did not",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("ISSUE FOUND").first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("NOT CHECKED").first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("NOT SUPPORTED").first(),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Inspector browser fixture"),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "1 standard form field detected; 1 currently contain values.",
+    ),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("MediaBox, CropBox, size, and rotation"),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Unified Document Inspector V1 reads supported PDF facts locally in your browser and does not upload the file.",
+    ),
+  ).toBeVisible();
+});
 
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
   page,
