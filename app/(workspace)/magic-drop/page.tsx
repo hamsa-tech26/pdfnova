@@ -5,6 +5,7 @@ import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import {
+  buildWorkflowRecipesHref,
   createDocumentArtifact,
   createMagicDropPlan,
   inspectPdfArtifact,
@@ -18,6 +19,7 @@ import {
   CheckCircle2,
   CircleOff,
   FileSearch,
+  ListChecks,
   LoaderCircle,
   ShieldCheck,
   Sparkles,
@@ -782,6 +784,43 @@ export default function MagicDropPage() {
                       )}
                     </div>
                   )}
+                </section>
+
+                <section className="rounded-3xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950/20 md:p-8">
+                  <div className="flex flex-col justify-between gap-5 md:flex-row md:items-start">
+                    <div className="max-w-4xl">
+                      <p className="flex items-center gap-2 text-sm font-bold uppercase tracking-[0.2em] text-blue-700 dark:text-blue-300">
+                        <ListChecks
+                          size={17}
+                        />
+                        Guided workflows
+                      </p>
+                      <h2 className="mt-2 text-2xl font-extrabold text-blue-950 dark:text-blue-100">
+                        Prefer a step-by-step recipe?
+                      </h2>
+                      <p className="mt-3 leading-7 text-blue-800 dark:text-blue-200">
+                        Workflow Recipes V1 turns approved tools into a guided sequence. You still review and run every modifying step yourself, and each supported result continues as a new browser-local workspace version.
+                      </p>
+                    </div>
+
+                    {workspaceFileId ? (
+                      <Link
+                        href={buildWorkflowRecipesHref(
+                          workspaceFileId,
+                        )}
+                        className="inline-flex shrink-0 items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                      >
+                        Open Workflow Recipes
+                        <ArrowRight
+                          size={16}
+                        />
+                      </Link>
+                    ) : (
+                      <div className="max-w-xs rounded-xl border border-blue-200 bg-white px-4 py-3 text-sm font-semibold text-blue-800 dark:border-blue-900 dark:bg-slate-950 dark:text-blue-200">
+                        Browser workspace persistence is required before a recipe can carry the PDF between steps.
+                      </div>
+                    )}
+                  </div>
                 </section>
 
                 <section className="rounded-3xl border border-amber-200 bg-amber-50 p-6 dark:border-amber-900 dark:bg-amber-950/20 md:p-8">

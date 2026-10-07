@@ -281,10 +281,76 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     ),
   ).toBeVisible();
 
-  await metadataLink.click();
+  const recipesLink =
+    page.getByRole("link", {
+      name: "Open Workflow Recipes",
+    });
+
+  await expect(
+    recipesLink,
+  ).toHaveAttribute(
+    "href",
+    /\/workflow-recipes\?workspaceFile=/,
+  );
+
+  await recipesLink.click();
 
   await expect(page).toHaveURL(
-    /\/remove-pdf-metadata\?workspaceFile=/,
+    /\/workflow-recipes\?workspaceFile=/,
+  );
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Prepare for Sharing",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Finalize Standard Form",
+    }),
+  ).toBeVisible();
+
+  const startSharing =
+    page.getByRole("link", {
+      name: "Start Prepare for Sharing",
+    });
+
+  await expect(
+    startSharing,
+  ).toHaveAttribute(
+    "href",
+    /recipe=prepare-for-sharing&recipeStep=0/,
+  );
+
+  await startSharing.click();
+
+  await expect(page).toHaveURL(
+    /\/workflow-recipes\?.*recipe=prepare-for-sharing.*recipeStep=0/,
+  );
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Step 1 of 3",
+    }),
+  ).toBeVisible();
+
+  const recipeMetadataLink =
+    page.getByRole("link", {
+      name: "Open Remove PDF Metadata",
+    });
+
+  await expect(
+    recipeMetadataLink,
+  ).toHaveAttribute(
+    "href",
+    /\/remove-pdf-metadata\?workspaceFile=.*recipe=prepare-for-sharing&recipeStep=0/,
+  );
+
+  await recipeMetadataLink.click();
+
+  await expect(page).toHaveURL(
+    /\/remove-pdf-metadata\?.*workspaceFile=.*recipe=prepare-for-sharing&recipeStep=0/,
   );
 
   await expect(
@@ -321,6 +387,36 @@ test("Magic Drop creates evidence-based recommendations without automatic edits"
     page.getByText(
       "Saved as Version 2 in this browser workspace",
     ),
+  ).toBeVisible();
+
+  const continueRecipe =
+    page.getByRole("link", {
+      name: "Continue Recipe",
+    });
+
+  await expect(
+    continueRecipe,
+  ).toHaveAttribute(
+    "href",
+    /\/workflow-recipes\?workspaceFile=.*recipe=prepare-for-sharing&recipeStep=1/,
+  );
+
+  await continueRecipe.click();
+
+  await expect(page).toHaveURL(
+    /\/workflow-recipes\?.*recipe=prepare-for-sharing.*recipeStep=1/,
+  );
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Step 2 of 3",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Compress PDF",
+    }),
   ).toBeVisible();
 
   await page.goto("/dashboard");
