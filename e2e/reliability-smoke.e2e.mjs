@@ -757,17 +757,15 @@ test("Multi-document workspace records merge composition and split/extract child
 
   await expect(
     page.getByText(
-      /3 documents stored locally/,
+      "Visual Document Graph V1",
     ),
   ).toBeVisible();
 
   await expect(
-    page.getByText(
-      "Parent documents",
-      {
-        exact: true,
-      },
-    ),
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged.pdf",
+    }),
   ).toBeVisible();
 
   await expect(
@@ -828,35 +826,24 @@ test("Multi-document workspace records merge composition and split/extract child
   );
 
   await expect(
-    page.getByText(
-      /4 documents stored locally/,
-    ),
-  ).toBeVisible();
-
-  await expect(
     page.getByRole("heading", {
       name:
         "kukureku-merged-extracted.pdf",
     }),
   ).toBeVisible();
 
-  const splitParentPanel =
-    page
-      .getByText(
-        "Parent documents",
-        {
-          exact: true,
-        },
-      )
-      .locator("..");
+  await expect(
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged.pdf",
+    }),
+  ).toBeVisible();
 
   await expect(
-    splitParentPanel.getByText(
-      "kukureku-merged.pdf",
-      {
-        exact: true,
-      },
-    ),
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged-extracted.pdf",
+    }),
   ).toBeVisible();
 
   await page
@@ -894,15 +881,16 @@ test("Multi-document workspace records merge composition and split/extract child
   );
 
   await expect(
-    page.getByText(
-      /5 documents stored locally/,
-    ),
-  ).toBeVisible();
-
-  await expect(
     page.getByRole("heading", {
       name:
         "kukureku-merged-extracted-extracted.pdf",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByRole("button", {
+      name:
+        "Open graph node kukureku-merged-extracted-extracted.pdf",
     }),
   ).toBeVisible();
 
