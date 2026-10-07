@@ -8,6 +8,10 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
+import {
   applyPdfMetadata,
   readPdfMetadata,
   type PdfMetadataValues,
@@ -15,7 +19,6 @@ import {
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { FilePenLine, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -77,7 +80,7 @@ export default function EditPdfMetadataPage() {
       return;
     }
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer(), { updateMetadata: false });
+      const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
       setFile(selectedFile);
       setMetadata(readPdfMetadata(pdf));
       resetResult();
@@ -106,9 +109,9 @@ export default function EditPdfMetadataPage() {
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const pdf = await PDFDocument.load(await file.arrayBuffer(), { updateMetadata: false });
+      const pdf = await loadPdfWithoutMetadataMutation(await file.arrayBuffer());
       applyPdfMetadata(pdf, metadata);
-      const bytes = await pdf.save();
+      const bytes = await savePdfWithoutFormAppearanceMutation(pdf);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + "-metadata-edited.pdf";
       downloadFile(bytes, generatedFileName, "application/pdf");

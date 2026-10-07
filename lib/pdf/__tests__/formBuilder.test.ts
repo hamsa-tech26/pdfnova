@@ -255,4 +255,81 @@ describe("formBuilder", () => {
         ),
     ).toBe(true);
   });
+
+  it("normalizes dropdown options and rejects duplicate-only choices", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    pdf.addPage();
+
+    await expect(
+      addFillableFields(
+        pdf,
+        [
+          {
+            id: 1,
+            name: "choice",
+            type: "dropdown",
+            page: 1,
+            rect: {
+              x: 0.1,
+              y: 0.1,
+              width: 0.3,
+              height: 0.08,
+            },
+            options: [
+              "One",
+              " One ",
+              "",
+            ],
+          },
+        ],
+      ),
+    ).rejects.toThrow(
+      "two unique non-empty options",
+    );
+  });
+
+  it("trims and deduplicates dropdown options before writing them", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    pdf.addPage();
+
+    await addFillableFields(
+      pdf,
+      [
+        {
+          id: 1,
+          name: "choice",
+          type: "dropdown",
+          page: 1,
+          rect: {
+            x: 0.1,
+            y: 0.1,
+            width: 0.3,
+            height: 0.08,
+          },
+          options: [
+            " One ",
+            "Two",
+            "One",
+          ],
+        },
+      ],
+    );
+
+    expect(
+      pdf
+        .getForm()
+        .getDropdown(
+          "choice",
+        )
+        .getOptions(),
+    ).toEqual([
+      "One",
+      "Two",
+    ]);
+  });
+
 });

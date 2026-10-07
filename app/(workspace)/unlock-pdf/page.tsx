@@ -1,8 +1,10 @@
 "use client";
 
 import ActionButton from "@/components/pdf/ActionButton";
+import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
+import SuccessCard from "@/components/pdf/SuccessCard";
 import PasswordInput from "@/components/pdf/PasswordInput";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
@@ -56,6 +58,10 @@ export default function UnlockPdfPage() {
   const [file, setFile] = useState<File | null>(null);
   const [password, setPassword] = useState("");
   const [isUnlocking, setIsUnlocking] = useState(false);
+  const [outputBytes, setOutputBytes] =
+    useState<Uint8Array | null>(null);
+  const [outputFileName, setOutputFileName] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
 
   function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
@@ -80,6 +86,9 @@ export default function UnlockPdfPage() {
 
     setFile(selectedFile);
     setPassword("");
+    setOutputBytes(null);
+    setOutputFileName("");
+    setErrorMessage("");
     event.target.value = "";
 
     toast.success("Protected PDF selected.");
@@ -88,22 +97,28 @@ export default function UnlockPdfPage() {
   function removeFile() {
     setFile(null);
     setPassword("");
+    setOutputBytes(null);
+    setOutputFileName("");
+    setErrorMessage("");
 
     toast.success("PDF file removed.");
   }
 
   async function handleUnlockPdf() {
     if (!file) {
-      toast.error("Please select a PDF file.");
+      setErrorMessage("Please select a PDF file.");
       return;
     }
 
     if (!password.trim()) {
-      toast.error("Please enter the PDF password.");
+      setErrorMessage("Please enter the PDF password.");
       return;
     }
 
     setIsUnlocking(true);
+    setErrorMessage("");
+    setOutputBytes(null);
+    setOutputFileName("");
 
     try {
       const unlockedBytes = await unlockPdf(file, password);
@@ -115,6 +130,9 @@ export default function UnlockPdfPage() {
         outputFileName,
         "application/pdf",
       );
+
+      setOutputBytes(unlockedBytes);
+      setOutputFileName(outputFileName);
 
       addRecentFile({
         fileName: outputFileName,
@@ -129,9 +147,11 @@ export default function UnlockPdfPage() {
     } catch (error) {
       console.error(error);
 
-      toast.error(
-        "The PDF could not be unlocked. Check the password and make sure the file is a valid password-protected PDF.",
-      );
+      const message =
+        "The PDF could not be unlocked. Check the password and make sure the file is a valid password-protected PDF.";
+
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsUnlocking(false);
     }
@@ -181,25 +201,73 @@ export default function UnlockPdfPage() {
             file={file}
             onRemove={removeFile}
             removeLabel="Remove protected PDF"
-            statusText="Ready for password removal"
+            statusText={
+              isUnlocking
+                ? "Removing password protection"
+                : outputBytes
+                  ? "Unlocked PDF created successfully"
+                  : "Ready for password removal"
+            }
           />
 
-          <PasswordInput
-            id="pdf-password"
-            label="PDF password"
-            value={password}
-            onChange={setPassword}
-            placeholder="Enter the PDF password"
-          />
+          {!outputBytes && (
+            <PasswordInput
+              id="pdf-password"
+              label="PDF password"
+              value={password}
+              onChange={(value) => {
+                setPassword(value);
+                setErrorMessage("");
+              }}
+              placeholder="Enter the PDF password"
+            />
+          )}
 
-          <ActionButton
-            isLoading={isUnlocking}
-            loadingText="Unlocking PDF..."
-            loadingSubtitle="Removing password protection and preparing your file."
-            buttonText="Unlock and Download PDF"
-            subtitle="Create an unlocked copy directly inside your browser."
-            onClick={handleUnlockPdf}
-          />
+          {!outputBytes && !errorMessage && (
+            <ActionButton
+              isLoading={isUnlocking}
+              loadingText="Unlocking PDF..."
+              loadingSubtitle="Removing password protection and preparing your file."
+              buttonText="Unlock and Download PDF"
+              subtitle="Create an unlocked copy directly inside your browser."
+              onClick={handleUnlockPdf}
+              disabled={isUnlocking}
+            />
+          )}
+
+          {!isUnlocking && outputBytes && (
+            <SuccessCard
+              title="Your unlocked PDF is ready"
+              description="Password protection was removed successfully using the password you provided."
+              fileName={outputFileName}
+              onDownloadAgain={() =>
+                downloadFile(
+                  outputBytes,
+                  outputFileName,
+                  "application/pdf",
+                )
+              }
+              onStartAgain={removeFile}
+              downloadLabel="Download Unlocked PDF Again"
+              resetLabel="Unlock Another PDF"
+            />
+          )}
+
+          {!isUnlocking && errorMessage && (
+            <ErrorCard
+              title="PDF unlocking needs attention"
+              description={errorMessage}
+              reasons={[
+                "The password may be incorrect.",
+                "The PDF may use unsupported encryption.",
+                "The PDF may be damaged or may not actually be password-protected.",
+              ]}
+              onRetry={file ? handleUnlockPdf : undefined}
+              onReset={removeFile}
+              retryLabel="Retry Unlock"
+              resetLabel="Choose Another PDF"
+            />
+          )}
         </div>
       )}
 

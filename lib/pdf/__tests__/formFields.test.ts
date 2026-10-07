@@ -1,5 +1,7 @@
 import {
   PDFDocument,
+  PDFName,
+  PDFString,
   StandardFonts,
 } from "pdf-lib";
 import {
@@ -11,6 +13,7 @@ import {
 import {
   applyPdfFormValues,
   describePdfFormFields,
+  flattenStandardPdfForm,
   getPdfFormProcessingError,
 } from "../formFields";
 
@@ -380,4 +383,45 @@ describe("formFields", () => {
         .getFields(),
     ).toHaveLength(0);
   });
+
+  it("refuses flattening XFA forms before mutating them", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    pdf.addPage();
+    pdf.getForm();
+
+    pdf.catalog
+      .AcroForm()
+      ?.set(
+        PDFName.of("XFA"),
+        PDFString.of(
+          "unsupported-xfa",
+        ),
+      );
+
+    expect(() =>
+      flattenStandardPdfForm(
+        pdf,
+      ),
+    ).toThrow(
+      "XFA form data",
+    );
+  });
+
+  it("rejects flatten when no standard form fields exist", async () => {
+    const pdf =
+      await PDFDocument.create();
+
+    pdf.addPage();
+
+    expect(() =>
+      flattenStandardPdfForm(
+        pdf,
+      ),
+    ).toThrow(
+      "No standard interactive AcroForm fields",
+    );
+  });
+
 });

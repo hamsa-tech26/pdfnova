@@ -3,6 +3,10 @@
 import ActionButton from "@/components/pdf/ActionButton";
 import FileUploader from "@/components/pdf/FileUploader";
 import ToolLayout from "@/components/pdf/ToolLayout";
+import {
+  getRasterImageKind,
+  validateRasterImageBatch,
+} from "@/lib/pdf/imageBatchLimits";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { downloadFile } from "@/lib/downloadFile";
 import {
@@ -25,14 +29,22 @@ export default function JpgToPdfPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
-    const selectedImages = Array.from(event.target.files ?? []).filter(
-      (file) =>
-        file.type === "image/jpeg" ||
-        file.type === "image/png",
-    );
+    const selectedImages =
+      Array.from(
+        event.target.files ??
+          [],
+      );
 
-    if (selectedImages.length === 0) {
-      toast.error("Please select JPG or PNG image files.");
+    const validationError =
+      validateRasterImageBatch(
+        images,
+        selectedImages,
+      );
+
+    if (validationError) {
+      toast.error(
+        validationError,
+      );
       event.target.value = "";
       return;
     }
@@ -109,8 +121,19 @@ export default function JpgToPdfPage() {
       for (const imageFile of images) {
         const imageBytes = await imageFile.arrayBuffer();
 
+        const imageKind =
+          getRasterImageKind(
+            imageFile,
+          );
+
+        if (!imageKind) {
+          throw new Error(
+            `${imageFile.name} is not a supported JPG or PNG image.`,
+          );
+        }
+
         const embeddedImage =
-          imageFile.type === "image/png"
+          imageKind === "png"
             ? await pdf.embedPng(imageBytes)
             : await pdf.embedJpg(imageBytes);
 
@@ -212,7 +235,8 @@ export default function JpgToPdfPage() {
               title="Select image files"
               description="Choose JPG or PNG images from your computer."
               buttonText="Choose Images"
-              helperText="Supported formats: JPG and PNG"
+              helperText="JPG or PNG · Up to 25 MB each · Maximum 50 images / 100 MB combined"
+              disabled={isCreating}
             />
 
             {images.length > 0 && (

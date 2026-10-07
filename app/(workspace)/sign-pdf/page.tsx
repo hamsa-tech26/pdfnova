@@ -9,6 +9,10 @@ import SignaturePad from "@/components/pdf/SignaturePad";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 import { renderPdfPages, type RenderedPdfPage } from "@/lib/pdf/render";
 import { calculateSignaturePdfPlacement } from "@/lib/pdf/signaturePlacementGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -27,7 +31,6 @@ import {
 } from "react";
 import {
   degrees,
-  PDFDocument,
 } from "pdf-lib";
 import { toast } from "sonner";
 
@@ -536,9 +539,8 @@ export default function SignPdfPage() {
 
     try {
       const pdf =
-        await PDFDocument.load(
+        await loadPdfWithoutMetadataMutation(
           await selectedFile.arrayBuffer(),
-          { updateMetadata: false },
         );
 
       const count =
@@ -973,9 +975,8 @@ export default function SignPdfPage() {
 
     try {
       const pdf =
-        await PDFDocument.load(
+        await loadPdfWithoutMetadataMutation(
           await file.arrayBuffer(),
-          { updateMetadata: false },
         );
 
       const page =
@@ -1044,7 +1045,7 @@ export default function SignPdfPage() {
       );
 
       const bytes =
-        await pdf.save();
+        await savePdfWithoutFormAppearanceMutation(pdf);
 
       const baseName =
         file.name.replace(

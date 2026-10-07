@@ -9,13 +9,17 @@ import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  assertPageCopySafe,
+  validatePdfBatch,
+} from "@/lib/pdf/pdfInputSafety";
+import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
-const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
 const mergePdfTips = [
   {
@@ -39,7 +43,7 @@ const mergePdfFaqs = [
   {
     question: "How many PDF files can I merge?",
     answer:
-      "You can add multiple PDF files, provided your browser has enough available memory to process them.",
+      "You can add up to 20 PDFs, with a 25 MB per-file limit and a 100 MB combined browser-processing limit.",
   },
   {
     question: "Can I change the file order?",
@@ -94,47 +98,37 @@ export default function MergePdfPage() {
   ) {
     const selectedFiles = Array.from(
       event.target.files ?? [],
-    ).filter((file) => {
-      return (
-        file.type === "application/pdf" ||
-        file.name.toLowerCase().endsWith(".pdf")
-      );
-    });
-
-    if (selectedFiles.length === 0) {
-      const message = "Please select valid PDF files.";
-
-      setErrorMessage(message);
-      toast.error(message);
-      event.target.value = "";
-      return;
-    }
-
-    const oversizedFile = selectedFiles.find(
-      (file) => file.size > MAX_FILE_SIZE,
     );
 
-    if (oversizedFile) {
-      const message = `${oversizedFile.name} is larger than 25 MB.`;
+    const batchError = validatePdfBatch(
+      files.map((item) => item.file),
+      selectedFiles,
+    );
 
-      setErrorMessage(message);
-      toast.error(message);
+    if (batchError) {
+      setErrorMessage(batchError);
+      toast.error(batchError);
       event.target.value = "";
       return;
     }
 
     try {
-      const selectedFileInfo = await Promise.all(
-        selectedFiles.map(async (file) => {
-          const fileBytes = await file.arrayBuffer();
-          const pdf = await PDFDocument.load(fileBytes);
+      const selectedFileInfo: PdfFileInfo[] = [];
 
-          return {
-            file,
-            pageCount: pdf.getPageCount(),
-          };
-        }),
-      );
+      for (const file of selectedFiles) {
+        const fileBytes = await file.arrayBuffer();
+        const pdf = await loadPdfWithoutMetadataMutation(fileBytes);
+
+        assertPageCopySafe(
+          pdf,
+          "Merge PDF",
+        );
+
+        selectedFileInfo.push({
+          file,
+          pageCount: pdf.getPageCount(),
+        });
+      }
 
       setFiles((currentFiles) => [
         ...currentFiles,
@@ -152,7 +146,9 @@ export default function MergePdfPage() {
       console.error(selectionError);
 
       const message =
-        "One of the selected PDF files is damaged or password-protected.";
+        selectionError instanceof Error
+          ? selectionError.message
+          : "One of the selected PDF files is damaged or password-protected.";
 
       setErrorMessage(message);
       toast.error(message);
@@ -270,7 +266,14 @@ export default function MergePdfPage() {
       for (let index = 0; index < files.length; index += 1) {
         const fileInfo = files[index];
         const fileBytes = await fileInfo.file.arrayBuffer();
-        const sourcePdf = await PDFDocument.load(fileBytes);
+        const sourcePdf = await loadPdfWithoutMetadataMutation(
+          fileBytes,
+        );
+
+        assertPageCopySafe(
+          sourcePdf,
+          "Merge PDF",
+        );
 
         const copiedPages = await mergedPdf.copyPages(
           sourcePdf,
@@ -321,7 +324,9 @@ export default function MergePdfPage() {
       console.error(mergeError);
 
       const message =
-        "The PDF files could not be merged. One of the files may be damaged or password-protected.";
+        mergeError instanceof Error
+          ? mergeError.message
+          : "The PDF files could not be merged. One of the files may be damaged or password-protected.";
 
       setErrorMessage(message);
       toast.error("Failed to merge PDF files.");
@@ -334,7 +339,7 @@ export default function MergePdfPage() {
     <ToolLayout
       label="Merge PDF"
       title="Merge PDF files online, privately"
-      description="Add two or more PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file."
+      description="Add two or more non-form PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file and a 100 MB combined browser-processing limit."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
       howToTitle="How to merge PDF files online"
@@ -343,6 +348,11 @@ export default function MergePdfPage() {
           title: "Add your PDFs",
           description:
             "Choose two or more PDF files from your device. Each file can be up to 25 MB.",
+        },
+        {
+          title: "Use non-form PDFs",
+          description:
+            "Interactive PDF forms must be flattened before merging so form structure is not silently damaged.",
         },
         {
           title: "Set the file order",
@@ -408,7 +418,8 @@ export default function MergePdfPage() {
               reasons={[
                 "One of the PDF files may be damaged.",
                 "A selected PDF may be password-protected.",
-                "Your browser may not have enough memory for the selected files.",
+                "Interactive PDF forms must be flattened before merging.",
+                "The selected files may exceed the browser-processing limits.",
               ]}
               onRetry={
                 files.length >= 2 ? mergePdfFiles : undefined

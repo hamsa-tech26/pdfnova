@@ -3,6 +3,7 @@ export type RenderedPdfPage = {
   dataUrl: string;
   width: number;
   height: number;
+  scale: number;
 };
 
 export type RenderPdfPagesOptions = {
@@ -229,6 +230,8 @@ export async function forEachRenderedPdfPage(
               canvas.width,
             height:
               canvas.height,
+            scale:
+              effectiveScale,
           });
         } finally {
           canvas.width = 0;

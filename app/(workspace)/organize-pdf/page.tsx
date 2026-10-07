@@ -11,14 +11,15 @@ import ProgressCard from "@/components/pdf/ProgressCard";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { organizePdfPagesInPlace } from "@/lib/pdf/pageOrder";
 import { renderPdfPages } from "@/lib/pdf/render";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import {
-  degrees,
-  PDFDocument,
-} from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -86,7 +87,7 @@ const savingSteps = [
   {
     label: "Building organized PDF",
     description:
-      "Copying and rotating pages in the selected order.",
+      "Reordering the existing page tree, applying rotations, and removing deleted pages.",
   },
   {
     label: "Preparing download",
@@ -441,14 +442,10 @@ export default function OrganizePdfPage() {
     setCurrentStep(1);
 
     try {
-      const sourceBytes =
-        await file.arrayBuffer();
-
       const sourcePdf =
-        await PDFDocument.load(sourceBytes);
-
-      const outputPdf =
-        await PDFDocument.create();
+        await loadPdfWithoutMetadataMutation(
+          await file.arrayBuffer(),
+        );
 
       await new Promise((resolve) =>
         setTimeout(resolve, 150),
@@ -457,49 +454,31 @@ export default function OrganizePdfPage() {
       setProgress(35);
       setCurrentStep(2);
 
-      for (
-        let index = 0;
-        index < pages.length;
-        index += 1
-      ) {
-        const pageItem = pages[index];
+      organizePdfPagesInPlace(
+        sourcePdf,
+        pages.map(
+          (pageItem) => ({
+            originalPageIndex:
+              pageItem.originalPageIndex,
+            rotationDelta:
+              pageItem.rotation,
+          }),
+        ),
+      );
 
-        const [copiedPage] =
-          await outputPdf.copyPages(
-            sourcePdf,
-            [pageItem.originalPageIndex],
-          );
+      setProgress(82);
 
-        const originalRotation =
-          copiedPage.getRotation().angle;
-
-        const finalRotation =
-          (originalRotation +
-            pageItem.rotation) %
-          360;
-
-        copiedPage.setRotation(
-          degrees(finalRotation),
-        );
-
-        outputPdf.addPage(copiedPage);
-
-        const pageProgress =
-          35 +
-          Math.round(
-            ((index + 1) / pages.length) * 47,
-          );
-
-        setProgress(
-          Math.min(82, pageProgress),
-        );
-      }
+      await new Promise((resolve) =>
+        setTimeout(resolve, 100),
+      );
 
       setProgress(88);
       setCurrentStep(3);
 
       const generatedBytes =
-        await outputPdf.save();
+        await savePdfWithoutFormAppearanceMutation(
+          sourcePdf,
+        );
 
       const originalName =
         file.name.replace(/\.pdf$/i, "");
@@ -552,7 +531,7 @@ export default function OrganizePdfPage() {
     <ToolLayout
       label="Organize PDF"
       title="Organize PDF pages in your browser"
-      description="Reorder, rotate, move, or delete PDF pages visually in your browser. Your original file stays on your device while you create an organized copy."
+      description="Reorder, rotate, move, or delete PDF pages visually in your browser while preserving the existing PDF structure wherever possible. Your original file stays on your device."
       tips={organizePdfTips}
       faqs={organizePdfFaqs}
       howToTitle="How to organize PDF pages"

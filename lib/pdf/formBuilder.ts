@@ -80,13 +80,28 @@ export async function addFillableFields(
       );
     }
 
+    const normalizedOptions =
+      definition.type ===
+      "dropdown"
+        ? [
+            ...new Set(
+              definition.options
+                .map((option) =>
+                  option.trim(),
+                )
+                .filter(Boolean),
+            ),
+          ]
+        : [];
+
     if (
       definition.type ===
         "dropdown" &&
-      definition.options.length < 2
+      normalizedOptions.length <
+        2
     ) {
       throw new Error(
-        `Dropdown field ${name} needs at least two options.`,
+        `Dropdown field ${name} needs at least two unique non-empty options.`,
       );
     }
 
@@ -155,7 +170,7 @@ export async function addFillableFields(
         );
 
       field.setOptions(
-        definition.options,
+        normalizedOptions,
       );
 
       field.addToPage(page, {

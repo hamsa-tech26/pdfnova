@@ -7,11 +7,14 @@ import FileUploader from "@/components/pdf/FileUploader";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
 import { calculateVisibleCropBox } from "@/lib/pdf/cropGeometry";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { Crop, ShieldCheck, TriangleAlert } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -122,7 +125,7 @@ export default function CropPdfPage() {
     }
 
     try {
-      const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
+      const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
       const count = pdf.getPageCount();
 
       if (count === 0) {
@@ -193,7 +196,7 @@ export default function CropPdfPage() {
         throw new Error("Enter at least one crop margin greater than 0 mm.");
       }
 
-      const pdf = await PDFDocument.load(await file.arrayBuffer());
+      const pdf = await loadPdfWithoutMetadataMutation(await file.arrayBuffer());
 
       pdf.getPages().forEach((page, index) => {
         const box = page.getCropBox();
@@ -234,7 +237,7 @@ export default function CropPdfPage() {
         }
       });
 
-      const bytes = await pdf.save();
+      const bytes = await savePdfWithoutFormAppearanceMutation(pdf);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = `${baseName}-cropped.pdf`;
 

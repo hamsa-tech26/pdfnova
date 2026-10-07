@@ -309,6 +309,33 @@ export function applyPdfFormValues(
 }
 
 
+export function flattenStandardPdfForm(
+  pdf: PDFDocument,
+) {
+  if (hasPdfXfa(pdf)) {
+    throw new Error(
+      "This PDF contains XFA form data. Kukureku will not flatten it because the XFA structure cannot be preserved safely.",
+    );
+  }
+
+  const form = pdf.getForm();
+  const fields = form.getFields();
+
+  if (fields.length === 0) {
+    throw new Error(
+      "No standard interactive AcroForm fields were found to flatten.",
+    );
+  }
+
+  form.flatten({
+    updateFieldAppearances:
+      true,
+  });
+
+  return fields.length;
+}
+
+
 export function getPdfFormProcessingError(
   error: unknown,
   fallback: string,

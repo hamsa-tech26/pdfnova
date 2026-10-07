@@ -8,6 +8,10 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import {
+  loadPdfWithoutMetadataMutation,
+  savePdfWithoutFormAppearanceMutation,
+} from "@/lib/pdf/safeDocument";
+import {
   PDF_PAGE_SIZE_PRESETS,
   calculateProportionalFitScale,
   resolveResizeTarget,
@@ -21,7 +25,7 @@ import {
   TriangleAlert,
 } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
+
 import { toast } from "sonner";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
@@ -113,7 +117,7 @@ export default function ResizePdfPagesPage() {
     }
 
     try {
-      const pdf = await PDFDocument.load(
+      const pdf = await loadPdfWithoutMetadataMutation(
         await selectedFile.arrayBuffer(),
       );
 
@@ -169,7 +173,7 @@ export default function ResizePdfPagesPage() {
     setOutputFileName("");
 
     try {
-      const pdf = await PDFDocument.load(
+      const pdf = await loadPdfWithoutMetadataMutation(
         await file.arrayBuffer(),
       );
 
@@ -204,7 +208,7 @@ export default function ResizePdfPagesPage() {
         );
       }
 
-      const bytes = await pdf.save();
+      const bytes = await savePdfWithoutFormAppearanceMutation(pdf);
 
       const baseName =
         file.name.replace(/\.pdf$/i, "") ||
