@@ -117,7 +117,7 @@ export function applyWorkflowStepDecision(
 
   const now =
     options.now ?? Date.now();
-  const steps =
+  const steps: WorkflowRecipeProgressStep[] =
     progress.steps.map(
       (item) =>
         item.index ===
@@ -180,7 +180,7 @@ export function applyWorkflowStepVerification(
     options.verification.status ===
     "FAILED";
 
-  const steps =
+  const steps: WorkflowRecipeProgressStep[] =
     progress.steps.map(
       (item) =>
         item.index ===
