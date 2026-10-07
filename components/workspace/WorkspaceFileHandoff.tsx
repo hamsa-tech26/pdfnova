@@ -3,6 +3,7 @@
 import {
   getWorkspaceFile,
 } from "@/lib/storage/workspaceFiles";
+import { usePathname } from "next/navigation";
 import { useEffect, useRef } from "react";
 import { toast } from "sonner";
 
@@ -32,6 +33,7 @@ function injectFile(
 }
 
 export default function WorkspaceFileHandoff() {
+  const pathname = usePathname();
   const loadedRef =
     useRef<string | null>(null);
 
@@ -43,16 +45,21 @@ export default function WorkspaceFileHandoff() {
     const workspaceFileId =
       params.get(QUERY_KEY);
 
+    const loadKey =
+      pathname +
+      ":" +
+      (workspaceFileId ?? "");
+
     if (
       !workspaceFileId ||
       loadedRef.current ===
-        workspaceFileId
+        loadKey
     ) {
       return;
     }
 
     loadedRef.current =
-      workspaceFileId;
+      loadKey;
 
     let cancelled = false;
     let attempts = 0;
@@ -145,7 +152,7 @@ export default function WorkspaceFileHandoff() {
         );
       }
     };
-  }, []);
+  }, [pathname]);
 
   return null;
 }

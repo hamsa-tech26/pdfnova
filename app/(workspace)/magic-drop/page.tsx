@@ -224,9 +224,6 @@ export default function MagicDropPage() {
           nextReport,
         );
 
-      setReport(nextReport);
-      setPlan(nextPlan);
-
       try {
         const stored =
           await saveActiveWorkspaceFile(
@@ -246,6 +243,9 @@ export default function MagicDropPage() {
           "Magic Drop completed, but this browser could not persist the PDF for automatic handoff. You can still open a tool and choose the file manually.",
         );
       }
+
+      setReport(nextReport);
+      setPlan(nextPlan);
 
       toast.success(
         "Magic Drop plan is ready.",
