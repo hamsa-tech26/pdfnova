@@ -108,7 +108,7 @@ function hasOnlyImageXObjects(
 
     return Boolean(
       dictionary &&
-        dictionary.size() > 0,
+        dictionary.keys().length > 0,
     );
   };
 
