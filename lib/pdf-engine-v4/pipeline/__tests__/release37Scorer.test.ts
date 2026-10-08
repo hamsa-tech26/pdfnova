@@ -30,10 +30,12 @@ describe("Release 37 independent positional and structural document scoring",()=
     expect(result.structure.pct).toBeLessThan(100);
   });
   it("scores text separately from merged-cell span structure",()=>{
-    const expected=ref();
-    expected.tables[0].cells[1].columnSpan=1;
-    const x=observed();x.tables[0].rows[0].cells[1].columnSpan=2;
-    const result=scoreRelease37Case(expected,x);
+    const base=ref();
+    const expected={tables:base.tables.map(t=>({...t,cells:t.cells.map((c,i)=>i===1?{...c,columnSpan:1}:c)}))};
+    const x=observed();
+    const modified={...x,tables:x.tables.map(t=>({...t,rows:t.rows.map((r,i)=>({...r,
+      cells:r.cells.map((c,j)=>i===0&&j===1?{...c,columnSpan:2}:c)}))}))};
+    const result=scoreRelease37Case(expected,modified);
     expect(result.cells.pct).toBe(100);
     expect(result.structure.pct).toBeLessThan(100);
   });
