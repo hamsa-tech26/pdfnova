@@ -15,7 +15,16 @@ export async function benchmark(manifest, results) {
   const byId = new Map(results.map(x => [x.id, x]));
   return { generatedAt: new Date().toISOString(), metricDefinition: "Exact normalized cell text at the same row/column index. Missing or shifted cells fail. This is not semantic or character-error-rate scoring.", fixtures: manifest.fixtures.map(f => {
     const actual = byId.get(f.id);
-    return !actual ? {id:f.id,file:f.file,status:"NOT_RUN"} : {id:f.id,file:f.file,status:"MEASURED",...scoreFixture(f.expectedRows,actual.rows)};
+    return !actual ? {id:f.id,file:f.file,status:"NOT_RUN"} : {
+      id:f.id,file:f.file,
+      status:actual.ocrAttempted === false ? "OCR_NOT_ATTEMPTED" : "MEASURED",
+      ...scoreFixture(f.expectedRows,actual.rows),
+      ocrAttempted:actual.ocrAttempted ?? null,
+      ocrProcessedPages:actual.ocrProcessedPages ?? [],
+      confirmedTableCount:actual.confirmedTableCount ?? null,
+      timings:actual.timings ?? null,
+      extractionSource:actual.source ?? null,
+    };
   })};
 }
 if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
@@ -27,5 +36,5 @@ if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.ar
   await fs.mkdir("benchmarks/phase10_14/reports",{recursive:true});
   await fs.writeFile("benchmarks/phase10_14/reports/latest.json",JSON.stringify(report,null,2)+"\n");
   console.log(JSON.stringify(report,null,2));
-  if (file && report.fixtures.some(x=>x.status==="NOT_RUN")) process.exitCode = 2;
+  if (file && report.fixtures.some(x=>x.status!=="MEASURED")) process.exitCode = 2;
 }
