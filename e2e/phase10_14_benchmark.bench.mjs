@@ -48,7 +48,7 @@ for (const fixture of manifest.fixtures) {
       const csvDownloadPromise = page.waitForEvent("download");
       await csvButton.click();
       const csvDownload = await csvDownloadPromise;
-      expect(csvDownload.suggestedFilename()).toMatch(/\\.csv$/i);
+      expect(csvDownload.suggestedFilename()).toMatch(/\.csv$/i);
       const csvPath = await csvDownload.path();
       if (!csvPath) throw new Error("V4 CSV download has no local file path");
       const csvText = await readFile(csvPath, "utf8");
