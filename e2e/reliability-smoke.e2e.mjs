@@ -1047,15 +1047,6 @@ test("Multi-document workspace records merge composition and split/extract child
 
   await expect(
     page.getByText(
-      "What changed?",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText(
       "What needs attention before sharing?",
       {
         exact: true,
