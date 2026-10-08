@@ -50,5 +50,13 @@ export function inspectV4TableExport(table: LogicalTable): {needsReview:boolean;
       warnings.push("Leading quotation artifacts appear in serial cells.");
     }
   }
+  const corrected = table.rows.flatMap(row => row.cells).filter(cell =>
+    cell.originalOcrText !== undefined && cell.originalOcrText !== cell.text
+  ).length;
+  if (corrected) warnings.push(corrected + " OCR-adjusted cell(s): compare with original OCR text and source PDF.");
+  const duplicateColumns = table.rows.filter(row =>
+    new Set(row.cells.map(cell => cell.columnIndex)).size !== row.cells.length
+  ).length;
+  if (duplicateColumns) warnings.push(duplicateColumns + " row(s) contain duplicate column indices.");
   return {needsReview:warnings.length > 0,warnings};
 }
