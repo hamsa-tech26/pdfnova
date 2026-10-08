@@ -8,6 +8,7 @@ on:
       - "e2e/phase10_14_benchmark.bench.mjs"
       - "playwright.benchmark.config.mjs"
       - "scripts/scorePhase10_14.mjs"
+      - "scripts/checkV4ProductionGate.mjs"
       - "scripts/collectPhase10_14.mjs"
       - "lib/pdf-engine-v4/**"
       - ".github/workflows/phase10-14-benchmark.yml"
@@ -47,3 +48,5 @@ jobs:
           name: phase10-14-v4-baseline
           path: benchmarks/phase10_14/reports/
           retention-days: 14
+      - name: Enforce measured Phase 10.14 OCR accuracy acceptance gate
+        run: node scripts/checkV4ProductionGate.mjs benchmarks/phase10_14/reports/latest.json
