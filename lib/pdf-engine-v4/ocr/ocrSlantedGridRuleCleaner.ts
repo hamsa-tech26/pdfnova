@@ -20,6 +20,11 @@ export function detectPdfV4SlantedRules(
     if(dark<width*0.04)ys.push(y);
   }
   if(ys.length<24)return [];
+  const straightVotes=new Uint16Array(width);
+  for(const y of ys)for(let x=30;x<width-30;x++){
+    const k=(y*width+x)*4;
+    if(pixels[k]<80&&pixels[k+1]<80&&pixels[k+2]<80)straightVotes[x]++;
+  }
   const candidates:Rule[]=[];
   for(let si=-20;si<=20;si++){
     const slope=si*0.004;
@@ -34,7 +39,7 @@ export function detectPdfV4SlantedRules(
       }
     }
     for(let x=35;x<width-35;x++){
-      if(votes[x]>=ys.length*0.67&&votes[x]>=votes[x-1]&&votes[x]>=votes[x+1]){
+      if(votes[x]>=ys.length*0.67&&votes[x]>=straightVotes[x]+ys.length*0.20&&votes[x]>=votes[x-1]&&votes[x]>=votes[x+1]){
         candidates.push({x,slope,votes:votes[x]});
       }
     }
