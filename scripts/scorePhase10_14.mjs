@@ -2,6 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
 import process from "node:process";
+import { excludePhase10_14ColumnHeader } from "./phase10_14Rows.mjs";
 
 export const norm = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 export function scoreFixture(expected, actual) {
@@ -15,10 +16,14 @@ export async function benchmark(manifest, results) {
   const byId = new Map(results.map(x => [x.id, x]));
   return { generatedAt: new Date().toISOString(), metricDefinition: "Exact normalized cell text at the same row/column index. Missing or shifted cells fail. This is not semantic or character-error-rate scoring.", fixtures: manifest.fixtures.map(f => {
     const actual = byId.get(f.id);
-    return !actual ? {id:f.id,file:f.file,status:"NOT_RUN"} : {
+    if (!actual) return {id:f.id,file:f.file,status:"NOT_RUN"};
+    const cleaned = excludePhase10_14ColumnHeader(actual.rows);
+    return {
       id:f.id,file:f.file,
       status:actual.ocrAttempted === false ? "OCR_NOT_ATTEMPTED" : "MEASURED",
-      ...scoreFixture(f.expectedRows,actual.rows),
+      ...scoreFixture(f.expectedRows,cleaned.rows),
+      headerRowsExcluded:cleaned.removed,
+      unadjustedPositional:scoreFixture(f.expectedRows,actual.rows),
       ocrAttempted:actual.ocrAttempted ?? null,
       ocrProcessedPages:actual.ocrProcessedPages ?? [],
       confirmedTableCount:actual.confirmedTableCount ?? null,
