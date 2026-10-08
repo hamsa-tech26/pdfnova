@@ -1,5 +1,3 @@
-import type { PdfV4PreparedOcrPage } from "./ocrPageRenderer";
-
 type Rule={x:number;slope:number;votes:number};
 
 /** Detect long slanted ruled-table borders using consistent dark pixels.
