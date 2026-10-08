@@ -30,6 +30,15 @@ describe("post-structure OCR table repair",()=>{
   expect(fixed.rows[7].cells[0].words[0].text).toBe("18");
   expect(original.rows[7].cells[0].text).toBe("18");
  });
+ it("removes low-confidence serial punctuation without altering the observed high-confidence digit",()=>{
+  const table=fixture();
+  table.rows[6].cells[0]=cell(0,"7 ! a",[
+    word("7",96,46),word("!",58,60),word("a",0,65)]);
+  const fixed=repairPdfV4TableOcrCells(table);
+  expect(fixed.rows[6].cells[0].text).toBe("7");
+  expect(fixed.rows[7].cells[0].text).toBe("8");
+  expect(fixed.rows[6].cells[0].originalOcrText).toBe("7 ! a");
+ });
  it("drops spurious low-confidence grid artifacts but preserves real words and provenance",()=>{
   const t=fixture();
   t.rows[8].cells[1]=cell(1,"Serechandra Para ES",[
