@@ -16,3 +16,9 @@ The dedicated GitHub Actions workflow **Phase 10.14 Real OCR Benchmark** launche
 This benchmark is diagnostic, not a production accuracy certification. It uses synthetic English tables only. Real documents, multilingual samples, table geometry and expected row-alignment strategies need separate acceptance thresholds. Browser OCR may need to download English language models during initialization.
 
 CSV export for confirmed V4 tables is available through the existing Engine Inspector; the download is text/columns only, with spreadsheet formula protection. The full V4 JSON should be retained when provenance matters. Do not treat CSV output as authoritative without reviewing the source PDF.
+
+## Release acceptance gate (intentional blocker)
+
+`node scripts/checkV4ProductionGate.mjs benchmarks/phase10_14/reports/latest.json` checks all four measurements, actual OCR execution, matching data-row counts, at least **95% exact cell accuracy** and **75% exact row accuracy** per fixture. Unlike the diagnostic benchmark it deliberately exits nonzero on insufficient accuracy. These thresholds are an initial minimum synthetic-fixture gate, **not** a declaration that all Phase 10.14–10.20 milestones are production-ready.
+
+As of 8 October 2026, fixture 10.14d has 42.22% exact cells and 11.11% exact rows, so promotion must remain blocked. CI validation/build success does not override this gate. The acceptance step runs after artifact upload so failed scores remain inspectable.
