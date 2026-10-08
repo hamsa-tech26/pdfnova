@@ -2,7 +2,7 @@
 
 import type { LogicalTable } from "@/lib/pdf-engine-v4/model/logicalTable";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
-import { tableToCsvRows } from "@/lib/converters/v4TableExport";
+import { tableToCsvRows, inspectV4TableExport } from "@/lib/converters/v4TableExport";
 import { saveAs } from "file-saver";
 import { toast } from "sonner";
 
@@ -19,8 +19,8 @@ export default function EngineTableExport({tables}:{tables:LogicalTable[]}) {
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
         {tables.map((table,index) => (
+          <div key={table.id || index} className="space-y-2">
           <button
-            key={table.id || index}
             type="button"
             className="rounded-xl border border-cyan-700 bg-cyan-50 px-4 py-3 text-sm font-bold text-cyan-900 hover:bg-cyan-100 dark:bg-slate-950 dark:text-cyan-200"
             onClick={()=>{
@@ -34,6 +34,12 @@ export default function EngineTableExport({tables}:{tables:LogicalTable[]}) {
           >
             Export table {index+1} CSV · {table.rows.length} rows
           </button>
+          {inspectV4TableExport(table).needsReview && (
+            <p role="status" className="max-w-xl rounded-lg border border-amber-300 bg-amber-50 p-3 text-xs font-semibold text-amber-900 dark:border-amber-700 dark:bg-amber-950/30 dark:text-amber-200">
+              Review required: {inspectV4TableExport(table).warnings.join(" ")} Source verification is necessary before relying on this CSV.
+            </p>
+          )}
+          </div>
         ))}
       </div>
     </section>
