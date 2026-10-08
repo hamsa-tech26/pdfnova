@@ -1,0 +1,44 @@
+name: Release 37 Public Document Pilot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/downloadRelease37PublicPilot.mjs"
+      - "e2e/release37_public.pilot.mjs"
+      - "playwright.pilot.config.mjs"
+      - ".github/workflows/release37-public-pilot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  public-real-document-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    # Third-party document availability is not a release blocker.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Download original USGS report to ephemeral runner and sample real pages
+        run: node scripts/downloadRelease37PublicPilot.mjs
+      - name: Exercise PDF Engine V4 on actual publisher pages
+        run: npx playwright test --config=playwright.pilot.config.mjs
+      - name: Upload aggregated evidence only (NO PDFs, page text, ground truth, or personal data)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release37-public-document-pilot
+          path: |
+            benchmarks/release37/reports/public-usgs-pilot.json
+            benchmarks/release37/private/usgs-public-pilot-metadata.json
+          retention-days: 14
+          if-no-files-found: warn
