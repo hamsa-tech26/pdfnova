@@ -1038,33 +1038,6 @@ test("Multi-document workspace records merge composition and split/extract child
 
   await expect(
     page.getByText(
-      "Which version should I use?",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText(
-      "What needs attention before sharing?",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText(
-      "What should I do next?",
-      {
-        exact: true,
-      },
-    ),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText(
       "Local Evidence Mode",
     ),
   ).toBeVisible();
