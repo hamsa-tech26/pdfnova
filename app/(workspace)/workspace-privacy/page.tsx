@@ -39,7 +39,10 @@ export default function WorkspacePrivacyPage() {
     setSettings,
   ] =
     useState<PrivateWorkspaceIntelligenceSettings>(
-      DEFAULT_PRIVATE_WORKSPACE_INTELLIGENCE_SETTINGS,
+      () =>
+        loadWorkspaceIntelligenceSettings(
+          DEFAULT_PRIVATE_WORKSPACE_INTELLIGENCE_SETTINGS,
+        ),
     );
   const [stats, setStats] =
     useState<WorkspaceIntelligenceCacheStats>(
@@ -59,11 +62,6 @@ export default function WorkspacePrivacyPage() {
   }
 
   useEffect(() => {
-    setSettings(
-      loadWorkspaceIntelligenceSettings(
-        DEFAULT_PRIVATE_WORKSPACE_INTELLIGENCE_SETTINGS,
-      ),
-    );
     void refresh();
   }, []);
 
@@ -151,7 +149,7 @@ export default function WorkspacePrivacyPage() {
               Browser-local OCR for scanned pages
             </p>
             <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
-              Auto mode uses Kukureku's existing Tesseract OCR engine only on text-sparse pages and caches the result locally.
+              Auto mode uses Kukureku&apos;s existing Tesseract OCR engine only on text-sparse pages and caches the result locally.
             </p>
           </div>
           <input
