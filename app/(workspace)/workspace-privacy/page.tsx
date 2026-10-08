@@ -62,7 +62,25 @@ export default function WorkspacePrivacyPage() {
   }
 
   useEffect(() => {
-    void refresh();
+    let cancelled = false;
+
+    getWorkspaceIntelligenceCacheStats()
+      .then((next) => {
+        if (!cancelled) {
+          setStats(next);
+        }
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setStats(
+            emptyStats,
+          );
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   function update(
