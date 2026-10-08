@@ -33,3 +33,7 @@ export * from "./workflows/createWorkflowRecipes";
 export * from "./workflows/links";
 
 export * from "./workflows/progress";
+
+export * from "./package-guard/types";
+export * from "./package-guard/policies";
+export * from "./package-guard/evaluate";

@@ -391,6 +391,13 @@ export default function ActiveWorkspaceFileCard() {
         </Link>
 
         <Link
+          href="/package-guard"
+          className="inline-flex rounded-xl border border-cyan-200 bg-white px-5 py-2.5 text-sm font-semibold text-cyan-700 transition hover:bg-cyan-50 dark:border-cyan-900 dark:bg-slate-950 dark:text-cyan-300"
+        >
+          Run Package Guard
+        </Link>
+
+        <Link
           href="/workspace-copilot"
           className="inline-flex rounded-xl bg-violet-600 px-5 py-2.5 text-sm font-semibold text-white transition hover:bg-violet-700"
         >
