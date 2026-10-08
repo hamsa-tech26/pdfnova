@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import process from "node:process";
 
 export const norm = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
@@ -17,7 +18,7 @@ export async function benchmark(manifest, results) {
     return !actual ? {id:f.id,file:f.file,status:"NOT_RUN"} : {id:f.id,file:f.file,status:"MEASURED",...scoreFixture(f.expectedRows,actual.rows)};
   })};
 }
-if (process.argv[1] && import.meta.url === new URL("file://" + path.resolve(process.argv[1])).href) {
+if (process.argv[1] && import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href) {
   const manifest = JSON.parse(await fs.readFile("benchmarks/phase10_14/manifest.json","utf8"));
   const file = process.argv[2];
   const results = file ? JSON.parse(await fs.readFile(file,"utf8")) : [];
