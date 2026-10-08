@@ -1,0 +1,282 @@
+{
+  "schemaVersion": 1,
+  "description": "Synthetic fixtures only; actual OCR results must be supplied separately; not a real-world accuracy claim.",
+  "fixtures": [
+    {
+      "id": "10.14a",
+      "file": "phase10_14a_low_resolution_blur.pdf",
+      "expectedRows": [
+        [
+          "1",
+          "Rani Para Scheme",
+          "Damcherra RF",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "2",
+          "Khahamthai Para",
+          "West Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Uttamjoy VC",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "4",
+          "Nilbusan Para Scheme",
+          "Kacharicherra",
+          "Repair",
+          "Motor fault"
+        ],
+        [
+          "5",
+          "Kamalacherri Scheme",
+          "Thumsarai",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "6",
+          "Purnaram Para Scheme",
+          "Thumsarai",
+          "Low source",
+          "Tanker used"
+        ],
+        [
+          "7",
+          "Gouranga Para Scheme",
+          "West Damcherra",
+          "Repair",
+          "Pipe damage"
+        ],
+        [
+          "8",
+          "Halam Para Scheme",
+          "Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "9",
+          "Serechandra Para",
+          "Thumsarai",
+          "Low pressure",
+          "Tail end"
+        ]
+      ]
+    },
+    {
+      "id": "10.14b",
+      "file": "phase10_14b_faint_print_noisy_background.pdf",
+      "expectedRows": [
+        [
+          "1",
+          "Rani Para Scheme",
+          "Damcherra RF",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "2",
+          "Khahamthai Para",
+          "West Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Uttamjoy VC",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "4",
+          "Nilbusan Para Scheme",
+          "Kacharicherra",
+          "Repair",
+          "Motor fault"
+        ],
+        [
+          "5",
+          "Kamalacherri Scheme",
+          "Thumsarai",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "6",
+          "Purnaram Para Scheme",
+          "Thumsarai",
+          "Low source",
+          "Tanker used"
+        ],
+        [
+          "7",
+          "Gouranga Para Scheme",
+          "West Damcherra",
+          "Repair",
+          "Pipe damage"
+        ],
+        [
+          "8",
+          "Halam Para Scheme",
+          "Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "9",
+          "Serechandra Para",
+          "Thumsarai",
+          "Low pressure",
+          "Tail end"
+        ]
+      ]
+    },
+    {
+      "id": "10.14c",
+      "file": "phase10_14c_uneven_lighting_edge_shadow.pdf",
+      "expectedRows": [
+        [
+          "1",
+          "Rani Para Scheme",
+          "Damcherra RF",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "2",
+          "Khahamthai Para",
+          "West Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Uttamjoy VC",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "4",
+          "Nilbusan Para Scheme",
+          "Kacharicherra",
+          "Repair",
+          "Motor fault"
+        ],
+        [
+          "5",
+          "Kamalacherri Scheme",
+          "Thumsarai",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "6",
+          "Purnaram Para Scheme",
+          "Thumsarai",
+          "Low source",
+          "Tanker used"
+        ],
+        [
+          "7",
+          "Gouranga Para Scheme",
+          "West Damcherra",
+          "Repair",
+          "Pipe damage"
+        ],
+        [
+          "8",
+          "Halam Para Scheme",
+          "Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "9",
+          "Serechandra Para",
+          "Thumsarai",
+          "Low pressure",
+          "Tail end"
+        ]
+      ]
+    },
+    {
+      "id": "10.14d",
+      "file": "phase10_14d_perspective_distortion.pdf",
+      "expectedRows": [
+        [
+          "1",
+          "Rani Para Scheme",
+          "Damcherra RF",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "2",
+          "Khahamthai Para",
+          "West Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "3",
+          "Jalidhan Para Scheme",
+          "Uttamjoy VC",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "4",
+          "Nilbusan Para Scheme",
+          "Kacharicherra",
+          "Repair",
+          "Motor fault"
+        ],
+        [
+          "5",
+          "Kamalacherri Scheme",
+          "Thumsarai",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "6",
+          "Purnaram Para Scheme",
+          "Thumsarai",
+          "Low source",
+          "Tanker used"
+        ],
+        [
+          "7",
+          "Gouranga Para Scheme",
+          "West Damcherra",
+          "Repair",
+          "Pipe damage"
+        ],
+        [
+          "8",
+          "Halam Para Scheme",
+          "Damcherra",
+          "Functional",
+          "Normal"
+        ],
+        [
+          "9",
+          "Serechandra Para",
+          "Thumsarai",
+          "Low pressure",
+          "Tail end"
+        ]
+      ]
+    }
+  ]
+}
