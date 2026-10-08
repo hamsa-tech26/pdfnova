@@ -62,7 +62,10 @@ export function cleanPdfV4RuledGridArtifacts(
   for(const w of words){
     const t=w.text.trim();
     const b=box(w);
-    const removePipe=/^[|│]$/u.test(t);
+    // Keep line tokens through this stage: V4 column inference needs them.
+    // The subsequent spatial intersection filter removes only confirmed
+    // crossing artifacts after document structure cues are preserved.
+    const removePipe=false;
     const removeRule=horizontalDebris.includes(w);
     const removeIsolatedPunctuation=(t==="!" || t==="I" || t==="a" || t==="E") &&
       w.confidence<=65 && b.x1-b.x0<pageWidth*0.025 && nearBorder(w,50,125);
