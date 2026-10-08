@@ -49,6 +49,11 @@ for (const fixture of manifest.fixtures) {
       ocrAttempted: analysis.controlledOcrResult?.attempted ?? false,
       ocrProcessedPages: analysis.controlledOcrResult?.processedPageNumbers ?? [],
       timings: analysis.processingTimes ?? null,
+      ocrWordDiagnostics: (analysis.controlledOcrResult?.pages ?? []).flatMap(
+        page => (page.words ?? []).slice(0, 300).map(word => ({
+          pageNumber:page.pageNumber,text:word.text,confidence:word.confidence,bounds:word.sourceBounds ?? word.bounds,
+        })),
+      ),
       source: "Browser V4 Inspector, controlled OCR enabled; largest detected logical table",
     };
     await mkdir(rawDirectory, { recursive: true });
