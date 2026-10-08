@@ -39,3 +39,7 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# Release 36 OCR reports: keep private measurements out of source control
+/benchmarks/phase10_14/reports/*.json
+/benchmarks/phase10_14/reports/raw/
