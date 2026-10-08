@@ -60,7 +60,6 @@ import {
 } from "./ocrDeskewImagePreparer";
 
 import { removeOcrGridIntersectionTokens } from "./ocrGridIntersectionFilter";
-import { cleanPdfV4RuledGridArtifacts } from "./ocrRuledGridArtifactCleaner";
 
 import {
   remapPdfV4DeskewedOcrWords,
@@ -483,15 +482,10 @@ const pages =
         (page) =>
           page.pageNumber,
       ),
-    pages: pagesWithApprovedRetries.map(page => {
-      const cleaned=cleanPdfV4RuledGridArtifacts(page.words,page.renderedWidth);
-      return {
-        ...page,
-        words:removeOcrGridIntersectionTokens(cleaned.words,page.renderedWidth),
-        removedOcrGridArtifacts:cleaned.removed,
-        correctedOcrGridArtifacts:cleaned.corrected,
-      };
-    }),
+    pages: pagesWithApprovedRetries.map(page => ({
+      ...page,
+      words: removeOcrGridIntersectionTokens(page.words, page.renderedWidth),
+    })),
     retryRegions,
     reliability,
   };
