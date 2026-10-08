@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { benchmark, scoreFixture } from "../../../scripts/scorePhase10_14.mjs";
+import { benchmark, scoreFixture } from "../../../../scripts/scorePhase10_14.mjs";
 describe("Phase 10.14 scoring",()=>{
  it("reports perfect exact reference row match",()=>{
   expect(scoreFixture([["1","A"],["2","B"]],[["1","A"],["2","B"]])).toMatchObject({matchedRows:2,matchedCells:4,exactMatch:true});
