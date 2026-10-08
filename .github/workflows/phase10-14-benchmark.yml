@@ -11,6 +11,9 @@ on:
       - "scripts/checkV4ProductionGate.mjs"
       - "scripts/collectPhase10_14.mjs"
       - "lib/pdf-engine-v4/**"
+      - "benchmarks/release37/**"
+      - "e2e/release37_qualification.bench.mjs"
+      - "scripts/generateRelease37Fixtures.mjs"
       - ".github/workflows/phase10-14-benchmark.yml"
   workflow_dispatch:
 
@@ -34,7 +37,9 @@ jobs:
       - run: npm ci --no-audit --no-fund
       - run: npm install --no-save @playwright/test@1.56.1
       - run: npx playwright install --with-deps chromium
-      - name: Execute actual V4 OCR on four committed synthetic PDFs
+      - name: Generate Release 37 synthetic hybrid, complex and continuation fixtures
+        run: npm run benchmark:release37:fixtures
+      - name: Execute actual V4 OCR on Phase 10.14 and Release 37 synthetic fixtures
         run: npx playwright test --config=playwright.benchmark.config.mjs
       - name: Score actual extracted tables (including incomplete runs)
         if: always()
@@ -46,7 +51,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: phase10-14-v4-baseline
-          path: benchmarks/phase10_14/reports/
+          path: |
+            benchmarks/phase10_14/reports/
+            benchmarks/release37/reports/
           retention-days: 14
       - name: Enforce measured Phase 10.14 OCR accuracy acceptance gate
         run: node scripts/checkV4ProductionGate.mjs benchmarks/phase10_14/reports/latest.json
