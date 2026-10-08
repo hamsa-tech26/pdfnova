@@ -5,10 +5,12 @@ function mockReport() {
   return {
     corpus:{documents:Array.from({length:20},(_,i)=>({
       id:"test-"+i,origin:"real-world",usageRights:"de-identified",sha256:"a".repeat(64),
+      rightsUrl:"https://example.org/rights",independentReferenceReview:true,
       categories:REQUIRED_CATEGORIES.filter((_,j)=>i===j || i===j+8),
     }))},
     metrics:Object.fromEntries(REQUIRED_CATEGORIES.map(c=>[c,{
       status:"MEASURED",source:"real-world",documentCount:2,cellPct:98,rowPct:90,structurePct:94,actualOcrAttempted:true,
+      scoredFromFiles:true,groundTruthVerified:true,evidenceDigest:"b".repeat(64),
     }])),
     phases:Object.fromEntries(REQUIRED_PHASES.map(p=>[p,{status:"PASS",evidenceUrl:"https://example.org/review"}])),
     regressions:{critical:0},syntheticPhase10_14:{status:"PASS"},
@@ -23,6 +25,14 @@ describe("Release 37 formal V4 Stable gate is fail-closed",()=>{
   });
   it("blocks synthetic or unauthorized real corpus",()=>{
     const r=mockReport();r.corpus.documents[0].origin="synthetic";
+    expect(checkRelease37Gate(r).status).toBe("BLOCKED");
+  });
+  it("blocks unreviewed references even with good claimed accuracy",()=>{
+    const r=mockReport();r.corpus.documents[0].independentReferenceReview=false;
+    expect(checkRelease37Gate(r).status).toBe("BLOCKED");
+  });
+  it("blocks unmeasured category evidence",()=>{
+    const r=mockReport();r.metrics.complex.scoredFromFiles=false;
     expect(checkRelease37Gate(r).status).toBe("BLOCKED");
   });
   it("blocks structure problems even when OCR exact text passes",()=>{
