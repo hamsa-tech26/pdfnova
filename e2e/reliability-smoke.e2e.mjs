@@ -1146,6 +1146,56 @@ test("Multi-document workspace records merge composition and split/extract child
   ).toBeVisible();
 });
 
+test("Package Guard blocks strict issues and passes the same package under integrity-only policy", async ({
+  page,
+}) => {
+  const source = await createInspectorPdf();
+
+  await page.goto("/magic-drop");
+  await uploadPdf(page, source, "package-application.pdf");
+
+  await page.goto("/package-guard");
+
+  await expect(
+    page.getByRole("heading", {
+      name: "Run acceptance gates before you submit, send, or share",
+    }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("button", { name: "Run Package Guard" })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "BLOCKED" }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText("Common document metadata"),
+  ).toBeVisible();
+  await expect(
+    page.getByText("Interactive form fields"),
+  ).toBeVisible();
+  await expect(
+    page.getByRole("link", { name: "Remove metadata" }),
+  ).toHaveAttribute("href", /\/remove-pdf-metadata\?workspaceFile=/);
+
+  await page
+    .getByLabel("Package Guard preset")
+    .selectOption("integrity-only");
+
+  await page
+    .getByRole("button", { name: "Run Package Guard" })
+    .click();
+
+  await expect(
+    page.getByRole("heading", { name: "READY" }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(/Snapshot [a-f0-9]{12}/),
+  ).toBeVisible();
+});
 test("QPDF protects, rejects a wrong password, and unlocks the same PDF", async ({
   page,
 }) => {

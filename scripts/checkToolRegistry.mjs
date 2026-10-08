@@ -12,6 +12,7 @@ const INTERNAL_ROUTES = new Set([
   "compare-documents",
   "workspace-findings",
   "safe-share",
+  "package-guard",
   "workspace-copilot",
   "workspace-privacy",
   "evidence-viewer",

@@ -78,6 +78,12 @@ const navigationGroups: SidebarGroup[] = [
         badge: "V1",
       },
       {
+        label: "Package Guard",
+        href: "/package-guard",
+        icon: ListChecks,
+        badge: "V1",
+      },
+      {
         label: "Workspace Copilot",
         href: "/workspace-copilot",
         icon: Bot,
