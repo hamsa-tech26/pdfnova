@@ -14,6 +14,9 @@ on:
       - "benchmarks/release37/**"
       - "e2e/release37_qualification.bench.mjs"
       - "scripts/generateRelease37Fixtures.mjs"
+      - "scripts/downloadRelease37PublicPilot.mjs"
+      - "e2e/release37_public.pilot.mjs"
+      - "playwright.pilot.config.mjs"
       - ".github/workflows/phase10-14-benchmark.yml"
   workflow_dispatch:
 
@@ -57,3 +60,32 @@ jobs:
           retention-days: 14
       - name: Enforce measured Phase 10.14 OCR accuracy acceptance gate
         run: node scripts/checkV4ProductionGate.mjs benchmarks/phase10_14/reports/latest.json
+
+  public-pilot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    # Optional external-source smoke: not an accuracy gate and cannot certify V4 Stable.
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Fetch a genuine USGS document and prepare an ephemeral real-page sample
+        run: node scripts/downloadRelease37PublicPilot.mjs
+      - name: Run actual PDF Engine V4 browser intake on the publisher pages
+        run: npx playwright test --config=playwright.pilot.config.mjs
+      - name: Keep only non-sensitive metadata and status
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release37-public-pilot-aggregate
+          path: |
+            benchmarks/release37/reports/public-usgs-pilot.json
+            benchmarks/release37/private/usgs-public-pilot-metadata.json
+          retention-days: 14
+          if-no-files-found: warn
