@@ -38,7 +38,11 @@ export function repairPdfV4TableOcrCells(table:LogicalTable):LogicalTable {
  const rows=table.rows.map((row)=>{
   const cells=row.cells.map(cell=>{
    if(!cell.words.some(isOcr))return cell;
-   const filtered=cell.words.filter(w=>!isDebris(w));
+   const confidentSerial=cell.columnIndex===0 && cell.words.some(w=>
+     isOcr(w) && confidence(w)>=70 && /^\d{1,3}$/u.test(w.text.trim()));
+   const filtered=cell.words.filter(w=>
+     !isDebris(w) &&
+     !(confidentSerial && isOcr(w) && w.text.trim()==="!" && confidence(w)<70));
    if(filtered.length===cell.words.length || filtered.length===0)return cell;
    const cleaned=wordsText(filtered);
    const next=withAdjustedText(cell,cleaned,"Removed low-confidence line/border OCR artifact; original text and words retained.");
