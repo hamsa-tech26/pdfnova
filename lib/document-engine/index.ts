@@ -18,6 +18,13 @@ export * from "./workspace-intelligence/verification";
 export * from "./workspace-intelligence/sensitiveSignals";
 export * from "./workspace-intelligence/safeShare";
 export * from "./workspace-intelligence/copilot";
+export * from "./workspace-intelligence/workspaceSearch";
+export * from "./workspace-intelligence/facts";
+export * from "./workspace-intelligence/pageDiff";
+export * from "./workspace-intelligence/citedAnswers";
+export * from "./workspace-intelligence/planner";
+export * from "./workspace-intelligence/brief";
+export * from "./workspace-intelligence/privacy";
 
 export * from "./workflows/types";
 export * from "./workflows/createWorkflowRecipes";

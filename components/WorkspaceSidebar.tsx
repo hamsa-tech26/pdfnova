@@ -81,7 +81,7 @@ const navigationGroups: SidebarGroup[] = [
         label: "Workspace Copilot",
         href: "/workspace-copilot",
         icon: Bot,
-        badge: "V1",
+        badge: "V2",
       },
     ],
   },
