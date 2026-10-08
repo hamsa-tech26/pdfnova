@@ -6,7 +6,7 @@ const w=(text:string,x:number,y:number,confidence=90):PdfV4OcrWord=>({
  coordinateSpace:"rendered-image-pixels",source:"ocr-tesseract",
 });
 function grid(){
- return [400,600,800,1000,1200].flatMap(y=>[130,250,780,1200,1660].map(x=>w("|",x,y,90)));
+ return [1300,1520,1640,1778,1900].flatMap(y=>[130,250,780,1200,1660].map(x=>w("|",x,y,90)));
 }
 describe("ruled OCR grid artifacts",()=>{
  it("does not edit text without spatial evidence",()=>{
@@ -14,7 +14,8 @@ describe("ruled OCR grid artifacts",()=>{
   expect(cleanPdfV4RuledGridArtifacts(words,1750)).toEqual({words,removed:[],corrected:[]});
  });
  it("drops low-confidence source-border debris but preserves low-confidence legitimate words",()=>{
-  const words=[...grid(),w("Damcherra",790,1649,8),w("a",130,1613,0),w("ES",283,1810,22),w("———",800,1810,0)];
+  const longRule=w("———",800,1810,0);longRule.bounds.x1=1000;
+  const words=[...grid(),w("Damcherra",790,1649,8),w("a",130,1613,0),w("ES",283,1810,22),longRule];
   const result=cleanPdfV4RuledGridArtifacts(words,1750);
   expect(result.words.map(x=>x.text)).toEqual(["Damcherra"]);
   expect(result.removed.length).toBe(words.length-1);
