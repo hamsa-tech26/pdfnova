@@ -1689,9 +1689,14 @@ if (builtTable !== null) {
     );
 }
 
-const finalTable =
+const sourceTable =
   cellRepair?.table ??
   builtTable;
+
+const finalTable =
+  sourceTable
+    ? repairPdfV4TableOcrCells(sourceTable)
+    : null;
 
   if (finalTable === null) {
   rejectedForTableBuildFailure +=
@@ -1752,7 +1757,7 @@ const mergedTables =
   mergedTableResult.tables.map(
     (table) =>
       attachTableExtractionProvenance(
-        repairPdfV4TableOcrCells(table),
+        table,
       ),
   );
 
