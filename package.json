@@ -9,7 +9,8 @@
     "lint": "eslint",
     "test": "vitest run",
     "check:tools": "node scripts/checkToolRegistry.mjs",
-    "benchmark:ocr:baseline": "node scripts/scorePhase10_14.mjs"
+    "benchmark:ocr:baseline": "node scripts/scorePhase10_14.mjs",
+    "qualify:v4:stable": "node scripts/checkRelease37Gate.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
