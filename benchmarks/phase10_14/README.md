@@ -11,4 +11,8 @@ The JSON must be an array of objects `{"id":"10.14a","rows":[["1","..."],...]}` 
 
 The output `benchmarks/phase10_14/reports/latest.json` should be treated as a local artifact, not committed as evidence without the corresponding input and provenance. The scoring test cases are unit tests of the scorer only. **Real OCR accuracy remains unverified until actual results are collected.**
 
-Follow-up: wire deterministic Engine V4 extraction into this input format, produce real fixtures, capture per-page timing and memory; add real-world document corpus and a separately reviewed privacy policy for fixture data.
+The dedicated GitHub Actions workflow **Phase 10.14 Real OCR Benchmark** launches Chromium against `/engine-inspector` with the actual four committed synthetic PDF fixtures, downloads the V4 result JSON, selects the largest confirmed logical table independent of ground truth, and writes the extracted rows to `reports/raw/10.14[a-d].json`. The collector combines these into `reports/actual-results.json`, and the scorer records exact positional row/cell metrics in `reports/latest.json`. The workflow uploads all reports as a 14-day Actions artifact. A failed OCR run remains `NOT_RUN` and fails the benchmark workflow; failed/weak extraction remains visible rather than being edited to pass.
+
+This benchmark is diagnostic, not a production accuracy certification. It uses synthetic English tables only. Real documents, multilingual samples, table geometry and expected row-alignment strategies need separate acceptance thresholds. Browser OCR may need to download English language models during initialization.
+
+CSV export for confirmed V4 tables is available through the existing Engine Inspector; the download is text/columns only, with spreadsheet formula protection. The full V4 JSON should be retained when provenance matters. Do not treat CSV output as authoritative without reviewing the source PDF.
