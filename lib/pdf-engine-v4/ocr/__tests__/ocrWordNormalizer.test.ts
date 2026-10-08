@@ -45,6 +45,14 @@ describe(
     );
 
     it(
+      "removes an OCR-confused opening quote from a low-confidence serial",
+      () => {
+        expect(normalizePdfV4OcrWord({text:"“4", confidence:45}).text).toBe("4");
+        expect(normalizePdfV4OcrWord({text:"“4", confidence:95}).text).toBe("“4");
+      },
+    );
+
+    it(
       "keeps a high-confidence leading apostrophe unchanged",
       () => {
         const result =

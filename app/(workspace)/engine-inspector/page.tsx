@@ -1,5 +1,6 @@
 "use client";
 
+import EngineTableExport from "@/components/pdf/EngineTableExport";
 import ErrorCard from "@/components/pdf/ErrorCard";
 import FileCard from "@/components/pdf/FileCard";
 import FileUploader from "@/components/pdf/FileUploader";
@@ -2301,6 +2302,8 @@ candidate.columnIndex
               </p>
             </section>
           )}
+
+          <EngineTableExport tables={result.tables} />
 
           <section className="rounded-3xl border border-gray-200 bg-slate-950 p-6 text-white shadow-sm dark:border-slate-800">
             <div className="flex items-center gap-2">

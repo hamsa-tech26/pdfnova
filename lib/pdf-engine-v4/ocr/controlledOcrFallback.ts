@@ -59,6 +59,8 @@ import {
   preparePdfV4DeskewedOcrPage,
 } from "./ocrDeskewImagePreparer";
 
+import { removeOcrGridIntersectionTokens } from "./ocrGridIntersectionFilter";
+
 import {
   remapPdfV4DeskewedOcrWords,
 } from "./ocrDeskewWordRemapper";
@@ -480,8 +482,10 @@ const pages =
         (page) =>
           page.pageNumber,
       ),
-    pages:
-      pagesWithApprovedRetries,
+    pages: pagesWithApprovedRetries.map(page => ({
+      ...page,
+      words: removeOcrGridIntersectionTokens(page.words, page.renderedWidth),
+    })),
     retryRegions,
     reliability,
   };

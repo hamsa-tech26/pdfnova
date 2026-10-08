@@ -1,0 +1,52 @@
+name: Phase 10.14 Real OCR Benchmark
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "benchmarks/phase10_14/**"
+      - "e2e/phase10_14_benchmark.bench.mjs"
+      - "playwright.benchmark.config.mjs"
+      - "scripts/scorePhase10_14.mjs"
+      - "scripts/checkV4ProductionGate.mjs"
+      - "scripts/collectPhase10_14.mjs"
+      - "lib/pdf-engine-v4/**"
+      - ".github/workflows/phase10-14-benchmark.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: phase10-14-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  measure:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Execute actual V4 OCR on four committed synthetic PDFs
+        run: npx playwright test --config=playwright.benchmark.config.mjs
+      - name: Score actual extracted tables (including incomplete runs)
+        if: always()
+        run: |
+          node scripts/collectPhase10_14.mjs
+          node scripts/scorePhase10_14.mjs benchmarks/phase10_14/reports/actual-results.json
+      - name: Upload evidence and reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase10-14-v4-baseline
+          path: benchmarks/phase10_14/reports/
+          retention-days: 14
+      - name: Enforce measured Phase 10.14 OCR accuracy acceptance gate
+        run: node scripts/checkV4ProductionGate.mjs benchmarks/phase10_14/reports/latest.json

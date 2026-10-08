@@ -69,7 +69,7 @@ const directoryDescription =
   "Kukureku PDF is a free browser-based PDF workspace for merging, splitting, compressing, converting, organizing, watermarking, and unlocking PDFs. Current supported workflows process files locally on the user's device rather than uploading document contents for server-side conversion, and no Kukureku account is required.";
 
 const longDescription =
-  "Kukureku PDF is a free, privacy-first browser workspace for common document tasks. Its current public launch includes 10 tools: Merge PDF, Split PDF, Compress PDF, PDF to Word, Word to PDF, JPG to PDF, PDF to JPG, Organize PDF, Watermark PDF, and Unlock PDF. Supported workflows are designed to process files locally in the browser instead of uploading document contents to Kukureku servers for conversion. The site publishes a Trust Center, a private-processing verification guide, and a controlled launch verification report documenting practical limits and observed test results.";
+  "Kukureku PDF is a free, privacy-first browser workspace for common document tasks. Its current public launch has 30 PDF tools, alongside private workspace experiences for inspection, version tracking, local document comparison, and submission-preparation checks. Supported workflows are designed to process files locally in the browser instead of uploading document contents to Kukureku servers for conversion. The site publishes a Trust Center, a private-processing verification guide, and a controlled launch verification report documenting practical limits and observed test results.";
 
 const tags = [
   "PDF",
@@ -115,7 +115,7 @@ export default function PressPage() {
             {[
               ["Product", "Kukureku PDF"],
               ["Website", "kukureku.com"],
-              ["Current tools", "10"],
+              ["Current tools", "30"],
               ["Account required", "No"],
             ].map(([label, value]) => (
               <div

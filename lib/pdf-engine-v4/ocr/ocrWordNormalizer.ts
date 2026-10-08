@@ -21,7 +21,7 @@ export function normalizePdfV4OcrWord<
 
   const normalizedText =
     word.text.replace(
-      /^['’](?=[A-Za-z0-9])/,
+      /^['’‘“](?=[A-Za-z0-9])/,
       "",
     );
 

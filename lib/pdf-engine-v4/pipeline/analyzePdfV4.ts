@@ -12,6 +12,7 @@ import {
   type TableReliabilityV2Result,
 } from "../analysis/tableReliabilityAnalyzerV2";;
 import type { LogicalTable } from "../model/logicalTable";
+import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
 } from "../reader/pageReader";
@@ -1688,9 +1689,14 @@ if (builtTable !== null) {
     );
 }
 
-const finalTable =
+const sourceTable =
   cellRepair?.table ??
   builtTable;
+
+const finalTable =
+  sourceTable
+    ? repairPdfV4TableOcrCells(sourceTable)
+    : null;
 
   if (finalTable === null) {
   rejectedForTableBuildFailure +=
