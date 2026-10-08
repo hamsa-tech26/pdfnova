@@ -25,6 +25,8 @@ export * from "./workspace-intelligence/citedAnswers";
 export * from "./workspace-intelligence/planner";
 export * from "./workspace-intelligence/brief";
 export * from "./workspace-intelligence/privacy";
+export * from "./workspace-intelligence/privateIntelligence";
+export * from "./workspace-intelligence/factIntelligenceV2";
 
 export * from "./workflows/types";
 export * from "./workflows/createWorkflowRecipes";

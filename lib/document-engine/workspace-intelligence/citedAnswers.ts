@@ -10,6 +10,9 @@ import {
   type WorkspaceEvidenceCitation,
   type WorkspaceEvidenceIndex,
 } from "./workspaceSearch";
+import {
+  expandLocalSemanticQuery,
+} from "./privateIntelligence";
 
 export type WorkspaceCitedEvidence = {
   citation: WorkspaceEvidenceCitation;
@@ -303,7 +306,9 @@ export function answerWorkspaceQuestion(
   const results =
     searchWorkspaceEvidence(
       context.index,
-      query,
+      expandLocalSemanticQuery(
+        query,
+      ),
       5,
     );
 

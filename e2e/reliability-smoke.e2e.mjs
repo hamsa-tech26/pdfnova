@@ -1032,26 +1032,20 @@ test("Multi-document workspace records merge composition and split/extract child
   await expect(
     page.getByRole("heading", {
       name:
-        "Ask across the entire workspace",
+        "Understand clean, scanned, reordered, and evolving PDFs",
     }),
-  ).toBeVisible();
-
-  await expect(
-    page.getByText(
-      "Local Evidence Mode",
-    ),
   ).toBeVisible();
 
   await expect(
     page.getByRole("heading", {
       name:
-        "Ask a question across local PDFs",
+        "Ask across native text and local OCR evidence",
     }),
   ).toBeVisible();
 
   await page
     .getByPlaceholder(
-      "Example: What is the final contract amount?",
+      "Example: Which file contains the warranty or final contract amount?",
     )
     .fill(
       "MULTI DOCUMENT FIRST",
@@ -1080,11 +1074,75 @@ test("Multi-document workspace records merge composition and split/extract child
       .first(),
   ).toBeVisible();
 
+  await page
+    .getByRole("link", {
+      name:
+        "View evidence",
+    })
+    .first()
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Exact source evidence",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Highlighted evidence",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name:
+        "Back to Copilot",
+    })
+    .click();
+
+  await expect(
+    page.getByText(
+      "Cache reused",
+      {
+        exact: true,
+      },
+    ),
+  ).toBeVisible();
+
   await expect(
     page.getByRole("heading", {
       name:
         "Copilot Action Planner V1",
     }),
+  ).toBeVisible();
+
+  await page
+    .getByRole("link", {
+      name:
+        "Privacy controls",
+      exact: true,
+    })
+    .click();
+
+  await expect(
+    page.getByRole("heading", {
+      name:
+        "Your Workspace Intelligence stays under your control",
+    }),
+  ).toBeVisible();
+
+  await expect(
+    page.getByText(
+      "Cached states",
+      {
+        exact: true,
+      },
+    ),
   ).toBeVisible();
 });
 

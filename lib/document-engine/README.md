@@ -287,3 +287,85 @@ The planner converts verified findings into an ordered sequence of preparation a
 ### Semantic Workspace Benchmark
 
 The validation suite includes a deterministic benchmark for local retrieval accuracy, fact extraction, contradiction detection, cited answers, page-level changes, approval-only planning, Workspace Brief behavior, and privacy defaults.
+
+## Private Workspace Intelligence V2
+
+Workspace Copilot V3 expands the browser-local intelligence layer to scanned, reordered, and structurally changing PDFs.
+
+### Browser-Local OCR Intelligence V1
+
+- Reuses Kukureku's existing Tesseract OCR engine.
+- OCR runs only on text-sparse pages in Auto mode.
+- OCR page count is bounded per document.
+- OCR source and confidence are stored with page evidence.
+- OCR failures do not turn into false success; native evidence remains available.
+- English OCR is the current OCR language boundary. Native selectable Unicode text remains searchable in other languages.
+
+### Persistent Evidence Index V2 + Incremental Intelligence
+
+Each immutable workspace node can persist a private intelligence record in IndexedDB containing:
+
+- native/OCR page text;
+- page evidence chunks;
+- extracted facts;
+- source fingerprint and schema version.
+
+Unchanged nodes are reused. New or changed nodes are the only records reprocessed. Stale cache records are pruned when their workspace node disappears.
+
+### Smart Page Alignment V1
+
+Related PDFs are aligned using deterministic page-text similarity rather than page number alone. Kukureku distinguishes:
+
+- same-position pages;
+- moved pages;
+- changed pages;
+- added pages;
+- removed pages;
+- pages that cannot be text-verified.
+
+### Entity & Fact Normalization V2
+
+Amounts, dates, document numbers, names, organizations, and contact/identity patterns are normalized for comparison. Related labels such as Contract Value, Final Amount, Awarded Amount, Tender Value, and Estimated Cost can map to a common contract-amount concept.
+
+### Contradiction Intelligence V2
+
+Contradictions are evaluated after field/concept normalization across independent document identities. They remain review findings, not declarations that one value is authoritative.
+
+### Missing Information + Completeness Intelligence
+
+Kukureku detects named sections present in a comparison document but absent from the current document. A heuristic completeness score combines readable-page coverage with detected sections and table-like structure. This score never claims legal or factual completeness.
+
+### Section-Level Comparison V1
+
+Detected headings and named sections can be classified as added, removed, changed, or unchanged.
+
+### Table Intelligence V1
+
+Kukureku detects table-like multi-column rows from preserved page text, reports confidence, and compares table presence/content by page. It remains reviewable and does not claim perfect table reconstruction.
+
+### Evidence Viewer V1
+
+Copilot citations can open the exact browser-local PDF page beside a highlighted evidence snippet. The source PDF is not modified.
+
+### Workspace Intelligence Performance Controls
+
+V2 applies configurable browser budgets for:
+
+- maximum workspace states;
+- total indexed pages;
+- evidence chunks;
+- OCR pages per document.
+
+The analysis UI exposes progress and cancellation. Larger workspaces degrade by explicit coverage limits rather than silently exhausting browser memory.
+
+### Privacy Control Center V1
+
+Users can review cached intelligence statistics, enable/disable local OCR, cap OCR work, refresh storage information, and clear the intelligence cache. Cloud AI and document upload for Workspace Intelligence remain disabled.
+
+### Private Semantic Layer V1
+
+Local semantic expansion uses deterministic document concepts and synonyms on top of hashed token/bigram retrieval. No external embedding service or cloud model is required.
+
+### Workspace Intelligence Benchmark V2
+
+The benchmark now covers page reordering, OCR-labeled evidence, multilingual selectable text, fact normalization, contradiction detection, section removal, table changes, completeness boundaries, and local semantic query expansion.
