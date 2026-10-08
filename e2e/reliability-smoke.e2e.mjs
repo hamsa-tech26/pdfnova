@@ -1125,6 +1125,7 @@ test("Multi-document workspace records merge composition and split/extract child
     .getByRole("link", {
       name:
         "Privacy controls",
+      exact: true,
     })
     .click();
 
