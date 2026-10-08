@@ -10,6 +10,8 @@ import {
   removePdfV4OcrRetryGridLines,
 } from "./ocrRetryGridLineRemover";
 
+import { detectPdfV4SlantedRules, clearPdfV4SlantedRules } from "./ocrSlantedGridRuleCleaner";
+
 function loadPdfV4PrimaryOcrImage(
   imageDataUrl: string,
 ): Promise<HTMLImageElement> {
@@ -87,6 +89,14 @@ export async function preparePdfV4PrimaryOcrPages(
         canvas.width,
         canvas.height,
       );
+
+    // Perspective-tilted column rules are not reliably detected by
+    // straight-line morphological cleanup. Require four coherent lines
+    // before changing source pixels; do not synthesize text.
+    const slantedRules=detectPdfV4SlantedRules(imageData.data,imageData.width,imageData.height);
+    if(slantedRules.length>=4){
+      imageData.data.set(clearPdfV4SlantedRules(imageData.data,imageData.width,imageData.height,slantedRules));
+    }
 
     const originalPixels =
       new Uint8ClampedArray(
