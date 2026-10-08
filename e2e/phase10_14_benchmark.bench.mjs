@@ -41,6 +41,20 @@ for (const fixture of manifest.fixtures) {
     const localPath = await download.path();
     if (!localPath) throw new Error("No V4 inspection JSON was downloaded");
     const analysis = JSON.parse(await readFile(localPath, "utf8"));
+    // Exercise the actual user-facing CSV export on the same V4 extraction.
+    if ((analysis.tables ?? []).length > 0) {
+      const csvButton = page.getByRole("button", { name: /Export table 1 CSV/ });
+      await expect(csvButton).toBeVisible();
+      const csvDownloadPromise = page.waitForEvent("download");
+      await csvButton.click();
+      const csvDownload = await csvDownloadPromise;
+      expect(csvDownload.suggestedFilename()).toMatch(/\\.csv$/i);
+      const csvPath = await csvDownload.path();
+      if (!csvPath) throw new Error("V4 CSV download has no local file path");
+      const csvText = await readFile(csvPath, "utf8");
+      expect(csvText.length).toBeGreaterThan(20);
+      expect(csvText).toContain("Rani Para Scheme");
+    }
     const payload = {
       id: fixture.id,
       file: fixture.file,
