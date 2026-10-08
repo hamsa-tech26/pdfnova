@@ -22,9 +22,11 @@ export function checkRelease37Gate(report, limits=THRESHOLDS) {
     }
     ids.add(item.id);
     if (item.origin !== "real-world" ||
-        !["consented","de-identified"].includes(item.usageRights) ||
-        !/^[a-f0-9]{64}$/i.test(String(item.sha256 ?? ""))) {
-      failures.push(item.id + ": missing real-world consent/de-identification/hash evidence.");
+        !["consented","de-identified","public-domain","licensed"].includes(item.usageRights) ||
+        !/^[a-f0-9]{64}$/i.test(String(item.sha256 ?? "")) ||
+        !/^https:\/\/[^ ]+/i.test(String(item.rightsUrl ?? "")) ||
+        item.independentReferenceReview !== true) {
+      failures.push(item.id + ": missing real-world source rights, independent annotation review or hash evidence.");
     }
   }
   if (ids.size < limits.distinctRealDocuments) failures.push("Real corpus has " + ids.size + " of " + limits.distinctRealDocuments + " required documents.");
@@ -38,7 +40,9 @@ export function checkRelease37Gate(report, limits=THRESHOLDS) {
         !Number.isFinite(metric.structurePct) || metric.structurePct < limits.structurePct ||
         !Number.isInteger(metric.documentCount) || metric.documentCount < limits.perCategory ||
         metric.cellPct > 100 || metric.rowPct > 100 || metric.structurePct > 100 ||
-        (["scanned","hindi","bengali"].includes(category) && metric.actualOcrAttempted !== true)) {
+        (["scanned","hindi","bengali"].includes(category) && metric.actualOcrAttempted !== true) ||
+        metric.scoredFromFiles !== true || metric.groundTruthVerified !== true ||
+        !/^[a-f0-9]{64}$/i.test(String(metric.evidenceDigest ?? ""))) {
       failures.push(category + ": separately measured cell, row and structure accuracy missing or insufficient.");
     }
   }
