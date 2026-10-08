@@ -8,7 +8,8 @@
     "start": "next start",
     "lint": "eslint",
     "test": "vitest run",
-    "check:tools": "node scripts/checkToolRegistry.mjs"
+    "check:tools": "node scripts/checkToolRegistry.mjs",
+    "benchmark:ocr:baseline": "node scripts/scorePhase10_14.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
