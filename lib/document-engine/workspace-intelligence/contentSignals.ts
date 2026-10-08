@@ -3,6 +3,8 @@ export type PdfPageContentSignal = {
   text: string;
   normalizedText: string;
   selectableTextChars: number;
+  source?: "native" | "ocr-tesseract";
+  confidence?: number;
 };
 
 export type PdfContentSignal = {
@@ -302,17 +304,27 @@ export async function createPdfContentSignal(
             "string"
         ) {
           fragments.push(
-            item.str,
+            item.str +
+              (
+                "hasEOL" in item &&
+                item.hasEOL
+                  ? "\n"
+                  : " "
+              ),
           );
         }
       }
 
       pageTexts.push(
         fragments
-          .join(" ")
+          .join("")
           .replace(
-            /\s+/g,
+            /[ \t]+/g,
             " ",
+          )
+          .replace(
+            / *\n */g,
+            "\n",
           )
           .trim(),
       );
@@ -338,6 +350,8 @@ export async function createPdfContentSignal(
           normalizedText,
           selectableTextChars:
             normalizedText.length,
+          source:
+            "native" as const,
         };
       },
     );

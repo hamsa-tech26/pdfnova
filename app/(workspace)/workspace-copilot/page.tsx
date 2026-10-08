@@ -1,10 +1,14 @@
 "use client";
 
 import {
+  DEFAULT_PRIVATE_WORKSPACE_INTELLIGENCE_SETTINGS,
   DEFAULT_WORKSPACE_INTELLIGENCE_PRIVACY_POLICY,
+  alignPdfPages,
   answerWorkspaceQuestion,
   buildWorkspaceEvidenceIndex,
   comparePdfContentSignals,
+  compareWorkspaceSections,
+  compareWorkspaceTableSignals,
   createDocumentArtifact,
   createPageLevelDiff,
   createPdfContentSignal,
@@ -13,14 +17,24 @@ import {
   createWorkspaceBrief,
   createWorkspaceCopilotAnswers,
   createWorkspaceIntelligenceReport,
-  detectWorkspaceFactContradictions,
+  detectMissingInformation,
+  detectWorkspaceConceptContradictionsV2,
+  enrichPdfContentSignalWithLocalOcr,
   extractWorkspaceFacts,
+  extractWorkspaceSections,
+  extractWorkspaceTableSignals,
   inspectPdfArtifact,
+  mergeEvidenceIndexes,
   scanSensitiveText,
+  scoreDocumentCompleteness,
   selectWorkspaceCopilotComparisonTarget,
   verifyWorkspaceRelationships,
+  type DocumentCompletenessScore,
+  type PageLevelDiffReport,
   type PdfContentSignal,
-  type SafeSharePlan,
+  type PrivateWorkspaceAnalysisProgress,
+  type SectionComparisonFinding,
+  type SmartPageAlignmentReport,
   type WorkspaceActionPlan,
   type WorkspaceBrief,
   type WorkspaceCitedAnswer,
@@ -30,7 +44,9 @@ import {
   type WorkspaceEvidenceIndex,
   type WorkspaceFact,
   type WorkspaceFactContradiction,
-  type PageLevelDiffReport,
+  type WorkspaceTableComparisonFinding,
+  type WorkspaceTableSignal,
+  type MissingInformationFinding,
 } from "@/lib/document-engine";
 import {
   buildWorkspaceHandoffHref,
@@ -42,22 +58,29 @@ import {
   type WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
 import {
-  AlertTriangle,
+  getWorkspaceIntelligenceCacheRecord,
+  loadWorkspaceIntelligenceSettings,
+  pruneWorkspaceIntelligenceCache,
+  saveWorkspaceIntelligenceCacheRecord,
+} from "@/lib/storage/workspaceIntelligenceCache";
+import {
   ArrowRight,
   Bot,
-  CheckCircle2,
-  CircleHelp,
+  Database,
   FileSearch,
   LoaderCircle,
+  ScanText,
   Search,
   ShieldCheck,
   Sparkles,
+  Square,
 } from "lucide-react";
 import Link from "next/link";
 import {
   type FormEvent,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from "react";
 import { toast } from "sonner";
@@ -76,47 +99,67 @@ const questionLabels: Record<
     "What should I do next?",
 };
 
-type SemanticState = {
+type PrivateSemanticState = {
   active: WorkspaceFileSummary | null;
   summaries: WorkspaceFileSummary[];
   answers: WorkspaceCopilotAnswer[];
   index: WorkspaceEvidenceIndex;
   facts: WorkspaceFact[];
   contradictions: WorkspaceFactContradiction[];
-  safeShare: SafeSharePlan | null;
+  safeShare: ReturnType<
+    typeof createSafeSharePlan
+  > | null;
   comparison: WorkspaceCopilotComparisonContext | null;
   diff: PageLevelDiffReport | null;
+  alignment: SmartPageAlignmentReport | null;
+  sections: SectionComparisonFinding[];
+  missing: MissingInformationFinding[];
+  tables: WorkspaceTableSignal[];
+  tableComparison: WorkspaceTableComparisonFinding[];
+  completeness: {
+    current: DocumentCompletenessScore | null;
+    comparison: DocumentCompletenessScore | null;
+  };
   brief: WorkspaceBrief;
   plan: WorkspaceActionPlan;
+  cacheHits: number;
+  cacheMisses: number;
+  ocrPages: number;
 };
 
-function emptyIndex(): WorkspaceEvidenceIndex {
-  return {
-    pages: [],
-    chunks: [],
-    indexedNodeIds: [],
-    skippedNodeIds: [],
-    coverage: {
-      mode:
-        "browser-local-selectable-text",
-      maxNodes: 10,
-      maxPages: 160,
-      maxChunks: 480,
-      pageCount: 0,
-      chunkCount: 0,
-      truncated: false,
-      notes: [],
-    },
-  };
+function buildEvidenceHref(
+  evidence: WorkspaceCitedAnswer["evidence"][number],
+  query: string,
+) {
+  const params =
+    new URLSearchParams({
+      workspaceFile:
+        evidence.citation
+          .nodeId,
+      page:
+        String(
+          evidence.citation
+            .pageNumber,
+        ),
+      evidence:
+        evidence.snippet,
+      q: query,
+    });
+
+  return (
+    "/evidence-viewer?" +
+    params.toString()
+  );
 }
 
 export default function WorkspaceCopilotPage() {
   const [
     state,
     setState,
-  ] = useState<SemanticState | null>(
-    null,
-  );
+  ] =
+    useState<PrivateSemanticState | null>(
+      null,
+    );
   const [
     selectedQuestion,
     setSelectedQuestion,
@@ -124,16 +167,15 @@ export default function WorkspaceCopilotPage() {
     useState<WorkspaceCopilotQuestion>(
       "next-step",
     );
-  const [
-    query,
-    setQuery,
-  ] = useState("");
+  const [query, setQuery] =
+    useState("");
   const [
     queryAnswer,
     setQueryAnswer,
-  ] = useState<WorkspaceCitedAnswer | null>(
-    null,
-  );
+  ] =
+    useState<WorkspaceCitedAnswer | null>(
+      null,
+    );
   const [
     loading,
     setLoading,
@@ -142,26 +184,63 @@ export default function WorkspaceCopilotPage() {
     error,
     setError,
   ] = useState("");
+  const [
+    progress,
+    setProgress,
+  ] =
+    useState<PrivateWorkspaceAnalysisProgress | null>(
+      null,
+    );
+  const abortRef =
+    useRef<AbortController | null>(
+      null,
+    );
 
   useEffect(() => {
+    const controller =
+      new AbortController();
+    abortRef.current =
+      controller;
     let cancelled = false;
 
     async function analyze() {
       setLoading(true);
       setError("");
+      setProgress({
+        phase:
+          "native-text",
+        completed: 0,
+        total: 1,
+        message:
+          "Preparing private workspace intelligence.",
+      });
 
       try {
+        const settings =
+          loadWorkspaceIntelligenceSettings(
+            DEFAULT_PRIVATE_WORKSPACE_INTELLIGENCE_SETTINGS,
+          );
         const [
           summaries,
           active,
-        ] = await Promise.all([
-          listWorkspaceFileSummaries(),
-          getActiveWorkspaceFileSummary(),
-        ]);
+        ] =
+          await Promise.all([
+            listWorkspaceFileSummaries(),
+            getActiveWorkspaceFileSummary(),
+          ]);
+
+        await pruneWorkspaceIntelligenceCache(
+          summaries.map(
+            (summary) =>
+              summary.id,
+          ),
+        );
+
         const report =
           createWorkspaceIntelligenceReport(
             summaries,
-            active?.id ?? null,
+            active?.id ??
+              null,
           );
         const verification =
           verifyWorkspaceRelationships(
@@ -171,9 +250,9 @@ export default function WorkspaceCopilotPage() {
           selectWorkspaceCopilotComparisonTarget(
             summaries,
             report,
-            active?.id ?? null,
+            active?.id ??
+              null,
           );
-
         const priorityIds = [
           active?.id,
           target?.targetNodeId,
@@ -183,65 +262,124 @@ export default function WorkspaceCopilotPage() {
           ): value is string =>
             Boolean(value),
         );
-        const ordered = [
-          ...priorityIds
-            .map(
-              (id) =>
-                summaries.find(
-                  (summary) =>
-                    summary.id ===
-                    id,
+        const ordered =
+          [
+            ...priorityIds
+              .map(
+                (id) =>
+                  summaries.find(
+                    (summary) =>
+                      summary.id ===
+                      id,
+                  ),
+              )
+              .filter(
+                (
+                  value,
+                ): value is WorkspaceFileSummary =>
+                  Boolean(value),
+              ),
+            ...summaries.filter(
+              (summary) =>
+                !priorityIds.includes(
+                  summary.id,
                 ),
-            )
+            ),
+          ]
             .filter(
               (
-                value,
-              ): value is WorkspaceFileSummary =>
-                Boolean(value),
-            ),
-          ...summaries.filter(
-            (summary) =>
-              !priorityIds.includes(
-                summary.id,
-              ),
-          ),
-        ];
-        const uniqueOrdered =
-          ordered.filter(
-            (
-              summary,
-              index,
-              all,
-            ) =>
-              all.findIndex(
-                (candidate) =>
-                  candidate.id ===
-                  summary.id,
-              ) === index,
-          );
-        const signalInputs: Array<{
-          node: WorkspaceFileSummary;
-          signal: PdfContentSignal;
-        }> = [];
+                summary,
+                index,
+                all,
+              ) =>
+                all.findIndex(
+                  (
+                    candidate,
+                  ) =>
+                    candidate.id ===
+                    summary.id,
+                ) === index,
+            )
+            .slice(
+              0,
+              settings.maxWorkspaceNodes,
+            );
+
         const signals =
           new Map<
             string,
             PdfContentSignal
           >();
-        let indexedPages = 0;
+        const partialIndexes:
+          WorkspaceEvidenceIndex[] =
+          [];
+        const allFacts:
+          WorkspaceFact[] =
+          [];
+        let cacheHits = 0;
+        let cacheMisses = 0;
+        let ocrPages = 0;
 
         for (
-          const summary of uniqueOrdered.slice(
-            0,
-            10,
-          )
+          let index = 0;
+          index <
+          ordered.length;
+          index += 1
         ) {
           if (
-            indexedPages >= 160
+            controller.signal
+              .aborted
           ) {
-            break;
+            throw new DOMException(
+              "Workspace intelligence analysis was cancelled.",
+              "AbortError",
+            );
           }
 
+          const summary =
+            ordered[index];
+          setProgress({
+            phase:
+              "native-text",
+            completed:
+              index,
+            total:
+              ordered.length,
+            message:
+              "Checking cached intelligence for " +
+              summary.name,
+          });
+
+          const cached =
+            await getWorkspaceIntelligenceCacheRecord(
+              summary,
+            );
+
+          if (cached) {
+            cacheHits += 1;
+            signals.set(
+              summary.id,
+              cached.signal,
+            );
+            partialIndexes.push(
+              cached.index,
+            );
+            allFacts.push(
+              ...cached.facts,
+            );
+            ocrPages +=
+              (
+                cached.signal
+                  .pages ?? []
+              ).filter(
+                (page) =>
+                  page.source ===
+                  "ocr-tesseract",
+              ).length;
+            continue;
+          }
+
+          cacheMisses += 1;
           const file =
             await getWorkspaceFile(
               summary.id,
@@ -251,41 +389,122 @@ export default function WorkspaceCopilotPage() {
             continue;
           }
 
-          try {
-            const signal =
-              await createPdfContentSignal(
-                file,
-              );
-
-            signalInputs.push({
-              node: summary,
-              signal,
-            });
-            signals.set(
-              summary.id,
-              signal,
+          let signal =
+            await createPdfContentSignal(
+              file,
             );
-            indexedPages +=
-              signal.pageCount;
-          } catch {
-            // A single unsupported or damaged file must not block the workspace brief.
-          }
+
+          const enriched =
+            await enrichPdfContentSignalWithLocalOcr(
+              file,
+              signal,
+              {
+                mode:
+                  settings.ocrMode,
+                maxPages:
+                  settings.maxOcrPagesPerDocument,
+                abortSignal:
+                  controller.signal,
+                onProgress:
+                  setProgress,
+              },
+            );
+
+          signal =
+            enriched.signal;
+          ocrPages +=
+            enriched.coverage
+              .recognizedPages
+              .length;
+
+          const partialIndex =
+            buildWorkspaceEvidenceIndex(
+              [
+                {
+                  node:
+                    summary,
+                  signal,
+                },
+              ],
+              {
+                maxNodes: 1,
+                maxPages:
+                  Math.min(
+                    Math.max(
+                      signal.pageCount,
+                      1,
+                    ),
+                    settings.maxWorkspacePages,
+                  ),
+                maxChunks:
+                  Math.min(
+                    Math.max(
+                      signal.pageCount *
+                        6,
+                      12,
+                    ),
+                    settings.maxWorkspaceChunks,
+                  ),
+              },
+            );
+          const facts =
+            extractWorkspaceFacts(
+              partialIndex,
+            );
+
+          signals.set(
+            summary.id,
+            signal,
+          );
+          partialIndexes.push(
+            partialIndex,
+          );
+          allFacts.push(
+            ...facts,
+          );
+
+          await saveWorkspaceIntelligenceCacheRecord(
+            summary,
+            {
+              signal,
+              index:
+                partialIndex,
+              facts,
+            },
+          );
         }
 
-        const index =
-          buildWorkspaceEvidenceIndex(
-            signalInputs,
-          );
-        const facts =
-          extractWorkspaceFacts(
-            index,
+        setProgress({
+          phase: "index",
+          completed:
+            ordered.length,
+          total:
+            ordered.length,
+          message:
+            "Composing persistent evidence records into the workspace index.",
+        });
+
+        const evidenceIndex =
+          mergeEvidenceIndexes(
+            partialIndexes,
+            {
+              maxNodes:
+                settings.maxWorkspaceNodes,
+              maxPages:
+                settings.maxWorkspacePages,
+              maxChunks:
+                settings.maxWorkspaceChunks,
+            },
           );
         const contradictions =
-          detectWorkspaceFactContradictions(
-            facts,
+          detectWorkspaceConceptContradictionsV2(
+            allFacts,
           );
+
         let safeShare:
-          | SafeSharePlan
+          | ReturnType<
+              typeof createSafeSharePlan
+            >
           | null = null;
 
         if (active) {
@@ -321,6 +540,17 @@ export default function WorkspaceCopilotPage() {
                 scanSensitiveText(
                   activeSignal.rawText ??
                     "",
+                  {
+                    ocrIncluded:
+                      (
+                        activeSignal.pages ??
+                        []
+                      ).some(
+                        (page) =>
+                          page.source ===
+                          "ocr-tesseract",
+                      ),
+                  },
                 );
 
               safeShare =
@@ -342,15 +572,45 @@ export default function WorkspaceCopilotPage() {
         let diff:
           | PageLevelDiffReport
           | null = null;
+        let alignment:
+          | SmartPageAlignmentReport
+          | null = null;
+        let sections:
+          SectionComparisonFinding[] =
+          [];
+        let missing:
+          MissingInformationFinding[] =
+          [];
+        let tableComparison:
+          WorkspaceTableComparisonFinding[] =
+          [];
+        let comparisonCompleteness:
+          DocumentCompletenessScore | null =
+          null;
+        const activeSignal =
+          active
+            ? signals.get(
+                active.id,
+              ) ?? null
+            : null;
+        const activeTables =
+          activeSignal
+            ? extractWorkspaceTableSignals(
+                activeSignal,
+              )
+            : [];
+        const activeCompleteness =
+          activeSignal
+            ? scoreDocumentCompleteness(
+                activeSignal,
+              )
+            : null;
 
         if (
           active &&
-          target
+          target &&
+          activeSignal
         ) {
-          const activeSignal =
-            signals.get(
-              active.id,
-            );
           const targetSignal =
             signals.get(
               target.targetNodeId,
@@ -363,7 +623,6 @@ export default function WorkspaceCopilotPage() {
             );
 
           if (
-            activeSignal &&
             targetSignal &&
             targetSummary
           ) {
@@ -384,6 +643,38 @@ export default function WorkspaceCopilotPage() {
               createPageLevelDiff(
                 targetSignal,
                 activeSignal,
+              );
+            alignment =
+              alignPdfPages(
+                targetSignal,
+                activeSignal,
+              );
+            sections =
+              compareWorkspaceSections(
+                extractWorkspaceSections(
+                  targetSignal,
+                ),
+                extractWorkspaceSections(
+                  activeSignal,
+                ),
+              );
+            missing =
+              detectMissingInformation(
+                targetSignal,
+                activeSignal,
+              );
+            const targetTables =
+              extractWorkspaceTableSignals(
+                targetSignal,
+              );
+            tableComparison =
+              compareWorkspaceTableSignals(
+                targetTables,
+                activeTables,
+              );
+            comparisonCompleteness =
+              scoreDocumentCompleteness(
+                targetSignal,
               );
           }
         }
@@ -423,8 +714,7 @@ export default function WorkspaceCopilotPage() {
               report,
               verification,
               contradictions,
-              evidenceIndex:
-                index,
+              evidenceIndex,
               safeShare,
               actionPlan:
                 plan,
@@ -436,25 +726,65 @@ export default function WorkspaceCopilotPage() {
             active,
             summaries,
             answers,
-            index,
-            facts,
+            index:
+              evidenceIndex,
+            facts:
+              allFacts,
             contradictions,
             safeShare,
             comparison,
             diff,
+            alignment,
+            sections,
+            missing,
+            tables:
+              activeTables,
+            tableComparison,
+            completeness: {
+              current:
+                activeCompleteness,
+              comparison:
+                comparisonCompleteness,
+            },
             brief,
             plan,
+            cacheHits,
+            cacheMisses,
+            ocrPages,
+          });
+          setProgress({
+            phase:
+              "complete",
+            completed:
+              ordered.length,
+            total:
+              ordered.length,
+            message:
+              "Private Workspace Intelligence is ready.",
           });
         }
       } catch (
         analysisError
       ) {
-        if (!cancelled) {
+        if (
+          analysisError instanceof
+            DOMException &&
+          analysisError.name ===
+            "AbortError"
+        ) {
+          if (!cancelled) {
+            setError(
+              "Workspace intelligence analysis was cancelled.",
+            );
+          }
+        } else if (
+          !cancelled
+        ) {
           setError(
             analysisError instanceof
               Error
               ? analysisError.message
-              : "Semantic Workspace Intelligence could not analyze the browser-local workspace.",
+              : "Private Workspace Intelligence could not analyze the browser-local workspace.",
           );
         }
       } finally {
@@ -468,6 +798,7 @@ export default function WorkspaceCopilotPage() {
 
     return () => {
       cancelled = true;
+      controller.abort();
     };
   }, []);
 
@@ -505,6 +836,61 @@ export default function WorkspaceCopilotPage() {
     }
   }
 
+  function activeDiffContext() {
+    if (
+      !state?.active ||
+      !state.comparison ||
+      !state.diff
+    ) {
+      return null;
+    }
+
+    const targetSummary =
+      state.summaries.find(
+        (summary) =>
+          summary.id ===
+          state.comparison
+            ?.targetNodeId,
+      );
+
+    return {
+      otherName:
+        state.comparison
+          .targetName,
+      report:
+        state.diff,
+      citations: [
+        {
+          nodeId:
+            state.active.id,
+          documentId:
+            state.active.documentId,
+          fileName:
+            state.active.name,
+          version:
+            state.active.version,
+          pageNumber: 1,
+        },
+        {
+          nodeId:
+            state.comparison
+              .targetNodeId,
+          documentId:
+            targetSummary
+              ?.documentId ??
+            "",
+          fileName:
+            state.comparison
+              .targetName,
+          version:
+            targetSummary
+              ?.version ?? 1,
+          pageNumber: 1,
+        },
+      ] as const,
+    };
+  }
+
   function runQuery(
     event?: FormEvent,
   ) {
@@ -513,60 +899,6 @@ export default function WorkspaceCopilotPage() {
     if (!state) {
       return;
     }
-
-    const activeDiff =
-      state.active &&
-      state.comparison &&
-      state.diff
-        ? {
-            otherName:
-              state.comparison
-                .targetName,
-            report:
-              state.diff,
-            citations: [
-              {
-                nodeId:
-                  state.active.id,
-                documentId:
-                  state.active
-                    .documentId,
-                fileName:
-                  state.active.name,
-                version:
-                  state.active
-                    .version,
-                pageNumber: 1,
-              },
-              {
-                nodeId:
-                  state.comparison
-                    .targetNodeId,
-                documentId:
-                  state.summaries.find(
-                    (summary) =>
-                      summary.id ===
-                      state.comparison
-                        ?.targetNodeId,
-                  )
-                    ?.documentId ??
-                  "",
-                fileName:
-                  state.comparison
-                    .targetName,
-                version:
-                  state.summaries.find(
-                    (summary) =>
-                      summary.id ===
-                      state.comparison
-                        ?.targetNodeId,
-                  )
-                    ?.version ?? 1,
-                pageNumber: 1,
-              },
-            ] as const,
-          }
-        : null;
 
     setQueryAnswer(
       answerWorkspaceQuestion(
@@ -578,7 +910,8 @@ export default function WorkspaceCopilotPage() {
             state.facts,
           contradictions:
             state.contradictions,
-          activeDiff,
+          activeDiff:
+            activeDiffContext(),
         },
       ),
     );
@@ -587,33 +920,49 @@ export default function WorkspaceCopilotPage() {
   function actionHref(
     step: WorkspaceActionPlan["steps"][number],
   ) {
-    if (
-      !step.route
-    ) {
+    if (!step.route) {
       return null;
     }
 
-    if (
-      step.targetNodeId
-    ) {
-      return buildWorkspaceHandoffHref(
-        step.route,
-        step.targetNodeId,
-      );
-    }
-
-    return step.route;
+    return step.targetNodeId
+      ? buildWorkspaceHandoffHref(
+          step.route,
+          step.targetNodeId,
+        )
+      : step.route;
   }
 
   if (loading) {
     return (
       <main className="mx-auto max-w-6xl px-4 py-8">
-        <div className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-5 text-sm font-semibold text-slate-600 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-300">
-          <LoaderCircle
-            size={19}
-            className="animate-spin"
-          />
-          Building the browser-local semantic evidence index…
+        <div className="rounded-3xl border border-violet-200 bg-white p-6 shadow-sm dark:border-violet-900 dark:bg-slate-900">
+          <div className="flex items-center gap-3">
+            <LoaderCircle
+              size={20}
+              className="animate-spin text-violet-600"
+            />
+            <div>
+              <p className="font-extrabold text-slate-950 dark:text-white">
+                Building Private Workspace Intelligence V2
+              </p>
+              <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                {progress?.message ??
+                  "Loading local evidence…"}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() =>
+              abortRef.current?.abort()
+            }
+            className="mt-4 inline-flex items-center gap-2 rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-bold text-slate-700 dark:border-slate-700 dark:text-slate-200"
+          >
+            <Square
+              size={14}
+            />
+            Cancel analysis
+          </button>
         </div>
       </main>
     );
@@ -639,37 +988,62 @@ export default function WorkspaceCopilotPage() {
         <div className="bg-gradient-to-br from-violet-50 via-blue-50 to-cyan-50 p-6 dark:from-violet-950/30 dark:via-blue-950/20 dark:to-cyan-950/20 sm:p-8">
           <div className="flex flex-col justify-between gap-5 md:flex-row md:items-start">
             <div className="flex items-start gap-4">
-              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white shadow-sm">
+              <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-violet-600 text-white">
                 <Bot
                   size={24}
                 />
               </div>
               <div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">
-                    Workspace Copilot V2
-                  </p>
-                  <span className="rounded-full bg-white px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-wide text-violet-700 shadow-sm dark:bg-slate-950 dark:text-violet-300">
-                    Semantic Workspace Intelligence V1
-                  </span>
-                </div>
+                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-violet-700 dark:text-violet-300">
+                  Workspace Copilot V3 · Private Workspace Intelligence V2
+                </p>
                 <h1 className="mt-2 text-3xl font-black tracking-tight text-slate-950 dark:text-white">
-                  Ask across the entire workspace
+                  Understand clean, scanned, reordered, and evolving PDFs
                 </h1>
                 <p className="mt-3 max-w-3xl text-sm leading-7 text-slate-600 dark:text-slate-400">
-                  Search page-level evidence, extract structured facts, identify labeled conflicts, review page-level changes, and plan safe next actions. Core intelligence stays browser-local.
+                  Kukureku now reuses persistent browser intelligence, OCRs text-sparse pages locally, aligns moved pages, compares sections and tables, normalizes facts, detects missing information, and keeps every evidence path inspectable.
                 </p>
               </div>
             </div>
-
-            <div className="inline-flex items-center gap-2 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
+            <Link
+              href="/workspace-privacy"
+              className="inline-flex items-center gap-2 rounded-xl border border-emerald-200 bg-white px-4 py-2.5 text-sm font-bold text-emerald-700 dark:border-emerald-900 dark:bg-slate-950 dark:text-emerald-300"
+            >
               <ShieldCheck
-                size={17}
+                size={16}
               />
-              Local Evidence Mode
-            </div>
+              Privacy controls
+            </Link>
           </div>
         </div>
+      </section>
+
+      <section className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <Metric
+          label="Cache reused"
+          value={String(
+            state.cacheHits,
+          )}
+        />
+        <Metric
+          label="Newly analyzed"
+          value={String(
+            state.cacheMisses,
+          )}
+        />
+        <Metric
+          label="Local OCR pages"
+          value={String(
+            state.ocrPages,
+          )}
+        />
+        <Metric
+          label="Evidence pages"
+          value={String(
+            state.index.coverage
+              .pageCount,
+          )}
+        />
       </section>
 
       <section className="mt-6 rounded-3xl border border-blue-200 bg-white p-6 shadow-sm dark:border-blue-900 dark:bg-slate-900">
@@ -680,14 +1054,13 @@ export default function WorkspaceCopilotPage() {
           />
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
-              Workspace Brief V1
+              Workspace Brief V2
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">
               {state.brief.headline}
             </h2>
           </div>
         </div>
-
         <div className="mt-5 grid gap-3 md:grid-cols-3">
           {state.brief.summary.map(
             (item) => (
@@ -700,26 +1073,6 @@ export default function WorkspaceCopilotPage() {
             ),
           )}
         </div>
-
-        {state.brief.attention.length >
-          0 && (
-          <div className="mt-5 space-y-2">
-            {state.brief.attention.map(
-              (item) => (
-                <div
-                  key={item}
-                  className="flex items-start gap-2 rounded-xl border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950/20 dark:text-amber-200"
-                >
-                  <AlertTriangle
-                    size={17}
-                    className="mt-0.5 shrink-0"
-                  />
-                  {item}
-                </div>
-              ),
-            )}
-          </div>
-        )}
       </section>
 
       <section className="mt-6 rounded-3xl border border-violet-200 bg-white p-6 shadow-sm dark:border-violet-900 dark:bg-slate-900">
@@ -730,10 +1083,10 @@ export default function WorkspaceCopilotPage() {
           />
           <div>
             <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-violet-600 dark:text-violet-300">
-              Evidence-Cited Copilot V2
+              Private Semantic Layer V1
             </p>
             <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">
-              Ask a question across local PDFs
+              Ask across native text and local OCR evidence
             </h2>
           </div>
         </div>
@@ -749,7 +1102,7 @@ export default function WorkspaceCopilotPage() {
                 event.target.value,
               )
             }
-            placeholder="Example: What is the final contract amount?"
+            placeholder="Example: Which file contains the warranty or final contract amount?"
             className="min-h-12 flex-1 rounded-xl border border-slate-300 bg-white px-4 text-sm text-slate-950 outline-none focus:border-violet-500 dark:border-slate-700 dark:bg-slate-950 dark:text-white"
           />
           <button
@@ -759,94 +1112,6 @@ export default function WorkspaceCopilotPage() {
             Search evidence
           </button>
         </form>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          {[
-            "What changed?",
-            "Are there conflicting amounts or dates?",
-            "What is the final amount?",
-            "Which document mentions payment terms?",
-          ].map(
-            (prompt) => (
-              <button
-                key={prompt}
-                type="button"
-                aria-label={
-                  "Search evidence: " +
-                  prompt
-                }
-                onClick={() => {
-                  setQuery(prompt);
-                  setQueryAnswer(
-                    answerWorkspaceQuestion(
-                      prompt,
-                      {
-                        index:
-                          state.index,
-                        facts:
-                          state.facts,
-                        contradictions:
-                          state.contradictions,
-                        activeDiff:
-                          state.active &&
-                          state.comparison &&
-                          state.diff
-                            ? {
-                                otherName:
-                                  state
-                                    .comparison
-                                    .targetName,
-                                report:
-                                  state.diff,
-                                citations: [
-                                  {
-                                    nodeId:
-                                      state.active.id,
-                                    documentId:
-                                      state.active.documentId,
-                                    fileName:
-                                      state.active.name,
-                                    version:
-                                      state.active.version,
-                                    pageNumber:
-                                      1,
-                                  },
-                                  {
-                                    nodeId:
-                                      state.comparison.targetNodeId,
-                                    documentId:
-                                      state.summaries.find(
-                                        (summary) =>
-                                          summary.id ===
-                                          state.comparison?.targetNodeId,
-                                      )?.documentId ??
-                                      "",
-                                    fileName:
-                                      state.comparison.targetName,
-                                    version:
-                                      state.summaries.find(
-                                        (summary) =>
-                                          summary.id ===
-                                          state.comparison?.targetNodeId,
-                                      )?.version ??
-                                      1,
-                                    pageNumber:
-                                      1,
-                                  },
-                                ],
-                              }
-                            : null,
-                      },
-                    ),
-                  );
-                }}
-                className="rounded-full border border-violet-200 bg-violet-50 px-3 py-1.5 text-xs font-bold text-violet-700 hover:bg-violet-100 dark:border-violet-900 dark:bg-violet-950/20 dark:text-violet-300"
-              >
-                {prompt}
-              </button>
-            ),
-          )}
-        </div>
 
         {queryAnswer && (
           <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-800 dark:bg-slate-950">
@@ -859,7 +1124,6 @@ export default function WorkspaceCopilotPage() {
             <p className="mt-2 text-sm leading-7 text-slate-600 dark:text-slate-400">
               {queryAnswer.answer}
             </p>
-
             {queryAnswer.evidence.length >
               0 && (
               <div className="mt-5 space-y-3">
@@ -901,15 +1165,16 @@ export default function WorkspaceCopilotPage() {
                           }
                         </p>
                         <Link
-                          href={buildWorkspaceHandoffHref(
-                            "/document-inspector",
-                            evidence
-                              .citation
-                              .nodeId,
+                          href={buildEvidenceHref(
+                            evidence,
+                            query,
                           )}
-                          className="text-xs font-bold text-blue-600 hover:underline dark:text-blue-300"
+                          className="inline-flex items-center gap-1 text-xs font-bold text-blue-600 hover:underline dark:text-blue-300"
                         >
-                          Inspect source
+                          <FileSearch
+                            size={13}
+                          />
+                          View evidence
                         </Link>
                       </div>
                       <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
@@ -959,21 +1224,13 @@ export default function WorkspaceCopilotPage() {
                     : "border-slate-200 bg-white hover:border-violet-300 dark:border-slate-800 dark:bg-slate-900")
                 }
               >
-                <div className="flex items-start justify-between gap-3">
-                  <p className="font-extrabold text-slate-950 dark:text-white">
-                    {
-                      questionLabels[
-                        question
-                      ]
-                    }
-                  </p>
-                  <StatusIcon
-                    status={
-                      answer?.status ??
-                      "not-verified"
-                    }
-                  />
-                </div>
+                <p className="font-extrabold text-slate-950 dark:text-white">
+                  {
+                    questionLabels[
+                      question
+                    ]
+                  }
+                </p>
                 <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
                   {answer?.title ??
                     "Evidence not available"}
@@ -986,14 +1243,7 @@ export default function WorkspaceCopilotPage() {
 
       {selectedAnswer && (
         <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-slate-500">
-            {
-              questionLabels[
-                selectedAnswer.question
-              ]
-            }
-          </p>
-          <h2 className="mt-2 text-2xl font-black text-slate-950 dark:text-white">
+          <h2 className="text-2xl font-black text-slate-950 dark:text-white">
             {
               selectedAnswer.title
             }
@@ -1003,35 +1253,6 @@ export default function WorkspaceCopilotPage() {
               selectedAnswer.answer
             }
           </p>
-
-          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {selectedAnswer.evidence.map(
-              (
-                evidence,
-                index,
-              ) => (
-                <div
-                  key={
-                    evidence.label +
-                    index
-                  }
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
-                    {
-                      evidence.label
-                    }
-                  </p>
-                  <p className="mt-2 text-sm font-extrabold text-slate-950 dark:text-white">
-                    {
-                      evidence.value
-                    }
-                  </p>
-                </div>
-              ),
-            )}
-          </div>
-
           <div className="mt-5">
             <CopilotAction
               answer={
@@ -1049,131 +1270,165 @@ export default function WorkspaceCopilotPage() {
       )}
 
       <section className="mt-6 grid gap-6 lg:grid-cols-2">
-        <div className="rounded-3xl border border-amber-200 bg-white p-6 shadow-sm dark:border-amber-900 dark:bg-slate-900">
-          <h2 className="text-xl font-black text-slate-950 dark:text-white">
-            Contradiction & Conflict Detection V1
-          </h2>
-          {state.contradictions
-            .length === 0 ? (
-            <p className="mt-4 text-sm leading-6 text-slate-600 dark:text-slate-400">
-              No labeled amount, date, or document-number conflict was found across indexed documents.
-            </p>
-          ) : (
-            <div className="mt-4 space-y-3">
-              {state.contradictions
-                .slice(0, 5)
-                .map(
-                  (conflict) => (
-                    <div
-                      key={
-                        conflict.id
-                      }
-                      className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
-                    >
-                      <p className="font-extrabold text-slate-950 dark:text-white">
-                        {
-                          conflict.label
-                        }
-                      </p>
-                      <p className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-400">
-                        {
-                          conflict.explanation
-                        }
-                      </p>
-                      <p className="mt-2 text-xs font-bold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-                        {
-                          conflict.facts.length
-                        }{" "}
-                        cited value(s)
-                      </p>
-                    </div>
-                  ),
-                )}
-            </div>
-          )}
-        </div>
-
-        <div className="rounded-3xl border border-blue-200 bg-white p-6 shadow-sm dark:border-blue-900 dark:bg-slate-900">
-          <h2 className="text-xl font-black text-slate-950 dark:text-white">
-            Document Facts Extraction V1
-          </h2>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
-            {state.facts.length} structured fact(s) extracted from selectable text.
-          </p>
-          <div className="mt-4 flex flex-wrap gap-2">
-            {[
-              ...new Set(
-                state.facts.map(
-                  (fact) =>
-                    fact.kind,
-                ),
+        <InsightCard
+          title="Smart Page Alignment V1"
+          icon="pages"
+          rows={[
+            "Same position: " +
+              (state.alignment
+                ?.summary
+                .samePosition ??
+                0),
+            "Moved: " +
+              (state.alignment
+                ?.summary.moved ??
+                0),
+            "Changed: " +
+              (state.alignment
+                ?.summary.changed ??
+                0),
+            "Added / removed: " +
+              ((state.alignment
+                ?.summary.added ??
+                0) +
+                (state.alignment
+                  ?.summary
+                  .removed ??
+                  0)),
+          ]}
+        />
+        <InsightCard
+          title="Document Completeness Intelligence V1"
+          icon="scan"
+          rows={[
+            "Current heuristic score: " +
+              (state.completeness
+                .current?.score ??
+                "Not available") +
+              (state.completeness
+                .current
+                ? "/100"
+                : ""),
+            "Comparison score: " +
+              (state.completeness
+                .comparison
+                ?.score ??
+                "Not available") +
+              (state.completeness
+                .comparison
+                ? "/100"
+                : ""),
+            "Missing detected sections: " +
+              state.missing.length,
+            "This score is heuristic, not a legal completeness claim.",
+          ]}
+        />
+        <InsightCard
+          title="Section-Level Comparison V1"
+          icon="scan"
+          rows={[
+            "Detected changes: " +
+              state.sections.filter(
+                (item) =>
+                  item.status ===
+                  "changed",
+              ).length,
+            "Added sections: " +
+              state.sections.filter(
+                (item) =>
+                  item.status ===
+                  "added",
+              ).length,
+            "Removed sections: " +
+              state.sections.filter(
+                (item) =>
+                  item.status ===
+                  "removed",
+              ).length,
+            ...state.sections
+              .filter(
+                (item) =>
+                  item.status !==
+                  "unchanged",
+              )
+              .slice(0, 2)
+              .map(
+                (item) =>
+                  item.status +
+                  ": " +
+                  item.title,
               ),
-            ].map(
-              (kind) => (
-                <span
-                  key={kind}
-                  className="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-blue-700 dark:bg-blue-950/30 dark:text-blue-300"
-                >
-                  {kind}:{" "}
-                  {
-                    state.facts.filter(
-                      (fact) =>
-                        fact.kind ===
-                        kind,
-                    ).length
-                  }
-                </span>
-              ),
-            )}
-          </div>
-        </div>
+          ]}
+        />
+        <InsightCard
+          title="Table Intelligence V1"
+          icon="database"
+          rows={[
+            "Current table-like pages: " +
+              state.tables.length,
+            "Changed table pages: " +
+              state.tableComparison.filter(
+                (item) =>
+                  item.status ===
+                  "changed",
+              ).length,
+            "Added / removed table pages: " +
+              state.tableComparison.filter(
+                (item) =>
+                  item.status ===
+                    "added" ||
+                  item.status ===
+                    "removed",
+              ).length,
+            "Table detection is confidence-based and remains reviewable.",
+          ]}
+        />
       </section>
 
-      {state.diff && (
-        <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-          <h2 className="text-xl font-black text-slate-950 dark:text-white">
-            Page-Level Difference Intelligence V1
-          </h2>
-          <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-            Comparison by page number against{" "}
-            {
-              state.comparison
-                ?.targetName
-            }.
-          </p>
-          <div className="mt-4 grid gap-3 sm:grid-cols-5">
-            {Object.entries(
-              state.diff.summary,
-            ).map(
-              ([
-                label,
-                value,
-              ]) => (
-                <div
-                  key={label}
-                  className="rounded-xl border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950"
-                >
-                  <p className="text-[10px] font-bold uppercase tracking-wide text-slate-500">
-                    {label}
-                  </p>
-                  <p className="mt-1 text-lg font-black text-slate-950 dark:text-white">
-                    {value}
-                  </p>
-                </div>
-              ),
-            )}
+      <section className="mt-6 rounded-3xl border border-amber-200 bg-white p-6 shadow-sm dark:border-amber-900 dark:bg-slate-900">
+        <h2 className="text-xl font-black text-slate-950 dark:text-white">
+          Entity & Fact Normalization V2 · Conflict Detection V2
+        </h2>
+        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
+          {state.facts.length} fact(s) were extracted; {state.contradictions.length} normalized cross-document conflict(s) need review.
+        </p>
+        {state.contradictions.length >
+          0 && (
+          <div className="mt-4 space-y-3">
+            {state.contradictions
+              .slice(0, 4)
+              .map(
+                (conflict) => (
+                  <div
+                    key={
+                      conflict.id
+                    }
+                    className="rounded-2xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950/20"
+                  >
+                    <p className="font-extrabold text-slate-950 dark:text-white">
+                      {
+                        conflict.label
+                      }
+                    </p>
+                    <p className="mt-1 text-sm text-slate-600 dark:text-slate-400">
+                      {
+                        conflict.explanation
+                      }
+                    </p>
+                  </div>
+                ),
+              )}
           </div>
-        </section>
-      )}
+        )}
+      </section>
 
       <section className="mt-6 rounded-3xl border border-emerald-200 bg-white p-6 shadow-sm dark:border-emerald-900 dark:bg-slate-900">
         <h2 className="text-xl font-black text-slate-950 dark:text-white">
           Copilot Action Planner V1
         </h2>
-        <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-400">
-          Every modifying step requires explicit user confirmation. Automatic execution is disabled.
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
+          Automatic modifying actions remain disabled.
         </p>
-
         <div className="mt-5 space-y-3">
           {state.plan.steps.map(
             (step) => {
@@ -1219,46 +1474,57 @@ export default function WorkspaceCopilotPage() {
         </div>
       </section>
 
-      <section className="mt-6 rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
-        <h2 className="text-xl font-black text-slate-950 dark:text-white">
-          Privacy Architecture for AI
-        </h2>
-        <div className="mt-4 grid gap-3 sm:grid-cols-3">
-          <Metric
-            label="Mode"
-            value="Local Evidence"
-          />
-          <Metric
-            label="Cloud AI"
-            value="Off"
-          />
-          <Metric
-            label="Document upload"
-            value="Off"
-          />
-        </div>
-        <p className="mt-4 text-xs leading-6 text-slate-500 dark:text-slate-400">
-          {
-            DEFAULT_WORKSPACE_INTELLIGENCE_PRIVACY_POLICY.notes.join(
-              " ",
-            )
-          }
-        </p>
-      </section>
-
       <section className="mt-6 rounded-2xl border border-blue-200 bg-blue-50 p-5 text-xs leading-6 text-blue-900 dark:border-blue-900 dark:bg-blue-950/20 dark:text-blue-200">
         <strong>
-          Evidence coverage:
+          Privacy boundary:
         </strong>{" "}
-        {state.index.coverage.pageCount} page(s),{" "}
-        {state.index.coverage.chunkCount} chunk(s),{" "}
-        {state.index.indexedNodeIds.length} stored state(s).
-        {state.index.coverage.truncated
-          ? " V1 limits were reached, so coverage is partial."
-          : " The selected states fit within V1 index limits."}{" "}
-        Scanned/image-only text is not OCR-expanded by this index.
+        Cloud AI is {DEFAULT_WORKSPACE_INTELLIGENCE_PRIVACY_POLICY.cloudAiEnabled ? "enabled" : "off"} and document upload for intelligence is {DEFAULT_WORKSPACE_INTELLIGENCE_PRIVACY_POLICY.documentUploadEnabled ? "enabled" : "off"}. Persistent evidence and OCR records remain in browser IndexedDB.
       </section>
     </main>
+  );
+}
+
+function InsightCard({
+  title,
+  rows,
+  icon,
+}: {
+  title: string;
+  rows: string[];
+  icon:
+    | "pages"
+    | "scan"
+    | "database";
+}) {
+  const Icon =
+    icon === "database"
+      ? Database
+      : ScanText;
+
+  return (
+    <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
+      <div className="flex items-center gap-2">
+        <Icon
+          size={19}
+          className="text-violet-600"
+        />
+        <h2 className="font-black text-slate-950 dark:text-white">
+          {title}
+        </h2>
+      </div>
+      <div className="mt-4 space-y-2">
+        {rows.map(
+          (row) => (
+            <p
+              key={row}
+              className="rounded-xl bg-slate-50 px-3 py-2 text-sm text-slate-600 dark:bg-slate-950 dark:text-slate-400"
+            >
+              {row}
+            </p>
+          ),
+        )}
+      </div>
+    </section>
   );
 }
 
@@ -1293,7 +1559,7 @@ function CopilotAction({
             action.targetNodeId!,
           )
         }
-        className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-700"
+        className="rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white"
       >
         {action.label}
       </button>
@@ -1353,53 +1619,13 @@ function CopilotAction({
   return (
     <Link
       href={href}
-      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white hover:bg-violet-700"
+      className="inline-flex items-center gap-2 rounded-xl bg-violet-600 px-4 py-2.5 text-sm font-bold text-white"
     >
       {action.label}
       <ArrowRight
         size={16}
       />
     </Link>
-  );
-}
-
-function StatusIcon({
-  status,
-}: {
-  status:
-    | "ready"
-    | "attention"
-    | "not-verified";
-}) {
-  if (
-    status ===
-    "ready"
-  ) {
-    return (
-      <CheckCircle2
-        size={18}
-        className="shrink-0 text-emerald-600"
-      />
-    );
-  }
-
-  if (
-    status ===
-    "attention"
-  ) {
-    return (
-      <AlertTriangle
-        size={18}
-        className="shrink-0 text-amber-600"
-      />
-    );
-  }
-
-  return (
-    <CircleHelp
-      size={18}
-      className="shrink-0 text-slate-400"
-    />
   );
 }
 
@@ -1411,11 +1637,11 @@ function Metric({
   value: string;
 }) {
   return (
-    <div className="rounded-xl border border-slate-200 bg-slate-50 p-4 dark:border-slate-800 dark:bg-slate-950">
+    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900">
       <p className="text-xs font-bold uppercase tracking-wide text-slate-500">
         {label}
       </p>
-      <p className="mt-2 font-black text-slate-950 dark:text-white">
+      <p className="mt-2 text-xl font-black text-slate-950 dark:text-white">
         {value}
       </p>
     </div>

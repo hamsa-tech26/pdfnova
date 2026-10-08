@@ -22,7 +22,7 @@ export type SensitiveTextReport = {
     mode:
       "selectable-text-patterns";
     semanticAddressDetection: false;
-    ocrIncluded: false;
+    ocrIncluded: boolean;
     notes: string[];
   };
 };
@@ -97,6 +97,9 @@ const patterns: PatternDefinition[] = [
 
 export function scanSensitiveText(
   text: string,
+  options: {
+    ocrIncluded?: boolean;
+  } = {},
 ): SensitiveTextReport {
   const signals: SensitiveSignal[] =
     [];
@@ -138,10 +141,14 @@ export function scanSensitiveText(
         "selectable-text-patterns",
       semanticAddressDetection:
         false,
-      ocrIncluded: false,
+      ocrIncluded:
+        options.ocrIncluded ??
+        false,
       notes: [
         "Patterns can produce false positives and false negatives.",
-        "Only selectable PDF text is scanned; image-only text is not OCR-scanned here.",
+        options.ocrIncluded
+          ? "Browser-local OCR text is included for OCR-recognized pages; OCR can contain recognition errors."
+          : "Only selectable PDF text is scanned; image-only text is not OCR-scanned here.",
         "Kukureku does not currently claim semantic postal-address detection in this check.",
       ],
     },

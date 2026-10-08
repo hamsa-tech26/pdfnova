@@ -4,7 +4,7 @@ import type { ReactNode } from "react";
 export const metadata: Metadata = {
   title: "Workspace Copilot",
   description:
-    "Browser-local cross-document evidence search, cited answers, page-level differences, structured facts, contradiction detection, workspace briefs, and approval-only action planning.",
+    "Private browser-local OCR intelligence, persistent incremental indexing, smart page alignment, normalized facts, section and table analysis, evidence viewing, and cross-document guidance.",
   robots: {
     index: false,
     follow: false,

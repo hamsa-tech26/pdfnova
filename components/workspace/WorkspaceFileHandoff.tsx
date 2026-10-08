@@ -19,6 +19,8 @@ const DIRECT_WORKSPACE_ROUTES = [
   "/workspace-findings",
   "/safe-share",
   "/workspace-copilot",
+  "/workspace-privacy",
+  "/evidence-viewer",
 ];
 
 function findFileInput() {

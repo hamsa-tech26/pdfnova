@@ -13,6 +13,8 @@ const INTERNAL_ROUTES = new Set([
   "workspace-findings",
   "safe-share",
   "workspace-copilot",
+  "workspace-privacy",
+  "evidence-viewer",
   "magic-drop",
   "workflow-recipes",
 ]);
