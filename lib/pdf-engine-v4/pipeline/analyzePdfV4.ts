@@ -12,6 +12,7 @@ import {
   type TableReliabilityV2Result,
 } from "../analysis/tableReliabilityAnalyzerV2";;
 import type { LogicalTable } from "../model/logicalTable";
+import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
 } from "../reader/pageReader";
@@ -1751,7 +1752,7 @@ const mergedTables =
   mergedTableResult.tables.map(
     (table) =>
       attachTableExtractionProvenance(
-        table,
+        repairPdfV4TableOcrCells(table),
       ),
   );
 
