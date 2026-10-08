@@ -1,0 +1,26 @@
+name: V4 Stable Release Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "lib/pdf-engine-v4/**"
+      - "benchmarks/release37/**"
+      - "scripts/checkRelease37Gate.mjs"
+      - ".github/workflows/release37-stable.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  formal-evidence:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Fail closed unless independent 10.15–10.20 real-world qualification passes
+        run: node scripts/checkRelease37Gate.mjs benchmarks/release37/report.json

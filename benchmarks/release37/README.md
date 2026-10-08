@@ -32,3 +32,5 @@ Phase 10.20: the independent formal freeze gate is deliberately BLOCKED until re
 The checked-in report.json is an explicit NOT_VERIFIED placeholder. Gate requires 20+ distinct consented/de-identified real PDFs, at least two cases each of native, scanned, hybrid, complex, multipage, rotated, Hindi and Bengali, separately measured text/row/structure accuracy per slice, independent linked phase evidence, Phase 10.14 real-browser OCR gate PASS, no critical regressions, and measured 20–25 MB memory, responsiveness, batching and cancellation stress. No green build or synthetic benchmark substitutes for this gate. Do not weaken thresholds to force a pass.
 
 Never commit original personal, government, or confidential source documents; only consented/de-identified metadata, hashes and aggregate score evidence. A human reviewer must verify corpus quality and reference labels.
+
+The GitHub Actions V4 Stable Release Gate intentionally fails on the NOT_VERIFIED report and must remain a merge/deploy blocker until independent evidence is supplied and reviewed. Never mark it successful just because separate build and synthetic OCR jobs pass.

@@ -29,14 +29,16 @@ export function checkRelease37Gate(report, limits=THRESHOLDS) {
   }
   if (ids.size < limits.distinctRealDocuments) failures.push("Real corpus has " + ids.size + " of " + limits.distinctRealDocuments + " required documents.");
   for (const category of REQUIRED_CATEGORIES) {
-    const coverage = documents.filter(d=>Array.isArray(d?.categories) && d.categories.includes(category) && ids.has(d.id)).length;
+    const coverage = new Set(documents.filter(d=>Array.isArray(d?.categories) && d.categories.includes(category) && ids.has(d.id)).map(d=>d.id)).size;
     if (coverage < limits.perCategory) failures.push(category + ": insufficient real-world document coverage.");
     const metric = report?.metrics?.[category];
     if (metric?.status !== "MEASURED" || metric.source !== "real-world" ||
         !Number.isFinite(metric.cellPct) || metric.cellPct < limits.cellPct ||
         !Number.isFinite(metric.rowPct) || metric.rowPct < limits.rowPct ||
         !Number.isFinite(metric.structurePct) || metric.structurePct < limits.structurePct ||
-        !Number.isInteger(metric.documentCount) || metric.documentCount < limits.perCategory) {
+        !Number.isInteger(metric.documentCount) || metric.documentCount < limits.perCategory ||
+        metric.cellPct > 100 || metric.rowPct > 100 || metric.structurePct > 100 ||
+        (["scanned","hindi","bengali"].includes(category) && metric.actualOcrAttempted !== true)) {
       failures.push(category + ": separately measured cell, row and structure accuracy missing or insufficient.");
     }
   }

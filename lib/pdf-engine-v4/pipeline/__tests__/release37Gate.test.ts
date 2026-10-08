@@ -8,7 +8,7 @@ function mockReport() {
       categories:REQUIRED_CATEGORIES.filter((_,j)=>i===j || i===j+8),
     }))},
     metrics:Object.fromEntries(REQUIRED_CATEGORIES.map(c=>[c,{
-      status:"MEASURED",source:"real-world",documentCount:2,cellPct:98,rowPct:90,structurePct:94,
+      status:"MEASURED",source:"real-world",documentCount:2,cellPct:98,rowPct:90,structurePct:94,actualOcrAttempted:true,
     }])),
     phases:Object.fromEntries(REQUIRED_PHASES.map(p=>[p,{status:"PASS",evidenceUrl:"https://example.org/review"}])),
     regressions:{critical:0},syntheticPhase10_14:{status:"PASS"},
@@ -27,6 +27,10 @@ describe("Release 37 formal V4 Stable gate is fail-closed",()=>{
   });
   it("blocks structure problems even when OCR exact text passes",()=>{
     const r=mockReport();r.metrics.complex.structurePct=40;
+    expect(checkRelease37Gate(r).status).toBe("BLOCKED");
+  });
+  it("blocks a Bengali score without actual recognition evidence",()=>{
+    const r=mockReport();r.metrics.bengali.actualOcrAttempted=false;
     expect(checkRelease37Gate(r).status).toBe("BLOCKED");
   });
   it("blocks unsupported Bengali OCR measurements",()=>{
