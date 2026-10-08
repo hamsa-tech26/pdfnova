@@ -1061,6 +1061,7 @@ test("Multi-document workspace records merge composition and split/extract child
     .getByRole("button", {
       name:
         "Search evidence",
+      exact: true,
     })
     .click();
 
