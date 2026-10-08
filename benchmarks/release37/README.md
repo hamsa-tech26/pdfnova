@@ -34,3 +34,33 @@ The checked-in report.json is an explicit NOT_VERIFIED placeholder. Gate require
 Never commit original personal, government, or confidential source documents; only consented/de-identified metadata, hashes and aggregate score evidence. A human reviewer must verify corpus quality and reference labels.
 
 The GitHub Actions V4 Stable Release Gate intentionally fails on the NOT_VERIFIED report and must remain a merge/deploy blocker until independent evidence is supplied and reviewed. Never mark it successful just because separate build and synthetic OCR jobs pass.
+
+## Real-world corpus intake and independent scoring
+
+Candidates are listed in [candidates.json](./candidates.json), but none is currently accepted toward the 20-document formal qualification. Public availability does not automatically imply permission to reuse copyrighted third-party figures.
+
+Use the USGS rights guidance (https://pubs.usgs.gov/documentation/faq) and the DocLayNet dataset card (https://huggingface.co/datasets/docling-project/DocLayNet) to check each source. IBM DocLayNet declares CDLA-Permissive-1.0, but its annotated page layouts are not by themselves complete table-cell or multilingual OCR labels. Do not silently reuse research-only or noncommercial benchmark PDFs for a commercial product.
+
+Put permitted original PDFs, independent reference labels and complete PDF Engine V4 Inspector output inside benchmarks/release37/private/. This path is gitignored.
+
+Sample manifest at benchmarks/release37/private/manifest.json:
+
+```json
+{"documents":[{"id":"reviewed-001","origin":"real-world","usageRights":"public-domain","rightsUrl":"https://example.org/rights","rightsConfirmed":true,"sourceUrl":"https://example.org/file.pdf","sha256":"64_CHAR_HEX_SHA256","categories":["native","complex"],"independentReferenceReview":true,"reviewedBy":"Independent QA reviewer","reviewedAt":"2026-10-08","localPdf":"benchmarks/release37/private/reviewed-001.pdf","referenceJson":"benchmarks/release37/private/reviewed-001-gold.json","inspectorJson":"benchmarks/release37/private/reviewed-001-v4.json"}]}
+```
+
+Replace the illustrative URLs and hash before use. Reference labels must be independently verified rather than copied from V4 output. Gold JSON has tables[] with rowCount, columnCount and cells[]; each cell needs rowIndex, columnIndex, text, and optional rowSpan/columnSpan. The observed file must be the complete JSON exported by the actual Engine Inspector.
+
+Run: npm run benchmark:release37:corpus
+
+Scoring is positional and separately measures exact text, complete rows and structure; missing/extra cells and rows count as failures. It validates PDF signatures, SHA-256 input hashes, source/rights evidence, independent reviews, and the presence of actual Inspector output. It only writes aggregated JSON to the ignored benchmarks/release37/reports/real-corpus.json file.
+
+### Public-document pilot
+
+An optional GitHub CI job fetches the genuine publisher-hosted USGS sir20245103 report, copies the first three real pages without altering page contents, and runs the actual V4 browser Inspector. Only SHA-256s, routing, extraction counts and elapsed time are uploaded. Neither PDFs nor extracted content is uploaded to GitHub.
+
+Run locally: npm run benchmark:release37:public-pilot, then npx playwright test --config=playwright.pilot.config.mjs.
+
+The pilot is non-blocking and not a scored table-accuracy benchmark. These three pages count as no more than one real source, and the pilot is not formal acceptance evidence until rights and ground truth have been independently reviewed.
+
+The formal V4 Stable gate remains intentionally BLOCKED until complete real-world, structure, language, regression and stress evidence is available.
