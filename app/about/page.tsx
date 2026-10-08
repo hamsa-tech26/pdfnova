@@ -62,16 +62,13 @@ const structuredData = {
 };
 
 const currentTools = [
-  "Merge PDF",
-  "Split PDF",
-  "Compress PDF",
-  "PDF to Word",
-  "Word to PDF",
-  "JPG to PDF",
-  "PDF to JPG",
-  "Organize PDF",
-  "Watermark PDF",
-  "Unlock PDF",
+  "Merge PDF", "Split PDF", "Compress PDF", "PDF to Word", "Word to PDF", "JPG to PDF",
+  "PDF to JPG", "Organize PDF", "Rotate PDF", "Extract PDF Pages", "Delete PDF Pages",
+  "PDF to Text", "Flatten PDF", "OCR PDF", "Reorder PDF Pages", "Reverse PDF",
+  "Remove PDF Metadata", "Add Page Numbers", "Crop PDF", "Resize PDF Pages",
+  "Header and Footer PDF", "Sign PDF", "PDF Form Filler", "Redact PDF",
+  "Edit PDF Metadata", "Add Image / Stamp", "Create Fillable PDF",
+  "Watermark PDF", "Protect PDF", "Unlock PDF",
 ];
 
 export default function AboutPage() {
