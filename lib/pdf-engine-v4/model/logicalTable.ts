@@ -24,6 +24,8 @@ export type LogicalCell = {
   rowIndex: number;
   columnIndex: number;
   text: string;
+  originalOcrText?: string;
+  ocrAdjustmentReasons?: string[];
   words: PdfWord[];
   bounds: PdfBoundingBox;
   confidence: number;
