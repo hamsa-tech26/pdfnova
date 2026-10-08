@@ -2,7 +2,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import process from "node:process";
 
-export const norm = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\\s+/g, " ").toLowerCase();
+export const norm = (value) => String(value ?? "").normalize("NFKC").trim().replace(/\s+/g, " ").toLowerCase();
 export function scoreFixture(expected, actual) {
   if (!Array.isArray(expected) || !Array.isArray(actual) || !expected.every(Array.isArray) || !actual.every(Array.isArray)) throw new Error("Expected two row matrices");
   const totalCells = expected.reduce((n, row) => n + row.length, 0);
@@ -24,7 +24,7 @@ if (process.argv[1] && import.meta.url === new URL("file://" + path.resolve(proc
   if (!Array.isArray(results) || !results.every(v => v && typeof v.id === "string" && Array.isArray(v.rows))) throw new Error("Results must be [{id, rows: string[][]}]");
   const report = await benchmark(manifest,results);
   await fs.mkdir("benchmarks/phase10_14/reports",{recursive:true});
-  await fs.writeFile("benchmarks/phase10_14/reports/latest.json",JSON.stringify(report,null,2)+"\\n");
+  await fs.writeFile("benchmarks/phase10_14/reports/latest.json",JSON.stringify(report,null,2)+"\n");
   console.log(JSON.stringify(report,null,2));
   if (file && report.fixtures.some(x=>x.status==="NOT_RUN")) process.exitCode = 2;
 }
