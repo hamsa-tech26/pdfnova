@@ -492,7 +492,6 @@ export async function readPdfDocumentV4(
       words.length, lines.length, nativeCharacterCount,
     ),
   },
-},
 });
 
       page.cleanup();
