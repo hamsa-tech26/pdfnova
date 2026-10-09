@@ -15,6 +15,7 @@ export function checkRelease37Gate(report, limits=THRESHOLDS) {
   const failures = [];
   const documents = Array.isArray(report?.corpus?.documents) ? report.corpus.documents : [];
   const ids = new Set();
+  const contentHashes = new Set();
   for (const item of documents) {
     if (typeof item?.id !== "string" || !item.id || ids.has(item.id)) {
       failures.push("Missing/duplicate real-world document ID.");
@@ -28,17 +29,24 @@ export function checkRelease37Gate(report, limits=THRESHOLDS) {
         item.independentReferenceReview !== true) {
       failures.push(item.id + ": missing real-world source rights, independent annotation review or hash evidence.");
     }
+    const contentHash = String(item.sha256 ?? "").toLowerCase();
+    if (/^[a-f0-9]{64}$/.test(contentHash)) {
+      if (contentHashes.has(contentHash)) {
+        failures.push(item.id + ": duplicate PDF content hash; a renamed copy is not an independent document.");
+      }
+      contentHashes.add(contentHash);
+    }
   }
-  if (ids.size < limits.distinctRealDocuments) failures.push("Real corpus has " + ids.size + " of " + limits.distinctRealDocuments + " required documents.");
+  if (contentHashes.size < limits.distinctRealDocuments) failures.push("Real corpus has " + contentHashes.size + " distinct PDF hashes of " + limits.distinctRealDocuments + " required documents.");
   for (const category of REQUIRED_CATEGORIES) {
-    const coverage = new Set(documents.filter(d=>Array.isArray(d?.categories) && d.categories.includes(category) && ids.has(d.id)).map(d=>d.id)).size;
+    const coverage = new Set(documents.filter(d=>Array.isArray(d?.categories) && d.categories.includes(category) && ids.has(d.id)).map(d=>d.sha256)).size;
     if (coverage < limits.perCategory) failures.push(category + ": insufficient real-world document coverage.");
     const metric = report?.metrics?.[category];
     if (metric?.status !== "MEASURED" || metric.source !== "real-world" ||
         !Number.isFinite(metric.cellPct) || metric.cellPct < limits.cellPct ||
         !Number.isFinite(metric.rowPct) || metric.rowPct < limits.rowPct ||
         !Number.isFinite(metric.structurePct) || metric.structurePct < limits.structurePct ||
-        !Number.isInteger(metric.documentCount) || metric.documentCount < limits.perCategory ||
+        !Number.isInteger(metric.documentCount) || metric.documentCount !== coverage || metric.documentCount < limits.perCategory ||
         metric.cellPct > 100 || metric.rowPct > 100 || metric.structurePct > 100 ||
         (["scanned","hindi","bengali"].includes(category) && metric.actualOcrAttempted !== true) ||
         metric.scoredFromFiles !== true || metric.groundTruthVerified !== true ||

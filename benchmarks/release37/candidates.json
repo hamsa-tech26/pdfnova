@@ -27,6 +27,15 @@
       "title": "DocLayNet annotated layout dataset",
       "status": "DATASET_PROSPECT_ONLY",
       "notes": "CDLA-Permissive-1.0 declared by curator; layout annotations are not complete table-cell or OCR reference labels. Extra original PDF pack ~7.5 GiB, not automatically fetched."
+    },
+    {
+      "id": "pubtables-1m",
+      "publisher": "Microsoft Research",
+      "sourceUrl": "https://www.microsoft.com/en-us/research/publication/pubtables-1m/",
+      "rightsUrl": "https://github.com/microsoft/table-transformer",
+      "title": "PubTables-1M complete table structure + cell and header annotations",
+      "status": "DATASET_PROSPECT_ONLY",
+      "notes": "Promising independent structural reference from PubMed Central Open Access Commercial-Use Collection. Source PDF rights, document mapping, reuse terms and full-annotation quality require review; dataset archives are very large. Do not fetch bulk assets into CI."
     }
   ]
 }

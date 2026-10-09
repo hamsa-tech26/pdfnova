@@ -66,3 +66,7 @@ The pilot is non-blocking and not a scored table-accuracy benchmark. These three
 The formal V4 Stable gate remains intentionally BLOCKED until complete real-world, structure, language, regression and stress evidence is available.
 
 The reference scorer rejects incomplete table annotations (including omitted blank cells), overlapping gold spans and malformed predicted merge geometry. It does not repair predictions from reference answers. Source-document accuracy remains NOT VERIFIED without independent labels.
+
+A real-world document must have a distinct SHA-256, not merely a new name or manifest ID. The formal gate compares independently evidenced category document counts against category metrics. Duplicate PDF content cannot satisfy the 20-document requirement.
+
+PubTables-1M (Microsoft Research) is a candidate source for independently reviewed blank cells, headers, and table geometry. Its reference annotations must be mapped to source PDF pages and their respective rights reviewed; its large archives are NOT downloaded as part of CI.

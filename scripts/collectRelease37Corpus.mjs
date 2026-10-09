@@ -85,6 +85,7 @@ export function buildRelease37CorpusReport(measuredRecords,extra={}) {
 export async function collectRelease37Corpus(manifest){
   if(!Array.isArray(manifest?.documents))throw new Error("manifest.documents[] required");
   const uniqueIds=new Set();
+  const uniquePdfHashes=new Set();
   const records=[];
   for(const entry of manifest.documents) {
     const errors=validateRelease37Entry(entry);
@@ -96,6 +97,8 @@ export async function collectRelease37Corpus(manifest){
     if(pdf.length>30*1024*1024)throw new Error(entry.id+": exceeds 30 MB benchmark intake limit");
     const pdfSha=sha(pdf);
     if(pdfSha.toLowerCase()!==entry.sha256.toLowerCase())throw new Error(entry.id+": input PDF SHA-256 mismatch");
+    if(uniquePdfHashes.has(pdfSha))throw new Error(entry.id+": duplicate PDF bytes; each benchmark document must be independent");
+    uniquePdfHashes.add(pdfSha);
     const goldBytes=await readPrivateFile(entry.referenceJson,".json");
     const resultBytes=await readPrivateFile(entry.inspectorJson,".json");
     const gold=JSON.parse(goldBytes.toString("utf8"));

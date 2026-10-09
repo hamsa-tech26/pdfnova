@@ -4,7 +4,7 @@ import {checkRelease37Gate,REQUIRED_CATEGORIES,REQUIRED_PHASES} from "../../../.
 function mockReport() {
   return {
     corpus:{documents:Array.from({length:20},(_,i)=>({
-      id:"test-"+i,origin:"real-world",usageRights:"de-identified",sha256:"a".repeat(64),
+      id:"test-"+i,origin:"real-world",usageRights:"de-identified",sha256:(i+1).toString(16).padStart(64,"0"),
       rightsUrl:"https://example.org/rights",independentReferenceReview:true,
       categories:REQUIRED_CATEGORIES.filter((_,j)=>i===j || i===j+8),
     }))},
@@ -25,6 +25,18 @@ describe("Release 37 formal V4 Stable gate is fail-closed",()=>{
   });
   it("blocks synthetic or unauthorized real corpus",()=>{
     const r=mockReport();r.corpus.documents[0].origin="synthetic";
+    expect(checkRelease37Gate(r).status).toBe("BLOCKED");
+  });
+  it("rejects 20 distinct names pointing to the same source PDF bytes",()=>{
+    const r=mockReport();
+    r.corpus.documents[1].sha256=r.corpus.documents[0].sha256;
+    const result=checkRelease37Gate(r);
+    expect(result.status).toBe("BLOCKED");
+    expect(result.failures.some((message:string)=>message.includes("duplicate PDF content hash"))).toBe(true);
+  });
+  it("rejects a claimed per-category measurement count that differs from actual source evidence",()=>{
+    const r=mockReport();
+    r.metrics.native.documentCount=20;
     expect(checkRelease37Gate(r).status).toBe("BLOCKED");
   });
   it("blocks unreviewed references even with good claimed accuracy",()=>{
