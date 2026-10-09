@@ -50,6 +50,46 @@ describe("Release 37 independent positional and structural document scoring",()=
   it("reports no measured accuracy when gold has no scoring evidence",()=>{
     expect(scoreRelease37Case({tables:[]},{tables:[]}).cells.pct).toBeNull();
   });
+
+  it("rejects partial gold annotations even if observed extraction would match them",()=>{
+    const incomplete=ref();
+    incomplete.tables[0].cells.pop();
+    expect(()=>scoreRelease37Case(incomplete,observed())).toThrow(/Incomplete reference/);
+  });
+  it("requires explicit blank cells in reviewed reference tables",()=>{
+    const incomplete=ref();
+    incomplete.tables[0].cells[3].text="";
+    expect(scoreRelease37Case(incomplete,observed()).cells.pct).toBe(75);
+    incomplete.tables[0].cells.pop();
+    expect(()=>scoreRelease37Case(incomplete,observed())).toThrow(/Incomplete reference/);
+  });
+  it("rejects overlapping reference spans and unbounded reference grids",()=>{
+    const overlap=ref();
+    overlap.tables[0].cells[0].columnSpan=2;
+    expect(()=>scoreRelease37Case(overlap,observed())).toThrow(/Overlapping reference/);
+    const huge=ref();huge.tables[0].rowCount=10000;huge.tables[0].columnCount=500;
+    expect(()=>scoreRelease37Case(huge,observed())).toThrow(/bounded dimensions/);
+  });
+  it("a row spanning cell must be present and structurally correct in all occupied rows",()=>{
+    const golden={tables:[{rowCount:2,columnCount:1,cells:[
+      {rowIndex:0,columnIndex:0,rowSpan:2,text:"Merged"}]}]};
+    const good={tables:[{columnCount:1,rows:[
+      {cells:[{rowIndex:0,columnIndex:0,rowSpan:2,text:"Merged"}]},
+      {cells:[]},
+    ]}]};
+    const bad={tables:[{columnCount:1,rows:[
+      {cells:[{rowIndex:0,columnIndex:0,rowSpan:1,text:"Merged"}]},
+      {cells:[]},
+    ]}]};
+    expect(scoreRelease37Case(golden,good).rows.pct).toBe(100);
+    expect(scoreRelease37Case(golden,bad).rows.pct).toBe(0);
+  });
+  it("rejects observed spans overlapping existing cells instead of rewarding geometry",()=>{
+    const bad=observed();
+    bad.tables[0].rows[0].cells[0].columnSpan=2;
+    expect(scoreRelease37Case(ref(),bad).structure.pct).toBeLessThan(100);
+  });
+
   it("computes aggregate micro-averages from raw counts, not averages of percentages",()=>{
     const a=scoreRelease37Case(ref(),observed());
     const b=scoreRelease37Case(ref(),{tables:[]});

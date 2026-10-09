@@ -10,12 +10,19 @@ const key = (t,r,c) => t+":"+r+":"+c;
 function assertIndex(n,label) {
   if (!Number.isSafeInteger(n) || n < 0 || n > 10000) throw new Error("Invalid "+label+": "+n);
 }
+const MAX_REFERENCE_SLOTS = 100_000;
+
 function expectedTables(reference) {
   if (!Array.isArray(reference?.tables)) throw new Error("Reference must have tables[]");
   return reference.tables.map((table,t) => {
     assertIndex(table.rowCount,"reference rowCount");
     assertIndex(table.columnCount,"reference columnCount");
     if (!Array.isArray(table.cells)) throw new Error("Reference table "+t+" needs cells[]");
+    if (table.rowCount < 1 || table.columnCount < 1 || table.columnCount > 512 ||
+        table.rowCount * table.columnCount > MAX_REFERENCE_SLOTS) {
+      throw new Error("Reference table requires positive bounded dimensions");
+    }
+    const slots = new Set();
     const cells=new Map();
     for (const cell of table.cells) {
       assertIndex(cell.rowIndex,"reference rowIndex");
@@ -29,7 +36,17 @@ function expectedTables(reference) {
       }
       const id=key(t,cell.rowIndex,cell.columnIndex);
       if(cells.has(id))throw new Error("Duplicated reference cell "+id);
+      for (let r = cell.rowIndex; r < cell.rowIndex + rowSpan; r++) {
+        for (let c = cell.columnIndex; c < cell.columnIndex + columnSpan; c++) {
+          const slot = key(t,r,c);
+          if (slots.has(slot)) throw new Error("Overlapping reference cell spans at "+slot);
+          slots.add(slot);
+        }
+      }
       cells.set(id,{text:norm(cell.text),rowSpan,columnSpan,rowIndex:cell.rowIndex,columnIndex:cell.columnIndex,tableIndex:t});
+    }
+    if (slots.size !== table.rowCount * table.columnCount) {
+      throw new Error("Incomplete reference: every table slot must have a reviewed cell, including blanks");
     }
     return {rowCount:table.rowCount,columnCount:table.columnCount,cells};
   });
@@ -41,17 +58,28 @@ function observedTables(observed) {
     assertIndex(table.columnCount,"observed columnCount");
     const cells=new Map();
     let duplicates=0, malformed=0;
+    const occupied = new Set();
     table.rows.forEach((row,r)=>{
       if(!Array.isArray(row?.cells)) { malformed++;return; }
       for(const cell of row.cells){
         const rowIndex=cell.rowIndex??r;
         const columnIndex=cell.columnIndex;
-        if(!Number.isSafeInteger(rowIndex)||rowIndex<0||rowIndex>=table.rows.length||
-           !Number.isSafeInteger(columnIndex)||columnIndex<0||columnIndex>=table.columnCount){malformed++;continue;}
+        const rowSpan=cell.rowSpan??1,columnSpan=cell.columnSpan??1;
+        if(!Number.isSafeInteger(rowIndex)||rowIndex!==r||
+           !Number.isSafeInteger(columnIndex)||columnIndex<0||columnIndex>=table.columnCount||
+           !Number.isSafeInteger(rowSpan)||rowSpan<1||rowIndex+rowSpan>table.rows.length||
+           !Number.isSafeInteger(columnSpan)||columnSpan<1||columnIndex+columnSpan>table.columnCount){malformed++;continue;}
         const id=key(t,rowIndex,columnIndex);
         if(cells.has(id)){duplicates++;continue;}
-        cells.set(id,{text:norm(cell.text),rowSpan:cell.rowSpan??1,columnSpan:cell.columnSpan??1,
-          rowIndex,columnIndex,tableIndex:t});
+        let overlapping=false;
+        for(let y=rowIndex;y<rowIndex+rowSpan;y++)for(let x=columnIndex;x<columnIndex+columnSpan;x++){
+          if(occupied.has(key(t,y,x)))overlapping=true;
+        }
+        if(overlapping){malformed++;continue;}
+        for(let y=rowIndex;y<rowIndex+rowSpan;y++)for(let x=columnIndex;x<columnIndex+columnSpan;x++){
+          occupied.add(key(t,y,x));
+        }
+        cells.set(id,{text:norm(cell.text),rowSpan,columnSpan,rowIndex,columnIndex,tableIndex:t});
       }
     });
     return {rowCount:table.rows.length,columnCount:table.columnCount,cells,duplicates,malformed};
@@ -80,11 +108,13 @@ export function scoreRelease37Case(reference,observed){
     if(a&&a.rowCount>e.rowCount)extraRows+=a.rowCount-e.rowCount;
     for(let r=0;r<e.rowCount;r++){
       if(!a||r>=a.rowCount)continue;
-      const expectedRow=[...e.cells.values()].filter(c=>c.rowIndex===r);
-      const actualRow=[...a.cells.values()].filter(c=>c.rowIndex===r);
+      // Count row correctness only when every occupying source cell, including
+      // cells anchored in a previous row by rowSpan, is represented faithfully.
+      const expectedRow=[...e.cells.values()].filter(c=>c.rowIndex<=r && c.rowIndex+c.rowSpan>r);
+      const actualRow=[...a.cells.values()].filter(c=>c.rowIndex<=r && c.rowIndex+c.rowSpan>r);
       if(expectedRow.length===actualRow.length&&expectedRow.every(c=>{
-        const other=a.cells.get(key(t,r,c.columnIndex));
-        return other?.text===c.text;
+        const other=a.cells.get(key(t,c.rowIndex,c.columnIndex));
+        return other?.text===c.text && other.rowSpan===c.rowSpan && other.columnSpan===c.columnSpan;
       }))rowCorrect++;
     }
   }
