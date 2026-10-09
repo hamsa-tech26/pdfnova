@@ -13,7 +13,7 @@ The fixture generator makes three reproducible PDFs: a three-page hybrid (native
 
 ## Scope and honest limitations
 
-Phase 10.15: native-first selective OCR and preservation smoke is testable; mixed page image insertions are NOT VERIFIED.
+Phase 10.15: native-first selective OCR and preservation smoke is testable. Native-text pages with raster paint operations are now flagged for explicit inset review, but image presence can also be a logo, and automatic inset OCR remains NOT VERIFIED.
 
 Phase 10.16: structural review warnings detect invalid/duplicate column slots and missing cells. Nested headers, merged cells, forms, gridless structures, and independent geometric structure fidelity are NOT VERIFIED.
 
@@ -64,3 +64,5 @@ Run locally: npm run benchmark:release37:public-pilot, then npx playwright test 
 The pilot is non-blocking and not a scored table-accuracy benchmark. These three pages count as no more than one real source, and the pilot is not formal acceptance evidence until rights and ground truth have been independently reviewed.
 
 The formal V4 Stable gate remains intentionally BLOCKED until complete real-world, structure, language, regression and stress evidence is available.
+
+The reference scorer rejects incomplete table annotations (including omitted blank cells), overlapping gold spans and malformed predicted merge geometry. It does not repair predictions from reference answers. Source-document accuracy remains NOT VERIFIED without independent labels.

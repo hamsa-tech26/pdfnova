@@ -76,10 +76,19 @@ export function createRelease37Audit(input: {
         : "Requested scanned pages: " + decision.requiredPageNumbers.length +
           "; processed: " + actualOcrPages.length + ". Low-text pages require review, not silent OCR.",
   });
+  const nativePagesWithRasterImages = nativeDocument.pages
+    .filter(page => page.textExtraction.status === "sufficient" &&
+      typeof page.nativeRasterImagePaintCount === "number" &&
+      page.nativeRasterImagePaintCount > 0)
+    .map(page => page.pageNumber);
   checks.push({
     id: "10.15-scanned-insets",
-    state: "NOT_VERIFIED",
-    detail: "Scanned image insertions inside pages with selectable text are not identified by the page-level OCR router. Manual review required.",
+    state: nativePagesWithRasterImages.length ? "REVIEW_REQUIRED" : "NOT_VERIFIED",
+    detail: nativePagesWithRasterImages.length
+      ? "Raster image paint operations found on native-text page(s): " +
+        nativePagesWithRasterImages.join(", ") +
+        ". These could be photos, logos or scanned insets. No inset OCR was performed; compare with the source."
+      : "No positive raster-image signal observed on native-text pages. This does not establish absence of scanned insets; manual review is required.",
   });
 
   let structuralIssues = 0;

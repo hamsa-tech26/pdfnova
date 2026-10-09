@@ -78,6 +78,20 @@ describe("Release 37 evidence: never over-certify",()=>{
       rows:[{id:"r",rowIndex:0,confidence:1,cells:[makeCell("a"),makeCell("b")]}]};
     expect(check(audit(raw,raw,[table]),"10.16-complex-table-structure").state).toBe("REVIEW_REQUIRED");
   });
+  it("flags embedded raster paint operations on a native-text page without erasing its text",()=>{
+    const raw=document([page(1,"sufficient"),page(2,"none")]);
+    raw.pages[0].nativeRasterImagePaintCount=2;
+    const result=audit(raw,raw,[],[2]);
+    expect(check(result,"10.15-scanned-insets").state).toBe("REVIEW_REQUIRED");
+    expect(check(result,"10.15-scanned-insets").detail).toContain("page(s): 1");
+    expect(check(result,"10.15-native-preservation").state).toBe("PASS_SCOPED");
+  });
+  it("does not certify the absence of scanned insets when no image evidence is found",()=>{
+    const raw=document([page(1,"sufficient")]);
+    raw.pages[0].nativeRasterImagePaintCount=0;
+    expect(check(audit(raw,raw),"10.15-scanned-insets").state).toBe("NOT_VERIFIED");
+  });
+
   it("never claims Hindi/Bengali OCR or performance certification from runtime only",()=>{
     const raw=document([page(1,"sufficient")]);
     raw.pages[0].words[0].text="বাংলা हिन्दी";

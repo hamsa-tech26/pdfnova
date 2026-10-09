@@ -30,7 +30,9 @@ for(const fixture of cases){
       expect(result.controlledOcrResult?.attempted).toBe(true);
       expect(result.controlledOcrResult?.processedPageNumbers).toEqual([2]);
       expect(result.release37Audit.checks.find(c=>c.id==="10.15-native-preservation")?.state).toBe("PASS_SCOPED");
-      expect(result.release37Audit.checks.find(c=>c.id==="10.15-scanned-insets")?.state).toBe("NOT_VERIFIED");
+      expect(["NOT_VERIFIED","REVIEW_REQUIRED"]).toContain(
+        result.release37Audit.checks.find(c=>c.id==="10.15-scanned-insets")?.state
+      );
     }
     const evidence={
       case:fixture.kind,filename:fixture.name,source:"actual Chromium PDF Engine V4 Inspector",

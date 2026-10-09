@@ -145,6 +145,8 @@ export type PdfPageModel = {
   lines: PdfLine[];
   blocks: PdfVisualBlock[];
   textExtraction: PdfPageTextExtractionMetrics;
+  /** Count of raster paint operations on native-text pages; null means inspection unavailable. */
+  nativeRasterImagePaintCount?: number | null;
 };
 
 export type PdfDocumentModel = {

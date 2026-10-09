@@ -448,6 +448,33 @@ export async function readPdfDocumentV4(
           pageNumber,
         );
 
+      const nativeCharacterCount = words.reduce(
+        (sum, word) => sum + word.text.length, 0,
+      );
+      const nativeStatus = classifyPageTextExtractionStatus(
+        words.length, lines.length, nativeCharacterCount,
+      );
+      let nativeRasterImagePaintCount: number | null = null;
+      if (nativeStatus === "sufficient") {
+        // Image operators are only a conservative review signal. Logos,
+        // signatures and genuinely scanned insets cannot be distinguished
+        // without inspecting the source geometry. Never auto-OCR native text.
+        try {
+          const operators = await page.getOperatorList();
+          const imageCodes = new Set<number>([
+            pdfjsLib.OPS.paintImageXObject,
+            pdfjsLib.OPS.paintInlineImageXObject,
+            pdfjsLib.OPS.paintImageMaskXObject,
+          ]);
+          nativeRasterImagePaintCount = operators.fnArray.filter(
+            (code) => imageCodes.has(code),
+          ).length;
+        } catch {
+          // An unavailable operator list must not destroy native extraction.
+          nativeRasterImagePaintCount = null;
+        }
+      }
+
       pages.push({
   pageNumber,
   width: viewport.width,
@@ -455,34 +482,16 @@ export async function readPdfDocumentV4(
   words,
   lines,
   blocks: [],
+  nativeRasterImagePaintCount,
   textExtraction: {
-  wordCount: words.length,
-  lineCount: lines.length,
-  characterCount: words.reduce(
-    (sum, word) =>
-      sum + word.text.length,
-    0,
-  ),
-  status:
-    classifyPageTextExtractionStatus(
-      words.length,
-      lines.length,
-      words.reduce(
-        (sum, word) =>
-          sum + word.text.length,
-        0,
-      ),
+    wordCount: words.length,
+    lineCount: lines.length,
+    characterCount: nativeCharacterCount,
+    status: nativeStatus,
+    qualityScore: calculatePageTextExtractionQualityScore(
+      words.length, lines.length, nativeCharacterCount,
     ),
-    qualityScore:
-  calculatePageTextExtractionQualityScore(
-    words.length,
-    lines.length,
-    words.reduce(
-      (sum, word) =>
-        sum + word.text.length,
-      0,
-    ),
-  ),
+  },
 },
 });
 
