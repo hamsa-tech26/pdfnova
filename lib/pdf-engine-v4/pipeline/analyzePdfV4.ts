@@ -1,3 +1,4 @@
+import { createRelease37Audit, type Release37Audit } from "./release37Audit";
 import type {
   PdfDocumentModel,
   PdfPageTextExtractionMetrics,
@@ -241,6 +242,7 @@ export type PdfEngineV4Result = {
     PdfV4NativePageTextExtraction[];
   ocrDecision: PdfV4OcrDecision;
   controlledOcrResult?: PdfV4ControlledOcrResult;
+  release37Audit: Release37Audit;
   confidence: number;
 };
 function getRowSerialNumber(
@@ -1847,6 +1849,16 @@ const confidence =
   const totalMs =
     now() - totalStart;
 
+  const release37Audit = createRelease37Audit({
+    nativeDocument: rawDocument,
+    analyzedDocument: document,
+    decision: nativeOcrDecision,
+    ocrResult: controlledOcrResult,
+    tables: mergedTables,
+    fileBytes: file.size,
+    elapsedMs: totalMs,
+  });
+
   return {
     document,
     tables: mergedTables,
@@ -1866,6 +1878,7 @@ textExtractionProfile,
 nativePageTextExtraction,
 ocrDecision,
 controlledOcrResult,
+release37Audit,
 confidence,
   };
 }

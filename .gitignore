@@ -43,3 +43,10 @@ next-env.d.ts
 # Release 36 OCR reports: keep private measurements out of source control
 /benchmarks/phase10_14/reports/*.json
 /benchmarks/phase10_14/reports/raw/
+
+# Release 37 generated fixtures and private diagnostic reports
+/test-fixtures/release37/*.pdf
+/benchmarks/release37/reports/
+
+# Rights-reviewed corpus source documents, annotations, inspector JSON and publisher pilot
+/benchmarks/release37/private/

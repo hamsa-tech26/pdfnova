@@ -2304,6 +2304,18 @@ candidate.columnIndex
           )}
 
           <EngineTableExport tables={result.tables} />
+          <section className="mt-6 rounded-3xl border border-amber-300 bg-amber-50 p-5 text-amber-950 dark:border-amber-800 dark:bg-amber-950/20 dark:text-amber-100">
+            <h2 className="text-lg font-bold">Release 37 — qualification evidence (development)</h2>
+            <p className="mt-2 text-sm">Diagnostics only, not V4 Stable certification. Some cases require source-file review or independent real-world benchmarks.</p>
+            <ul className="mt-3 space-y-2 text-sm">
+              {result.release37Audit.checks.map(check => (
+                <li key={check.id}>
+                  <strong>{check.id} — {check.state.replaceAll("_", " ")}</strong>
+                  <span className="block">{check.detail}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
 
           <section className="rounded-3xl border border-gray-200 bg-slate-950 p-6 text-white shadow-sm dark:border-slate-800">
             <div className="flex items-center gap-2">
