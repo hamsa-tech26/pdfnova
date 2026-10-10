@@ -13,6 +13,8 @@ test("cancel multi-page JPG export without a partial download and retry a subset
   }
   const bytes = Buffer.from(await pdf.save());
   await page.goto("/pdf-to-jpg");
+  const observedDownloads = [];
+  page.on("download", download => observedDownloads.push(download.suggestedFilename()));
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"cancel-jpg-export.pdf", mimeType:"application/pdf", buffer:bytes,
   });
@@ -22,12 +24,12 @@ test("cancel multi-page JPG export without a partial download and retry a subset
   await page.getByRole("button",{name:"Cancel ZIP export"}).click();
   await expect(page.getByRole("button",{name:"Cancel ZIP export"})).toHaveCount(0,{timeout:90000});
   await expect(page.getByRole("button",{name:"Download All as ZIP"})).toBeEnabled();
-  const download = page.waitForEvent("download");
+  expect(observedDownloads).toEqual([]);
   await page.getByRole("button",{name:"Next previews"}).click();
   await expect(page.getByRole("status").filter({hasText:"Previewing pages 9–16 of 28"})).toBeVisible();
-  await page.getByRole("button",{name:"Clear Selection"}).click().catch(()=>{});
   // One visible page is enough to prove the same input remains retryable.
-  await page.getByRole("checkbox",{name:/PDF page 9/i}).first().check();
+  await page.getByRole("button",{name:"Select page 9"}).click();
+  const download = page.waitForEvent("download");
   await page.getByRole("button",{name:"Download Selected as ZIP"}).click();
   const saved = await download;
   const zip = await JSZip.loadAsync(await readFile(await saved.path()));
