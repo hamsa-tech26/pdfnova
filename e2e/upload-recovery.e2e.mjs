@@ -24,7 +24,7 @@ test("invalid selections are visible and users can recover without losing the up
     await field.setInputFiles({name:"not-a-pdf.txt",mimeType:"text/plain",buffer:Buffer.from("invalid")});
     const alert=page.getByRole("alert").filter({hasText:prompt});
     await expect(alert,href+" input error").toBeVisible();
-    await expect(alert,href+" descriptive error").toContainText("Please select a valid PDF file.");
+    await expect(alert,href+" descriptive error").toContainText(href==="/merge-pdf" ? "not-a-pdf.txt is not a supported PDF file." : "Please select a valid PDF file.");
     await alert.getByRole("button",{name:/Choose Another PDF|Choose Other PDFs/}).click();
     await expect(alert).toHaveCount(0);
     await field.setInputFiles({name:"recovered.pdf",mimeType:"application/pdf",buffer:bytes});
