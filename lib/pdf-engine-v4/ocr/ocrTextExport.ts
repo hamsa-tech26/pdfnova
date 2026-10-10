@@ -69,7 +69,8 @@ export function suggestPdfV4OcrColumnPreview(
 ): string | null {
   const raw = page.text || "";
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(raw)) return null;
-  if (page.renderedWidth <= 0 || page.words.length < 25) return null;
+  // Avoid expensive layout heuristics on exceptionally large OCR pages.
+  if (page.renderedWidth <= 0 || page.words.length < 25 || page.words.length > 4000) return null;
   const words = page.words.filter((word) =>
     word.text.trim() &&
     Number.isFinite(word.bounds.x0) &&
@@ -89,7 +90,6 @@ export function suggestPdfV4OcrColumnPreview(
     if (left.length < 10 || right.length < 10 || crossing > words.length * 0.025) {
       continue;
     }
-    if (makeLines(left).length < 4 || makeLines(right).length < 4) continue;
     const balance = Math.min(left.length, right.length) / words.length;
     if (!best || crossing < best.crossing ||
         (crossing === best.crossing && balance > best.balance)) {
@@ -99,6 +99,7 @@ export function suggestPdfV4OcrColumnPreview(
   if (!best) return null;
   const left = makeLines(words.filter((w) => w.bounds.x1 < best!.split));
   const right = makeLines(words.filter((w) => w.bounds.x0 > best!.split));
+  if (left.length < 4 || right.length < 4) return null;
   // This is a review aid rather than a replacement for source reading order.
   return "[LEFT COLUMN - CHECK AGAINST ORIGINAL]\n" +
     linesToText(left) + "\n\n[RIGHT COLUMN - CHECK AGAINST ORIGINAL]\n" +
