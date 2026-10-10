@@ -1,0 +1,22 @@
+{
+  "schema": "kukureku-private-golden-v1",
+  "provenance": "REAL_WORLD_HUMAN_REVIEWED",
+  "cases": [
+    {
+      "id": "approved-scan-01",
+      "category": "ocr-text",
+      "file": "case-approved-scan-01.pdf",
+      "sha256": "REPLACE_WITH_REAL_FILE_SHA256",
+      "rights": "owner-consent",
+      "annotation": {
+        "annotatorId": "reviewer-alpha",
+        "reviewerId": "reviewer-beta",
+        "reviewerApproved": true,
+        "reviewDate": "2026-10-10"
+      },
+      "expected": {
+        "text": "REPLACE WITH INDEPENDENTLY REVIEWED COMPLETE TEXT"
+      }
+    }
+  ]
+}
