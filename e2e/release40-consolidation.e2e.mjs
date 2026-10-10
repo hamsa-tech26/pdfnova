@@ -56,6 +56,10 @@ test("workspace version health exports a metadata-only inventory, not PDFs",asyn
   expect(json.warning).toMatch(/Does not contain actual PDF files/);
   expect(json.versions.some(x=>x.name==="kukureku-merged.pdf")).toBe(true);
   expect(json.versions.some(x=>"blob" in x || "bytes" in x)).toBe(false);
+  await page.getByRole("button",{name:"Use stored version health-one.pdf"}).click();
+  await expect(page.getByRole("status").filter({hasText:"Other versions have not been overwritten"})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Current version health-one.pdf"})).toBeDisabled();
+  await expect(page.getByText("kukureku-merged.pdf").first()).toBeVisible();
 });
 
 test("twenty-source merge enforces file count, preserves selections, and recovers for another run",async({page})=>{

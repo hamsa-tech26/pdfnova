@@ -2,7 +2,7 @@
 
 import { downloadFile } from "@/lib/downloadFile";
 import { auditWorkspaceVersions } from "@/lib/storage/workspaceAudit";
-import { listWorkspaceFileSummaries, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
+import { listWorkspaceFileSummaries, getWorkspaceFile, getActiveWorkspaceFileSummary, setActiveWorkspaceFile, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { Database, Download, RefreshCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -11,10 +11,14 @@ export default function WorkspaceHealthPage() {
   const [versions, setVersions] = useState<WorkspaceFileSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [switching, setSwitching] = useState(false);
+  const [notice, setNotice] = useState("");
   const refresh = useCallback(async () => {
     try {
-      const summaries = await listWorkspaceFileSummaries();
+      const [summaries, active] = await Promise.all([listWorkspaceFileSummaries(),getActiveWorkspaceFileSummary()]);
       setVersions(summaries);
+      setActiveId(active?.id ?? null);
       setError("");
     } catch {
       setError("This browser could not read the local workspace. Check browser storage permissions.");
@@ -32,6 +36,23 @@ export default function WorkspaceHealthPage() {
     };
   },[refresh]);
   const health=useMemo(()=>auditWorkspaceVersions(versions),[versions]);
+  async function useVersion(id: string) {
+    if (switching || id === activeId) return;
+    setSwitching(true);
+    setNotice("");
+    try {
+      const file = await getWorkspaceFile(id);
+      if (!file) throw new Error("This stored PDF is missing; no active document was changed.");
+      await setActiveWorkspaceFile(id);
+      setActiveId(id);
+      setNotice("This stored version is now active. Other versions have not been overwritten.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "This version cannot be opened.");
+    } finally {
+      setSwitching(false);
+    }
+  }
+
   function exportManifest() {
     const manifest = {
       schema: "kukureku-local-manifest-v1",
@@ -64,9 +85,16 @@ export default function WorkspaceHealthPage() {
       {(health.missingParentReferences>0 || health.duplicateIds>0)&&<p role="alert" className="mt-5 rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm leading-6 text-amber-950 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">Some version references are unavailable or repeated. This is a metadata consistency warning, not proof the PDF bytes are corrupted.</p>}
       <section className="mt-6 rounded-2xl border border-slate-200 bg-white p-6 dark:border-slate-800 dark:bg-slate-900">
         <h2 className="text-xl font-black">Version inventory</h2>
+        <p className="mt-2 text-sm text-slate-600 dark:text-slate-300">Select an earlier stored version without overwriting or deleting any other version. This changes the active workspace pointer only.</p>
+        {notice && <p role="status" className="mt-3 rounded-xl bg-emerald-50 p-3 text-sm font-semibold text-emerald-900 dark:bg-emerald-950/30 dark:text-emerald-200">{notice}</p>}
         {versions.length===0?<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">No stored documents yet. Try Magic Drop to create a workspace version.</p>:
           <ol className="mt-4 space-y-2">{versions.slice(0,50).map(v=><li key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-700">
             <p className="break-all font-semibold">{v.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Version {v.version} · {v.relationKind} · {(v.size/1024/1024).toFixed(2)} MB</p>
+            <button type="button" onClick={() => void useVersion(v.id)} disabled={switching || v.id === activeId}
+              aria-label={v.id === activeId ? "Current version "+v.name : "Use stored version "+v.name}
+              className="mt-3 min-h-11 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-slate-950 dark:text-blue-300">
+              {v.id === activeId ? "Active version" : "Use this version"}
+            </button>
           </li>)}</ol>}
         {versions.length>50&&<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Showing first 50 of {versions.length} versions. The export includes all version metadata.</p>}
         <div className="mt-6 flex flex-wrap gap-3">

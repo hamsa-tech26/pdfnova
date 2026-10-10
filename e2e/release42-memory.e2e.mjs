@@ -16,12 +16,12 @@ test("PDF to JPG previews at most eight pages at a time, keeps selected pages an
   });
   await expect(page.getByRole("heading",{name:"PDF Pages (12)"})).toBeVisible({timeout:90000});
   await expect(page.getByRole("status").filter({hasText:"Previewing pages 1–8 of 12"})).toBeVisible();
-  await expect(page.locator("img")).toHaveCount(8,{timeout:25000});
+  await expect(page.locator('img[alt^="PDF page "]')).toHaveCount(8,{timeout:25000});
   await page.getByRole("button",{name:"Select All"}).click();
   await expect(page.getByText("Selected: 12")).toBeVisible();
   await page.getByRole("button",{name:"Next previews"}).click();
   await expect(page.getByRole("status").filter({hasText:"Previewing pages 9–12 of 12"})).toBeVisible();
-  await expect(page.locator("img")).toHaveCount(4);
+  await expect(page.locator('img[alt^="PDF page "]')).toHaveCount(4);
   await expect(page.getByText("Selected: 12")).toBeVisible();
   const dl=page.waitForEvent("download");
   await page.getByRole("button",{name:"Download All as ZIP"}).click();
