@@ -23,10 +23,13 @@ export default function WorkspaceHealthPage() {
     }
   }, []);
   useEffect(()=>{
-    void refresh();
+    const frame = window.requestAnimationFrame(()=>void refresh());
     const changed = ()=>void refresh();
     window.addEventListener(WORKSPACE_CHANGE_EVENT,changed);
-    return ()=>window.removeEventListener(WORKSPACE_CHANGE_EVENT,changed);
+    return ()=>{
+      window.cancelAnimationFrame(frame);
+      window.removeEventListener(WORKSPACE_CHANGE_EVENT,changed);
+    };
   },[refresh]);
   const health=useMemo(()=>auditWorkspaceVersions(versions),[versions]);
   function exportManifest() {
