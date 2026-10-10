@@ -1,0 +1,190 @@
+{
+  "schema": "kukureku-output-evidence-v1",
+  "meaning": {
+    "content": "Real browser export with semantic/content or format-specific invariant asserted",
+    "structure": "Real browser export checked for structural/parsing invariants; not full fidelity",
+    "unit-only": "No independent browser export correctness certification"
+  },
+  "entries": [
+    {
+      "route": "/merge-pdf",
+      "level": "content",
+      "file": "e2e/release40-consolidation.e2e.mjs",
+      "claim": "Downloaded PDF preserves merged page count; 20-file stress and retry"
+    },
+    {
+      "route": "/split-pdf",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded output contains exact selected source pages in order"
+    },
+    {
+      "route": "/compress-pdf",
+      "level": "structure",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Output parses and retains page count; visual fidelity still unverified"
+    },
+    {
+      "route": "/pdf-to-word",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded DOCX contains expected original selectable text"
+    },
+    {
+      "route": "/word-to-pdf",
+      "level": "structure",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Real DOCX produces openable nonempty PDF; layout fidelity unverified"
+    },
+    {
+      "route": "/jpg-to-pdf",
+      "level": "structure",
+      "file": "e2e/release41-cancellation.e2e.mjs",
+      "claim": "JPG export creates valid PDF; repeated operation and ordering locked"
+    },
+    {
+      "route": "/pdf-to-jpg",
+      "level": "structure",
+      "file": "e2e/release42-memory.e2e.mjs",
+      "claim": "All pages exported as JPEGs to ZIP; selection and pagination tested"
+    },
+    {
+      "route": "/organize-pdf",
+      "level": "unit-only",
+      "file": "lib/pdf/__tests__/pageOrder.test.ts",
+      "claim": "Page-organization helper unit tested; browser export correctness not certified"
+    },
+    {
+      "route": "/rotate-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Real output rotation checked with saved workspace version"
+    },
+    {
+      "route": "/extract-pdf-pages",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Real export keeps selected source page sizes and sequence"
+    },
+    {
+      "route": "/delete-pdf-pages",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Real export removes chosen page only"
+    },
+    {
+      "route": "/pdf-to-text",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "TXT download contains text from all three pages"
+    },
+    {
+      "route": "/flatten-pdf",
+      "level": "unit-only",
+      "file": "lib/pdf/__tests__/formFields.test.ts",
+      "claim": "Form operations tested; browser flatten fidelity not qualified"
+    },
+    {
+      "route": "/ocr-pdf",
+      "level": "structure",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Real worker exercised twice; real-world OCR accuracy remains unqualified"
+    },
+    {
+      "route": "/reorder-pdf-pages",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Real file downloaded and actual page tree permutation asserted"
+    },
+    {
+      "route": "/reverse-pdf",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Real file downloaded with reversed page order and preserved title"
+    },
+    {
+      "route": "/remove-pdf-metadata",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Clears common title/author on downloaded PDF (not forensic sanitization)"
+    },
+    {
+      "route": "/add-page-numbers",
+      "level": "structure",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded PDF valid and has same pages; generated text still needs pixel/text assertion"
+    },
+    {
+      "route": "/crop-pdf",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded CropBox dimensions reduced on each page"
+    },
+    {
+      "route": "/resize-pdf-pages",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "All downloaded page dimensions exactly A4"
+    },
+    {
+      "route": "/header-footer-pdf",
+      "level": "structure",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded PDF parseable and page count preserved; rendered text unverified"
+    },
+    {
+      "route": "/sign-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Keyboard placement on rotated CropBox and real exported PDF validated"
+    },
+    {
+      "route": "/pdf-form-filler",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "AcroForm values persisted after browser download and reload"
+    },
+    {
+      "route": "/redact-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Downloaded page is image-only rather than retaining redacted selectable text"
+    },
+    {
+      "route": "/edit-pdf-metadata",
+      "level": "content",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded PDF persists changed author and title"
+    },
+    {
+      "route": "/add-image-stamp-pdf",
+      "level": "unit-only",
+      "file": "lib/pdf/__tests__/signaturePlacementGeometry.test.ts",
+      "claim": "Related placement geometry tested; stamp browser export unqualified"
+    },
+    {
+      "route": "/create-fillable-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Real AcroForm field on rotated cropped page preserved"
+    },
+    {
+      "route": "/watermark-pdf",
+      "level": "structure",
+      "file": "e2e/release47-output-certification.e2e.mjs",
+      "claim": "Downloaded PDF parses and keeps pages; rendered appearance unverified"
+    },
+    {
+      "route": "/protect-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "QPDF protection and wrong-password rejection verified"
+    },
+    {
+      "route": "/unlock-pdf",
+      "level": "content",
+      "file": "e2e/reliability-smoke.e2e.mjs",
+      "claim": "Protected PDF reopened and successfully unlocked"
+    }
+  ]
+}
