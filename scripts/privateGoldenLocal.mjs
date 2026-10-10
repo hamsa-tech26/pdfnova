@@ -40,6 +40,8 @@ export async function readPrivatePdf(entry){
 export async function writePrivateResult(entry,result){
   const output=path.join(PRIVATE_ROOT,"results");
   await mkdir(output,{recursive:true,mode:0o700});
+  const info=await lstat(output);
+  if(!info.isDirectory()||info.isSymbolicLink())throw Error("PRIVATE_GOLDEN_UNSAFE_RESULTS_DIR");
   const row={
     id:entry.id,category:entry.category,status:result.status,
     reasonCode:result.reasonCode??"UNKNOWN",metrics:result.metrics??{},
