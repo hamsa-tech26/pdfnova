@@ -8,6 +8,9 @@ import { downloadFile } from "@/lib/downloadFile";
 import {
   forEachRenderedPdfPage,
   renderPdfPages,
+  countPdfPages,
+  pdfPreviewPageNumbers,
+  PDF_JPG_PREVIEW_BATCH_SIZE,
   type RenderedPdfPage,
 } from "@/lib/pdf/render";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -38,6 +41,10 @@ export default function PdfToJpgPage() {
 
   const [file, setFile] = useState<File | null>(null);
   const [pages, setPages] = useState<RenderedPdfPage[]>([]);
+  const [pageCount, setPageCount] = useState(0);
+  const [previewStart, setPreviewStart] = useState(1);
+  const [isPreviewing, setIsPreviewing] = useState(false);
+  const operationRef = useRef(false);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingZip, setIsCreatingZip] = useState(false);
@@ -46,12 +53,18 @@ export default function PdfToJpgPage() {
   async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
   ) {
+    if (operationRef.current || isCreatingZip) {
+      event.target.value = "";
+      return;
+    }
+    operationRef.current = true;
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile || selectedFile.type !== "application/pdf") {
       setErrorMessage("Please select a valid PDF file.");
       toast.error("Please select a valid PDF file.");
       event.target.value = "";
+      operationRef.current = false;
       return;
     }
 
@@ -59,32 +72,35 @@ export default function PdfToJpgPage() {
       setErrorMessage("The PDF file must not be larger than 25 MB.");
       toast.error("The PDF file must not be larger than 25 MB.");
       event.target.value = "";
+      operationRef.current = false;
       return;
     }
 
     setFile(selectedFile);
     setErrorMessage("");
     setPages([]);
+    setPageCount(0);
+    setPreviewStart(1);
     setSelectedPages([]);
     setIsLoading(true);
 
     try {
+      const count = await countPdfPages(selectedFile);
+      const firstPages = pdfPreviewPageNumbers(1, count);
       const renderedPages = await renderPdfPages(
         selectedFile,
         {
+          pageNumbers: firstPages,
           scale: 1.25,
           quality: 0.84,
           format: "jpeg",
           maxDimension: 1800,
         },
       );
-
+      setPageCount(count);
       setPages(renderedPages);
-
       toast.success(
-        `${renderedPages.length} ${
-          renderedPages.length === 1 ? "page" : "pages"
-        } rendered successfully.`,
+        `PDF ready: ${count} pages. Showing ${renderedPages.length} preview thumbnails.`,
       );
     } catch (error) {
       console.error(error);
@@ -94,8 +110,34 @@ export default function PdfToJpgPage() {
       setErrorMessage(message);
       toast.error(message);
     } finally {
+      operationRef.current = false;
       setIsLoading(false);
       event.target.value = "";
+    }
+  }
+
+  async function changePreview(start: number) {
+    if (!file || isPreviewing || isCreatingZip || operationRef.current) return;
+    const pageNumbers = pdfPreviewPageNumbers(start, pageCount);
+    if (!pageNumbers.length) return;
+    operationRef.current = true;
+    setIsPreviewing(true);
+    try {
+      const newPages = await renderPdfPages(file, {
+        pageNumbers,
+        scale: 1.25,
+        quality: 0.84,
+        format: "jpeg",
+        maxDimension: 1800,
+      });
+      setPages(newPages);
+      setPreviewStart(start);
+    } catch (error) {
+      console.error(error);
+      setErrorMessage("Unable to preview this page range. The original PDF remains available.");
+    } finally {
+      operationRef.current = false;
+      setIsPreviewing(false);
     }
   }
 
@@ -169,7 +211,7 @@ export default function PdfToJpgPage() {
   }
 
   function selectAllPages() {
-    setSelectedPages(pages.map((page) => page.pageNumber));
+    setSelectedPages(Array.from({length: pageCount}, (_, i) => i + 1));
   }
 
   function clearSelection() {
@@ -185,6 +227,8 @@ export default function PdfToJpgPage() {
       return;
     }
 
+    if (operationRef.current) return;
+    operationRef.current = true;
     setIsCreatingZip(true);
 
     try {
@@ -264,6 +308,7 @@ export default function PdfToJpgPage() {
 
       toast.error("The ZIP file could not be created.");
     } finally {
+      operationRef.current = false;
       setIsCreatingZip(false);
     }
   }
@@ -276,7 +321,7 @@ export default function PdfToJpgPage() {
   }
 
   async function downloadAllPages() {
-    const allPageNumbers = pages.map((page) => page.pageNumber);
+    const allPageNumbers = Array.from({length: pageCount}, (_, i) => i + 1);
 
     await downloadPagesAsZip(
       allPageNumbers,
@@ -316,6 +361,7 @@ export default function PdfToJpgPage() {
               description="Choose the PDF you want to convert."
               buttonText="Choose PDF"
               helperText="Maximum file size: 25 MB"
+              disabled={isLoading || isPreviewing || isCreatingZip}
             />
 
             {errorMessage && (
@@ -365,12 +411,12 @@ export default function PdfToJpgPage() {
               </div>
             )}
 
-            {pages.length > 0 && (
+            {pageCount > 0 && (
               <div className="mt-10">
                 <div className="flex flex-col justify-between gap-4 lg:flex-row lg:items-end">
                   <div>
                     <h2 className="text-xl font-bold text-gray-900">
-                      PDF Pages ({pages.length})
+                      PDF Pages ({pageCount})
                     </h2>
 
                     <p className="mt-1 text-sm text-gray-500">
@@ -383,7 +429,7 @@ export default function PdfToJpgPage() {
                       type="button"
                       onClick={selectAllPages}
                       disabled={
-                        selectedPages.length === pages.length
+                        selectedPages.length === pageCount
                       }
                       className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -406,7 +452,7 @@ export default function PdfToJpgPage() {
                     type="button"
                     onClick={downloadSelectedPages}
                     disabled={
-                      selectedPages.length === 0 || isCreatingZip
+                      selectedPages.length === 0 || isCreatingZip || isPreviewing
                     }
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white transition hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
@@ -425,7 +471,7 @@ export default function PdfToJpgPage() {
                   <button
                     type="button"
                     onClick={downloadAllPages}
-                    disabled={isCreatingZip}
+                    disabled={isCreatingZip || isPreviewing}
                     className="inline-flex items-center justify-center gap-2 rounded-xl bg-gray-950 px-5 py-3 font-semibold text-white transition hover:bg-blue-600 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {isCreatingZip ? (
@@ -441,6 +487,18 @@ export default function PdfToJpgPage() {
                   </button>
                 </div>
 
+                <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
+                  <span role="status">Previewing pages {previewStart}–{Math.min(pageCount, previewStart + PDF_JPG_PREVIEW_BATCH_SIZE - 1)} of {pageCount}. Only eight preview images are retained at a time. All pages remain available for export.</span>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" onClick={() => void changePreview(Math.max(1, previewStart - PDF_JPG_PREVIEW_BATCH_SIZE))}
+                      disabled={previewStart === 1 || isPreviewing || isCreatingZip}
+                      className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-40 dark:border-slate-700">Previous previews</button>
+                    <button type="button" onClick={() => void changePreview(previewStart + PDF_JPG_PREVIEW_BATCH_SIZE)}
+                      disabled={previewStart + PDF_JPG_PREVIEW_BATCH_SIZE > pageCount || isPreviewing || isCreatingZip}
+                      className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 font-semibold disabled:opacity-40 dark:border-slate-700">Next previews</button>
+                  </div>
+                </div>
+                {isPreviewing && <p role="status" className="mt-3 text-sm font-semibold text-blue-700">Loading the next preview group…</p>}
                 <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
                   {pages.map((page) => (
                     <PdfPageCard
