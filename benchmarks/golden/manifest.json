@@ -1,0 +1,85 @@
+{
+  "schema": "kukureku-golden-document-v1",
+  "classification": "SYNTHETIC_ONLY",
+  "realWorldEvaluated": 0,
+  "cases": [
+    {
+      "id": "layout",
+      "file": "golden-layout.pdf",
+      "type": "selectable-layout",
+      "expected": {
+        "pages": 2,
+        "title": "Golden Layout Qualification",
+        "textPerPage": [
+          [
+            "GOLDEN REPORT 2026",
+            "ITEM A-101",
+            "ITEM B-202",
+            "ITEM C-303"
+          ],
+          [
+            "FIELD NOTES",
+            "PIPELINE NORTH",
+            "PRESSURE NORMAL"
+          ]
+        ],
+        "geometry": [
+          {
+            "width": 600,
+            "height": 780,
+            "rotation": 0
+          },
+          {
+            "width": 640,
+            "height": 820,
+            "rotation": 90,
+            "crop": {
+              "x": 24,
+              "y": 30,
+              "width": 580,
+              "height": 740
+            }
+          }
+        ]
+      }
+    },
+    {
+      "id": "form",
+      "file": "golden-form.pdf",
+      "type": "acroform",
+      "expected": {
+        "pages": 1,
+        "geometry": [
+          {
+            "width": 612,
+            "height": 792,
+            "rotation": 0
+          }
+        ],
+        "fields": {
+          "qa.full_name": "EXAMPLE ALPHA",
+          "qa.accepted": true
+        }
+      }
+    },
+    {
+      "id": "scan",
+      "file": "golden-scan.pdf",
+      "type": "image-only",
+      "expected": {
+        "pages": 1,
+        "geometry": [
+          {
+            "width": 612,
+            "height": 792,
+            "rotation": 0
+          }
+        ],
+        "selectableTextItems": 0,
+        "imageXObjectsMin": 1,
+        "ocrExpectedText": "GOLDEN SCAN 123",
+        "ocrStatus": "NOT_MEASURED"
+      }
+    }
+  ]
+}
