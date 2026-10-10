@@ -9,6 +9,8 @@ import {
   FileText,
   Images,
   LayoutDashboard,
+  Menu,
+  X,
   ListChecks,
   GitCompareArrows,
   ShieldCheck,
@@ -20,6 +22,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
 
 type SidebarLink = {
   label: string;
@@ -167,9 +170,11 @@ const navigationGroups: SidebarGroup[] = [
 function SidebarNavigationLink({
   link,
   pathname,
+  onNavigate,
 }: {
   link: SidebarLink;
   pathname: string;
+  onNavigate?: () => void;
 }) {
   const Icon = link.icon;
   const isAvailable = link.available !== false;
@@ -203,6 +208,8 @@ function SidebarNavigationLink({
   return (
     <Link
       href={link.href}
+      aria-current={isActive ? "page" : undefined}
+      onClick={onNavigate}
       className={`group flex items-center gap-3 rounded-2xl px-4 py-3 text-sm font-semibold transition ${
         isActive
           ? "bg-blue-600 text-white shadow-lg shadow-blue-200 dark:shadow-none"
@@ -239,9 +246,128 @@ function SidebarNavigationLink({
 
 export default function WorkspaceSidebar() {
   const pathname = usePathname();
+  const [mobileOpen, setMobileOpen] = useState(false);
+  const menuButton = useRef<HTMLButtonElement>(null);
+  const closeButton = useRef<HTMLButtonElement>(null);
+  const mobileDrawer = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    if (!mobileOpen) return;
+    closeButton.current?.focus();
+    function onKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        setMobileOpen(false);
+        menuButton.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      // The navigation is a modal drawer: do not strand keyboard users
+      // behind the backdrop while the drawer is open.
+      const focusables = Array.from(
+        mobileDrawer.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getClientRects().length > 0);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !mobileDrawer.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !mobileDrawer.current?.contains(active))) {
+        event.preventDefault();
+        first.focus();
+      }
+    }
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [mobileOpen]);
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-80 shrink-0 border-r border-gray-200 bg-white px-5 py-6 transition-colors dark:border-slate-800 dark:bg-slate-950 lg:flex lg:flex-col">
+    <>
+      <header className="sticky top-0 z-40 flex min-h-16 items-center justify-between gap-3 border-b border-gray-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-950 lg:hidden">
+        <Link href="/dashboard" className="flex min-w-0 items-center gap-3">
+          <KukurekuBrandMark size={36} />
+          <span className="truncate font-extrabold text-gray-950 dark:text-white">Kukureku PDF</span>
+        </Link>
+        <button
+          ref={menuButton}
+          type="button"
+          aria-label="Open workspace menu"
+          aria-controls="mobile-workspace-navigation"
+          aria-expanded={mobileOpen}
+          onClick={() => setMobileOpen(true)}
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-gray-200 text-gray-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:text-white"
+        >
+          <Menu size={22} aria-hidden="true" />
+        </button>
+      </header>
+
+      {mobileOpen && (
+        <div className="fixed inset-0 z-[70] lg:hidden">
+          <button
+            type="button"
+            className="absolute inset-0 cursor-default bg-slate-950/60"
+            onClick={() => setMobileOpen(false)}
+            aria-label="Close workspace navigation backdrop"
+          />
+          <aside
+            ref={mobileDrawer}
+            id="mobile-workspace-navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Workspace navigation"
+            className="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col bg-white shadow-2xl dark:bg-slate-950"
+          >
+            <div className="flex min-h-16 items-center justify-between gap-2 border-b border-gray-200 px-4 dark:border-slate-800">
+              <span className="font-bold text-gray-950 dark:text-white">Workspace navigation</span>
+              <button
+                ref={closeButton}
+                type="button"
+                aria-label="Close workspace menu"
+                onClick={() => {
+                  setMobileOpen(false);
+                  menuButton.current?.focus();
+                }}
+                className="flex h-11 w-11 items-center justify-center rounded-xl border border-gray-200 text-gray-800 focus-visible:outline-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:text-white"
+              >
+                <X size={21} aria-hidden="true" />
+              </button>
+            </div>
+            <nav aria-label="Mobile workspace navigation" className="flex-1 space-y-6 overflow-y-auto overscroll-contain px-3 py-4">
+              {navigationGroups.map((group) => (
+                <section key={group.label}>
+                  <p className="px-4 text-xs font-bold uppercase tracking-wider text-gray-500 dark:text-slate-400">{group.label}</p>
+                  <div className="mt-2 space-y-1">
+                    {group.links.map((link) => (
+                      <SidebarNavigationLink
+                        key={link.href}
+                        link={link}
+                        pathname={pathname}
+                        onNavigate={() => setMobileOpen(false)}
+                      />
+                    ))}
+                  </div>
+                </section>
+              ))}
+              <Link
+                href="/"
+                onClick={() => setMobileOpen(false)}
+                className="flex min-h-12 items-center rounded-2xl px-4 text-sm font-semibold text-blue-700 dark:text-blue-300"
+              >
+                Back to website
+              </Link>
+            </nav>
+            <div className="border-t border-gray-200 p-4 dark:border-slate-800">
+              <ThemeToggle />
+            </div>
+          </aside>
+        </div>
+      )}
+
+      <aside className="sticky top-0 hidden h-screen w-80 shrink-0 border-r border-gray-200 bg-white px-5 py-6 transition-colors dark:border-slate-800 dark:bg-slate-950 lg:flex lg:flex-col">
       <div className="flex items-center justify-between gap-3 px-2">
         <Link
           href="/dashboard"
@@ -288,7 +414,7 @@ export default function WorkspaceSidebar() {
         </div>
       </div>
 
-      <nav className="mt-7 flex-1 space-y-7 overflow-y-auto pr-1">
+      <nav aria-label="Desktop workspace navigation" className="mt-7 flex-1 space-y-7 overflow-y-auto pr-1">
         {navigationGroups.map((group) => (
           <section key={group.label}>
             <p className="px-4 text-[11px] font-bold uppercase tracking-[0.2em] text-gray-400 dark:text-slate-500">
@@ -309,5 +435,6 @@ export default function WorkspaceSidebar() {
       </nav>
 
     </aside>
+    </>
   );
 }
