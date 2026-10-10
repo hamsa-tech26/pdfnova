@@ -1,6 +1,7 @@
 "use client";
 
 import { buildIntentPlan } from "@/lib/workflow/intentPlanner";
+import { downloadFile } from "@/lib/downloadFile";
 import { ArrowRight, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -12,6 +13,23 @@ export default function WorkflowPlannerPage() {
   const [request, setRequest] = useState("");
   const [reviewed, setReviewed] = useState<string[]>([]);
   const plan = useMemo(() => buildIntentPlan(request), [request]);
+
+  function exportSafePlan() {
+    if (!plan.steps.length) return;
+    // Export operation metadata ONLY; never include the user's free-text
+    // request, filenames, passwords, PDF bytes, or document contents.
+    const manifest = {
+      schema: "kukureku-manual-workflow-v1",
+      exportedAt: new Date().toISOString(),
+      notice: "Non-executable reference plan. Each step requires the user's review and manual action.",
+      operations: plan.steps.map(({id,title,href,note,requiresReview})=>({
+        id,title,href,note,requiresReview,
+      })),
+      warnings: plan.warnings,
+    };
+    downloadFile(new TextEncoder().encode(JSON.stringify(manifest,null,2)),
+      "kukureku-manual-workflow.json","application/json");
+  }
 
   function makePlan(value = input) {
     setRequest(value.trim());
@@ -48,7 +66,14 @@ export default function WorkflowPlannerPage() {
           ))}
 
           {plan.steps.length>0 && <>
-            <h2 className="text-2xl font-black">Your proposed steps ({plan.steps.length})</h2>
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-2xl font-black">Your proposed steps ({plan.steps.length})</h2>
+              <button type="button" onClick={exportSafePlan}
+                className="min-h-11 rounded-xl border border-blue-300 bg-white px-4 py-2.5 text-sm font-semibold text-blue-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-300">
+                Save manual plan (JSON)
+              </button>
+            </div>
+            <p className="text-sm text-slate-600 dark:text-slate-300">The saved plan includes tool names, routes, and safety notes only. Your original instructions and document content are excluded.</p>
             <ol className="space-y-3">
               {plan.steps.map((step,i)=>(
                 <li key={step.id} className="rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900">

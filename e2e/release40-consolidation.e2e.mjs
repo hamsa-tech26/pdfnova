@@ -25,6 +25,13 @@ test("review-first workflow planner orders linked steps and never executes uploa
   await expect(page.getByRole("heading",{name:"Your proposed steps (4)"})).toBeVisible();
   const routes=await page.locator("ol a").evaluateAll(links=>links.map(link=>link.getAttribute("href")));
   expect(routes).toEqual(["/merge-pdf","/compress-pdf","/add-page-numbers","/protect-pdf"]);
+  const planDownload=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Save manual plan (JSON)"}).click();
+  const savedPlan=await planDownload;
+  const planJson=JSON.parse((await readFile(await savedPlan.path())).toString());
+  expect(planJson.schema).toBe("kukureku-manual-workflow-v1");
+  expect(planJson.operations.map(x=>x.id)).toEqual(["merge","compress","number","protect"]);
+  expect(planJson).not.toHaveProperty("request");
   await page.getByLabel(/1\. Merge PDF/).check();
   await expect(page.getByText(/checking one does not process a file/)).toBeVisible();
   await page.getByLabel("What would you like to do?").fill("Summarize and email the PDF");
@@ -56,6 +63,10 @@ test("workspace version health exports a metadata-only inventory, not PDFs",asyn
   expect(json.warning).toMatch(/Does not contain actual PDF files/);
   expect(json.versions.some(x=>x.name==="kukureku-merged.pdf")).toBe(true);
   expect(json.versions.some(x=>"blob" in x || "bytes" in x)).toBe(false);
+  await page.getByRole("button",{name:"Use stored version health-one.pdf"}).click();
+  await expect(page.getByRole("status").filter({hasText:"Other versions have not been overwritten"})).toBeVisible();
+  await expect(page.getByRole("button",{name:"Current version health-one.pdf"})).toBeDisabled();
+  await expect(page.getByText("kukureku-merged.pdf").first()).toBeVisible();
 });
 
 test("twenty-source merge enforces file count, preserves selections, and recovers for another run",async({page})=>{

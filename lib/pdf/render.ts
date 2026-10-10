@@ -265,3 +265,33 @@ export async function renderPdfPages(
 
   return renderedPages;
 }
+
+/**
+ * Read only the document's page count without retaining page thumbnails.
+ * PDF.js loading tasks and worker references must be disposed each time.
+ */
+export async function countPdfPages(file: File): Promise<number> {
+  if (typeof window === "undefined") throw new Error("PDF page count is only available in the browser.");
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL(
+    "pdfjs-dist/legacy/build/pdf.worker.min.mjs",
+    import.meta.url,
+  ).toString();
+  const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
+  try {
+    const pdf = await task.promise;
+    return pdf.numPages;
+  } finally {
+    await task.destroy();
+  }
+}
+
+export const PDF_JPG_PREVIEW_BATCH_SIZE = 8;
+
+export function pdfPreviewPageNumbers(startPage: number, pageCount: number) {
+  if (!Number.isInteger(startPage) || !Number.isInteger(pageCount) || pageCount < 0 || startPage < 1 || startPage > pageCount) return [];
+  return Array.from(
+    { length: Math.min(PDF_JPG_PREVIEW_BATCH_SIZE, pageCount - startPage + 1) },
+    (_, i) => startPage + i,
+  );
+}
