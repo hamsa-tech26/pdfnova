@@ -18,6 +18,8 @@ const INTERNAL_ROUTES = new Set([
   "evidence-viewer",
   "magic-drop",
   "workflow-recipes",
+  "workflow-planner",
+  "workspace-health",
 ]);
 
 function read(relativePath) {

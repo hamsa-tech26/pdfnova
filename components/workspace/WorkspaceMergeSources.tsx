@@ -41,9 +41,11 @@ function sameFile(
 export default function WorkspaceMergeSources({
   fileInputRef,
   selectedFiles,
+  disabled = false,
 }: Readonly<{
   fileInputRef: RefObject<HTMLInputElement | null>;
   selectedFiles: File[];
+  disabled?: boolean;
 }>) {
   const [
     summaries,
@@ -105,6 +107,7 @@ export default function WorkspaceMergeSources({
   async function addDocument(
     summary: WorkspaceFileSummary,
   ) {
+    if (disabled) return;
     if (
       selectedFiles.some(
         (file) =>
@@ -194,7 +197,7 @@ export default function WorkspaceMergeSources({
                 }
                 type="button"
                 disabled={
-                  alreadySelected
+                  disabled || alreadySelected
                 }
                 onClick={() =>
                   void addDocument(

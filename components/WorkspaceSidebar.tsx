@@ -4,6 +4,7 @@ import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
 import {
   Archive,
+  Database,
   Bot,
   FileImage,
   FileText,
@@ -55,6 +56,18 @@ const navigationGroups: SidebarGroup[] = [
         label: "Workflow Recipes",
         href: "/workflow-recipes",
         icon: ListChecks,
+        badge: "V1",
+      },
+      {
+        label: "Workflow Planner",
+        href: "/workflow-planner",
+        icon: Sparkles,
+        badge: "V1",
+      },
+      {
+        label: "Workspace Health",
+        href: "/workspace-health",
+        icon: Database,
         badge: "V1",
       },
       {

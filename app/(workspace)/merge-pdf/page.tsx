@@ -11,21 +11,13 @@ import ToolLayout from "@/components/pdf/ToolLayout";
 import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerivedOutputNotice";
 import WorkspaceMergeSources from "@/components/workspace/WorkspaceMergeSources";
 import { downloadFile } from "@/lib/downloadFile";
-import {
-  assertPageCopySafe,
-  validatePdfBatch,
-} from "@/lib/pdf/pdfInputSafety";
-import { loadPdfWithoutMetadataMutation } from "@/lib/pdf/safeDocument";
+import { validatePdfBatch } from "@/lib/pdf/pdfBatchValidation";
 import { addRecentFile } from "@/lib/storage/recentFiles";
-import {
-  saveComposedPdfToWorkspace,
-} from "@/lib/storage/workspaceContinuity";
 import type {
   WorkspaceFileSummary,
 } from "@/lib/storage/workspaceFiles";
 import { ShieldCheck } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
-import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
 
 
@@ -85,6 +77,8 @@ export default function MergePdfPage() {
 
   const [files, setFiles] = useState<PdfFileInfo[]>([]);
   const [isMerging, setIsMerging] = useState(false);
+  const [isReadingFiles, setIsReadingFiles] = useState(false);
+  const readingFilesRef = useRef(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -111,6 +105,12 @@ export default function MergePdfPage() {
   async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
   ) {
+    if (readingFilesRef.current || isMerging) {
+      event.target.value = "";
+      toast.error("Please finish the current PDF operation before adding more files.");
+      return;
+    }
+
     const selectedFiles = Array.from(
       event.target.files ?? [],
     );
@@ -127,7 +127,17 @@ export default function MergePdfPage() {
       return;
     }
 
+    readingFilesRef.current = true;
+    setIsReadingFiles(true);
+
     try {
+      const [
+        { loadPdfWithoutMetadataMutation },
+        { assertPageCopySafe },
+      ] = await Promise.all([
+        import("@/lib/pdf/safeDocument"),
+        import("@/lib/pdf/pdfInputSafety"),
+      ]);
       const selectedFileInfo: PdfFileInfo[] = [];
 
       for (const file of selectedFiles) {
@@ -168,6 +178,8 @@ export default function MergePdfPage() {
       setErrorMessage(message);
       toast.error(message);
     } finally {
+      readingFilesRef.current = false;
+      setIsReadingFiles(false);
       event.target.value = "";
     }
   }
@@ -253,6 +265,10 @@ export default function MergePdfPage() {
   }
 
   async function mergePdfFiles() {
+    if (isMerging || readingFilesRef.current) {
+      return;
+    }
+
     if (files.length < 2) {
       const message = "Please select at least two PDF files.";
 
@@ -269,11 +285,16 @@ export default function MergePdfPage() {
     setCurrentStep(1);
 
     try {
+      const [
+        { PDFDocument },
+        { loadPdfWithoutMetadataMutation },
+        { assertPageCopySafe },
+      ] = await Promise.all([
+        import("pdf-lib"),
+        import("@/lib/pdf/safeDocument"),
+        import("@/lib/pdf/pdfInputSafety"),
+      ]);
       const mergedPdf = await PDFDocument.create();
-
-      await new Promise((resolve) =>
-        setTimeout(resolve, 200),
-      );
 
       setProgress(30);
       setCurrentStep(2);
@@ -311,10 +332,6 @@ export default function MergePdfPage() {
       const mergedPdfBytes = await mergedPdf.save();
       const generatedFileName = "kukureku-merged.pdf";
 
-      await new Promise((resolve) =>
-        setTimeout(resolve, 150),
-      );
-
       downloadFile(
         mergedPdfBytes,
         generatedFileName,
@@ -330,6 +347,7 @@ export default function MergePdfPage() {
         toolName: "Merge PDF",
       });
 
+      const { saveComposedPdfToWorkspace } = await import("@/lib/storage/workspaceContinuity");
       const savedWorkspaceDocument =
         await saveComposedPdfToWorkspace(
           {
@@ -413,7 +431,7 @@ export default function MergePdfPage() {
         description="Choose or drag at least two PDF files into the workspace."
         buttonText="Choose PDF Files"
         helperText="Supported format: PDF · Maximum file size: 25 MB per file"
-        disabled={isMerging}
+        disabled={isMerging || isReadingFiles}
       />
 
       <WorkspaceMergeSources
@@ -423,13 +441,21 @@ export default function MergePdfPage() {
         selectedFiles={files.map(
           (item) => item.file,
         )}
+        disabled={isMerging || isReadingFiles}
       />
+
+      {isReadingFiles && (
+        <p role="status" aria-live="polite" className="mt-4 text-sm font-semibold text-blue-700 dark:text-blue-300">
+          Validating your selected PDFs locally…
+        </p>
+      )}
 
       <FileList
         files={files}
         onRemove={removeFile}
         onMoveUp={moveFileUp}
         onMoveDown={moveFileDown}
+        disabled={isMerging || isReadingFiles}
       />
 
       {files.length === 0 && errorMessage && (
@@ -505,7 +531,7 @@ export default function MergePdfPage() {
                 buttonText="Merge and Download PDF"
                 subtitle="Combine the selected files in the order shown above."
                 onClick={mergePdfFiles}
-                disabled={files.length < 2}
+                disabled={files.length < 2 || isReadingFiles}
               />
             )}
         </div>

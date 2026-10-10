@@ -240,6 +240,20 @@ const quickActions = [
     accent: "bg-blue-50 text-blue-700",
   },
   {
+    title: "Workflow Planner",
+    description: "Turn task instructions into reviewed tool steps",
+    href: "/workflow-planner",
+    icon: Sparkles,
+    accent: "bg-cyan-50 text-cyan-700",
+  },
+  {
+    title: "Workspace Health",
+    description: "Review browser-local version history metadata",
+    href: "/workspace-health",
+    icon: FileText,
+    accent: "bg-emerald-50 text-emerald-700",
+  },
+  {
     title: "Merge PDF",
     description: "Combine documents",
     href: "/merge-pdf",
