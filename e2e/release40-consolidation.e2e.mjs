@@ -8,9 +8,9 @@ async function fixture(message) {
   pdf.addPage([595,842]).drawText(message,{x:32,y:700,font,size:14});
   return Buffer.from(await pdf.save());
 }
-async function downloadedPageCount(page) {
+async function downloadedPageCount(page, buttonLabel = "Merge and Download PDF") {
   const filePromise = page.waitForEvent("download");
-  await page.getByRole("button",{name:"Merge and Download PDF"}).click();
+  await page.getByRole("button",{name:buttonLabel}).click();
   const result=await filePromise;
   const doc=await PDFDocument.load(await readFile(await result.path()));
   return doc.getPageCount();
@@ -72,7 +72,7 @@ test("twenty-source merge enforces file count, preserves selections, and recover
   const alert=page.getByRole("alert").filter({hasText:"20 PDF files"});
   await expect(alert).toContainText("Choose no more than 20");
   await expect(page.getByRole("heading",{name:"Selected files (20)"})).toBeVisible();
-  expect(await downloadedPageCount(page)).toBe(20);
+  expect(await downloadedPageCount(page, "Retry Merge")).toBe(20);
   await expect(page.getByText("Saved as a new composed document in this browser workspace")).toBeVisible();
   await page.getByRole("button",{name:"Merge Another Set"}).click();
   await expect(page.getByRole("heading",{name:"Selected files (20)"})).toHaveCount(0);
