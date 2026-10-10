@@ -1,3 +1,4 @@
+import type { WorkspaceBackupEntry } from "./workspaceBackup";
 import {
   clearWorkflowRecipeProgress,
 } from "./workflowProgress";
@@ -1036,4 +1037,81 @@ export function buildWorkspaceMultiHandoffHref(
       uniqueIds.join(","),
     )
   );
+}
+
+/**
+ * Snapshot all actual saved PDF bytes and metadata from a single IndexedDB
+ * read transaction. Does not inspect or upload the content.
+ */
+export async function readWorkspaceBackupEntries(): Promise<WorkspaceBackupEntry[]> {
+  const db = await openWorkspaceDatabase();
+  let records: WorkspaceFileRecord[];
+  try {
+    const tx = db.transaction([FILE_STORE, SUMMARY_STORE], "readonly");
+    const [storedFiles, summaries] = await Promise.all([
+      requestValue(tx.objectStore(FILE_STORE).getAll()),
+      requestValue(tx.objectStore(SUMMARY_STORE).getAll()),
+    ]);
+    records = storedFiles as WorkspaceFileRecord[];
+    const savedIds = new Set((summaries as WorkspaceFileSummary[]).map(v => v.id));
+    if (records.length !== savedIds.size ||
+        records.some(record => !savedIds.has(record.id))) {
+      throw new Error("Stored PDF files do not match the workspace inventory. Backup stopped.");
+    }
+  } finally {
+    db.close();
+  }
+  const output: WorkspaceBackupEntry[] = [];
+  for (const record of records) {
+    if (!(record.blob instanceof Blob)) throw new Error("A saved PDF is missing. Backup stopped.");
+    output.push({
+      summary: toSummary(record),
+      bytes: new Uint8Array(await record.blob.arrayBuffer()),
+    });
+  }
+  return output;
+}
+
+/** Atomically append verified backup versions with new IDs. Never replace existing
+ * versions, clear storage, or change the active-file pointer. */
+export async function appendWorkspaceBackupEntries(entries: WorkspaceBackupEntry[]): Promise<number> {
+  if (!entries.length || entries.length > 60) throw new Error("Invalid restore batch.");
+  const ids = new Map(entries.map(({summary}) => [summary.id, crypto.randomUUID()]));
+  if (ids.size !== entries.length) throw new Error("Duplicate backup IDs cannot be restored.");
+  const mapped = (id: string) => {
+    const updated = ids.get(id);
+    if (!updated) throw new Error("A required parent or document identity is missing.");
+    return updated;
+  };
+  const restored: WorkspaceFileRecord[] = entries.map(({summary, bytes}) => {
+    if (bytes.byteLength !== summary.size || bytes.byteLength < 8) {
+      throw new Error("The backup PDF size changed after verification.");
+    }
+    const buffer = new ArrayBuffer(bytes.byteLength);
+    new Uint8Array(buffer).set(bytes);
+    return {
+      ...summary,
+      id: mapped(summary.id),
+      parentId: summary.parentId ? mapped(summary.parentId) : null,
+      parentIds: summary.parentIds.map(mapped),
+      rootId: mapped(summary.rootId),
+      rootIds: summary.rootIds.map(mapped),
+      documentId: mapped(summary.documentId),
+      blob: new Blob([buffer], {type:"application/pdf"}),
+    };
+  });
+  const db = await openWorkspaceDatabase();
+  try {
+    const tx = db.transaction([FILE_STORE, SUMMARY_STORE], "readwrite");
+    const complete = transactionComplete(tx);
+    for (const record of restored) {
+      tx.objectStore(FILE_STORE).add(record);
+      tx.objectStore(SUMMARY_STORE).add(toSummary(record));
+    }
+    await complete;
+    notifyWorkspaceChanged();
+    return restored.length;
+  } finally {
+    db.close();
+  }
 }
