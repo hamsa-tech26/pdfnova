@@ -107,7 +107,15 @@ export default function ProgressCard({
           </span>
         </div>
 
-        <div className="mt-3 h-3 overflow-hidden rounded-full bg-white shadow-inner dark:bg-slate-800">
+        <div
+          role="progressbar"
+          aria-label="Overall processing progress"
+          aria-valuemin={0}
+          aria-valuemax={100}
+          aria-valuenow={hasProgress ? Math.round(safeProgress) : undefined}
+          aria-valuetext={hasProgress ? undefined : "Processing"}
+          className="mt-3 h-3 overflow-hidden rounded-full bg-white shadow-inner dark:bg-slate-800"
+        >
           <div
             className={`h-full rounded-full bg-gradient-to-r from-blue-600 to-cyan-400 transition-all duration-500 ${
               hasProgress

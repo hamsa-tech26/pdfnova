@@ -249,6 +249,7 @@ export default function WorkspaceSidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const menuButton = useRef<HTMLButtonElement>(null);
   const closeButton = useRef<HTMLButtonElement>(null);
+  const mobileDrawer = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!mobileOpen) return;
@@ -257,6 +258,27 @@ export default function WorkspaceSidebar() {
       if (event.key === "Escape") {
         setMobileOpen(false);
         menuButton.current?.focus();
+        return;
+      }
+      if (event.key !== "Tab") return;
+
+      // The navigation is a modal drawer: do not strand keyboard users
+      // behind the backdrop while the drawer is open.
+      const focusables = Array.from(
+        mobileDrawer.current?.querySelectorAll<HTMLElement>(
+          'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ) ?? [],
+      ).filter((element) => element.getClientRects().length > 0);
+      if (!focusables.length) return;
+      const first = focusables[0];
+      const last = focusables[focusables.length - 1];
+      const active = document.activeElement;
+      if (event.shiftKey && (active === first || !mobileDrawer.current?.contains(active))) {
+        event.preventDefault();
+        last.focus();
+      } else if (!event.shiftKey && (active === last || !mobileDrawer.current?.contains(active))) {
+        event.preventDefault();
+        first.focus();
       }
     }
     window.addEventListener("keydown", onKeyDown);
@@ -292,8 +314,11 @@ export default function WorkspaceSidebar() {
             aria-label="Close workspace navigation backdrop"
           />
           <aside
+            ref={mobileDrawer}
             id="mobile-workspace-navigation"
-            aria-label="Mobile workspace navigation"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Workspace navigation"
             className="absolute inset-y-0 left-0 flex w-[min(88vw,22rem)] flex-col bg-white shadow-2xl dark:bg-slate-950"
           >
             <div className="flex min-h-16 items-center justify-between gap-2 border-b border-gray-200 px-4 dark:border-slate-800">

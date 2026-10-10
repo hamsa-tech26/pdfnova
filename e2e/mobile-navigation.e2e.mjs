@@ -53,6 +53,20 @@ test("workspace drawer can close by Escape, returning focus to its trigger", asy
   await expect(page.getByRole("button", { name: "Open workspace menu" })).toBeFocused();
 });
 
+test("mobile workspace navigation traps keyboard focus within its drawer", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Open workspace menu" }).click();
+  const dialog = page.getByRole("dialog", { name: "Workspace navigation" });
+  await expect(dialog).toBeVisible();
+  const close = dialog.getByRole("button", { name: "Close workspace menu" });
+  await expect(close).toBeFocused();
+  await page.keyboard.press("Shift+Tab");
+  await expect(dialog.getByRole("button", { name: "Toggle theme" })).toBeFocused();
+  await page.keyboard.press("Tab");
+  await expect(close).toBeFocused();
+});
+
 test("desktop navigation remains usable without the mobile controls", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");
