@@ -46,7 +46,7 @@ async function extractedText(bytes) {
       page.cleanup();
     }
     return texts;
-  } finally {await doc.destroy();}
+  } finally { if(typeof task.destroy==="function") await task.destroy(); }
 }
 function imageCount(pdf,pageNumber){
   const page=pdf.getPage(pageNumber);
