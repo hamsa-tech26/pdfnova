@@ -32,3 +32,29 @@ test("invalid selections are visible and users can recover without losing the up
     else await expect(page.getByText("recovered.pdf").first()).toBeVisible();
   }
 });
+
+test("image converters keep file-rejection messages visible and allow a corrected selection",async({page})=>{
+  test.setTimeout(120_000);
+  const pdf=await samplePdf();
+  await page.goto("/jpg-to-pdf");
+  let input=page.locator('input[type="file"]').first();
+  await input.setInputFiles({name:"invalid.txt",mimeType:"text/plain",buffer:Buffer.from("not image")});
+  let alert=page.getByRole("alert").filter({hasText:"Image processing needs attention"});
+  await expect(alert).toBeVisible();
+  await alert.getByRole("button",{name:"Dismiss Error"}).click();
+  await expect(alert).toHaveCount(0);
+  const oneByOnePng=Buffer.from(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+j3x8AAAAASUVORK5CYII=",
+    "base64");
+  await input.setInputFiles({name:"recovered.png",mimeType:"image/png",buffer:oneByOnePng});
+  await expect(page.getByText("recovered.png").first()).toBeVisible();
+
+  await page.goto("/pdf-to-jpg");
+  input=page.locator('input[type="file"]').first();
+  await input.setInputFiles({name:"invalid.txt",mimeType:"text/plain",buffer:Buffer.from("not pdf")});
+  alert=page.getByRole("alert").filter({hasText:"PDF processing needs attention"});
+  await expect(alert).toContainText("Please select a valid PDF file.");
+  await alert.getByRole("button",{name:"Dismiss Error"}).click();
+  await input.setInputFiles({name:"recovered.pdf",mimeType:"application/pdf",buffer:pdf});
+  await expect(page.getByText("recovered.pdf").first()).toBeVisible();
+});

@@ -1,6 +1,7 @@
 "use client";
 
 import FileUploader from "@/components/pdf/FileUploader";
+import ErrorCard from "@/components/pdf/ErrorCard";
 import PdfPageCard from "@/components/pdf/PdfPageCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
@@ -40,6 +41,7 @@ export default function PdfToJpgPage() {
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingZip, setIsCreatingZip] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   async function handleFileSelection(
     event: ChangeEvent<HTMLInputElement>,
@@ -47,18 +49,21 @@ export default function PdfToJpgPage() {
     const selectedFile = event.target.files?.[0];
 
     if (!selectedFile || selectedFile.type !== "application/pdf") {
+      setErrorMessage("Please select a valid PDF file.");
       toast.error("Please select a valid PDF file.");
       event.target.value = "";
       return;
     }
 
     if (selectedFile.size > 25 * 1024 * 1024) {
+      setErrorMessage("The PDF file must not be larger than 25 MB.");
       toast.error("The PDF file must not be larger than 25 MB.");
       event.target.value = "";
       return;
     }
 
     setFile(selectedFile);
+    setErrorMessage("");
     setPages([]);
     setSelectedPages([]);
     setIsLoading(true);
@@ -85,9 +90,9 @@ export default function PdfToJpgPage() {
       console.error(error);
       setFile(null);
 
-      toast.error(
-        "Unable to render this PDF. It may be damaged or password-protected.",
-      );
+      const message = "Unable to render this PDF. It may be damaged or password-protected.";
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsLoading(false);
       event.target.value = "";
@@ -312,6 +317,18 @@ export default function PdfToJpgPage() {
               buttonText="Choose PDF"
               helperText="Maximum file size: 25 MB"
             />
+
+            {errorMessage && (
+              <div className="mt-6">
+                <ErrorCard
+                  title="PDF processing needs attention"
+                  description={errorMessage}
+                  reasons={[]}
+                  onReset={() => setErrorMessage("")}
+                  resetLabel="Dismiss Error"
+                />
+              </div>
+            )}
 
             {file && (
               <div className="mt-8 flex items-center gap-3 rounded-2xl border border-gray-200 bg-gray-50 p-4">

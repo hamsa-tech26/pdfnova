@@ -1,6 +1,7 @@
 "use client";
 
 import ActionButton from "@/components/pdf/ActionButton";
+import ErrorCard from "@/components/pdf/ErrorCard";
 import FileUploader from "@/components/pdf/FileUploader";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import {
@@ -26,6 +27,7 @@ export default function JpgToPdfPage() {
   const [images, setImages] = useState<File[]>([]);
   const [pageSize, setPageSize] = useState<PageSize>("a4");
   const [isCreating, setIsCreating] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
@@ -42,13 +44,13 @@ export default function JpgToPdfPage() {
       );
 
     if (validationError) {
-      toast.error(
-        validationError,
-      );
+      setErrorMessage(validationError);
+      toast.error(validationError);
       event.target.value = "";
       return;
     }
 
+    setErrorMessage("");
     setImages((currentImages) => [
       ...currentImages,
       ...selectedImages,
@@ -114,6 +116,7 @@ export default function JpgToPdfPage() {
     }
 
     setIsCreating(true);
+    setErrorMessage("");
 
     try {
       const pdf = await PDFDocument.create();
@@ -195,9 +198,9 @@ export default function JpgToPdfPage() {
     } catch (creationError) {
       console.error(creationError);
 
-      toast.error(
-        "The PDF could not be created. One of the images may be damaged.",
-      );
+      const message = "The PDF could not be created. One of the images may be damaged.";
+      setErrorMessage(message);
+      toast.error(message);
     } finally {
       setIsCreating(false);
     }
@@ -238,6 +241,18 @@ export default function JpgToPdfPage() {
               helperText="JPG or PNG · Up to 25 MB each · Maximum 50 images / 100 MB combined"
               disabled={isCreating}
             />
+
+            {errorMessage && (
+              <div className="mt-6">
+                <ErrorCard
+                  title="Image processing needs attention"
+                  description={errorMessage}
+                  reasons={[]}
+                  onReset={() => setErrorMessage("")}
+                  resetLabel="Dismiss Error"
+                />
+              </div>
+            )}
 
             {images.length > 0 && (
               <div className="mt-8">
