@@ -39,6 +39,21 @@ test("Golden standard AcroForm flattens known fields without losing visible answ
   const pdf=await PDFDocument.load(result.bytes,{updateMetadata:false});
   expect(pdf.getPageCount()).toBe(1);
   expect(pdf.getForm().getFields()).toHaveLength(0);
+  // Read the actual downloadable output, not just the original input or status UI.
+  const {getDocument}=await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const task=getDocument({
+    data:new Uint8Array(result.bytes),disableFontFace:true,useSystemFonts:true,isEvalSupported:false
+  });
+  const inspected=await task.promise;
+  try {
+    const pageOne=await inspected.getPage(1);
+    const content=await pageOne.getTextContent();
+    const visibleText=content.items.map(item=>String(item.str??"")).join(" ");
+    expect(visibleText).toContain("EXAMPLE ALPHA");
+    pageOne.cleanup();
+  } finally {
+    await task.destroy();
+  }
   // The original form remains in its source; the exported flattened copy is noneditable.
   const original=await PDFDocument.load(await readFile(path.join(directory,"golden-form.pdf")));
   expect(original.getForm().getTextField("qa.full_name").getText()).toBe("EXAMPLE ALPHA");
