@@ -344,6 +344,12 @@ export default function ToolLayout({
                   {tool.label}
                 </Link>
               ))}
+              <Link
+                href="/#tools"
+                className="inline-flex min-h-11 items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
+              >
+                Browse all 30 tools
+              </Link>
             </div>
           </div>
         </section>

@@ -20,5 +20,9 @@ export function downloadFile(
   link.click();
   link.remove();
 
-  URL.revokeObjectURL(downloadUrl);
+  // Revoking synchronously after click can cancel file downloads on
+  // browsers that have not yet dereferenced the blob (notably Safari).
+  // The bounded delay allows the browser to start its transfer while
+  // ensuring repeated exports do not retain the blob URL indefinitely.
+  setTimeout(() => URL.revokeObjectURL(downloadUrl), 15_000);
 }

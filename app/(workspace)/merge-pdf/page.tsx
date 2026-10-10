@@ -432,6 +432,18 @@ export default function MergePdfPage() {
         onMoveDown={moveFileDown}
       />
 
+      {files.length === 0 && errorMessage && (
+        <div className="mt-6">
+          <ErrorCard
+            title="PDF files could not be selected"
+            description={errorMessage}
+            reasons={[]}
+            onReset={startAgain}
+            resetLabel="Choose Other PDFs"
+          />
+        </div>
+      )}
+
       {files.length > 0 && (
         <div className="mt-8 space-y-6">
           {isMerging && (

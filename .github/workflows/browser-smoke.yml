@@ -35,5 +35,14 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run browser reliability smoke suite
+      - name: Run browser reliability smoke suite, all 30 tool routes, and mobile baseline
         run: npx playwright test --config=playwright.config.mjs
+
+      - name: Preserve non-sensitive browser-loading baseline
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-mobile-baseline
+          path: benchmarks/website/reports/mobile-browser-baseline.json
+          retention-days: 14
+          if-no-files-found: warn

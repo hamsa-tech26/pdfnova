@@ -15,17 +15,30 @@ const links = [
 export default function MobileSiteNavigation() {
   const [isOpen, setIsOpen] = useState(false);
   const toggleRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     if (!isOpen) return;
+    menuRef.current?.querySelector<HTMLAnchorElement>("a[href]")?.focus();
+
     function onEscape(event: KeyboardEvent) {
       if (event.key === "Escape") {
         setIsOpen(false);
         toggleRef.current?.focus();
       }
     }
+    function onOutsidePointer(event: PointerEvent) {
+      if (!(event.target instanceof Node)) return;
+      if (!menuRef.current?.contains(event.target) && !toggleRef.current?.contains(event.target)) {
+        setIsOpen(false);
+      }
+    }
     window.addEventListener("keydown", onEscape);
-    return () => window.removeEventListener("keydown", onEscape);
+    document.addEventListener("pointerdown", onOutsidePointer);
+    return () => {
+      window.removeEventListener("keydown", onEscape);
+      document.removeEventListener("pointerdown", onOutsidePointer);
+    };
   }, [isOpen]);
 
   return (
@@ -43,6 +56,7 @@ export default function MobileSiteNavigation() {
       </button>
       {isOpen && (
         <nav
+          ref={menuRef}
           id="mobile-site-navigation"
           aria-label="Mobile primary navigation"
           className="absolute inset-x-0 top-full z-50 border-b border-gray-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-950"

@@ -1,0 +1,33 @@
+name: Public Domain Reachability Audit
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/auditPublicHttp.mjs"
+      - ".github/workflows/website-public-reachability.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  independent-public-http:
+    runs-on: ubuntu-latest
+    timeout-minutes: 4
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Verify public page, robots and sitemap from outside Vercel
+        run: node scripts/auditPublicHttp.mjs
+        continue-on-error: true
+      - name: Preserve only status codes and resource types
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: website-public-http-status
+          path: benchmarks/website/reports/public-http.json
+          retention-days: 14
+          if-no-files-found: warn

@@ -67,6 +67,26 @@ test("mobile workspace navigation traps keyboard focus within its drawer", async
   await expect(close).toBeFocused();
 });
 
+test("outside tap closes public mobile menu and opening focuses first link", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/");
+  await page.getByRole("button", { name: "Open site menu" }).click();
+  const menu = page.getByRole("navigation", { name: "Mobile primary navigation" });
+  await expect(menu.getByRole("link", { name: "Tools" })).toBeFocused();
+  await page.mouse.click(15, 780);
+  await expect(menu).toHaveCount(0);
+});
+
+test("mobile workspace provides a direct all-30-tools link", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/merge-pdf");
+  await page.getByRole("button", { name: "Open workspace menu" }).click();
+  const nav = page.getByRole("navigation", { name: "Mobile workspace navigation" });
+  await nav.getByRole("link", { name: "Browse all 30 tools" }).click();
+  await expect(page).toHaveURL(/\/dashboard#all-tools$/);
+  await expect(page.locator("#all-tools")).toBeVisible();
+});
+
 test("desktop navigation remains usable without the mobile controls", async ({ page }) => {
   await page.setViewportSize({ width: 1280, height: 800 });
   await page.goto("/");

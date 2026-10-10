@@ -153,6 +153,18 @@ export default function RotatePdfPage() {
         disabled={isProcessing}
       />
 
+      {!file && errorMessage && (
+        <div className="mt-6">
+          <ErrorCard
+            title="PDF could not be selected"
+            description={errorMessage}
+            reasons={[]}
+            onReset={startAgain}
+            resetLabel="Choose Another PDF"
+          />
+        </div>
+      )}
+
       {file && (
         <div className="mt-8 space-y-6">
           <FileCard
