@@ -104,6 +104,11 @@ const navigationGroups: SidebarGroup[] = [
     label: "PDF Tools",
     links: [
       {
+        label: "Browse all 30 tools",
+        href: "/dashboard#all-tools",
+        icon: LayoutDashboard,
+      },
+      {
         label: "Merge PDF",
         href: "/merge-pdf",
         icon: FileText,
