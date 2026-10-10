@@ -46,3 +46,8 @@ next-env.d.ts
 
 # CI-only public HTTP and local mobile diagnostic metadata
 /benchmarks/website/reports/
+
+# Release 51: generated PDFs and locally held private golden data
+/test-fixtures/golden/
+/benchmarks/golden/reports/
+/benchmarks/golden/private/
