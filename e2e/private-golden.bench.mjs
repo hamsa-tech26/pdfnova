@@ -41,9 +41,19 @@ for(const entry of manifest.cases){
   test("private Golden Document: "+entry.id,async({page})=>{
     test.setTimeout(360000);
     const possibleUploads=[];
-    page.on("request",req=>{
-      if(["POST","PUT","PATCH"].includes(req.method())&&/\/api\/|upload|convert/i.test(req.url()))
-        possibleUploads.push(req.method());
+    const approvedAssetHosts=new Set([
+      "127.0.0.1","localhost","cdn.jsdelivr.net","tessdata.projectnaptha.com"
+    ]);
+    // Fail closed on mutating requests and unexpected outbound hosts.
+    await page.route("**/*",async route=>{
+      const req=route.request(),url=new URL(req.url());
+      if(!["GET","HEAD","OPTIONS"].includes(req.method())||
+        !["http:","https:"].includes(url.protocol)||
+        !approvedAssetHosts.has(url.hostname)){
+        possibleUploads.push("UNEXPECTED_NETWORK_REQUEST");
+        await route.abort();return;
+      }
+      await route.continue();
     });
     try{
       const source=await readPrivatePdf(entry);

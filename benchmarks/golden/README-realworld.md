@@ -45,3 +45,23 @@ Private PDFs, answers and output reports stay under benchmarks/golden/private, w
 ## Non-goals
 
 The Release 51 synthetic fixtures remain a CI regression baseline; they are not real-world data. The separate Phase 10.14 Engine V4 freeze gate remains blocked until that measured gate passes. No promise is made about arbitrary PDFs, visually exact renderings, languages unsupported by browser OCR or independent security accreditation.
+
+## Release 53 — local intake preflight and evidence integrity
+
+Before measured browser tests, run:
+
+    npm run check:golden:preflight
+
+This checks physical PDF bytes against SHA-256, opens the PDF, verifies layout source page counts, requires AcroForm fields for form cases, and rejects selectable-text or imageless files as raster-only OCR samples. The report contains only aggregate counts and reason codes, no PDF text.
+
+To require a complete local corpus before measuring:
+
+    node scripts/privateGoldenPreflight.mjs --require-ready
+
+A READY_FOR_LOCAL_MEASUREMENT result is **not** OCR or table accuracy. After private browser tests:
+
+    node scripts/privateGoldenLocal.mjs --require-complete
+
+The final gate now hashes every original PDF again before trusting a saved PASS and invalidates older runner versions. Duplicate PDF SHA-256 hashes cannot count as separate cases. The private browser runner blocks network writes and unapproved outbound hosts, allowing only local app assets and the documented OCR asset CDNs. This does not replace independent privacy or security auditing.
+
+**Real-world qualification remains NOT_RUN without independently reviewed, consented PDFs.** Reviewer identities are attested in the manifest, not independently authenticated.
