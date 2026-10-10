@@ -127,7 +127,7 @@ export async function parseWorkspaceBackupArchive(bytes: Uint8Array): Promise<Wo
     throw new Error("Backup ZIP is empty or exceeds 96 MB.");
   }
   let zip: JSZip;
-  try { zip = await JSZip.loadAsync(bytes, {checkCRC32:true}); }
+  // Do not request eager CRC verification: it inflates attacker-supplied ZIP files\n  // before the declared uncompressed-size checks below. SHA-256 verifies each\n  // validated PDF after bounded decompression instead.\n  try { zip = await JSZip.loadAsync(bytes, {checkCRC32:false}); }
   catch { throw new Error("The selected ZIP is damaged or invalid."); }
   const manifestFile = zip.file("manifest.json");
   if (!manifestFile) throw new Error("Backup is missing manifest.json.");
