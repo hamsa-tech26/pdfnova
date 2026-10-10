@@ -92,18 +92,36 @@ export function mergePdfV4OcrRetryWords(
     [...primaryWords];
 
   for (const retryWord of retryWords) {
-    const isDuplicate =
-      merged.some(
+    // The retry is recognized from an independently enhanced image crop.
+    // On the same source coordinates, an overlapping *weak* primary OCR
+    // word must not automatically veto a substantially better retry.
+    const duplicateIndex =
+      merged.findIndex(
         (existingWord) =>
           calculateOverlapRatio(
             existingWord,
             retryWord,
-          ) >=
-          duplicateOverlapThreshold,
+          ) >= duplicateOverlapThreshold,
       );
 
-    if (!isDuplicate) {
+    if (duplicateIndex === -1) {
       merged.push(retryWord);
+      continue;
+    }
+
+    const existingWord = merged[duplicateIndex];
+    const materiallyBetter =
+      Number.isFinite(existingWord.confidence) &&
+      Number.isFinite(retryWord.confidence) &&
+      existingWord.confidence < 70 &&
+      retryWord.confidence >= 80 &&
+      retryWord.confidence - existingWord.confidence >= 15 &&
+      retryWord.text.trim().length > 0;
+
+    if (materiallyBetter) {
+      // Preserve the primary reading order but retain the actual retry
+      // candidate and its provenance; never hallucinate a corrected token.
+      merged[duplicateIndex] = retryWord;
     }
   }
 

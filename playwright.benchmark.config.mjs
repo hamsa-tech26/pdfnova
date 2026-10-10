@@ -2,7 +2,8 @@ import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
   testDir: "./e2e",
-  testMatch: "**/*.bench.mjs",
+  // Isolate the public synthetic OCR fixtures. Never import private real PDFs in CI.
+  testMatch: "**/phase10_14_benchmark.bench.mjs",
   timeout: 300_000,
   expect: { timeout: 20_000 },
   fullyParallel: false,
