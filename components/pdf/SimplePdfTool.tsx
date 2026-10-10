@@ -357,6 +357,18 @@ export default function SimplePdfTool({
         disabled={busy}
       />
 
+      {!file && error && (
+        <div className="mt-6">
+          <ErrorCard
+            title="PDF could not be selected"
+            description={error}
+            reasons={[]}
+            onReset={reset}
+            resetLabel="Choose Another PDF"
+          />
+        </div>
+      )}
+
       {file && (
         <div className="mt-8 space-y-6">
           <FileCard

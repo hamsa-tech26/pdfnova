@@ -12,3 +12,9 @@ The current domain reportedly returns HTTP 402 to independent external requests 
 ## Release boundaries
 
 This batch originates from live Release 38 and does not merge or certify the separate Release 37 PDF Engine V4 Stable qualification. Do not deploy this branch until all hard CI checks pass, and until external availability has been diagnosed.
+
+## Follow-up: real production lab and selected upload/error/download interactions
+
+- `lighthouse-production.yml` runs **Lighthouse 13.5.0** in GitHub-hosted Chromium against the currently deployed public `kukureku.com` pages, without creating a Vercel deployment. It records mobile-mode lab scores for performance, accessibility, best practices and SEO for homepage and Merge PDF. It does not claim CrUX field Core Web Vitals, nor does it test candidate branch code.
+- `e2e/upload-recovery.e2e.mjs` checks six key PDF workflows, including a shared component handling several tools, for initial invalid-file alert visibility and valid-PDF recovery. This is a **sample** of interaction paths, not 30/30 complete conversion certifications.
+- `lib/downloadFile.ts` now keeps generated Blob object URLs alive for 15 seconds so browsers that defer transfer initiation can read the data before cleanup; file content remains browser-local and each URL is revoked once after the short delay. Unit tests verify no premature revocation.

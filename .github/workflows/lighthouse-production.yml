@@ -1,0 +1,44 @@
+name: Production Lighthouse Lab Baseline
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/lighthouse-production.yml"
+      - "scripts/summarizeLighthouse.mjs"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  lighthouse-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 16
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Install pinned Lighthouse and Chrome harness without changing lockfile
+        run: |
+          npm install --no-save --no-package-lock --ignore-scripts lighthouse@13.5.0 @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Resolve installed Chromium for Lighthouse
+        run: echo "CHROME_PATH=$(node -e "const {chromium}=require('@playwright/test');process.stdout.write(chromium.executablePath())")" >> "$GITHUB_ENV"
+      - name: Audit production homepage and merge tool, mobile lab mode only
+        run: |
+          mkdir -p benchmarks/website/reports/lighthouse
+          npx lighthouse https://kukureku.com/ --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --output=json --output-path=benchmarks/website/reports/lighthouse/home.json --quiet --only-categories=performance,accessibility,best-practices,seo
+          npx lighthouse https://kukureku.com/merge-pdf --chrome-flags="--headless --no-sandbox --disable-dev-shm-usage" --output=json --output-path=benchmarks/website/reports/lighthouse/merge.json --quiet --only-categories=performance,accessibility,best-practices,seo
+      - name: Summarize measured lab metrics, not user Core Web Vitals
+        if: always()
+        run: node scripts/summarizeLighthouse.mjs
+      - name: Preserve compact lab results only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: production-lighthouse-mobile
+          path: benchmarks/website/reports/lighthouse/summary.json
+          retention-days: 14
+          if-no-files-found: warn
