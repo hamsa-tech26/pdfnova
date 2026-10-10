@@ -36,7 +36,7 @@ export default function WorkspaceHealthPage() {
     };
   },[refresh]);
   const health=useMemo(()=>auditWorkspaceVersions(versions),[versions]);
-  async function useVersion(id: string) {
+  async function activateStoredVersion(id: string) {
     if (switching || id === activeId) return;
     setSwitching(true);
     setNotice("");
@@ -90,7 +90,7 @@ export default function WorkspaceHealthPage() {
         {versions.length===0?<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">No stored documents yet. Try Magic Drop to create a workspace version.</p>:
           <ol className="mt-4 space-y-2">{versions.slice(0,50).map(v=><li key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-700">
             <p className="break-all font-semibold">{v.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Version {v.version} · {v.relationKind} · {(v.size/1024/1024).toFixed(2)} MB</p>
-            <button type="button" onClick={() => void useVersion(v.id)} disabled={switching || v.id === activeId}
+            <button type="button" onClick={() => void activateStoredVersion(v.id)} disabled={switching || v.id === activeId}
               aria-label={v.id === activeId ? "Current version "+v.name : "Use stored version "+v.name}
               className="mt-3 min-h-11 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-slate-950 dark:text-blue-300">
               {v.id === activeId ? "Active version" : "Use this version"}
