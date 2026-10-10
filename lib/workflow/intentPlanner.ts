@@ -58,3 +58,60 @@ export function buildIntentPlan(raw: string): IntentPlan {
   if (steps.length > 1) warnings.push("These are manual tool links. Outputs are not passed automatically between every tool; review the saved workspace version or reselect the correct result.");
   return { steps, warnings };
 }
+
+
+/** Load an exported manual plan without trusting caller-controlled routes, notes or text. */
+export function importManualIntentPlan(rawJson: string): IntentPlan {
+  if (rawJson.length > 64 * 1024) {
+    throw new Error("The saved plan is too large (64 KB maximum).");
+  }
+  let input: unknown;
+  try {
+    input = JSON.parse(rawJson);
+  } catch {
+    throw new Error("The selected file is not valid JSON.");
+  }
+  if (!input || typeof input !== "object" || Array.isArray(input)) {
+    throw new Error("The selected file is not a Kukureku manual workflow.");
+  }
+  const manifest = input as Record<string, unknown>;
+  if (manifest.schema !== "kukureku-manual-workflow-v1" ||
+      !Array.isArray(manifest.operations) || !manifest.operations.length ||
+      manifest.operations.length > patterns.length) {
+    throw new Error("The saved workflow has an unsupported schema or step count.");
+  }
+  const used = new Set<string>();
+  const steps: PlannedPdfStep[] = [];
+  for (const rawStep of manifest.operations) {
+    if (!rawStep || typeof rawStep !== "object" || Array.isArray(rawStep)) {
+      throw new Error("A saved workflow step is invalid.");
+    }
+    const step = rawStep as Record<string, unknown>;
+    const definition = patterns.find(candidate => candidate.id === step.id);
+    if (!definition || used.has(definition.id) ||
+        ("href" in step && step.href !== definition.href)) {
+      throw new Error("A saved workflow step has an unknown, duplicate or unsafe tool route.");
+    }
+    used.add(definition.id);
+    // Reconstitute every field from our internal allowlist: ignore imported
+    // titles, free text, operation notes, and any other attacker data.
+    steps.push({
+      id: definition.id,
+      title: definition.title,
+      href: definition.href,
+      note: definition.note,
+      requiresReview: definition.requiresReview,
+      matched: "",
+    });
+  }
+  const warnings = [
+    "Imported manual reference plan. Verify each step and choose the correct document version yourself; nothing runs automatically.",
+  ];
+  if (steps.some(s => s.id === "protect") && steps.some(s => s.id === "unlock")) {
+    warnings.push("Protect and unlock both appear in this plan. Confirm the intended order and passwords.");
+  }
+  if (steps.length > 1) {
+    warnings.push("Files are not passed between tools automatically. Review each exported PDF and reselect the correct version.");
+  }
+  return { steps, warnings };
+}
