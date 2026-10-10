@@ -278,8 +278,12 @@ export async function countPdfPages(file: File): Promise<number> {
     import.meta.url,
   ).toString();
   const task = pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) });
-  const pdf = await task.promise;
-  try { return pdf.numPages; } finally { await task.destroy(); }
+  try {
+    const pdf = await task.promise;
+    return pdf.numPages;
+  } finally {
+    await task.destroy();
+  }
 }
 
 export const PDF_JPG_PREVIEW_BATCH_SIZE = 8;
