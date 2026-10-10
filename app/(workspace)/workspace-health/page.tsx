@@ -2,7 +2,9 @@
 
 import { downloadFile } from "@/lib/downloadFile";
 import { auditWorkspaceVersions } from "@/lib/storage/workspaceAudit";
-import { listWorkspaceFileSummaries, getWorkspaceFile, getActiveWorkspaceFileSummary, setActiveWorkspaceFile, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
+import { listWorkspaceFileSummaries, getWorkspaceFile, getActiveWorkspaceFileSummary, setActiveWorkspaceFile, readWorkspaceBackupEntries, appendWorkspaceBackupEntries, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
+import { createWorkspaceBackupArchive, parseWorkspaceBackupArchive, WORKSPACE_BACKUP_MAX_ARCHIVE_BYTES, type WorkspaceBackupEntry } from "@/lib/storage/workspaceBackup";
+import type { ChangeEvent } from "react";
 import { Database, Download, RefreshCcw, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
@@ -15,6 +17,10 @@ export default function WorkspaceHealthPage() {
   const [switching, setSwitching] = useState(false);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
+  const [backupBusy, setBackupBusy] = useState(false);
+  const [backupError, setBackupError] = useState("");
+  const [backupNotice, setBackupNotice] = useState("");
+  const [pendingRestore, setPendingRestore] = useState<WorkspaceBackupEntry[] | null>(null);
   const refresh = useCallback(async () => {
     try {
       const [summaries, active] = await Promise.all([listWorkspaceFileSummaries(),getActiveWorkspaceFileSummary()]);
@@ -73,6 +79,63 @@ export default function WorkspaceHealthPage() {
     }
   }
 
+
+  async function downloadFullBackup() {
+    if (backupBusy || !versions.length) return;
+    setBackupBusy(true);
+    setBackupError("");
+    setBackupNotice("");
+    try {
+      const snapshot = await readWorkspaceBackupEntries();
+      const bytes = await createWorkspaceBackupArchive(snapshot);
+      downloadFile(bytes, "kukureku-private-workspace-backup.zip", "application/zip");
+      setBackupNotice("ZIP backup downloaded, including PDF files and full version lineage. Store it privately.");
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : "Unable to create a backup.");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function reviewRestoreFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    setPendingRestore(null);
+    setBackupError("");
+    setBackupNotice("");
+    if (!file) return;
+    if (file.size > WORKSPACE_BACKUP_MAX_ARCHIVE_BYTES) {
+      setBackupError("The backup is larger than 96 MB. No files were imported.");
+      return;
+    }
+    setBackupBusy(true);
+    try {
+      const parsed = await parseWorkspaceBackupArchive(new Uint8Array(await file.arrayBuffer()));
+      setPendingRestore(parsed);
+      setBackupNotice("Backup verified locally. Confirm to add these versions without replacing existing files.");
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : "The backup could not be verified.");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  async function confirmRestore() {
+    if (!pendingRestore || backupBusy) return;
+    setBackupBusy(true);
+    setBackupError("");
+    try {
+      const count = await appendWorkspaceBackupEntries(pendingRestore);
+      setPendingRestore(null);
+      setBackupNotice(count + " PDF versions restored as new documents. Existing files and your active version were preserved.");
+      await refresh();
+    } catch (e) {
+      setBackupError(e instanceof Error ? e.message : "The restore could not be completed.");
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
   function exportManifest() {
     const manifest = {
       schema: "kukureku-local-manifest-v1",
@@ -88,9 +151,9 @@ export default function WorkspaceHealthPage() {
   }
   return <main className="mx-auto w-full max-w-5xl px-4 py-7 text-slate-900 dark:text-white sm:px-7 lg:py-10">
     <section className="rounded-3xl bg-gradient-to-br from-slate-950 to-blue-800 p-6 text-white sm:p-9">
-      <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-blue-200"><Database size={20} aria-hidden="true"/> Workspace Health — Version History Foundation</div>
+      <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-blue-200"><Database size={20} aria-hidden="true"/> Workspace Health — Version History and Backup</div>
       <h1 className="mt-3 text-3xl font-black">Understand your local document versions</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-blue-100">Review the locally stored version graph, download individual saved PDF copies, or export a metadata-only inventory. Nothing is uploaded. Metadata export alone cannot restore PDFs.</p>
+      <p className="mt-3 max-w-3xl text-sm leading-7 text-blue-100">Review saved PDF versions, download individual files, or create a complete private ZIP backup with restoration. All processing stays in this browser.</p>
     </section>
     {loading ? <p role="status" className="mt-6">Reading browser workspace metadata…</p> : error ? <p role="alert" className="mt-6 rounded-xl bg-red-50 p-4 text-red-800">{error}</p> : <>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -129,6 +192,38 @@ export default function WorkspaceHealthPage() {
       </section>
       <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300"><ShieldCheck size={18} className="mt-1 shrink-0"/> The export includes filenames and operation history, which may themselves be sensitive. It does not contain PDF bytes and <strong>cannot restore lost files</strong>. Keep your original PDFs backed up separately.</p>
     </>}
+    <section aria-labelledby="workspace-backup-heading" className="mt-6 rounded-2xl border border-slate-200 bg-white p-5 dark:border-slate-800 dark:bg-slate-900 sm:p-7">
+      <h2 id="workspace-backup-heading" className="text-xl font-black">Private workspace backup and restore</h2>
+      <p className="mt-2 text-sm leading-6 text-slate-600 dark:text-slate-300">
+        Save actual PDF files and their version relationships in one local ZIP. The ZIP is not encrypted.
+        Keep it somewhere private; it may contain sensitive PDFs and filenames. No cloud upload.
+        Limit: 60 stored versions / 64 MB of PDFs per backup.
+      </p>
+      <div className="mt-4 flex flex-wrap gap-3">
+        <button type="button" disabled={backupBusy || !versions.length}
+          onClick={() => void downloadFullBackup()}
+          className="min-h-11 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:opacity-50">
+          Download full workspace backup (ZIP)
+        </button>
+      </div>
+      <label htmlFor="workspace-backup-upload" className="mt-6 block text-sm font-bold">Choose saved Kukureku backup ZIP to review</label>
+      <input id="workspace-backup-upload" type="file" accept=".zip,application/zip"
+        disabled={backupBusy} onChange={e => void reviewRestoreFile(e)}
+        className="mt-2 block w-full max-w-xl text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:font-semibold dark:file:bg-slate-800"/>
+      {backupBusy && <p role="status" className="mt-3 text-sm">Verifying or updating local workspace…</p>}
+      {backupNotice && <p role="status" className="mt-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200">{backupNotice}</p>}
+      {backupError && <p role="alert" className="mt-3 text-sm font-semibold text-red-700 dark:text-red-300">{backupError}</p>}
+      {pendingRestore && <div className="mt-4 rounded-xl border border-amber-300 p-4">
+        <p className="text-sm font-semibold">Verified: {pendingRestore.length} saved PDF versions, {(pendingRestore.reduce((n,v)=>n+v.bytes.length,0)/1024/1024).toFixed(2)} MB.</p>
+        <p className="mt-2 text-sm">Restore appends fresh copies with their parent relationships. Existing versions are not replaced; no file becomes active automatically.</p>
+        <div className="mt-3 flex flex-wrap gap-3">
+          <button type="button" disabled={backupBusy} onClick={() => void confirmRestore()}
+            className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50">Restore verified versions</button>
+          <button type="button" onClick={() => {setPendingRestore(null);setBackupNotice("Restore cancelled. No files were changed.");}}
+            className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">Cancel restore</button>
+        </div>
+      </div>}
+    </section>
     <div className="mt-5 flex flex-wrap gap-4 text-sm font-semibold"><Link className="text-blue-700 underline dark:text-blue-300" href="/dashboard">Back to Dashboard</Link><Link className="text-blue-700 underline dark:text-blue-300" href="/workspace-privacy">Privacy Controls</Link></div>
   </main>;
 }
