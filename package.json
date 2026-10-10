@@ -12,7 +12,8 @@
     "benchmark:ocr:baseline": "node scripts/scorePhase10_14.mjs",
     "check:output-evidence": "node scripts/auditToolOutputEvidence.mjs",
     "check:golden": "node scripts/goldenDocuments.mjs",
-    "check:golden:realworld": "node scripts/privateGoldenLocal.mjs"
+    "check:golden:realworld": "node scripts/privateGoldenLocal.mjs",
+    "check:golden:preflight": "node scripts/privateGoldenPreflight.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
