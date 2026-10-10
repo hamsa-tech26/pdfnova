@@ -41,7 +41,7 @@ test("manual JSON import enforces trusted routes and never follows injected URLs
     operations:[{id:"merge",href:"https://untrusted-workflow.invalid/leak"}],
   };
   await input.setInputFiles({name:"unsafe.json",mimeType:"application/json",buffer:Buffer.from(JSON.stringify(injected))});
-  await expect(page.getByRole("alert")).toContainText("unsafe tool route");
+  await expect(page.locator('p[role="alert"]').filter({hasText:"unsafe tool route"})).toContainText("unsafe tool route");
   await expect(page.locator("ol a")).toHaveAttribute("href","/merge-pdf");
   expect(observed).toEqual([]);
 });
