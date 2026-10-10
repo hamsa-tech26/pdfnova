@@ -49,28 +49,38 @@ export async function writePrivateResult(entry,result){
     runnerVersion:RUNNER_VERSION};
   await writeFile(path.join(output,entry.id+".json"),JSON.stringify(row,null,2)+"\n",{mode:0o600});
 }
+/**
+ * Re-read the actual source and bind result to original PDF and reviewed
+ * annotation hashes. Never trust a stale PASS from an earlier file/reviewer.
+ * No raw text, original files, or private annotations leave this directory.
+ */
+export async function verifiedPrivateCaseEvidence(entry){
+  const missing={id:entry.id,category:entry.category,status:"NOT_RUN",
+    reasonCode:"EVIDENCE_MISSING_OR_STALE",metrics:{}};
+  try{
+    await readPrivatePdf(entry);
+    const file=path.join(PRIVATE_ROOT,"results",entry.id+".json");
+    const info=await regular(file);
+    if(info.size>50000)failure();
+    const row=JSON.parse(await readFile(file,"utf8"));
+    if(row.id!==entry.id||row.category!==entry.category||
+      row.pdfHash!==entry.sha256.toLowerCase()||
+      row.annotationHash!==annotationHash(entry)||
+      row.runnerVersion!==RUNNER_VERSION||
+      !["PASS","FAIL"].includes(row.status))failure();
+    return {id:entry.id,category:entry.category,status:row.status,
+      reasonCode:typeof row.reasonCode==="string"?row.reasonCode:"UNKNOWN",
+      metrics:row.metrics??{}};
+  }catch{return missing;}
+}
 export async function summarizePrivate(requireComplete=false){
   try{
     const manifest=await privateCorpus();
-    const measured=[];
-    for(const entry of manifest.cases){
-      let status="NOT_RUN";
-      try{
-        // Reverify the physical PDF on EVERY summary. A cached PASS must not
-        // survive document replacement, deletion or an altered hash.
-        await readPrivatePdf(entry);
-        const file=path.join(PRIVATE_ROOT,"results",entry.id+".json");
-        const info=await regular(file);
-        if(info.size>50000)failure();
-        const r=JSON.parse(await readFile(file,"utf8"));
-        if(r.id===entry.id&&r.category===entry.category&&
-          r.pdfHash===entry.sha256.toLowerCase()&&r.annotationHash===annotationHash(entry)&&
-          r.runnerVersion===RUNNER_VERSION&&["PASS","FAIL"].includes(r.status))status=r.status;
-      }catch{}
-      measured.push({id:entry.id,status});
-    }
+    const evidence=await Promise.all(manifest.cases.map(verifiedPrivateCaseEvidence));
+    const measured=evidence.map(({id,status})=>({id,status}));
     const summary=assessRealWorldCoverage(manifest,measured);
-    await writeFile(path.join(PRIVATE_ROOT,"local-qualification.json"),JSON.stringify(summary,null,2)+"\n",{mode:0o600});
+    await writeFile(path.join(PRIVATE_ROOT,"local-qualification.json"),
+      JSON.stringify(summary,null,2)+"\n",{mode:0o600});
     if(requireComplete&&summary.status!=="PASS_SCOPED_REAL_WORLD")process.exitCode=2;
     console.log(JSON.stringify(summary,null,2));return summary;
   }catch{
