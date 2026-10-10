@@ -11,6 +11,7 @@ type FileListProps = {
   onRemove: (index: number) => void;
   onMoveUp?: (index: number) => void;
   onMoveDown?: (index: number) => void;
+  disabled?: boolean;
 };
 
 export default function FileList({
@@ -18,6 +19,7 @@ export default function FileList({
   onRemove,
   onMoveUp,
   onMoveDown,
+  disabled = false,
 }: FileListProps) {
   if (files.length === 0) {
     return null;
@@ -76,7 +78,7 @@ export default function FileList({
                     <button
                       type="button"
                       onClick={() => onMoveUp?.(index)}
-                      disabled={index === 0}
+                      disabled={disabled || index === 0}
                       className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <ArrowUp size={17} />
@@ -86,7 +88,7 @@ export default function FileList({
                     <button
                       type="button"
                       onClick={() => onMoveDown?.(index)}
-                      disabled={index === files.length - 1}
+                      disabled={disabled || index === files.length - 1}
                       className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       <ArrowDown size={17} />
@@ -98,7 +100,8 @@ export default function FileList({
                 <button
                   type="button"
                   onClick={() => onRemove(index)}
-                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
+                  disabled={disabled}
+                  className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   <Trash2 size={17} />
                   Delete
