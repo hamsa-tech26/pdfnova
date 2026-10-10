@@ -6,7 +6,7 @@ import {validatePrivateManifest,assessRealWorldCoverage,REALWORLD_POLICY} from "
 
 // ALL original PDFs, annotations and actual output remain under this gitignored folder.
 export const PRIVATE_ROOT=path.resolve("benchmarks/golden/private");
-export const RUNNER_VERSION="release52-browser-v1";
+export const RUNNER_VERSION="release53-browser-v2";
 const sha256=buffer=>createHash("sha256").update(buffer).digest("hex");
 const failure=()=>{throw new Error("PRIVATE_GOLDEN_DATA_UNAVAILABLE_OR_INVALID");};
 const annotationHash=entry=>sha256(Buffer.from(JSON.stringify({annotation:entry.annotation,expected:entry.expected})));
@@ -56,6 +56,9 @@ export async function summarizePrivate(requireComplete=false){
     for(const entry of manifest.cases){
       let status="NOT_RUN";
       try{
+        // Reverify the physical PDF on EVERY summary. A cached PASS must not
+        // survive document replacement, deletion or an altered hash.
+        await readPrivatePdf(entry);
         const file=path.join(PRIVATE_ROOT,"results",entry.id+".json");
         const info=await regular(file);
         if(info.size>50000)failure();

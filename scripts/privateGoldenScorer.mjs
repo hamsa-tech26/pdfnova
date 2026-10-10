@@ -39,18 +39,21 @@ export function characterErrorPct(expected,actual){
 export function validatePrivateManifest(manifest){
   if(!manifest||manifest.schema!==REALWORLD_SCHEMA||manifest.provenance!=="REAL_WORLD_HUMAN_REVIEWED"||
      !Array.isArray(manifest.cases)||!manifest.cases.length||manifest.cases.length>80)err();
-  const ids=new Set(),files=new Set();
+  const ids=new Set(),files=new Set(),sourceHashes=new Set();
   for(const entry of manifest.cases){
     if(!entry||!ID.test(entry.id)||!CATEGORIES.includes(entry.category)||
       typeof entry.file!=="string"||!/^case-[a-z0-9-]+\.pdf$/.test(entry.file)||
       files.has(entry.file)||ids.has(entry.id)||!HASH.test(entry.sha256)||
+      sourceHashes.has(entry.sha256.toLowerCase())||
       !["owner-consent","public-domain","licensed-test"].includes(entry.rights)||
       !entry.annotation||!ID.test(entry.annotation.annotatorId)||
       !ID.test(entry.annotation.reviewerId)||
       entry.annotation.annotatorId===entry.annotation.reviewerId||
       entry.annotation.reviewerApproved!==true||
       !/^\d{4}-\d{2}-\d{2}$/.test(entry.annotation.reviewDate)||!entry.expected)err();
-    ids.add(entry.id);files.add(entry.file);
+    ids.add(entry.id);files.add(entry.file);sourceHashes.add(entry.sha256.toLowerCase());
+    const reviewDate=new Date(entry.annotation.reviewDate+"T00:00:00.000Z");
+    if(!Number.isFinite(reviewDate.getTime())||reviewDate.toISOString().slice(0,10)!==entry.annotation.reviewDate)err();
     const e=entry.expected;
     if(entry.category==="ocr-text" && !safeText(e.text))err();
     if(entry.category==="table"){

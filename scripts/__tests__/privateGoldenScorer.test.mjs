@@ -1,10 +1,11 @@
+import {createHash} from "node:crypto";
 import {describe,it,expect} from "vitest";
 import {
  validatePrivateManifest,scorePrivateCase,assessRealWorldCoverage,
  characterErrorPct,REALWORLD_POLICY,normalizeText
 } from "../privateGoldenScorer.mjs";
 
-const hash="a".repeat(64);
+const hashFor=id=>createHash("sha256").update("public-example-"+id).digest("hex");
 function entry(category,id){
  const expected={
   "ocr-text":{text:"EXAMPLE APPROVED TEXT"},
@@ -15,7 +16,7 @@ function entry(category,id){
    {width:480,height:720,rotation:90,requiredText:["PAGE TWO"]}
   ]}
  };
- return {id,category,file:"case-"+id+".pdf",sha256:hash,rights:"owner-consent",
+ return {id,category,file:"case-"+id+".pdf",sha256:hashFor(id),rights:"owner-consent",
    annotation:{annotatorId:"annotator-one",reviewerId:"reviewer-two",
      reviewerApproved:true,reviewDate:"2026-10-10"},expected:expected[category]};
 }
@@ -36,6 +37,18 @@ describe("Release 52 private Golden Document score engine",()=>{
   expect(()=>validatePrivateManifest(manifest([{...s,annotation:{...s.annotation,reviewerId:"annotator-one"}}]))).toThrow();
   expect(()=>validatePrivateManifest(manifest([{...s,annotation:{...s.annotation,reviewerApproved:false}}]))).toThrow();
   expect(()=>validatePrivateManifest(manifest([{...s,sha256:"bad"}]))).toThrow();
+ });
+ it("forbids counting a single source PDF twice under different categories",()=>{
+  const first=entry("ocr-text","source-one");
+  const second={...entry("table","source-two"),sha256:first.sha256};
+  expect(()=>validatePrivateManifest(manifest([first,second]))).toThrow();
+ });
+ it("rejects nonexistent calendar dates and accepts a legitimate leap day",()=>{
+  const first=entry("ocr-text","calendar-01");
+  expect(()=>validatePrivateManifest(manifest([{...first,
+    annotation:{...first.annotation,reviewDate:"2026-02-30"}}]))).toThrow();
+  expect(validatePrivateManifest(manifest([{...first,
+    annotation:{...first.annotation,reviewDate:"2024-02-29"}}]))).toHaveLength(1);
  });
  it("requires exact independently chosen table index and penalizes shifted rows",()=>{
   const s=entry("table","table-one");
