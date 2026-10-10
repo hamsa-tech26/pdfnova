@@ -25,6 +25,13 @@ test("review-first workflow planner orders linked steps and never executes uploa
   await expect(page.getByRole("heading",{name:"Your proposed steps (4)"})).toBeVisible();
   const routes=await page.locator("ol a").evaluateAll(links=>links.map(link=>link.getAttribute("href")));
   expect(routes).toEqual(["/merge-pdf","/compress-pdf","/add-page-numbers","/protect-pdf"]);
+  const planDownload=page.waitForEvent("download");
+  await page.getByRole("button",{name:"Save manual plan (JSON)"}).click();
+  const savedPlan=await planDownload;
+  const planJson=JSON.parse((await readFile(await savedPlan.path())).toString());
+  expect(planJson.schema).toBe("kukureku-manual-workflow-v1");
+  expect(planJson.operations.map(x=>x.id)).toEqual(["merge","compress","number","protect"]);
+  expect(planJson).not.toHaveProperty("request");
   await page.getByLabel(/1\. Merge PDF/).check();
   await expect(page.getByText(/checking one does not process a file/)).toBeVisible();
   await page.getByLabel("What would you like to do?").fill("Summarize and email the PDF");
