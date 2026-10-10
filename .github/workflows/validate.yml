@@ -23,6 +23,7 @@ jobs:
       - run: npm run check:output-evidence
       - run: npm run lint
       - run: npm test
+      - run: npm run check:output-evidence -- --require-complete
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
