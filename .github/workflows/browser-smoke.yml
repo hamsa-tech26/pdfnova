@@ -32,11 +32,23 @@ jobs:
       - name: Install pinned Playwright release-test dependency
         run: npm install --no-save @playwright/test@1.56.1
 
+      - name: Generate synthetic Golden Documents and verify source ground truth
+        run: npm run check:golden
+
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
       - name: Run browser reliability smoke suite, all 30 tool routes, and mobile baseline
         run: npx playwright test --config=playwright.config.mjs
+
+      - name: Preserve synthetic golden evidence only (never PDF files)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release51-golden-diagnostics
+          path: benchmarks/golden/reports/*.json
+          retention-days: 14
+          if-no-files-found: warn
 
       - name: Preserve non-sensitive browser-loading baseline
         if: always()

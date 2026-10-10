@@ -19,6 +19,7 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci --no-audit --no-fund
+      - run: npm run check:golden
       - run: npm run check:tools
       - run: npm run check:output-evidence
       - run: npm run lint
