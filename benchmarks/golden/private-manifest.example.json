@@ -3,19 +3,19 @@
   "provenance": "REAL_WORLD_HUMAN_REVIEWED",
   "cases": [
     {
-      "id": "example-scan-01",
+      "id": "approved-scan-01",
       "category": "ocr-text",
-      "file": "case-example-scan-01.pdf",
-      "sha256": "REPLACE_WITH_ACTUAL_PDF_SHA256",
+      "file": "case-approved-scan-01.pdf",
+      "sha256": "REPLACE_WITH_REAL_FILE_SHA256",
       "rights": "owner-consent",
       "annotation": {
-        "annotatorId": "reviewer-one",
-        "reviewerId": "reviewer-two",
+        "annotatorId": "reviewer-alpha",
+        "reviewerId": "reviewer-beta",
         "reviewerApproved": true,
         "reviewDate": "2026-10-10"
       },
       "expected": {
-        "text": "REPLACE WITH HUMAN-VERIFIED EXACT TEXT"
+        "text": "REPLACE WITH INDEPENDENTLY REVIEWED COMPLETE TEXT"
       }
     }
   ]
