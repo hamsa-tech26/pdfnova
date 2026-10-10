@@ -56,6 +56,9 @@ export async function summarizePrivate(requireComplete=false){
     for(const entry of manifest.cases){
       let status="NOT_RUN";
       try{
+        // Reverify the physical PDF on EVERY summary. A cached PASS must not
+        // survive document replacement, deletion or an altered hash.
+        await readPrivatePdf(entry);
         const file=path.join(PRIVATE_ROOT,"results",entry.id+".json");
         const info=await regular(file);
         if(info.size>50000)failure();
