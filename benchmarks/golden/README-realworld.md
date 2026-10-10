@@ -65,3 +65,43 @@ A READY_FOR_LOCAL_MEASUREMENT result is **not** OCR or table accuracy. After pri
 The final gate now hashes every original PDF again before trusting a saved PASS and invalidates older runner versions. Duplicate PDF SHA-256 hashes cannot count as separate cases. The private browser runner blocks network writes and unapproved outbound hosts, allowing only local app assets and the documented OCR asset CDNs. This does not replace independent privacy or security auditing.
 
 **Real-world qualification remains NOT_RUN without independently reviewed, consented PDFs.** Reviewer identities are attested in the manifest, not independently authenticated.
+
+## Release 54 — first measured real-document qualification intake
+
+**Real-world accuracy status: NOT_RUN until you supply eight distinct approved PDFs with independently verified annotations.** Releases 51–53 established synthetic controls, scoring and privacy checks; none of those are substitutes for real-document measurements.
+
+From the **Kukureku repository root** on Windows Command Prompt, run:
+
+    npm ci
+    npm run golden:intake-plan
+    npm run golden:scaffold
+
+The scaffold creates an eight-case template at:
+`benchmarks/golden/private/manifest.draft.json`.
+It deliberately **does not** fill in consent, reviewer approval, SHA-256 or expected answers. It does **not** create a valid real-world manifest. The tool will **not overwrite** a previous draft.
+
+Collect **two distinct, genuinely approved PDF samples for each** of OCR scans, tables, forms and layouts. Put the PDF files under `benchmarks/golden/private` with the matching `case-*.pdf` names. Manually write their exact independent ground-truth expected fields in the draft and obtain a second person's review. Check source hashes using Windows PowerShell:
+
+    Get-FileHash -Algorithm SHA256 'benchmarks/golden/private/case-ocr-scan-one.pdf'
+
+Set valid `rights`, `annotation` and `expected` fields only after permission and human review. Change `provenance` to `REAL_WORLD_HUMAN_REVIEWED` after *actual* independent review. Save a copy as `benchmarks/golden/private/manifest.json`. All of these private files are intentionally gitignored. Do not upload originals, annotations or transcripts to GitHub or Vercel.
+
+Next, execute:
+
+    npm run check:golden:preflight
+    node scripts/privateGoldenPreflight.mjs --require-ready
+    npm install --no-save @playwright/test@1.56.1
+    npx playwright install chromium
+    npx playwright test --config=playwright.private-golden.config.mjs
+    npm run golden:remediation
+    node scripts/privateGoldenReport.mjs --require-complete
+
+**Important:** A successful preflight means source data is ready, not that any OCR/table extraction succeeded. The private browser run inspects actual downloads, including OCR text, Engine V4 JSON, flattened forms and reversed layouts. Release 54 first verifies that each uploaded local source meets its own preflight eligibility, then checks output against independently reviewed ground truth.
+
+The remediation report stays at
+`benchmarks/golden/private/remediation-report.json`.
+It contains case outcome codes, bounded numeric metrics, prioritized categories and suggested next repairs. Original PDF bytes, OCR transcriptions, table cell values and reviewer annotations are excluded from its content.
+
+**Acceptance policy:** Two valid, distinct PDFs per category, all passing the existing fixed metrics, no stale/hash-mismatched results, and no missing or failed cases. Otherwise the release-54 real-world certification gate **remains BLOCKED**; the CLI exits unsuccessfully when `--require-complete` is used. Synthetic evidence, placeholder drafts or fabricated ground truth never qualify.
+
+Known limitations: Only an internal, consent-based functional assessment; reviewer identity is an operator attestation, not independently authenticated. Browser OCR may download public language-model files; verify the trusted environment before processing confidential material. The existing separate Phase 10.14 V4 production freeze/accuracy gate is unchanged.

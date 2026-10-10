@@ -4,6 +4,7 @@ import {getDocument} from "pdfjs-dist/legacy/build/pdf.mjs";
 import {readFile} from "node:fs/promises";
 import {privateCorpus,readPrivatePdf,writePrivateResult} from "../scripts/privateGoldenLocal.mjs";
 import {scorePrivateCase} from "../scripts/privateGoldenScorer.mjs";
+import {inspectPrivatePdfStructure} from "../scripts/privateGoldenPreflight.mjs";
 // Runs only with explicit local config, never in GitHub CI.
 const manifest=await privateCorpus();
 async function pages(bytes){
@@ -57,6 +58,8 @@ for(const entry of manifest.cases){
     });
     try{
       const source=await readPrivatePdf(entry);
+      const intake=await inspectPrivatePdfStructure(entry,source);
+      if(intake.status!=="READY")throw Error("PRIVATE_INTAKE_REJECTED");
       let observed=null,spec=entry,route="",button="";
       if(entry.category==="layout"){
         if(scorePrivateCase(entry,{measured:true,pages:await pages(source)}).status!=="PASS")

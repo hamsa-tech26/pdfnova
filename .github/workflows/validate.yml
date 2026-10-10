@@ -22,6 +22,8 @@ jobs:
       - run: npm run check:golden
       - run: npm run check:golden:realworld
       - run: npm run check:golden:preflight
+      - run: npm run golden:intake-plan
+      - run: npm run golden:remediation
       - run: npm run check:tools
       - run: npm run check:output-evidence
       - run: npm run lint

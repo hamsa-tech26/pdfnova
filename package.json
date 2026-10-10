@@ -13,7 +13,10 @@
     "check:output-evidence": "node scripts/auditToolOutputEvidence.mjs",
     "check:golden": "node scripts/goldenDocuments.mjs",
     "check:golden:realworld": "node scripts/privateGoldenLocal.mjs",
-    "check:golden:preflight": "node scripts/privateGoldenPreflight.mjs"
+    "check:golden:preflight": "node scripts/privateGoldenPreflight.mjs",
+    "golden:scaffold": "node scripts/privateGoldenScaffold.mjs",
+    "golden:intake-plan": "node scripts/privateGoldenScaffold.mjs --plan",
+    "golden:remediation": "node scripts/privateGoldenReport.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
