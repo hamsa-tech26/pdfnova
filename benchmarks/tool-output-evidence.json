@@ -1,190 +1,298 @@
 {
-  "schema": "kukureku-output-evidence-v1",
+  "schema": "kukureku-output-evidence-v2",
   "meaning": {
-    "content": "Real browser export with semantic/content or format-specific invariant asserted",
-    "structure": "Real browser export checked for structural/parsing invariants; not full fidelity",
-    "unit-only": "No independent browser export correctness certification"
+    "content": "A real browser-produced file was inspected with a semantic, operation-specific, or format-specific output invariant.",
+    "structure": "Only parseability/filename/page count verified; does not satisfy primary internal certificate.",
+    "unit-only": "Unit helper checks only; no real browser export proof.",
+    "PASS": "A valid real-browser output satisfied a primary operation invariant on the tested synthetic fixture.",
+    "PASS_WITH_WARNING": "A valid real-browser output satisfied a primary operation invariant, with known operation- or format-specific limitations.",
+    "FAILED": "Broken primary operation; no certification."
   },
   "entries": [
     {
       "route": "/merge-pdf",
       "level": "content",
       "file": "e2e/release40-consolidation.e2e.mjs",
-      "claim": "Downloaded PDF preserves merged page count; 20-file stress and retry"
+      "claim": "Downloaded PDF preserves merged page count; 20-file stress and retry",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/split-pdf",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded output contains exact selected source pages in order"
+      "claim": "Downloaded output contains exact selected source pages in order",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/compress-pdf",
-      "level": "structure",
-      "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Output parses and retains page count; visual fidelity still unverified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Low compression PDF retains page widths, text, and page count on a three-page real output fixture",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "High/medium raster compression may intentionally lose selectable text, forms and links; visual fidelity under varying scan conditions is not covered."
     },
     {
       "route": "/pdf-to-word",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded DOCX contains expected original selectable text"
+      "claim": "Downloaded DOCX contains expected original selectable text",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     },
     {
       "route": "/word-to-pdf",
-      "level": "structure",
-      "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Real DOCX produces openable nonempty PDF; layout fidelity unverified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "DOCX input generates a PDF with readable selectable original Word text",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Complex Word layout, merged cells, media, exact fonts and page fidelity remain outside supported basic-conversion scope."
     },
     {
       "route": "/jpg-to-pdf",
-      "level": "structure",
-      "file": "e2e/release41-cancellation.e2e.mjs",
-      "claim": "JPG export creates valid PDF; repeated operation and ordering locked"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Two distinct PNG inputs create image XObjects on both downloaded PDF pages",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Basic PNG rasterization and image presence checked; color-management and full pixel similarity not proven."
     },
     {
       "route": "/pdf-to-jpg",
-      "level": "structure",
-      "file": "e2e/release42-memory.e2e.mjs",
-      "claim": "All pages exported as JPEGs to ZIP; selection and pagination tested"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "ZIP contains expected page count and JPEG files with valid markers and decoded SOF dimensions",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "JPEG framing and dimensions checked; visual similarity across color profiles and exotic PDFs not proven."
     },
     {
       "route": "/organize-pdf",
-      "level": "unit-only",
-      "file": "lib/pdf/__tests__/pageOrder.test.ts",
-      "claim": "Page-organization helper unit tested; browser export correctness not certified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Real saved output verifies deliberate move, 90° rotation, and deletion by page tree",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Standard pages checked; complex annotations, forms and XFA require separate compatibility review."
     },
     {
       "route": "/rotate-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Real output rotation checked with saved workspace version"
+      "claim": "Real output rotation checked with saved workspace version",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/extract-pdf-pages",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Real export keeps selected source page sizes and sequence"
+      "claim": "Real export keeps selected source page sizes and sequence",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/delete-pdf-pages",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Real export removes chosen page only"
+      "claim": "Real export removes chosen page only",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/pdf-to-text",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "TXT download contains text from all three pages"
+      "claim": "TXT download contains text from all three pages",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/flatten-pdf",
-      "level": "unit-only",
-      "file": "lib/pdf/__tests__/formFields.test.ts",
-      "claim": "Form operations tested; browser flatten fidelity not qualified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Real filled form produces downloaded noneditable PDF with preserved visible value",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Standard AcroForm test only; XFA and unusual widget appearances intentionally unsupported."
     },
     {
       "route": "/ocr-pdf",
-      "level": "structure",
+      "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Real worker exercised twice; real-world OCR accuracy remains unqualified"
+      "claim": "Real browser OCR worker runs twice and produces nonempty content, but OCR recall remains separately unqualified",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Real OCR worker and limited fixture tested, but scanned field OCR accuracy, handwriting, multilingual recall and Engine V4 benchmark certification remain separate."
     },
     {
       "route": "/reorder-pdf-pages",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Real file downloaded and actual page tree permutation asserted"
+      "claim": "Real file downloaded and actual page tree permutation asserted",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/reverse-pdf",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Real file downloaded with reversed page order and preserved title"
+      "claim": "Real file downloaded with reversed page order and preserved title",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/remove-pdf-metadata",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Clears common title/author on downloaded PDF (not forensic sanitization)"
+      "claim": "Clears common title/author on downloaded PDF (not forensic sanitization)",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     },
     {
       "route": "/add-page-numbers",
-      "level": "structure",
-      "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded PDF valid and has same pages; generated text still needs pixel/text assertion"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Real output contains generated page numbers and source text on each page",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Selectable numbering and page preservation checked; pixel-perfect position on arbitrary rotated/cropped documents not exhaustively measured."
     },
     {
       "route": "/crop-pdf",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded CropBox dimensions reduced on each page"
+      "claim": "Downloaded CropBox dimensions reduced on each page",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/resize-pdf-pages",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "All downloaded page dimensions exactly A4"
+      "claim": "All downloaded page dimensions exactly A4",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/header-footer-pdf",
-      "level": "structure",
-      "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded PDF parseable and page count preserved; rendered text unverified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Real output contains expanded per-page footer tokens as selectable text",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Page token expansion checked; complex clipping and unusual rotations still need broader fixture evidence."
     },
     {
       "route": "/sign-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Keyboard placement on rotated CropBox and real exported PDF validated"
+      "claim": "Keyboard placement on rotated CropBox and real exported PDF validated",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     },
     {
       "route": "/pdf-form-filler",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "AcroForm values persisted after browser download and reload"
+      "claim": "AcroForm values persisted after browser download and reload",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/redact-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Downloaded page is image-only rather than retaining redacted selectable text"
+      "claim": "Downloaded page is image-only rather than retaining redacted selectable text",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     },
     {
       "route": "/edit-pdf-metadata",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded PDF persists changed author and title"
+      "claim": "Downloaded PDF persists changed author and title",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/add-image-stamp-pdf",
-      "level": "unit-only",
-      "file": "lib/pdf/__tests__/signaturePlacementGeometry.test.ts",
-      "claim": "Related placement geometry tested; stamp browser export unqualified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Downloaded PDF has an embedded raster stamp image only on the specifically selected page",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "XObject placement scoped to selected page; exact pixel geometry and ICC/image rendering require visual-diff qualification."
     },
     {
       "route": "/create-fillable-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Real AcroForm field on rotated cropped page preserved"
+      "claim": "Real AcroForm field on rotated cropped page preserved",
+      "verdict": "PASS",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
       "route": "/watermark-pdf",
-      "level": "structure",
-      "file": "e2e/release47-output-certification.e2e.mjs",
-      "claim": "Downloaded PDF parses and keeps pages; rendered appearance unverified"
+      "level": "content",
+      "file": "e2e/releases48-50-certification.e2e.mjs",
+      "claim": "Downloaded PDF retains source text and includes watermark text on all pages",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Selectable watermark text verified; transparency/print rendering fidelity not exhaustively measured."
     },
     {
       "route": "/protect-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "QPDF protection and wrong-password rejection verified"
+      "claim": "QPDF protection and wrong-password rejection verified",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     },
     {
       "route": "/unlock-pdf",
       "level": "content",
       "file": "e2e/reliability-smoke.e2e.mjs",
-      "claim": "Protected PDF reopened and successfully unlocked"
+      "claim": "Protected PDF reopened and successfully unlocked",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Internal synthetic-fixture browser functional/output check for documented basic workflow; not external accreditation.",
+      "limitations": "Supports documented primary workflow on tested fixtures; uncommon formats and real-device accuracy remain outside this evidence."
     }
-  ]
+  ],
+  "certificationPolicy": {
+    "name": "Kukureku internal functional qualification v1",
+    "kind": "internal, scoped, automated; NOT external security or accessibility certification",
+    "requiredPrimaryOutputCoverage": "30 of 30 tools have operation-specific browser output evidence and passed CI",
+    "resultAlwaysConditional": "Only applicable to the exact tested fixtures and software revision",
+    "excludes": [
+      "arbitrary real-world document correctness",
+      "OCR Engine V4 benchmark acceptance",
+      "external security audit",
+      "physical mobile-device certification",
+      "pixel-perfect visual similarity",
+      "unlimited sizes/complex documents"
+    ],
+    "finalReleaseGate": "Validate, Browser Reliability Smoke, and production post-deployment verification all passing at same build"
+  }
 }

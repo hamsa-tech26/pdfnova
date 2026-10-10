@@ -409,6 +409,14 @@ export default function AddImageStampPdfPage() {
         disabled={isProcessing}
       />
 
+      {!file && errorMessage && (
+        <div className="mt-6">
+          <ErrorCard title="Unable to open PDF for stamping" description={errorMessage}
+            reasons={["Use a genuine, unencrypted PDF.", "PDF files larger than 25 MB are unsupported."]}
+            onReset={startAgain} resetLabel="Choose Another PDF" />
+        </div>
+      )}
+
       {file && (
         <div className="mt-8 space-y-6">
           <FileCard file={file} onRemove={isProcessing ? undefined : startAgain} removeLabel="Remove PDF" statusText={isProcessing ? "Adding image or stamp" : "Ready for placement"} />

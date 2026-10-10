@@ -299,6 +299,14 @@ export default function FlattenPdfPage() {
         disabled={isProcessing}
       />
 
+      {!file && errorMessage && (
+        <div className="mt-6">
+          <ErrorCard title="Unable to open PDF form" description={errorMessage}
+            reasons={["Use a genuine PDF with supported AcroForm fields.", "Dynamic XFA forms cannot be safely flattened."]}
+            onReset={startAgain} resetLabel="Choose Another PDF" />
+        </div>
+      )}
+
       {file && (
         <div className="mt-8 space-y-6">
           <FileCard
