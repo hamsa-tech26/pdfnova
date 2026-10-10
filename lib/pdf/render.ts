@@ -1,3 +1,5 @@
+import { throwIfPdfOperationCancelled } from "./operationCancellation";
+
 export type RenderedPdfPage = {
   pageNumber: number;
   dataUrl: string;
@@ -12,6 +14,8 @@ export type RenderPdfPagesOptions = {
   pageNumbers?: number[];
   format?: "jpeg" | "png";
   maxDimension?: number;
+  /** Cooperative cancellation between render boundaries. */
+  signal?: AbortSignal;
 };
 
 export function calculatePdfRenderScale({
@@ -105,11 +109,15 @@ export async function forEachRenderedPdfPage(
     pageNumbers,
     format = "jpeg",
     maxDimension,
+    signal,
   } = options;
+
+  if (signal) throwIfPdfOperationCancelled(signal);
 
   const fileBytes =
     await file.arrayBuffer();
 
+  if (signal) throwIfPdfOperationCancelled(signal);
   const loadingTask =
     pdfjsLib.getDocument({
       data: new Uint8Array(
@@ -117,10 +125,9 @@ export async function forEachRenderedPdfPage(
       ),
     });
 
-  const pdf =
-    await loadingTask.promise;
-
   try {
+    const pdf = await loadingTask.promise;
+    if (signal) throwIfPdfOperationCancelled(signal);
     const pagesToRender =
       pageNumbers &&
       pageNumbers.length > 0
@@ -138,6 +145,11 @@ export async function forEachRenderedPdfPage(
       const pageNumber of
       pagesToRender
     ) {
+      // Yield to the browser so its Cancel button can be processed.
+      if (signal) {
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
+        throwIfPdfOperationCancelled(signal);
+      }
       if (
         pageNumber < 1 ||
         pageNumber >
@@ -173,6 +185,7 @@ export async function forEachRenderedPdfPage(
             scale:
               effectiveScale,
           });
+          if (signal) throwIfPdfOperationCancelled(signal);
 
         const canvas =
           document.createElement(
@@ -223,6 +236,7 @@ export async function forEachRenderedPdfPage(
                   quality,
                 );
 
+          if (signal) throwIfPdfOperationCancelled(signal);
           await onPage({
             pageNumber,
             dataUrl,

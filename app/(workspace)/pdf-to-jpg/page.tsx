@@ -14,6 +14,8 @@ import {
   type RenderedPdfPage,
 } from "@/lib/pdf/render";
 import { addRecentFile } from "@/lib/storage/recentFiles";
+import { nextJpgZipByteCount } from "@/lib/pdf/jpgZipBudget";
+import { PdfOperationCancelledError, throwIfPdfOperationCancelled } from "@/lib/pdf/operationCancellation";
 import JSZip from "jszip";
 import {
   Archive,
@@ -45,6 +47,11 @@ export default function PdfToJpgPage() {
   const [previewStart, setPreviewStart] = useState(1);
   const [isPreviewing, setIsPreviewing] = useState(false);
   const operationRef = useRef(false);
+  const zipControllerRef = useRef<AbortController | null>(null);
+  const [zipProgress, setZipProgress] = useState(0);
+  const [zipTotal, setZipTotal] = useState(0);
+  const [zipPhase, setZipPhase] = useState<"rendering" | "packaging">("rendering");
+  const [isCancellingZip, setIsCancellingZip] = useState(false);
   const [selectedPages, setSelectedPages] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreatingZip, setIsCreatingZip] = useState(false);
@@ -142,6 +149,7 @@ export default function PdfToJpgPage() {
   }
 
   function togglePageSelection(pageNumber: number) {
+    if (operationRef.current) return;
     setSelectedPages((currentPages) =>
       currentPages.includes(pageNumber)
         ? currentPages.filter((page) => page !== pageNumber)
@@ -150,9 +158,8 @@ export default function PdfToJpgPage() {
   }
 
   async function downloadPage(page: RenderedPdfPage) {
-    if (!file) {
-      return;
-    }
+    if (!file || operationRef.current) return;
+    operationRef.current = true;
 
     try {
       const outputPages =
@@ -207,14 +214,18 @@ export default function PdfToJpgPage() {
       toast.error(
         `Page ${page.pageNumber} could not be rendered for download.`,
       );
+    } finally {
+      operationRef.current = false;
     }
   }
 
   function selectAllPages() {
+    if (operationRef.current) return;
     setSelectedPages(Array.from({length: pageCount}, (_, i) => i + 1));
   }
 
   function clearSelection() {
+    if (operationRef.current) return;
     setSelectedPages([]);
   }
 
@@ -229,6 +240,13 @@ export default function PdfToJpgPage() {
 
     if (operationRef.current) return;
     operationRef.current = true;
+    const controller = new AbortController();
+    zipControllerRef.current = controller;
+    setZipProgress(0);
+    setZipTotal(pageNumbers.length);
+    setZipPhase("rendering");
+    setIsCancellingZip(false);
+    setErrorMessage("");
     setIsCreatingZip(true);
 
     try {
@@ -240,6 +258,7 @@ export default function PdfToJpgPage() {
 
       const zip = new JSZip();
       let renderedCount = 0;
+      let archiveBytes = 0;
 
       await forEachRenderedPdfPage(
         file,
@@ -249,12 +268,16 @@ export default function PdfToJpgPage() {
           quality: 0.92,
           format: "jpeg",
           maxDimension: 3200,
+          signal: controller.signal,
         },
         (page) => {
+          throwIfPdfOperationCancelled(controller.signal);
           const imageBytes =
             dataUrlToBytes(
               page.dataUrl,
             );
+
+          archiveBytes = nextJpgZipByteCount(archiveBytes, imageBytes.byteLength);
 
           const imageFileName =
             `kukureku-page-${page.pageNumber}.jpg`;
@@ -269,6 +292,7 @@ export default function PdfToJpgPage() {
           );
 
           renderedCount += 1;
+          setZipProgress(renderedCount);
         },
       );
 
@@ -281,12 +305,16 @@ export default function PdfToJpgPage() {
         );
       }
 
+      throwIfPdfOperationCancelled(controller.signal);
+      setZipPhase("packaging");
       const zipBytes =
         await zip.generateAsync({
           type: "uint8array",
           compression: "STORE",
         });
 
+      // Cancellation during JSZip packaging must not emit any partial download.
+      throwIfPdfOperationCancelled(controller.signal);
       downloadFile(zipBytes, zipFileName, "application/zip");
 
       addRecentFile({
@@ -304,12 +332,19 @@ export default function PdfToJpgPage() {
         description: "Your JPG images are being downloaded as a ZIP file.",
       });
     } catch (error) {
-      console.error(error);
-
-      toast.error("The ZIP file could not be created.");
+      if (error instanceof PdfOperationCancelledError || (error instanceof Error && error.name === "AbortError")) {
+        toast("JPG export cancelled. No partial ZIP was downloaded.");
+      } else {
+        console.error(error);
+        const message = error instanceof Error ? error.message : "The ZIP file could not be created.";
+        setErrorMessage(message);
+        toast.error(message);
+      }
     } finally {
+      zipControllerRef.current = null;
       operationRef.current = false;
       setIsCreatingZip(false);
+      setIsCancellingZip(false);
     }
   }
 
@@ -429,7 +464,7 @@ export default function PdfToJpgPage() {
                       type="button"
                       onClick={selectAllPages}
                       disabled={
-                        selectedPages.length === pageCount
+                        selectedPages.length === pageCount || isCreatingZip || isPreviewing || isLoading
                       }
                       className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
@@ -439,7 +474,7 @@ export default function PdfToJpgPage() {
                     <button
                       type="button"
                       onClick={clearSelection}
-                      disabled={selectedPages.length === 0}
+                      disabled={selectedPages.length === 0 || isCreatingZip || isPreviewing || isLoading}
                       className="rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                     >
                       Clear Selection
@@ -486,6 +521,14 @@ export default function PdfToJpgPage() {
                     Download All as ZIP
                   </button>
                 </div>
+
+                {isCreatingZip && (
+                  <div role="status" className="mt-4 rounded-xl border border-blue-200 bg-blue-50 p-4 text-sm text-blue-950">
+                    <p className="font-semibold">{isCancellingZip ? "Cancellation requested. Finishing the current safe step…" : zipPhase === "packaging" ? "Packaging ZIP archive…" : `Rendering JPG ${zipProgress} of ${zipTotal}…`}</p>
+                    <p className="mt-1">No partial archive will be downloaded if you cancel. The ZIP has a 64 MB image-data safety limit.</p>
+                    <button type="button" onClick={() => {zipControllerRef.current?.abort(); setIsCancellingZip(true);}} disabled={isCancellingZip} className="mt-3 min-h-11 rounded-lg border border-blue-400 bg-white px-4 py-2 font-semibold disabled:opacity-50">Cancel ZIP export</button>
+                  </div>
+                )}
 
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm dark:border-slate-700 dark:bg-slate-900">
                   <span role="status">Previewing pages {previewStart}–{Math.min(pageCount, previewStart + PDF_JPG_PREVIEW_BATCH_SIZE - 1)} of {pageCount}. Only eight preview images are retained at a time. All pages remain available for export.</span>

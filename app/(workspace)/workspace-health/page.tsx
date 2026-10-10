@@ -13,6 +13,7 @@ export default function WorkspaceHealthPage() {
   const [error, setError] = useState("");
   const [activeId, setActiveId] = useState<string | null>(null);
   const [switching, setSwitching] = useState(false);
+  const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [notice, setNotice] = useState("");
   const refresh = useCallback(async () => {
     try {
@@ -53,6 +54,25 @@ export default function WorkspaceHealthPage() {
     }
   }
 
+  async function downloadStoredVersion(id: string) {
+    if (switching || downloadingId) return;
+    setDownloadingId(id);
+    setError("");
+    setNotice("");
+    try {
+      const storedFile = await getWorkspaceFile(id);
+      if (!storedFile) throw new Error("The stored PDF is missing. Nothing was downloaded.");
+      const bytes = new Uint8Array(await storedFile.arrayBuffer());
+      if (!bytes.byteLength) throw new Error("The stored PDF is empty. Nothing was downloaded.");
+      downloadFile(bytes, storedFile.name, "application/pdf");
+      setNotice("The selected PDF copy was downloaded locally. Other saved versions are unchanged.");
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : "The selected PDF could not be downloaded.");
+    } finally {
+      setDownloadingId(null);
+    }
+  }
+
   function exportManifest() {
     const manifest = {
       schema: "kukureku-local-manifest-v1",
@@ -70,7 +90,7 @@ export default function WorkspaceHealthPage() {
     <section className="rounded-3xl bg-gradient-to-br from-slate-950 to-blue-800 p-6 text-white sm:p-9">
       <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-blue-200"><Database size={20} aria-hidden="true"/> Workspace Health — Version History Foundation</div>
       <h1 className="mt-3 text-3xl font-black">Understand your local document versions</h1>
-      <p className="mt-3 max-w-3xl text-sm leading-7 text-blue-100">Review the locally stored version graph and export a metadata-only inventory. This does not upload, inspect, or back up PDF contents.</p>
+      <p className="mt-3 max-w-3xl text-sm leading-7 text-blue-100">Review the locally stored version graph, download individual saved PDF copies, or export a metadata-only inventory. Nothing is uploaded. Metadata export alone cannot restore PDFs.</p>
     </section>
     {loading ? <p role="status" className="mt-6">Reading browser workspace metadata…</p> : error ? <p role="alert" className="mt-6 rounded-xl bg-red-50 p-4 text-red-800">{error}</p> : <>
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -90,10 +110,15 @@ export default function WorkspaceHealthPage() {
         {versions.length===0?<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">No stored documents yet. Try Magic Drop to create a workspace version.</p>:
           <ol className="mt-4 space-y-2">{versions.slice(0,50).map(v=><li key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-700">
             <p className="break-all font-semibold">{v.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Version {v.version} · {v.relationKind} · {(v.size/1024/1024).toFixed(2)} MB</p>
-            <button type="button" onClick={() => void activateStoredVersion(v.id)} disabled={switching || v.id === activeId}
+            <button type="button" onClick={() => void activateStoredVersion(v.id)} disabled={switching || Boolean(downloadingId) || v.id === activeId}
               aria-label={v.id === activeId ? "Current version "+v.name : "Use stored version "+v.name}
               className="mt-3 min-h-11 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-slate-950 dark:text-blue-300">
               {v.id === activeId ? "Active version" : "Use this version"}
+            </button>
+            <button type="button" onClick={() => void downloadStoredVersion(v.id)} disabled={switching || Boolean(downloadingId)}
+              aria-label={"Download stored PDF "+v.name}
+              className="ml-2 mt-3 min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
+              Download this PDF
             </button>
           </li>)}</ol>}
         {versions.length>50&&<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Showing first 50 of {versions.length} versions. The export includes all version metadata.</p>}
