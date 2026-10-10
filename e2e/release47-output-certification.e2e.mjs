@@ -22,7 +22,7 @@ async function upload(page,bytes,name="cert-three-pages.pdf",mimeType="applicati
 }
 async function exportDownload(page, button,timeout=45000){
   const download=page.waitForEvent("download",{timeout});
-  await page.getByRole("button",{name:button,exact:true}).click();
+  await page.getByRole("button",{name:button}).click();
   const entry=await download;
   return {name:entry.suggestedFilename(),bytes:await readFile(await entry.path())};
 }
