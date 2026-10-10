@@ -11,7 +11,9 @@ const PRIORITIES={
   form:{code:"FORM_VALUE_PRESERVATION",priority:2,
     next:"Review AcroForm appearance streams, retained visible values and removal of editable fields."},
   layout:{code:"PAGE_GEOMETRY_AND_TEXT",priority:2,
-    next:"Inspect rotations, page order, CropBox/MediaBox and selectable text preservation."}
+    next:"Inspect rotations, page order, CropBox/MediaBox and selectable text preservation."},
+  "jpg-to-pdf":{code:"IMAGE_PAGE_CONVERSION",priority:3,
+    next:"Review output page dimensions, image orientation, image count and source-image preservation."}
 };
 const metricAllowlist={
  "ocr-text":["characterErrorPct","characterAccuracyPct"],

@@ -16,7 +16,9 @@
     "check:golden:preflight": "node scripts/privateGoldenPreflight.mjs",
     "golden:scaffold": "node scripts/privateGoldenScaffold.mjs",
     "golden:intake-plan": "node scripts/privateGoldenScaffold.mjs --plan",
-    "golden:remediation": "node scripts/privateGoldenReport.mjs"
+    "golden:remediation": "node scripts/privateGoldenReport.mjs",
+    "golden:quality-triage": "node scripts/privateGoldenReport.mjs",
+    "golden:quality-gate": "node scripts/privateGoldenReport.mjs --require-complete"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
