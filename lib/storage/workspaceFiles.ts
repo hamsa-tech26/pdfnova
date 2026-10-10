@@ -877,34 +877,33 @@ export async function listWorkspaceFileSummaries(): Promise<
 export async function setActiveWorkspaceFile(
   id: string,
 ) {
-  const db =
-    await openWorkspaceDatabase();
+  const db = await openWorkspaceDatabase();
 
   try {
-    const transaction =
-      db.transaction(
-        SUMMARY_STORE,
-        "readonly",
-      );
-    const summary =
-      await requestValue(
-        transaction
-          .objectStore(
-            SUMMARY_STORE,
-          )
-          .get(id),
-      );
-
-    if (!summary) {
+    // Check both the metadata and the actual saved PDF inside the same
+    // read/write transaction as the pointer update. A stale summary must
+    // never become the active document in another tab.
+    const transaction = db.transaction(
+      [FILE_STORE, SUMMARY_STORE, META_STORE], "readwrite",
+    );
+    const completed = transactionComplete(transaction);
+    const [record, summary] = await Promise.all([
+      requestValue(transaction.objectStore(FILE_STORE).get(id)) as Promise<WorkspaceFileRecord | undefined>,
+      requestValue(transaction.objectStore(SUMMARY_STORE).get(id)) as Promise<WorkspaceFileSummary | undefined>,
+    ]);
+    if (!record?.blob || !summary) {
+      transaction.abort();
+      await completed.catch(() => undefined);
       throw new Error(
-        "This browser workspace document is no longer available.",
+        "This stored PDF is missing or incomplete; the active document was not changed.",
       );
     }
 
-    await writeActiveFileId(
-      db,
-      id,
-    );
+    transaction.objectStore(META_STORE).put({
+      key: ACTIVE_FILE_KEY,
+      value: id,
+    });
+    await completed;
     notifyWorkspaceChanged();
   } finally {
     db.close();

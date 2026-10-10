@@ -1,10 +1,10 @@
 "use client";
 
-import { buildIntentPlan } from "@/lib/workflow/intentPlanner";
+import { buildIntentPlan, importManualIntentPlan, type IntentPlan } from "@/lib/workflow/intentPlanner";
 import { downloadFile } from "@/lib/downloadFile";
 import { ArrowRight, CheckCircle2, ShieldAlert, Sparkles } from "lucide-react";
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ChangeEvent } from "react";
 
 const EXAMPLE = "Merge my PDFs, compress the result, add page numbers and protect it.";
 
@@ -12,7 +12,10 @@ export default function WorkflowPlannerPage() {
   const [input, setInput] = useState("");
   const [request, setRequest] = useState("");
   const [reviewed, setReviewed] = useState<string[]>([]);
-  const plan = useMemo(() => buildIntentPlan(request), [request]);
+  const [importedPlan, setImportedPlan] = useState<IntentPlan | null>(null);
+  const [importError, setImportError] = useState("");
+  const [importNotice, setImportNotice] = useState("");
+  const plan = useMemo(() => importedPlan ?? buildIntentPlan(request), [importedPlan, request]);
 
   function exportSafePlan() {
     if (!plan.steps.length) return;
@@ -32,9 +35,31 @@ export default function WorkflowPlannerPage() {
   }
 
   function makePlan(value = input) {
+    setImportedPlan(null);
+    setImportError("");
+    setImportNotice("");
     setRequest(value.trim());
     setInput(value);
     setReviewed([]);
+  }
+
+  async function loadSavedPlan(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    event.target.value = "";
+    if (!file) return;
+    setImportError("");
+    setImportNotice("");
+    try {
+      if (file.size > 64 * 1024) throw new Error("The saved plan is too large (64 KB maximum).");
+      const imported = importManualIntentPlan(await file.text());
+      setImportedPlan(imported);
+      setRequest("");
+      setInput("");
+      setReviewed([]);
+      setImportNotice("Manual plan loaded locally. Review every step before opening a tool.");
+    } catch (error) {
+      setImportError(error instanceof Error ? error.message : "This saved plan could not be loaded.");
+    }
   }
 
   return (
@@ -53,9 +78,16 @@ export default function WorkflowPlannerPage() {
           <button type="button" disabled={!input.trim()} onClick={()=>makePlan()} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-5 py-3 font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50">Create manual plan <ArrowRight size={18} aria-hidden="true"/></button>
           <button type="button" onClick={()=>makePlan(EXAMPLE)} className="min-h-11 rounded-xl border border-slate-300 px-5 py-3 font-semibold hover:bg-slate-50 dark:border-slate-700 dark:hover:bg-slate-800">Try an example</button>
         </div>
+        <div className="mt-5 border-t border-slate-200 pt-4 dark:border-slate-700">
+          <label htmlFor="saved-manual-plan" className="block text-sm font-semibold">Load saved plan (JSON)</label>
+          <input id="saved-manual-plan" type="file" accept=".json,application/json" onChange={e=>void loadSavedPlan(e)} className="mt-2 block w-full max-w-lg text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:font-semibold dark:file:bg-slate-800"/>
+          <p className="mt-2 text-xs text-slate-600 dark:text-slate-300">Only known operation IDs and local Kukureku routes are accepted. Imported notes and filenames are ignored. Nothing runs or uploads.</p>
+          {importNotice && <p role="status" className="mt-3 text-sm font-semibold text-emerald-800 dark:text-emerald-200">{importNotice}</p>}
+          {importError && <p role="alert" className="mt-3 text-sm font-semibold text-red-700 dark:text-red-300">{importError}</p>}
+        </div>
       </section>
 
-      {request && (
+      {(request || importedPlan) && (
         <section aria-live="polite" className="mt-6 space-y-5">
           <div className="rounded-2xl border border-blue-200 bg-blue-50 p-4 text-sm leading-6 text-blue-950 dark:border-blue-900 dark:bg-blue-950/30 dark:text-blue-100">
             <strong>Review required:</strong> This is a deterministic suggestion, not an inspection of your actual PDFs. Open and run every step yourself, verify its output, and choose the correct workspace version before continuing.
