@@ -12,6 +12,7 @@ import WorkspaceDerivedOutputNotice from "@/components/workspace/WorkspaceDerive
 import WorkspaceMergeSources from "@/components/workspace/WorkspaceMergeSources";
 import { downloadFile } from "@/lib/downloadFile";
 import { validatePdfBatch } from "@/lib/pdf/pdfBatchValidation";
+import { throwIfPdfOperationCancelled } from "@/lib/pdf/operationCancellation";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import type {
   WorkspaceFileSummary,
@@ -79,6 +80,10 @@ export default function MergePdfPage() {
   const [isMerging, setIsMerging] = useState(false);
   const [isReadingFiles, setIsReadingFiles] = useState(false);
   const readingFilesRef = useRef(false);
+  const mergeControllerRef = useRef<AbortController | null>(null);
+  const [canCancelMerge, setCanCancelMerge] = useState(false);
+  const [cancelRequested, setCancelRequested] = useState(false);
+  const [wasCancelled, setWasCancelled] = useState(false);
   const [progress, setProgress] = useState(0);
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -100,6 +105,7 @@ export default function MergePdfPage() {
     setProgress(0);
     setCurrentStep(1);
     setWorkspaceOutput(null);
+    setWasCancelled(false);
   }
 
   async function handleFileSelection(
@@ -264,8 +270,25 @@ export default function MergePdfPage() {
     });
   }
 
+  function cancelMerge() {
+    if (!mergeControllerRef.current || !canCancelMerge) return;
+    mergeControllerRef.current.abort();
+    setCancelRequested(true);
+  }
+
+  function releaseDownloadedCopy() {
+    // The browser workspace version is unaffected. This only frees
+    // the second, re-downloadable in-memory copy held by this tool page.
+    setOutputBytes(null);
+    setOutputFileName("");
+    setWorkspaceOutput(null);
+    toast("Downloaded copy released from this tab", {
+      description: "Saved workspace versions and selected sources are unchanged.",
+    });
+  }
+
   async function mergePdfFiles() {
-    if (isMerging || readingFilesRef.current) {
+    if (isMerging || readingFilesRef.current || mergeControllerRef.current) {
       return;
     }
 
@@ -277,6 +300,11 @@ export default function MergePdfPage() {
       return;
     }
 
+    const controller = new AbortController();
+    mergeControllerRef.current = controller;
+    setCanCancelMerge(true);
+    setCancelRequested(false);
+    setWasCancelled(false);
     setIsMerging(true);
     setErrorMessage("");
     setOutputBytes(null);
@@ -294,17 +322,22 @@ export default function MergePdfPage() {
         import("@/lib/pdf/safeDocument"),
         import("@/lib/pdf/pdfInputSafety"),
       ]);
+      throwIfPdfOperationCancelled(controller.signal);
       const mergedPdf = await PDFDocument.create();
+      throwIfPdfOperationCancelled(controller.signal);
 
       setProgress(30);
       setCurrentStep(2);
 
       for (let index = 0; index < files.length; index += 1) {
+        throwIfPdfOperationCancelled(controller.signal);
         const fileInfo = files[index];
         const fileBytes = await fileInfo.file.arrayBuffer();
+        throwIfPdfOperationCancelled(controller.signal);
         const sourcePdf = await loadPdfWithoutMetadataMutation(
           fileBytes,
         );
+        throwIfPdfOperationCancelled(controller.signal);
 
         assertPageCopySafe(
           sourcePdf,
@@ -315,6 +348,7 @@ export default function MergePdfPage() {
           sourcePdf,
           sourcePdf.getPageIndices(),
         );
+        throwIfPdfOperationCancelled(controller.signal);
 
         copiedPages.forEach((page) =>
           mergedPdf.addPage(page),
@@ -330,6 +364,10 @@ export default function MergePdfPage() {
       setProgress(88);
 
       const mergedPdfBytes = await mergedPdf.save();
+      throwIfPdfOperationCancelled(controller.signal);
+      // Downloads already started cannot be recalled. Stop offering
+      // cancellation once the output is committed to the browser.
+      setCanCancelMerge(false);
       const generatedFileName = "kukureku-merged.pdf";
 
       downloadFile(
@@ -376,6 +414,18 @@ export default function MergePdfPage() {
         description: "Your merged PDF is being downloaded.",
       });
     } catch (mergeError) {
+      if (controller.signal.aborted) {
+        setErrorMessage("");
+        setOutputBytes(null);
+        setOutputFileName("");
+        setProgress(0);
+        setCurrentStep(1);
+        setWasCancelled(true);
+        toast("Merge cancelled", {
+          description: "No partial PDF was downloaded; your selected sources are still available.",
+        });
+        return;
+      }
       console.error(mergeError);
 
       const message =
@@ -386,6 +436,9 @@ export default function MergePdfPage() {
       setErrorMessage(message);
       toast.error("Failed to merge PDF files.");
     } finally {
+      if (mergeControllerRef.current === controller) mergeControllerRef.current = null;
+      setCanCancelMerge(false);
+      setCancelRequested(false);
       setIsMerging(false);
     }
   }
@@ -472,6 +525,11 @@ export default function MergePdfPage() {
 
       {files.length > 0 && (
         <div className="mt-8 space-y-6">
+          {wasCancelled && !isMerging && (
+            <p role="status" className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm font-semibold text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              Merge cancelled. No new PDF was downloaded, and your selected files are ready to retry.
+            </p>
+          )}
           {isMerging && (
             <ProgressCard
               title="Merging PDF files"
@@ -481,6 +539,12 @@ export default function MergePdfPage() {
               steps={mergeSteps}
               estimatedTime="A few seconds"
             />
+          )}
+          {isMerging && canCancelMerge && (
+            <button type="button" onClick={cancelMerge} disabled={cancelRequested}
+              className="inline-flex min-h-11 items-center rounded-xl border border-amber-300 bg-amber-50 px-5 py-2.5 text-sm font-bold text-amber-900 hover:bg-amber-100 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:opacity-60 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
+              {cancelRequested ? "Cancellation requested…" : "Cancel merge"}
+            </button>
           )}
 
           {!isMerging && outputBytes && (
@@ -499,6 +563,10 @@ export default function MergePdfPage() {
                   workspaceOutput
                 }
               />
+              <button type="button" onClick={releaseDownloadedCopy}
+                className="inline-flex min-h-11 items-center rounded-xl border border-slate-300 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200">
+                Release downloaded copy from memory
+              </button>
             </>
           )}
 

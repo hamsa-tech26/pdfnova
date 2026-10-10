@@ -29,8 +29,13 @@ export default function JpgToPdfPage() {
   const [isCreating, setIsCreating] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const creatingRef = useRef(false);
 
   function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
+    if (creatingRef.current) {
+      event.target.value = "";
+      return;
+    }
     const selectedImages =
       Array.from(
         event.target.files ??
@@ -66,6 +71,7 @@ export default function JpgToPdfPage() {
   }
 
   function removeImage(indexToRemove: number) {
+    if (creatingRef.current) return;
     const removedImageName = images[indexToRemove]?.name;
 
     setImages((currentImages) =>
@@ -78,7 +84,7 @@ export default function JpgToPdfPage() {
   }
 
   function moveImageUp(index: number) {
-    if (index === 0) return;
+    if (creatingRef.current || index === 0) return;
 
     setImages((currentImages) => {
       const updatedImages = [...currentImages];
@@ -93,6 +99,7 @@ export default function JpgToPdfPage() {
   }
 
   function moveImageDown(index: number) {
+    if (creatingRef.current) return;
     setImages((currentImages) => {
       if (index === currentImages.length - 1) {
         return currentImages;
@@ -110,11 +117,13 @@ export default function JpgToPdfPage() {
   }
 
   async function createPdfFromImages() {
+    if (creatingRef.current) return;
     if (images.length === 0) {
       toast.error("Please select at least one image.");
       return;
     }
 
+    creatingRef.current = true;
     setIsCreating(true);
     setErrorMessage("");
 
@@ -202,6 +211,7 @@ export default function JpgToPdfPage() {
       setErrorMessage(message);
       toast.error(message);
     } finally {
+      creatingRef.current = false;
       setIsCreating(false);
     }
   }
@@ -292,7 +302,7 @@ export default function JpgToPdfPage() {
                         <button
                           type="button"
                           onClick={() => moveImageUp(index)}
-                          disabled={index === 0}
+                          disabled={isCreating || index === 0}
                           className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <ArrowUp size={17} />
@@ -302,7 +312,7 @@ export default function JpgToPdfPage() {
                         <button
                           type="button"
                           onClick={() => moveImageDown(index)}
-                          disabled={index === images.length - 1}
+                          disabled={isCreating || index === images.length - 1}
                           className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-4 py-2 text-sm font-semibold text-gray-700 transition hover:border-blue-300 hover:bg-blue-50 hover:text-blue-700 disabled:cursor-not-allowed disabled:opacity-40"
                         >
                           <ArrowDown size={17} />
@@ -312,6 +322,7 @@ export default function JpgToPdfPage() {
                         <button
                           type="button"
                           onClick={() => removeImage(index)}
+                          disabled={isCreating}
                           className="inline-flex items-center gap-2 rounded-xl border border-red-200 bg-white px-4 py-2 text-sm font-semibold text-red-600 transition hover:bg-red-50"
                         >
                           <Trash2 size={17} />
@@ -331,6 +342,7 @@ export default function JpgToPdfPage() {
                     <button
                       type="button"
                       onClick={() => setPageSize("a4")}
+                      disabled={isCreating}
                       className={`rounded-2xl p-4 text-left transition ${
                         pageSize === "a4"
                           ? "border-2 border-blue-600 bg-blue-50"
@@ -346,6 +358,7 @@ export default function JpgToPdfPage() {
                     <button
                       type="button"
                       onClick={() => setPageSize("fit")}
+                      disabled={isCreating}
                       className={`rounded-2xl p-4 text-left transition ${
                         pageSize === "fit"
                           ? "border-2 border-blue-600 bg-blue-50"
@@ -367,6 +380,7 @@ export default function JpgToPdfPage() {
                   loadingText="Creating PDF..."
                   buttonText="Create and Download PDF"
                   onClick={createPdfFromImages}
+                  disabled={isCreating}
                 />
               </div>
             )}
