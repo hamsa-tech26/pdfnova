@@ -21,6 +21,8 @@ export type SmartCellBuilderResult = {
 
 type SmartCellBuilderOptions = {
   minimumCellConfidence?: number;
+  /** Experimental only; disabled unless explicitly requested after corpus qualification. */
+  experimentalRowDrift?: boolean;
 };
 
 const DEFAULT_MINIMUM_CELL_CONFIDENCE = 0.35;
@@ -678,7 +680,10 @@ export function buildSmartTableV4(
     };
   }
 
-  const rowDrifts = estimatePdfV4RowHorizontalDrift(rows, columns);
+  // Not enabled in production: Phase 10.14 requires independent accuracy qualification.
+  const rowDrifts = options?.experimentalRowDrift
+    ? estimatePdfV4RowHorizontalDrift(rows, columns)
+    : new Map<number, number>();
 
   const logicalRows =
     rows.map(
