@@ -1,5 +1,6 @@
 import type { PdfV4OcrPageResult, PdfV4OcrWord } from "./ocrRecognizer";
-import { inspectPdfV4OcrCheckboxCandidates, formatPdfV4OcrCheckboxCandidates } from "./ocrCheckboxReview";
+import { inspectPdfV4OcrCheckboxCandidates, formatPdfV4OcrCheckboxCandidates, isPdfV4OcrChecklistLike } from "./ocrCheckboxReview";
+import { suggestPdfV4OcrMissingHeading } from "./ocrHeadingReview";
 
 /**
  * OCR text is evidence, not a structured/form-verified transcript.
@@ -70,7 +71,7 @@ export function suggestPdfV4OcrColumnPreview(
   page: PdfV4OcrPageResult,
 ): string | null {
   const raw = page.text || "";
-  if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(raw)) return null;
+  if (isPdfV4OcrChecklistLike(page)) return null;
   // Avoid expensive layout heuristics on exceptionally large OCR pages.
   if (page.renderedWidth <= 0 || page.words.length < 25 || page.words.length > 4000) return null;
   const words = page.words.filter((word) =>
@@ -119,7 +120,7 @@ export function buildPdfV4OcrTextExport(
   if (/\b(?:record\s+id|invoice\s+id|application\s+id|serial\s+number|reference\s*(?:number|:)|facility\s+code|package\s+code)\b/i.test(text)) {
     warnings.push("Verify exact identifiers character by character (for example O/0, I/1 and 7/T).");
   }
-  if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
+  if (isPdfV4OcrChecklistLike(page) && /(?:^|\s)X(?:\s|$)/im.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
   }
   if (page.identifierReviews?.length) {
@@ -127,10 +128,8 @@ export function buildPdfV4OcrTextExport(
   }
   if (page.alternateRecognition) {
     warnings.push("An alternative sparse-text OCR reading is available (NOT VERIFIED). Compare it with the source image; never assume different ID characters or recovered headings are correct.");
-    const leadingAlternative = page.alternateRecognition.text.split(/\r?\n/)[0]?.trim();
-    if (leadingAlternative && leadingAlternative.length < 150 &&
-        !text.includes(leadingAlternative)) {
-      warnings.push("Possible lost heading or isolated sidebar line detected in alternate OCR; verify against source.");
+    if (suggestPdfV4OcrMissingHeading(text, page.alternateRecognition.text)) {
+      warnings.push("Possible lost heading detected in alternate OCR; verify against the original image.");
     }
   }
   const checkboxPreview = formatPdfV4OcrCheckboxCandidates(
