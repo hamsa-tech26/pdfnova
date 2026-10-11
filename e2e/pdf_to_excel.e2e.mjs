@@ -107,8 +107,8 @@ test("two-page selectable tables retain first/last records and source-page revie
   const file=await download.path();
   expect(file).toBeTruthy();
   const verified=execFileSync("python",["-c",
-    "import sys; from openpyxl import load_workbook; "+
-    "w=load_workbook(sys.argv[1],read_only=True,data_only=False); "+
+    "import sys,io; from openpyxl import load_workbook; "+
+    "w=load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()),read_only=True,data_only=False); "+
     "tabs=[s for s in w if s.title!='Review Notes']; "+
     "rows=[r for s in tabs for r in s.values]; "+
     "assert any(len(r)>=5 and r[1]=='00071' and r[2]=='Record 1' for r in rows), 'missing first-page data'; "+
