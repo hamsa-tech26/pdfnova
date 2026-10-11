@@ -228,6 +228,12 @@ export default function OcrPdfPage() {
           description:
             "Pages are rendered and recognized one at a time instead of keeping every full-resolution OCR image in memory.",
         },
+        {
+          title:
+            "Verify the output against the scan",
+          description:
+            "OCR can omit document titles or misread identifiers, checkboxes, and column order. Review important fields before relying on the exported text.",
+        },
       ]}
       faqs={[
         {
@@ -336,7 +342,7 @@ export default function OcrPdfPage() {
             output && (
               <SuccessCard
                 title="OCR text is ready"
-                description="Recognized English text was saved as a TXT file."
+                description="Recognized English text was saved as a TXT file. Verify titles, identifiers, and reading order against the original scan."
                 fileName={
                   outputName
                 }

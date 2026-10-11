@@ -36,7 +36,7 @@ type FieldDefinition = FillableFieldDefinition;
 const tips = [
   { title: "Place fields visually or precisely", description: "Drag a field area on the preview or enter percentage coordinates for keyboard-friendly placement." },
   { title: "Use unique field names", description: "Every interactive field needs a unique name so PDF readers can store its value correctly." },
-  { title: "Create common AcroForm fields", description: "Add text, checkbox, and dropdown fields. Text appearances currently use the standard PDF WinAnsi/Latin font set." },
+  { title: "Check text field width", description: "Text fields use a readable default font. Draw them wide enough for expected answers, then test longer entries after filling. Standard PDF WinAnsi/Latin fonts are used." },
 ];
 
 const faqs = [

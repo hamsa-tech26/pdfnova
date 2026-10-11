@@ -41,7 +41,7 @@ describe("metadataEditor", () => {
     expect(persisted.subject).toBe("Private report");
     expect(persisted.creator).toBe("Kukureku");
     expect(persisted.producer).toBe("Kukureku");
-    expect(persisted.keywords).toContain("2026");
+    expect(persisted.keywords).toBe("water, report, 2026");
   });
 
   it("clears common metadata fields safely", async () => {

@@ -167,6 +167,54 @@ describe("formBuilder", () => {
     ).toBe(90);
   });
 
+  it("sets a readable default font size for ordinary two-page form entries", async () => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage([595, 842]);
+    pdf.addPage([595, 842]);
+
+    await addFillableFields(pdf, [
+      {
+        id: 1,
+        name: "Test_Name",
+        type: "text",
+        page: 1,
+        rect: { x: 0.095, y: 0.29, width: 0.342, height: 0.055 },
+        options: [],
+      },
+      {
+        id: 2,
+        name: "Test_Designation",
+        type: "text",
+        page: 2,
+        rect: { x: 0.13, y: 0.3, width: 0.41, height: 0.05 },
+        options: [],
+      },
+    ]);
+
+    const form = pdf.getForm();
+    const name = form.getTextField("Test_Name");
+    const designation = form.getTextField("Test_Designation");
+
+    // Physical Test 28: height-derived default was 37 pt, causing clipping.
+    expect(name.acroField.getDefaultAppearance()).toContain("12 Tf");
+    expect(designation.acroField.getDefaultAppearance()).toContain("12 Tf");
+
+    name.setText("Kukureku Test User");
+    designation.setText("Junior Engineer");
+
+    const reloaded = await PDFDocument.load(await pdf.save());
+    expect(reloaded.getPageCount()).toBe(2);
+    expect(reloaded.getForm().getTextField("Test_Name").getText()).toBe(
+      "Kukureku Test User",
+    );
+    expect(reloaded.getForm().getTextField("Test_Designation").getText()).toBe(
+      "Junior Engineer",
+    );
+    expect(
+      reloaded.getForm().getTextField("Test_Name").acroField.getDefaultAppearance(),
+    ).toContain("12 Tf");
+  });
+
   it("rejects duplicate field names already present in the PDF", async () => {
     const pdf =
       await PDFDocument.create();

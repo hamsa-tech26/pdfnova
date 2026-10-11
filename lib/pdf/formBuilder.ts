@@ -150,6 +150,21 @@ export async function addFillableFields(
         ...appearance,
         font,
       });
+
+      // pdf-lib scales an empty field's font to its height (37 pt in
+      // a physical QA fixture), clipping ordinary names in PDF viewers.
+      // Choose a conservative initial font size instead.
+      field.setFontSize(
+        Math.max(
+          1,
+          Math.min(
+            12,
+            Math.floor(
+              placement.height - 4,
+            ),
+          ),
+        ),
+      );
     } else if (
       definition.type ===
       "checkbox"
