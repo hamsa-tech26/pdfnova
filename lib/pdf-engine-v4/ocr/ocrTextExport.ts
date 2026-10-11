@@ -122,6 +122,14 @@ export function buildPdfV4OcrTextExport(
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
   }
+  if (page.alternateRecognition) {
+    warnings.push("An alternative sparse-text OCR reading is available (NOT VERIFIED). Compare it with the source image; never assume different ID characters or recovered headings are correct.");
+    const leadingAlternative = page.alternateRecognition.text.split(/\r?\n/)[0]?.trim();
+    if (leadingAlternative && leadingAlternative.length < 150 &&
+        !text.includes(leadingAlternative)) {
+      warnings.push("Possible lost heading or isolated sidebar line detected in alternate OCR; verify against source.");
+    }
+  }
   const checkboxPreview = formatPdfV4OcrCheckboxCandidates(
     inspectPdfV4OcrCheckboxCandidates(page),
   );
@@ -151,6 +159,10 @@ export function formatPdfV4OcrPageExport(
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
       output.columnPreview);
+  }
+  if (page.alternateRecognition) {
+    sections.push("[ALTERNATE SPARSE-TEXT OCR - NOT VERIFIED]\n" +
+      page.alternateRecognition.text);
   }
   return sections.join("\n\n");
 }
