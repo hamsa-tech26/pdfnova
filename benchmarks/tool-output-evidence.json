@@ -111,7 +111,7 @@
     {
       "route": "/pdf-to-excel",
       "level": "content",
-      "file": "e2e/pdf_to_excel.spec.mjs",
+      "file": "e2e/pdf_to_excel.e2e.mjs",
       "claim": "Actual browser conversion downloads genuine OOXML XLSX with table cell values and unverified notes; ZIP parts and independent reader assertions",
       "verdict": "PASS_WITH_WARNING",
       "qualificationScope": "Scoped synthetic selectable-text five-column PDF browser output only. XLSX output is reviewed by a real downstream spreadsheet reader in the dedicated Release 57 CI gate.",
