@@ -99,7 +99,7 @@ describe("Release 56B checklist evidence is never a verified status", () => {
         word("aside", 755, 240 + i * 34),
       ]).flat(),
     ];
-    const input = page(expanded, "Pass\\nFloor dry X\\nFail\\nRecords complete X\\nN/A");
+    const input = page(expanded, "Pass\nFloor dry X\nFail\nRecords complete X\nN/A");
     const result = buildPdfV4OcrTextExport(input);
     expect(result.columnPreview).toBeNull();
     expect(result.warnings.join(" ")).toContain("Checkbox status UNKNOWN");
