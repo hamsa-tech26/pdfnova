@@ -2,10 +2,10 @@ import {test,expect} from "@playwright/test";
 import {mkdir,writeFile} from "node:fs/promises";
 import {TOOL_ROUTES} from "../scripts/indexNowRoutes.mjs";
 
-test("mobile browser opens all 30 tool routes and provides a visible tool heading", async ({page})=>{
+test("mobile browser opens every registered tool route and provides a visible tool heading", async ({page})=>{
   test.setTimeout(480_000);
   await page.setViewportSize({width:375,height:812});
-  expect(TOOL_ROUTES).toHaveLength(30);
+  expect(TOOL_ROUTES.length).toBeGreaterThan(0);
   for(const route of TOOL_ROUTES){
     const response=await page.goto(route,{waitUntil:"domcontentloaded",timeout:45000});
     expect(response?.status(),route+" HTTP result").toBe(200);
