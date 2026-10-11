@@ -47,8 +47,8 @@ test("browser downloads real XLSX from an independent five-column PDF", async ({
   // ZIP string inspection alone does not establish Excel interoperability.
   const independentlyParsed = execFileSync("python", [
     "-c",
-    "import sys; from openpyxl import load_workbook; " +
-      "w=load_workbook(sys.argv[1], read_only=True, data_only=False); " +
+    "import sys,io; from openpyxl import load_workbook; " +
+      "w=load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), read_only=True, data_only=False); " +
       "s=w['Table 1']; r=list(s.values); " +
       "assert any(len(x)>=5 and x[1]=='00071' and x[2]=='Station 1' and x[3]=='1000' for x in r), 'row/column mismatch'; " +
       "assert any(len(x)>=5 and x[2]=='Station 12' for x in r), 'missing final row'; " +
