@@ -82,6 +82,30 @@ describe("Release 56B checklist evidence is never a verified status", () => {
     expect(inspectPdfV4OcrCheckboxCandidates(page(between))).toEqual([]);
   });
 
+  it("rejects a confident mark when a competing low-confidence X appears on the same row", () => {
+    const input = page([
+      ...header,
+      word("Floor", 50, 140), word("dry", 100, 140),
+      word("X", 600, 140, 30), word("X", 700, 140, 92),
+    ]);
+    expect(inspectPdfV4OcrCheckboxCandidates(input)).toEqual([]);
+    expect(buildPdfV4OcrTextExport(input).text).toContain("Floor dry X");
+  });
+
+  it("blocks misleading column reading when checklist headings are scrambled in raw OCR", () => {
+    const expanded = [...header, ...rows,
+      ...Array.from({length: 9}, (_, i) => [
+        word("extra", 45, 240 + i * 34), word("body", 115, 240 + i * 34),
+        word("aside", 755, 240 + i * 34),
+      ]).flat(),
+    ];
+    const input = page(expanded, "Pass\\nFloor dry X\\nFail\\nRecords complete X\\nN/A");
+    const result = buildPdfV4OcrTextExport(input);
+    expect(result.columnPreview).toBeNull();
+    expect(result.warnings.join(" ")).toContain("Checkbox status UNKNOWN");
+    expect(result.text).toBe(input.text);
+  });
+
   it("does not guess without exactly one geometric Pass/Fail/N/A heading", () => {
     const noHeading = page(rows);
     expect(inspectPdfV4OcrCheckboxCandidates(noHeading)).toEqual([]);
