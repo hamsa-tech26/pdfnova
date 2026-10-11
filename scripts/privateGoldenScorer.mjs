@@ -92,8 +92,9 @@ const pct=(n,total)=>total?Math.round(10000*n/total)/100:0;
 // cannot be excused by a good document-level CER. Alternative OCR review
 // hypotheses never count as independently verified content.
 function containsExactIdentifier(text, expected) {
+  const regexMeta = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
   const escaped = Array.from(expected, char =>
-    /[A-Za-z0-9]/.test(char) ? char : "\\" + char,
+    regexMeta.has(char) ? "\\" + char : char,
   ).join("");
   return new RegExp("(^|[^\\p{L}\\p{N}_])" + escaped +
     "(?=$|[^\\p{L}\\p{N}_])", "iu").test(text);
