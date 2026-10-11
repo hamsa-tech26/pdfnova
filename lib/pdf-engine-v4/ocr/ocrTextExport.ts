@@ -122,6 +122,9 @@ export function buildPdfV4OcrTextExport(
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
   }
+  if (page.identifierReviews?.length) {
+    warnings.push("A focused second OCR pass read one or more identifiers differently. Neither spelling is verified; compare the actual PDF image character by character.");
+  }
   if (page.alternateRecognition) {
     warnings.push("An alternative sparse-text OCR reading is available (NOT VERIFIED). Compare it with the source image; never assume different ID characters or recovered headings are correct.");
     const leadingAlternative = page.alternateRecognition.text.split(/\r?\n/)[0]?.trim();
@@ -159,6 +162,14 @@ export function formatPdfV4OcrPageExport(
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
       output.columnPreview);
+  }
+  if (page.identifierReviews?.length) {
+    sections.push("[FOCUSED ID OCR COMPARISONS - NOT VERIFIED]\n" +
+      page.identifierReviews.map((reading) =>
+        "Primary: " + reading.primaryText + "\n" +
+        "Second OCR pass: " + reading.alternateText + "\n" +
+        "Status: DIFFERENT - VERIFY AGAINST ORIGINAL PDF",
+      ).join("\n\n"));
   }
   if (page.alternateRecognition) {
     sections.push("[ALTERNATE SPARSE-TEXT OCR - NOT VERIFIED]\n" +
