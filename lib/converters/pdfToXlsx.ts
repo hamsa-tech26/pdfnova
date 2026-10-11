@@ -96,7 +96,7 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
   let totalCells = 0;
   for (const table of input.tables) {
     if (!Array.isArray(table.rows)) throw new Error("Invalid table data.");
-    totalCells += table.rows.reduce((sum, row) => sum + row.length, 0);
+    totalCells += table.rows.reduce((sum: number, row: readonly unknown[]) => sum + row.length, 0);
     if (totalCells > MAX_CELLS) {
       throw new Error("Workbook exceeds 50,000 source cells.");
     }
