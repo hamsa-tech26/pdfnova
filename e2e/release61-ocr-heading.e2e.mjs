@@ -2,6 +2,9 @@ import { test, expect } from "@playwright/test";
 import { PDFDocument, StandardFonts, rgb } from "pdf-lib";
 import { readFile } from "node:fs/promises";
 
+// Explicit Chrome Stable acceptance for public OCR TXT workflow.
+test.use({ channel: "chrome" });
+
 // Generated synthetic fixture, not a privately sourced real-world PDF.
 test("Release 61 OCR exports the visible title and critical body values", async ({ page }) => {
   test.setTimeout(180000);

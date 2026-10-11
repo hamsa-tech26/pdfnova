@@ -38,6 +38,9 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
+      - name: Install Google Chrome Stable for Release 61 acceptance
+        run: npx playwright install --with-deps chrome
+
       - name: Run browser reliability smoke suite, all 30 tool routes, and mobile baseline
         run: npx playwright test --config=playwright.config.mjs
 

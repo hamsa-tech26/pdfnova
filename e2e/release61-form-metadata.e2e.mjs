@@ -2,6 +2,10 @@ import { test, expect } from "@playwright/test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import { readFile } from "node:fs/promises";
 
+// Use installed Google Chrome Stable for the download and appearance-metric
+// acceptance tests, not only Playwright's default Chromium build.
+test.use({ channel: "chrome" });
+
 // Both cases use generated test PDFs and inspect actual downloaded bytes.
 async function twoPageFixture() {
   const pdf = await PDFDocument.create();
