@@ -73,3 +73,50 @@ test("scanned-only or empty PDF is explicitly rejected without an XLSX download"
   await expect(page.getByText(/image-only or low-text pages/)).toBeVisible();
   expect(wasDownloaded).toBe(false);
 });
+
+
+test("two-page selectable tables retain first/last records and source-page review notes", async ({page}) => {
+  test.setTimeout(180_000);
+  const pdf=await PDFDocument.create();
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const xs=[45,120,285,450,605];
+  for(let p=0;p<2;p++){
+    const sheet=pdf.addPage([900,760]);
+    const rows=[
+      ["Sl No","Code","Name","Amount","Remarks"],
+      ...Array.from({length:10},(_,i)=>{
+        const serial=p*10+i+1;
+        return [String(serial),String(70+serial).padStart(5,"0"),
+          "Record "+serial,String(1100+serial*13),"Checked "+serial];
+      }),
+    ];
+    rows.forEach((row,i)=>row.forEach((value,j)=>{
+      sheet.drawText(value,{x:xs[j],y:690-i*42,size:12,font});
+    }));
+  }
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').setInputFiles({
+    name:"R60_two_page_continuation.pdf",
+    mimeType:"application/pdf",
+    buffer:Buffer.from(await pdf.save()),
+  });
+  const [download]=await Promise.all([
+    page.waitForEvent("download",{timeout:120000}),
+    page.getByRole("button",{name:/Convert to Excel/i}).click(),
+  ]);
+  const file=await download.path();
+  expect(file).toBeTruthy();
+  const verified=execFileSync("python",["-c",
+    "import sys; from openpyxl import load_workbook; "+
+    "w=load_workbook(sys.argv[1],read_only=True,data_only=False); "+
+    "tabs=[s for s in w if s.title!='Review Notes']; "+
+    "rows=[r for s in tabs for r in s.values]; "+
+    "assert any(len(r)>=5 and r[1]=='00071' and r[2]=='Record 1' for r in rows), 'missing first-page data'; "+
+    "assert any(len(r)>=5 and r[1]=='00090' and r[2]=='Record 20' for r in rows), 'missing second-page data'; "+
+    "notes=' '.join(str(r[0] or '') for r in w['Review Notes'].values); "+
+    "assert 'Page 1' in notes or 'Pages 1-2' in notes, 'missing source page 1 provenance'; "+
+    "assert 'Page 2' in notes or 'Pages 1-2' in notes, 'missing source page 2 provenance'; "+
+    "print('R60_MULTIPAGE_OPENPYXL_OK')",
+    file],{encoding:"utf8"}).trim();
+  expect(verified).toContain("R60_MULTIPAGE_OPENPYXL_OK");
+});
