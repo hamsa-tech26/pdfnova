@@ -694,7 +694,8 @@ export function buildSmartTableV4(
   }
 
   // Not enabled in production: Phase 10.14 requires independent accuracy qualification.
-  const rowDrifts = options?.experimentalRowDrift
+  const rowDrifts = options?.experimentalRowDrift &&
+    !options?.experimentalPerspectiveWarp
     ? estimatePdfV4RowHorizontalDrift(rows, columns)
     : new Map<number, number>();
 
