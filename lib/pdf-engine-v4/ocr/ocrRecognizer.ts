@@ -14,6 +14,11 @@ import {
 import type {
   PdfV4PreparedOcrPage,
 } from "./ocrPageRenderer";
+import {
+  comparePdfV4OcrIdentifierReadings,
+  findPdfV4OcrIdentifierCandidates,
+} from "./ocrIdentifierReview";
+import type { PdfV4OcrIdentifierReview } from "./ocrIdentifierReview";
 
 export type PdfV4OcrRectangle = {
   left: number;
@@ -51,6 +56,7 @@ export type PdfV4OcrPageResult = {
  words: PdfV4OcrWord[];
  detectedSkewRadians: number | null;
   alternateRecognition?: { text: string; confidence: number; mode: "sparse-text" };
+  identifierReviews?: PdfV4OcrIdentifierReview[];
   language: "eng";
   source: "ocr-tesseract";
 };
@@ -306,10 +312,43 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  // Re-read only up to three uncertain, explicitly labelled identifier lines.
+  // Alternatives are review evidence only; the primary OCR text and word
+  // positions remain unmodified. Page scans without IDs pay no extra cost.
+  const identifierReviews: PdfV4OcrIdentifierReview[] = [];
+  const candidates = findPdfV4OcrIdentifierCandidates(
+    words, page.width, page.height, recognition.data.confidence,
+  );
+  if (candidates.length > 0) {
+    try {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE });
+      for (const candidate of candidates) {
+        try {
+          const reread = await worker.recognize(
+            page.imageDataUrl,
+            { rectangle: candidate.rectangle, rotateAuto: false },
+            { text: true },
+          );
+          const disagreement = comparePdfV4OcrIdentifierReadings(
+            candidate, reread.data.text, reread.data.confidence,
+          );
+          if (disagreement) identifierReviews.push(disagreement);
+        } catch {
+          // A failed focused pass must never invalidate the primary result.
+        }
+      }
+    } catch {
+      // Unsupported segmentation modes must not affect the successful OCR.
+    } finally {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
     alternateRecognition,
+    identifierReviews: identifierReviews.length ? identifierReviews : undefined,
     text:
       recognition.data.text.trim(),
     confidence:
