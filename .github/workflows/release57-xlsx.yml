@@ -6,7 +6,7 @@ on:
       - "lib/converters/pdfToXlsx.ts"
       - "lib/pdf-engine-v4/**"
       - "app/(workspace)/pdf-to-excel/**"
-      - "e2e/pdf_to_excel.spec.mjs"
+      - "e2e/pdf_to_excel.e2e.mjs"
       - "playwright.xlsx.config.mjs"
       - ".github/workflows/release57-xlsx.yml"
   workflow_dispatch:
