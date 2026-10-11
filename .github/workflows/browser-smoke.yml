@@ -38,7 +38,10 @@ jobs:
       - name: Install Chromium
         run: npx playwright install --with-deps chromium
 
-      - name: Run browser reliability smoke suite, all 30 tool routes, and mobile baseline
+      - name: Install independent XLSX reader for shared browser regression suite
+        run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
+
+      - name: Run browser reliability smoke suite, registered tool routes, and mobile baseline
         run: npx playwright test --config=playwright.config.mjs
 
       - name: Preserve synthetic golden evidence only (never PDF files)
