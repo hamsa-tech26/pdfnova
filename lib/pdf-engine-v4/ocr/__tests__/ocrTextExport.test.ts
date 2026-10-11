@@ -65,6 +65,26 @@ describe("Release 56 OCR review-safe export", () => {
     const words = ["One", "ordinary", "line"].map((t, i) => word(t, 40 + i * 95, 100));
     expect(suggestPdfV4OcrColumnPreview(page("One ordinary line", words))).toBeNull();
   });
+  it("reports focused ID reread disagreements without changing the primary transcript", () => {
+    const input = page("Record ID: DC-T316\\nReference: MAINT-160CT", [], 81);
+    input.identifierReviews = [{
+      primaryText: "Record ID: DC-T316",
+      alternateText: "Record ID: DC-7316",
+      alternateConfidence: 83,
+      rectangle: { left: 20, top: 60, width: 220, height: 32 },
+      status: "DIFFERENT_UNVERIFIED",
+    }];
+    const result = buildPdfV4OcrTextExport(input);
+    expect(result.text).toBe(input.text);
+    expect(result.text).not.toContain("DC-7316");
+    expect(result.warnings.join(" ")).toContain("Neither spelling is verified");
+    const formatted = formatPdfV4OcrPageExport(input);
+    expect(formatted).toContain("[FOCUSED ID OCR COMPARISONS - NOT VERIFIED]");
+    expect(formatted).toContain("Primary: Record ID: DC-T316");
+    expect(formatted).toContain("Second OCR pass: Record ID: DC-7316");
+    expect(formatted).toContain("VERIFY AGAINST ORIGINAL PDF");
+  });
+
   it("retains primary character evidence while surfacing alternative heading reads", () => {
     const input = page("Record ID: DC-T316\nBody line", [], 66);
     input.alternateRecognition = {
