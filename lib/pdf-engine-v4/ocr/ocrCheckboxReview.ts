@@ -80,6 +80,20 @@ function findHeader(words: PdfV4OcrWord[]): Header[] | null {
   return combinations.length === 1 ? combinations[0] : null;
 }
 
+/**
+ * Detect checklist-shaped pages even if flattened OCR transposes headings.
+ * This is a refusal heuristic (skip misleading column previews), not a
+ * determination that any marked checkbox is selected.
+ */
+export function isPdfV4OcrChecklistLike(page: PdfV4OcrPageResult): boolean {
+  const raw = page.text || "";
+  if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(raw)) return true;
+  const tokens = new Set(page.words
+    .filter(w => w.text.trim() && Number.isFinite(w.bounds.x0))
+    .map(w => w.text.trim().replace(/[./\\]/g, "").toUpperCase()));
+  return tokens.has("PASS") && tokens.has("FAIL") && tokens.has("NA");
+}
+
 export function inspectPdfV4OcrCheckboxCandidates(
   page: PdfV4OcrPageResult,
 ): PdfV4OcrCheckboxCandidate[] {
@@ -99,17 +113,17 @@ export function inspectPdfV4OcrCheckboxCandidates(
   );
   if (gap < 24) return [];
   const maxHorizontalOffset = gap * 0.38;
-  const marks = words.filter((w) =>
+  const allMarks = words.filter((w) =>
     /^[Xx]$/.test(w.text.trim()) &&
-    w.confidence >= 65 &&
     w.bounds.y0 > headerY + 2,
   );
+  const marks = allMarks.filter(w => w.confidence >= 65);
   const observations: PdfV4OcrCheckboxCandidate[] = [];
   for (const mark of marks) {
     const y = centerY(mark);
     const lineTolerance = Math.max(7, height(mark) * 0.65);
     // More than one X on one OCR line is ambiguous, not a status assertion.
-    if (marks.some((other) =>
+    if (allMarks.some((other) =>
       other !== mark && Math.abs(centerY(other) - y) < lineTolerance,
     )) continue;
 
@@ -121,17 +135,20 @@ export function inspectPdfV4OcrCheckboxCandidates(
     if (!column || Math.abs(centerX(column.word) - centerX(mark)) > maxHorizontalOffset) {
       continue;
     }
-    const rowLabel = words
+    const rowWords = words
       .filter((w) =>
         w !== mark &&
         centerX(w) < firstColumnStart - 8 &&
         Math.abs(centerY(w) - y) <= lineTolerance &&
         !/^[|_\\-]+$/.test(w.text.trim()),
       )
-      .sort((a, b) => a.bounds.x0 - b.bounds.x0)
-      .map((w) => w.text.trim())
-      .join(" ")
-      .slice(0, 100);
+      .sort((a, b) => a.bounds.x0 - b.bounds.x0);
+    if (!rowWords.length) continue;
+    const rowCenters = rowWords.map(centerY);
+    // Do not synthesize a label from two overlapping or wrapped visual rows.
+    if (Math.max(...rowCenters) - Math.min(...rowCenters) >
+      Math.max(6, Math.min(...rowWords.map(height)) * 0.45)) continue;
+    const rowLabel = rowWords.map(w => w.text.trim()).join(" ").slice(0, 100);
     if (!rowLabel) continue;
 
     observations.push({
