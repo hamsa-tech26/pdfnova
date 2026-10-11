@@ -109,6 +109,15 @@
       "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
+      "route": "/pdf-to-excel",
+      "level": "content",
+      "file": "e2e/pdf_to_excel.spec.mjs",
+      "claim": "Actual browser conversion downloads genuine OOXML XLSX with table cell values and unverified notes; ZIP parts and independent reader assertions",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Scoped synthetic selectable-text five-column PDF browser output only. XLSX output is reviewed by a real downstream spreadsheet reader in the dedicated Release 57 CI gate.",
+      "limitations": "Scanned, mixed, poorly structured and distorted PDFs are not certified; extracting a valid XLSX does not certify text fidelity, original layout, accuracy across arbitrary PDFs, or real-world success."
+    },
+    {
       "route": "/pdf-to-text",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
@@ -283,7 +292,7 @@
   "certificationPolicy": {
     "name": "Kukureku internal functional qualification v1",
     "kind": "internal, scoped, automated; NOT external security or accessibility certification",
-    "requiredPrimaryOutputCoverage": "30 of 30 tools have operation-specific browser output evidence and passed CI",
+    "requiredPrimaryOutputCoverage": "31 of 31 tools have operation-specific browser output test definitions; qualification depends on the dedicated Release 57 CI run passing.",
     "resultAlwaysConditional": "Only applicable to the exact tested fixtures and software revision",
     "excludes": [
       "arbitrary real-world document correctness",
@@ -293,6 +302,6 @@
       "pixel-perfect visual similarity",
       "unlimited sizes/complex documents"
     ],
-    "finalReleaseGate": "Validate, Browser Reliability Smoke, and production post-deployment verification all passing at same build"
+    "finalReleaseGate": "Validate, Phase 10.14, Browser Reliability Smoke, Release 57 XLSX Browser Roundtrip and production post-deployment verification; all on accepted commit."
   }
 }
