@@ -1,12 +1,9 @@
-import type {
-  PdfV4OcrWord,
-  PdfV4OcrRectangle,
-} from "./ocrRecognizer";
+import type { PdfV4OcrRectangle } from "./ocrRecognizer";
 
-// Some large display headings are excluded by full-page layout analysis
-// even when the body is recognized. Only probe an unrecognized top margin.
+// Run a conservative read of the first page's *actual pixels*, even when
+// Tesseract returns no blocks or returns words that it omits from data.text.
+// Never infer the title from document semantics or an expected fixture.
 export function planTopMarginRecovery(
-  words: PdfV4OcrWord[],
   bodyText: string,
   width: number,
   height: number,
@@ -16,48 +13,13 @@ export function planTopMarginRecovery(
     !Number.isFinite(height) ||
     width < 400 ||
     height < 500 ||
-    bodyText.trim().length < 65 ||
-    words.length < 12
+    bodyText.trim().length < 65
   ) {
     return null;
   }
 
-  const firstTop = Math.min(
-    ...words
-      .filter((word) =>
-        word.text.trim() &&
-        word.confidence >= 50 &&
-        Number.isFinite(word.bounds.y0) &&
-        word.bounds.y0 >= 0,
-      )
-      .map((word) => word.bounds.y0),
-  );
-
-  // Full-page OCR can report visible heading words in `blocks` while
-  // silently omitting those words from `data.text`. In that case
-  // firstTop is in the heading itself, so a strict margin-gap gate
-  // incorrectly prevents the recovery read. Re-probe a bounded
-  // top strip rather than trusting the exported text/blocks to agree.
-  if (
-    !Number.isFinite(firstTop) ||
-    firstTop > height * 0.38
-  ) {
-    return null;
-  }
-
-  const topStripHeight = height * 0.135;
-  const regionHeight = Math.floor(
-    firstTop < height * 0.115
-      ? topStripHeight
-      : Math.min(
-          firstTop - Math.max(14, height * 0.012),
-          height * 0.28,
-        ),
-  );
-
-  // The reread can only prepend text actually recognized at high
-  // confidence by acceptRecoveredTopHeading; no title is inferred.
-  if (regionHeight < height * 0.07) {
+  const regionHeight = Math.floor(height * 0.135);
+  if (regionHeight < 200) {
     return null;
   }
 
@@ -69,8 +31,48 @@ export function planTopMarginRecovery(
   };
 }
 
-// Only accept a distinct, high-confidence short heading read directly
-// from the scanned image. Do not infer the heading from body text.
+// Use a true cropped image rather than a Tesseract "rectangle" on the
+// full-resolution page. The latter may preserve full-page segmentation,
+// which omitted this heading in two actual browser exports.
+export async function cropTopMarginOcrImage(
+  imageDataUrl: string,
+  region: PdfV4OcrRectangle,
+): Promise<string> {
+  if (typeof document === "undefined" || typeof Image === "undefined") {
+    throw new Error("OCR top-margin crop requires a browser.");
+  }
+
+  const image = new Image();
+  await new Promise<void>((resolve, reject) => {
+    image.onload = () => resolve();
+    image.onerror = () => reject(new Error("OCR image could not be loaded."));
+    image.src = imageDataUrl;
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = region.width;
+  canvas.height = region.height;
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas is unavailable for OCR recovery.");
+  }
+
+  context.drawImage(
+    image,
+    region.left,
+    region.top,
+    region.width,
+    region.height,
+    0,
+    0,
+    region.width,
+    region.height,
+  );
+  return canvas.toDataURL("image/png");
+}
+
+// Accept only distinct high-confidence uppercase headings actually read
+// in a single crop line. Multi-line prose / OCR garbage are not headings.
 export function acceptRecoveredTopHeading(
   rawHeading: string,
   confidence: number,
@@ -82,6 +84,7 @@ export function acceptRecoveredTopHeading(
     .filter(Boolean);
 
   if (
+    !Number.isFinite(confidence) ||
     confidence < 78 ||
     lines.length !== 1
   ) {

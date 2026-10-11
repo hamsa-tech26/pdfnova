@@ -12,6 +12,7 @@ import {
 } from "./ocrSkewEstimator";
 import {
   acceptRecoveredTopHeading,
+  cropTopMarginOcrImage,
   planTopMarginRecovery,
 } from "./ocrTopMarginRecovery";
 
@@ -287,9 +288,8 @@ async function recognizePdfV4OcrPageWithWorker(
 
   let recognizedText = recognition.data.text.trim();
 
-  if (options.recoverMissingTopHeading) {
+  if (options.recoverMissingTopHeading && page.pageNumber === 1) {
     const topRegion = planTopMarginRecovery(
-      words,
       recognizedText,
       page.width,
       page.height,
@@ -297,9 +297,13 @@ async function recognizePdfV4OcrPageWithWorker(
 
     if (topRegion) {
       try {
-        const topRead = await worker.recognize(
+        const croppedImage = await cropTopMarginOcrImage(
           page.imageDataUrl,
-          { rectangle: topRegion },
+          topRegion,
+        );
+        const topRead = await worker.recognize(
+          croppedImage,
+          { rotateAuto: false },
           { text: true, blocks: true },
         );
         const heading = acceptRecoveredTopHeading(
@@ -308,11 +312,11 @@ async function recognizePdfV4OcrPageWithWorker(
           recognizedText,
         );
         if (heading) {
-          // Text export only; do not invent or relocate word geometry.
+          // Text export only. The source scan and word geometry are unchanged.
           recognizedText = heading + "\n\n" + recognizedText;
         }
       } catch {
-        // The original full-page recognition is still valid evidence.
+        // Keep the full-page OCR output if the optional crop fails.
       }
     }
   }
