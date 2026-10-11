@@ -40,7 +40,8 @@ function validGeometry(columns: readonly ColumnCandidate[]): {
   const ordered = [...columns].sort((a, b) => a.x - b.x);
   if (ordered.some(c => !Number.isFinite(c.x) ||
     !Number.isFinite(c.leftBoundary) || !Number.isFinite(c.rightBoundary) ||
-    c.confidence < 0.65 || !c.accepted)) return null;
+    !Number.isFinite(c.confidence) || c.confidence < 0.65 ||
+    !c.accepted || c.leftBoundary >= c.x || c.rightBoundary <= c.x)) return null;
   const gaps = ordered.slice(1).map((c, i) => c.x - ordered[i].x);
   const gap = Math.min(...gaps);
   if (gap < 28 || gaps.some(g => g > gap * 4)) return null;
