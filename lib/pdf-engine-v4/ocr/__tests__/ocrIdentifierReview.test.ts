@@ -49,6 +49,16 @@ describe("Release 58 conservative identifier reread selection", () => {
     expect(findPdfV4OcrIdentifierCandidates(invalid, 1000, 1400, 60)).toHaveLength(0);
   });
 
+  it("rejects label-only differences, field swaps, and case-only disagreement", () => {
+    const c = findPdfV4OcrIdentifierCandidates(words, 1000, 1400, 75)[0];
+    expect(comparePdfV4OcrIdentifierReadings(c, "RECORD ID DC-T316", 80)).toBeNull();
+    expect(comparePdfV4OcrIdentifierReadings(c, "Record ID: dc-t316", 80)).toBeNull();
+    expect(comparePdfV4OcrIdentifierReadings(c, "Invoice ID: DC-7316", 80)).toBeNull();
+    expect(comparePdfV4OcrIdentifierReadings(c, "DC-7316", 80)).toBeNull();
+    expect(comparePdfV4OcrIdentifierReadings(c, "Record ID: DC-7316", 80)?.status)
+      .toBe("DIFFERENT_UNVERIFIED");
+  });
+
   it("compares alternative characters without asserting a correction", () => {
     const candidate = findPdfV4OcrIdentifierCandidates(words, 1000, 1400, 75)[0];
     const diff = comparePdfV4OcrIdentifierReadings(candidate, "Record ID: DC-7316", 82);
