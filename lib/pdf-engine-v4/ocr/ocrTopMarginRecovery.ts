@@ -50,10 +50,7 @@ export function planTopMarginRecovery(
     firstTop < height * 0.115
       ? topStripHeight
       : Math.min(
-          Math.max(
-            topStripHeight,
-            firstTop - Math.max(14, height * 0.012),
-          ),
+          firstTop - Math.max(14, height * 0.012),
           height * 0.28,
         ),
   );
