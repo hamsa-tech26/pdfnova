@@ -483,7 +483,6 @@ function assignWordsToCells(
       row,
       columns,
       isFirstLogicalRow,
-      rowDrift,
     );
 
   const analysisWords =
@@ -612,6 +611,7 @@ function buildLogicalRow(
       row,
       columns,
       isFirstLogicalRow,
+      rowDrift,
     );
 
   const cells =
