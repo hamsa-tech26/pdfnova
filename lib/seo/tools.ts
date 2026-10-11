@@ -58,6 +58,7 @@ export const TOOL_SEO = {
   },
   "extract-pdf-pages": { name: "Extract PDF Pages", title: "Extract PDF Pages Online - Private, No Upload", description: "Extract selected PDF pages or ranges into a new PDF privately in your browser without uploading your document." },
   "delete-pdf-pages": { name: "Delete PDF Pages", title: "Delete PDF Pages Online - Private, No Upload", description: "Remove unwanted pages from a PDF and download a new copy privately in your browser with no upload." },
+  "pdf-to-excel": { name: "PDF to Excel", title: "PDF to Excel XLSX - Private Table Conversion", description: "Convert confidently detected selectable-text PDF tables to genuine Excel XLSX locally in your browser. Scanned PDFs are not supported." },
   "pdf-to-text": { name: "PDF to Text", title: "PDF to Text Online - Private Text Extraction", description: "Extract selectable PDF text into a TXT file directly in your browser. No upload or account required." },
   "flatten-pdf": { name: "Flatten PDF", title: "Flatten PDF Forms Online - Private, No Upload", description: "Flatten supported interactive PDF form fields into page content privately in your browser without uploading the PDF." },
   "ocr-pdf": { name: "OCR PDF", title: "OCR PDF Online - Private Scanned PDF to Text", description: "Recognize English text in scanned PDF pages locally in your browser and download the result as TXT without uploading the document." },

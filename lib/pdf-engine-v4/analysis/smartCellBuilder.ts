@@ -12,6 +12,7 @@ import type { ColumnCandidate } from "./stableColumnDetector";
 import {
   createAnalysisWordsV4,
 } from "./analysisTextFragments";
+import { estimatePdfV4RowHorizontalDrift } from "./rowGeometryCorrection";
 
 export type SmartCellBuilderResult = {
   table: LogicalTable | null;
@@ -20,6 +21,8 @@ export type SmartCellBuilderResult = {
 
 type SmartCellBuilderOptions = {
   minimumCellConfidence?: number;
+  /** Experimental only; disabled unless explicitly requested after corpus qualification. */
+  experimentalRowDrift?: boolean;
 };
 
 const DEFAULT_MINIMUM_CELL_CONFIDENCE = 0.35;
@@ -467,6 +470,7 @@ function assignWordsToCells(
   row: LogicalRowCandidate,
   columns: ColumnCandidate[],
   isFirstLogicalRow: boolean,
+  rowDrift: number,
 ) {
   const cells =
     createEmptyCells(
@@ -488,9 +492,13 @@ function assignWordsToCells(
     );
 
   for (const word of analysisWords) {
+    // Correct only the assignment coordinate; retain the original PDF word.
+    const positionWord = rowDrift !== 0
+      ? { ...word, bounds: { ...word.bounds, x: word.bounds.x - rowDrift } }
+      : word;
     const nearestColumn =
       findCellAssignmentColumn(
-        word,
+        positionWord,
         columns,
       );
 
@@ -595,6 +603,7 @@ function buildLogicalRow(
   columns: ColumnCandidate[],
   minimumCellConfidence: number,
   isFirstLogicalRow: boolean,
+  rowDrift: number,
 ): LogicalRow {
 
   const emptyCells =
@@ -602,6 +611,7 @@ function buildLogicalRow(
       row,
       columns,
       isFirstLogicalRow,
+      rowDrift,
     );
 
   const cells =
@@ -670,6 +680,11 @@ export function buildSmartTableV4(
     };
   }
 
+  // Not enabled in production: Phase 10.14 requires independent accuracy qualification.
+  const rowDrifts = options?.experimentalRowDrift
+    ? estimatePdfV4RowHorizontalDrift(rows, columns)
+    : new Map<number, number>();
+
   const logicalRows =
     rows.map(
       (
@@ -681,6 +696,7 @@ export function buildSmartTableV4(
           columns,
           minimumCellConfidence,
           rowPosition === 0,
+          rowDrifts.get(row.index) ?? 0,
         ),
     );
 
