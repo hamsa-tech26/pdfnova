@@ -106,7 +106,7 @@ describe("Release 59 research-only perspective alignment", () => {
     const selectable = perspective().map(r => ({
       ...r, lines: r.lines.map(line => ({
         ...line, words: line.words.map(w => ({ ...w,
-          extractionProvenance: { source: "pdfjs" as const, confidence: 91 },
+          extractionProvenance: { source: "native-pdf" as const, confidence: 91 },
         })),
       })),
     }));
