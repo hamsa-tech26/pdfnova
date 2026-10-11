@@ -10,6 +10,11 @@ import {
 import {
   estimatePdfV4DeskewRadiansFromBlocks,
 } from "./ocrSkewEstimator";
+import {
+  acceptRecoveredTopHeading,
+  cropTopMarginOcrImage,
+  planTopMarginRecovery,
+} from "./ocrTopMarginRecovery";
 
 import type {
   PdfV4PreparedOcrPage,
@@ -137,6 +142,7 @@ const PDF_V4_OCR_ORIENTATION_ROTATIONS = [
 export type PdfV4OcrRecognitionOptions = {
   rotateAuto?: boolean;
   allowQuarterTurnFallback?: boolean;
+  recoverMissingTopHeading?: boolean;
 };
 
 type PdfV4OcrWorker =
@@ -280,11 +286,46 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  let recognizedText = recognition.data.text.trim();
+
+  if (options.recoverMissingTopHeading && page.pageNumber === 1) {
+    const topRegion = planTopMarginRecovery(
+      recognizedText,
+      page.width,
+      page.height,
+    );
+
+    if (topRegion) {
+      try {
+        const croppedImage = await cropTopMarginOcrImage(
+          page.imageDataUrl,
+          topRegion,
+        );
+        const topRead = await worker.recognize(
+          croppedImage,
+          { rotateAuto: false },
+          { text: true, blocks: true },
+        );
+        const heading = acceptRecoveredTopHeading(
+          topRead.data.text,
+          topRead.data.confidence,
+          recognizedText,
+        );
+        if (heading) {
+          // Text export only. The source scan and word geometry are unchanged.
+          recognizedText = heading + "\n\n" + recognizedText;
+        }
+      } catch {
+        // Keep the full-page OCR output if the optional crop fails.
+      }
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
     text:
-      recognition.data.text.trim(),
+      recognizedText,
     confidence:
       recognition.data.confidence,
     renderedWidth:
