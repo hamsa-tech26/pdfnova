@@ -101,7 +101,12 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
       throw new Error("Workbook exceeds 50,000 source cells.");
     }
   }
-  const notes = (input.reviewNotes ?? []).slice(0, 30).map(note => note.slice(0, 500));
+  // Never silently discard source-page omission or accuracy warnings.
+  // The review sheet is bounded but omission is an explicit error.
+  if ((input.reviewNotes?.length ?? 0) > 200) {
+    throw new Error("Too many spreadsheet review notes; no notes were discarded.");
+  }
+  const notes = (input.reviewNotes ?? []).map(note => String(note).slice(0, 500));
   const sheets: PdfXlsxTable[] = [
     ...input.tables,
     ...(notes.length ? [{ name: "Review Notes", rows: [
