@@ -33,23 +33,33 @@ export function planTopMarginRecovery(
       .map((word) => word.bounds.y0),
   );
 
-  // Existing OCR content must start below a genuine header-height gap.
-  // Do not probe a fully used margin or an anomalously blank half-page.
+  // Full-page OCR can report visible heading words in `blocks` while
+  // silently omitting those words from `data.text`. In that case
+  // firstTop is in the heading itself, so a strict margin-gap gate
+  // incorrectly prevents the recovery read. Re-probe a bounded
+  // top strip rather than trusting the exported text/blocks to agree.
   if (
     !Number.isFinite(firstTop) ||
-    firstTop < height * 0.115 ||
     firstTop > height * 0.38
   ) {
     return null;
   }
 
+  const topStripHeight = height * 0.135;
   const regionHeight = Math.floor(
-    Math.min(
-      firstTop - Math.max(14, height * 0.012),
-      height * 0.28,
-    ),
+    firstTop < height * 0.115
+      ? topStripHeight
+      : Math.min(
+          Math.max(
+            topStripHeight,
+            firstTop - Math.max(14, height * 0.012),
+          ),
+          height * 0.28,
+        ),
   );
 
+  // The reread can only prepend text actually recognized at high
+  // confidence by acceptRecoveredTopHeading; no title is inferred.
   if (regionHeight < height * 0.07) {
     return null;
   }

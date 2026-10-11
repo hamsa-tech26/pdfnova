@@ -24,11 +24,27 @@ describe("OCR top-margin heading recovery", () => {
     );
     expect(plan).toEqual({ left: 0, top: 0, width: 1980, height: 376 });
   });
-  it("does not replace an occupied heading region", () => {
-    expect(planTopMarginRecovery(
+  it("reprobes a short top strip when layout blocks contain a heading omitted from text", () => {
+    // Regression for the original 1786x2526 scan: the heading starts
+    // near y=177 while the body text export starts at SV-2048.
+    const plan = planTopMarginRecovery(
+      [word(177), ...Array.from({ length: 18 }, () => word(372))],
+      body,
+      1786,
+      2526,
+    );
+    expect(plan).toEqual({ left: 0, top: 0, width: 1786, height: 341 });
+    expect(acceptRecoveredTopHeading("SERVICE VISIT NOTE", 96.35, body))
+      .toBe("SERVICE VISIT NOTE");
+    expect(acceptRecoveredTopHeading("SERVICE VISIT NOTE", 96.35, "SERVICE VISIT NOTE\\n" + body))
+      .toBeNull();
+  });
+  it("keeps probing bounded when other top-region words were already recognized", () => {
+    const plan = planTopMarginRecovery(
       [word(210), ...Array.from({ length: 18 }, () => word(410))],
       body, 1980, 2800,
-    )).toBeNull();
+    );
+    expect(plan).toEqual({ left: 0, top: 0, width: 1980, height: 378 });
   });
   it("does not probe underspecified/empty OCR pages", () => {
     expect(planTopMarginRecovery([word(410)], body, 1980, 2800)).toBeNull();
