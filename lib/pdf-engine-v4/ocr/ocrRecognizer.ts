@@ -10,6 +10,10 @@ import {
 import {
   estimatePdfV4DeskewRadiansFromBlocks,
 } from "./ocrSkewEstimator";
+import {
+  acceptRecoveredTopHeading,
+  planTopMarginRecovery,
+} from "./ocrTopMarginRecovery";
 
 import type {
   PdfV4PreparedOcrPage,
@@ -137,6 +141,7 @@ const PDF_V4_OCR_ORIENTATION_ROTATIONS = [
 export type PdfV4OcrRecognitionOptions = {
   rotateAuto?: boolean;
   allowQuarterTurnFallback?: boolean;
+  recoverMissingTopHeading?: boolean;
 };
 
 type PdfV4OcrWorker =
@@ -280,11 +285,43 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  let recognizedText = recognition.data.text.trim();
+
+  if (options.recoverMissingTopHeading) {
+    const topRegion = planTopMarginRecovery(
+      words,
+      recognizedText,
+      page.width,
+      page.height,
+    );
+
+    if (topRegion) {
+      try {
+        const topRead = await worker.recognize(
+          page.imageDataUrl,
+          { rectangle: topRegion },
+          { text: true, blocks: true },
+        );
+        const heading = acceptRecoveredTopHeading(
+          topRead.data.text,
+          topRead.data.confidence,
+          recognizedText,
+        );
+        if (heading) {
+          // Text export only; do not invent or relocate word geometry.
+          recognizedText = heading + "\n\n" + recognizedText;
+        }
+      } catch {
+        // The original full-page recognition is still valid evidence.
+      }
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
     text:
-      recognition.data.text.trim(),
+      recognizedText,
     confidence:
       recognition.data.confidence,
     renderedWidth:

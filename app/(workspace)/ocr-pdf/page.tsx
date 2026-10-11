@@ -143,7 +143,7 @@ export default function OcrPdfPage() {
             (_, index) =>
               index + 1,
           ),
-          {},
+          { recoverMissingTopHeading: true },
           (completed) => {
             setCompletedPages(
               completed,
