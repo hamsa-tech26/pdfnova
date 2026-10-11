@@ -1,4 +1,5 @@
 import type { PdfV4OcrPageResult, PdfV4OcrWord } from "./ocrRecognizer";
+import { inspectPdfV4OcrCheckboxCandidates, formatPdfV4OcrCheckboxCandidates } from "./ocrCheckboxReview";
 
 /**
  * OCR text is evidence, not a structured/form-verified transcript.
@@ -9,6 +10,7 @@ export type PdfV4OcrExport = {
   text: string;
   warnings: string[];
   columnPreview: string | null;
+  checkboxPreview: string | null;
 };
 
 type Line = { y: number; words: PdfV4OcrWord[] };
@@ -120,11 +122,17 @@ export function buildPdfV4OcrTextExport(
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
   }
+  const checkboxPreview = formatPdfV4OcrCheckboxCandidates(
+    inspectPdfV4OcrCheckboxCandidates(page),
+  );
+  if (checkboxPreview) {
+    warnings.push("OCR X positions suggest possible checklist column associations, but statuses are NOT VERIFIED. Check the original PDF before use.");
+  }
   const columnPreview = suggestPdfV4OcrColumnPreview(page);
   if (columnPreview) {
     warnings.push("Possible multiple columns: raw OCR reading order may interleave main text and sidebar. The alternate view is unverified.");
   }
-  return { text, warnings, columnPreview };
+  return { text, warnings, columnPreview, checkboxPreview };
 }
 
 export function formatPdfV4OcrPageExport(
@@ -135,6 +143,10 @@ export function formatPdfV4OcrPageExport(
   if (output.warnings.length) {
     sections.push("[OCR REVIEW NOTES - NOT VERIFIED]\n" +
       output.warnings.map((warning) => "- " + warning).join("\n"));
+  }
+  if (output.checkboxPreview) {
+    sections.push("[CHECKBOX POSITION CLUES - NOT VERIFIED]\n" +
+      output.checkboxPreview);
   }
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
