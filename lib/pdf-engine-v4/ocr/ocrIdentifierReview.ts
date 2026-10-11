@@ -95,7 +95,19 @@ export function comparePdfV4OcrIdentifierReadings(
   if (!Number.isFinite(alternateConfidence) || alternateConfidence < 50 ||
     alternative.length < Math.max(4, primary.length * 0.4) ||
     alternative.length > Math.min(200, primary.length * 2) ||
-    !/[A-Z0-9]/i.test(alternative) || primary === alternative) return null;
+    !/[A-Z0-9]/i.test(alternative)) return null;
+
+  const primaryField = IDENTIFIER_LABEL.exec(primary);
+  const alternateField = IDENTIFIER_LABEL.exec(alternative);
+  // Reject different fields and missing labels rather than comparing two
+  // unrelated strings. Compare only actual ID values, not label punctuation.
+  if (!primaryField || !alternateField ||
+      normalize(primaryField[0]).replace(/[:.]/g, "").toLowerCase() !==
+      normalize(alternateField[0]).replace(/[:.]/g, "").toLowerCase()) return null;
+  const primaryValue = normalize(primary.slice(primaryField.index + primaryField[0].length));
+  const alternativeValue = normalize(alternative.slice(alternateField.index + alternateField[0].length));
+  if (!primaryValue || !alternativeValue ||
+      primaryValue.toUpperCase() === alternativeValue.toUpperCase()) return null;
   return {
     primaryText: primary,
     alternateText: alternative,
