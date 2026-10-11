@@ -62,7 +62,7 @@ export function validatePrivateManifest(manifest){
         if(items===undefined)continue;
         if(!Array.isArray(items)||items.length<1||items.length>24||
           items.some(v=>typeof v!=="string"||v.length<2||v.length>140||
-            v.trim()!==v||v.includes("\\n")||v.includes("\\r"))||
+            v.trim()!==v||v.includes("\n")||v.includes("\r"))||
           new Set(items.map(v=>v.toLowerCase())).size!==items.length)err();
       }
     }
@@ -88,16 +88,19 @@ export function validatePrivateManifest(manifest){
   return manifest.cases;
 }
 const pct=(n,total)=>total?Math.round(10000*n/total)/100:0;
-// OCR field gates are intentionally strict: an exact critical code mistake
-// cannot be excused by a good page-level CER score. Alternate review
-// hypotheses never count as verified output.
-function containsExactIdentifier(text,expected){
-  const escaped=expected.replace(/[.*+?^\${}()|[\]\\]/g,"\\export function scorePrivateCase(spec,actual){");
-  return new RegExp("(^|[^\\p{L}\\p{N}_])"+escaped+"(?=$|[^\\p{L}\\p{N}_])","iu").test(text);
+// OCR field gates are intentionally strict: exact critical code mistakes
+// cannot be excused by a good document-level CER. Alternative OCR review
+// hypotheses never count as independently verified content.
+function containsExactIdentifier(text, expected) {
+  const escaped = Array.from(expected, char =>
+    /[A-Za-z0-9]/.test(char) ? char : "\\" + char,
+  ).join("");
+  return new RegExp("(^|[^\\p{L}\\p{N}_])" + escaped +
+    "(?=$|[^\\p{L}\\p{N}_])", "iu").test(text);
 }
-function containsExactHeadingLine(text,expected){
-  const heading=normalizeText(expected);
-  return text.split(/\\r?\\n/).some(line=>normalizeText(line)===heading);
+function containsExactHeadingLine(text, expected) {
+  const heading = normalizeText(expected);
+  return text.split(/\r?\n/).some(line => normalizeText(line) === heading);
 }
 export function scorePrivateCase(spec,actual){
   const result={id:spec.id,category:spec.category,status:"FAIL",metrics:{},reasonCode:"EVIDENCE_MISSING"};
