@@ -12,6 +12,7 @@ import type { ColumnCandidate } from "./stableColumnDetector";
 import {
   createAnalysisWordsV4,
 } from "./analysisTextFragments";
+import { estimatePdfV4RowHorizontalDrift } from "./rowGeometryCorrection";
 
 export type SmartCellBuilderResult = {
   table: LogicalTable | null;
@@ -467,6 +468,7 @@ function assignWordsToCells(
   row: LogicalRowCandidate,
   columns: ColumnCandidate[],
   isFirstLogicalRow: boolean,
+  rowDrift: number,
 ) {
   const cells =
     createEmptyCells(
@@ -479,6 +481,7 @@ function assignWordsToCells(
       row,
       columns,
       isFirstLogicalRow,
+      rowDrift,
     );
 
   const analysisWords =
@@ -488,9 +491,13 @@ function assignWordsToCells(
     );
 
   for (const word of analysisWords) {
+    // Correct only the assignment coordinate; retain the original PDF word.
+    const positionWord = rowDrift !== 0
+      ? { ...word, bounds: { ...word.bounds, x: word.bounds.x - rowDrift } }
+      : word;
     const nearestColumn =
       findCellAssignmentColumn(
-        word,
+        positionWord,
         columns,
       );
 
@@ -595,6 +602,7 @@ function buildLogicalRow(
   columns: ColumnCandidate[],
   minimumCellConfidence: number,
   isFirstLogicalRow: boolean,
+  rowDrift: number,
 ): LogicalRow {
 
   const emptyCells =
@@ -670,6 +678,8 @@ export function buildSmartTableV4(
     };
   }
 
+  const rowDrifts = estimatePdfV4RowHorizontalDrift(rows, columns);
+
   const logicalRows =
     rows.map(
       (
@@ -681,6 +691,7 @@ export function buildSmartTableV4(
           columns,
           minimumCellConfidence,
           rowPosition === 0,
+          rowDrifts.get(row.index) ?? 0,
         ),
     );
 
