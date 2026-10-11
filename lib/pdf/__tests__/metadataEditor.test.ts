@@ -68,6 +68,32 @@ describe("metadataEditor", () => {
     expect(metadata.keywords).toBe("");
   });
 
+  it("preserves comma-delimited keyword boundaries after PDF save and reload", async () => {
+    const pdf = await PDFDocument.create();
+    pdf.addPage();
+    const values = {
+      title: "QA keyword test",
+      author: "Kukureku",
+      subject: "",
+      keywords: "kukureku, pdf, qa",
+      creator: "",
+      producer: "",
+    };
+    applyPdfMetadata(pdf, values);
+    expect(readPdfMetadata(pdf).keywords).toBe(values.keywords);
+    const saved = await pdf.save();
+    const reopened = await PDFDocument.load(saved, { updateMetadata: false });
+    expect(readPdfMetadata(reopened).keywords).toBe(values.keywords);
+
+    applyPdfMetadata(reopened, {
+      ...values,
+      keywords: "one; two\nthree, four",
+    });
+    expect(readPdfMetadata(reopened).keywords).toBe("one, two, three, four");
+    applyPdfMetadata(reopened, { ...values, keywords: "" });
+    expect(readPdfMetadata(reopened).keywords).toBe("");
+  });
+
   it("parses comma, semicolon, and newline separated keywords", () => {
     expect(parseMetadataKeywords("one, two; three\nfour")).toEqual([
       "one",
