@@ -65,4 +65,21 @@ describe("Release 56 OCR review-safe export", () => {
     const words = ["One", "ordinary", "line"].map((t, i) => word(t, 40 + i * 95, 100));
     expect(suggestPdfV4OcrColumnPreview(page("One ordinary line", words))).toBeNull();
   });
+  it("retains primary character evidence while surfacing alternative heading reads", () => {
+    const input = page("Record ID: DC-T316\nBody line", [], 66);
+    input.alternateRecognition = {
+      text: "INSPECTION HEADING\nRecord ID: DC-7316\nBody line",
+      confidence: 72,
+      mode: "sparse-text",
+    };
+    const summary = buildPdfV4OcrTextExport(input);
+    expect(summary.text).toContain("DC-T316");
+    expect(summary.text).not.toContain("DC-7316");
+    expect(summary.warnings.join(" ")).toContain("Possible lost heading");
+    const full = formatPdfV4OcrPageExport(input);
+    expect(full).toContain("[ALTERNATE SPARSE-TEXT OCR - NOT VERIFIED]");
+    expect(full).toContain("DC-7316");
+    expect(full.indexOf("DC-T316")).toBeLessThan(full.indexOf("DC-7316"));
+  });
+
 });
