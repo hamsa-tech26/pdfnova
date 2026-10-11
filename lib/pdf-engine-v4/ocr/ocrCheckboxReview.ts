@@ -15,7 +15,6 @@ type Header = {
   label: PdfV4OcrCheckboxCandidate["alignedWith"];
   word: PdfV4OcrWord;
 };
-const labels: ReadonlyArray<Header["label"]> = ["Pass", "Fail", "N/A"];
 
 function centerX(word: PdfV4OcrWord) {
   return (word.bounds.x0 + word.bounds.x1) / 2;
