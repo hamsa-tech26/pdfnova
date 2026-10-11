@@ -50,6 +50,7 @@ export type PdfV4OcrPageResult = {
  renderedHeight: number;
  words: PdfV4OcrWord[];
  detectedSkewRadians: number | null;
+  alternateRecognition?: { text: string; confidence: number; mode: "sparse-text" };
   language: "eng";
   source: "ocr-tesseract";
 };
@@ -280,9 +281,35 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  // A bounded second OCR segmentation can recover isolated page headings.
+  // Never silently replace the primary transcript with an unverified guess.
+  let alternateRecognition: PdfV4OcrPageResult["alternateRecognition"];
+  if (recognition.data.confidence < 80 && words.length < 3000) {
+    try {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.SPARSE_TEXT });
+      const sparse = await worker.recognize(page.imageDataUrl, { rotateAuto: false },
+        { text: true, blocks: true });
+      const sparseWords = extractPdfV4OcrWords(sparse.data.blocks);
+      const sparseText = sparse.data.text.trim();
+      if (sparseText && sparseText !== recognition.data.text.trim() &&
+          Number.isFinite(sparse.data.confidence) &&
+          sparse.data.confidence >= Math.max(50, recognition.data.confidence - 8) &&
+          sparseWords.length >= Math.max(3, Math.floor(words.length * 0.75))) {
+        alternateRecognition = {
+          text: sparseText, confidence: sparse.data.confidence, mode: "sparse-text",
+        };
+      }
+    } catch {
+      // A failed alternative must not invalidate the successful primary OCR.
+    } finally {
+      await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
+    alternateRecognition,
     text:
       recognition.data.text.trim(),
     confidence:
