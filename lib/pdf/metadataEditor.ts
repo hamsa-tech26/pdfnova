@@ -34,7 +34,10 @@ export function applyPdfMetadata(pdf: PDFDocument, values: PdfMetadataValues) {
   pdf.setTitle(values.title.trim());
   pdf.setAuthor(values.author.trim());
   pdf.setSubject(values.subject.trim());
-  pdf.setKeywords(parseMetadataKeywords(values.keywords));
+  // pdf-lib joins keyword array entries with spaces. Store a single
+  // comma-delimited string to preserve visible keyword boundaries on
+  // subsequent PDF reads; maintain normalized token parsing on input.
+  pdf.setKeywords([parseMetadataKeywords(values.keywords).join(", ")]);
   pdf.setCreator(values.creator.trim());
   pdf.setProducer(values.producer.trim());
 }

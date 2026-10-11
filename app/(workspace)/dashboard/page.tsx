@@ -15,6 +15,7 @@ import {
   FileImage,
   FileOutput,
   FileText,
+  FileSpreadsheet,
   Files,
   ImageIcon,
   Layers3,
@@ -197,6 +198,14 @@ const availableTools = [
     category: "Office",
     icon: FileText,
     accent: "bg-sky-50 text-sky-600",
+  },
+  {
+    title: "PDF to Excel",
+    description: "Extract supported text-selectable PDF tables to real XLSX.",
+    href: "/pdf-to-excel",
+    category: "Office",
+    icon: FileSpreadsheet,
+    accent: "bg-green-50 text-green-700",
   },
   {
     title: "Word to PDF",

@@ -123,7 +123,7 @@ export default function Home() {
                   </div>
 
                   <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
-                    <p className="font-bold">30 working tools</p>
+                    <p className="font-bold">31 working tools</p>
                     <p className="mt-2 text-sm leading-6 text-blue-100">
                       Ready for common PDF workflows.
                     </p>

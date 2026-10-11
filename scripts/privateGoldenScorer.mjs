@@ -55,7 +55,17 @@ export function validatePrivateManifest(manifest){
     const reviewDate=new Date(entry.annotation.reviewDate+"T00:00:00.000Z");
     if(!Number.isFinite(reviewDate.getTime())||reviewDate.toISOString().slice(0,10)!==entry.annotation.reviewDate)err();
     const e=entry.expected;
-    if(entry.category==="ocr-text" && !safeText(e.text))err();
+    if(entry.category==="ocr-text"){
+      if(!safeText(e.text))err();
+      for(const key of ["criticalIdentifiers","requiredHeadings"]){
+        const items=e[key];
+        if(items===undefined)continue;
+        if(!Array.isArray(items)||items.length<1||items.length>24||
+          items.some(v=>typeof v!=="string"||v.length<2||v.length>140||
+            v.trim()!==v||v.includes("\n")||v.includes("\r"))||
+          new Set(items.map(v=>v.toLowerCase())).size!==items.length)err();
+      }
+    }
     if(entry.category==="table"){
       if(!Number.isInteger(e.tableIndex)||e.tableIndex<0||e.tableIndex>30||
         !Array.isArray(e.rows)||e.rows.length<2||e.rows.length>1000)err();
@@ -78,15 +88,38 @@ export function validatePrivateManifest(manifest){
   return manifest.cases;
 }
 const pct=(n,total)=>total?Math.round(10000*n/total)/100:0;
+// OCR field gates are intentionally strict: exact critical code mistakes
+// cannot be excused by a good document-level CER. Alternative OCR review
+// hypotheses never count as independently verified content.
+function containsExactIdentifier(text, expected) {
+  const regexMeta = new Set(["\\", "^", "$", ".", "*", "+", "?", "(", ")", "[", "]", "{", "}", "|"]);
+  const escaped = Array.from(expected, char =>
+    regexMeta.has(char) ? "\\" + char : char,
+  ).join("");
+  return new RegExp("(^|[^\\p{L}\\p{N}_])" + escaped +
+    "(?=$|[^\\p{L}\\p{N}_])", "iu").test(text);
+}
+function containsExactHeadingLine(text, expected) {
+  const heading = normalizeText(expected);
+  return text.split(/\r?\n/).some(line => normalizeText(line) === heading);
+}
 export function scorePrivateCase(spec,actual){
   const result={id:spec.id,category:spec.category,status:"FAIL",metrics:{},reasonCode:"EVIDENCE_MISSING"};
   if(!actual||actual.measured!==true)return result;
   if(spec.category==="ocr-text"){
     if(typeof actual.text!=="string"){result.reasonCode="NO_OCR_TEXT";return result;}
     const cer=characterErrorPct(spec.expected.text,actual.text);
-    result.metrics={characterErrorPct:cer,characterAccuracyPct:Math.max(0,Math.round((100-cer)*100)/100)};
-    result.status=cer<=REALWORLD_POLICY.maxCharacterErrorPct?"PASS":"FAIL";
-    result.reasonCode=result.status==="PASS"?"THRESHOLD_MET":"TEXT_ACCURACY";
+    const identifiers=spec.expected.criticalIdentifiers??[];
+    const headings=spec.expected.requiredHeadings??[];
+    const matchedIdentifiers=identifiers.filter(value=>containsExactIdentifier(actual.text,value)).length;
+    const matchedHeadings=headings.filter(value=>containsExactHeadingLine(actual.text,value)).length;
+    const criticalFieldsPass=matchedIdentifiers===identifiers.length&&matchedHeadings===headings.length;
+    result.metrics={characterErrorPct:cer,characterAccuracyPct:Math.max(0,Math.round((100-cer)*100)/100),
+      criticalIdentifiersExpected:identifiers.length,criticalIdentifiersMatched:matchedIdentifiers,
+      requiredHeadingsExpected:headings.length,requiredHeadingsMatched:matchedHeadings};
+    result.status=cer<=REALWORLD_POLICY.maxCharacterErrorPct&&criticalFieldsPass?"PASS":"FAIL";
+    result.reasonCode=cer>REALWORLD_POLICY.maxCharacterErrorPct?"TEXT_ACCURACY":
+      criticalFieldsPass?"THRESHOLD_MET":"OCR_CRITICAL_FIELD_ACCURACY";
   }else if(spec.category==="table"){
     if(!Array.isArray(actual.rows)){result.reasonCode="NO_CONFIRMED_TABLE";return result;}
     const gold=spec.expected.rows,rows=actual.rows;

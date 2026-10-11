@@ -67,6 +67,55 @@ describe("Release 52 private Golden Document score engine",()=>{
   expect(scorePrivateCase(s,{measured:false,text:s.expected.text}).status).toBe("FAIL");
   expect(REALWORLD_POLICY.maxCharacterErrorPct).toBe(5);
  });
+ it("blocks subtle reference-ID errors even when whole-page CER is below 5%",()=>{
+  const reference="SERVICE INSPECTION REPORT\nRecord ID: DC-7316\nPumps checked and inspected during maintenance work.";
+  const spec={...entry("ocr-text","critical-id-case"),expected:{
+    text:reference,criticalIdentifiers:["DC-7316"],requiredHeadings:["SERVICE INSPECTION REPORT"]
+  }};
+  expect(validatePrivateManifest(manifest([spec]))).toHaveLength(1);
+  const correct=scorePrivateCase(spec,{measured:true,text:reference});
+  expect(correct.status).toBe("PASS");
+  expect(correct.metrics.criticalIdentifiersMatched).toBe(1);
+  expect(correct.metrics.requiredHeadingsMatched).toBe(1);
+
+  const wrong=scorePrivateCase(spec,{measured:true,
+    text:reference.replace("DC-7316","DC-T316"),
+    alternateText:reference,
+  });
+  expect(wrong.metrics.characterErrorPct).toBeLessThan(5);
+  expect(wrong.metrics.criticalIdentifiersMatched).toBe(0);
+  expect(wrong.reasonCode).toBe("OCR_CRITICAL_FIELD_ACCURACY");
+  expect(wrong.status).toBe("FAIL");
+  expect(JSON.stringify(wrong)).not.toContain("DC-7316");
+  expect(JSON.stringify(wrong)).not.toContain(reference);
+ });
+
+ it("requires exact original heading lines rather than partial body text",()=>{
+  const reference="SERVICE INSPECTION REPORT\nRecord ID: DC-7316\nPumps checked and inspected during maintenance work.";
+  const spec={...entry("ocr-text","heading-case"),expected:{
+    text:reference,requiredHeadings:["SERVICE INSPECTION REPORT"]
+  }};
+  const shifted=scorePrivateCase(spec,{measured:true,
+    text:reference.replace("SERVICE INSPECTION REPORT","SITE INSPECTION REPORT"),
+  });
+  expect(shifted.metrics.characterErrorPct).toBeLessThan(5);
+  expect(shifted.metrics.requiredHeadingsMatched).toBe(0);
+  expect(shifted.status).toBe("FAIL");
+  const layout=scorePrivateCase(spec,{measured:true,
+    text:reference.replace("SERVICE INSPECTION REPORT","A SERVICE INSPECTION REPORT"),
+  });
+  expect(layout.metrics.requiredHeadingsMatched).toBe(0);
+  expect(layout.status).toBe("FAIL");
+ });
+
+ it("rejects unreviewed or malformed critical-field annotation lists",()=>{
+  const base=entry("ocr-text","bad-fields");
+  const badManifest=(patch)=>manifest([{...base,expected:{...base.expected,...patch}}]);
+  expect(()=>validatePrivateManifest(badManifest({criticalIdentifiers:["DC-1","dc-1"]}))).toThrow();
+  expect(()=>validatePrivateManifest(badManifest({requiredHeadings:["x"]}))).toThrow();
+  expect(()=>validatePrivateManifest(badManifest({criticalIdentifiers:["DC-1\nLEAK"]}))).toThrow();
+ });
+
  it("enforces visible form answer and removal of editable fields",()=>{
   const s=entry("form","form-one");
   expect(scorePrivateCase(s,{measured:true,flattenedText:"Visible EXAMPLE APPROVED",remainingFieldCount:0}).status).toBe("PASS");
