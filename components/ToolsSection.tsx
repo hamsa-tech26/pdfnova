@@ -5,6 +5,7 @@ import {
   FileImage,
   FileOutput,
   FileText,
+  FileSpreadsheet,
   Files,
   ImageIcon,
   Layers3,
@@ -54,6 +55,13 @@ const tools = [
     href: "/pdf-to-word",
     icon: FileText,
     accent: "bg-sky-50 text-sky-600",
+  },
+  {
+    title: "PDF to Excel",
+    description: "Convert selectable-text PDF tables to a genuine XLSX workbook.",
+    href: "/pdf-to-excel",
+    icon: FileSpreadsheet,
+    accent: "bg-green-50 text-green-700",
   },
   {
     title: "Word to PDF",
