@@ -9,6 +9,7 @@ import ToolLayout from "@/components/pdf/ToolLayout";
 import {
   recognizePdfV4OcrFilePages,
 } from "@/lib/pdf-engine-v4/ocr/ocrRecognizer";
+import { formatPdfV4OcrPageExport } from "@/lib/pdf-engine-v4/ocr/ocrTextExport";
 import {
   loadPdfWithoutMetadataMutation,
 } from "@/lib/pdf/safeDocument";
@@ -153,10 +154,7 @@ export default function OcrPdfPage() {
 
       const text =
         results
-          .map(
-            (result) =>
-              `--- Page ${result.pageNumber} ---\n${result.text}`,
-          )
+          .map(formatPdfV4OcrPageExport)
           .join("\n\n");
 
       if (
@@ -208,7 +206,7 @@ export default function OcrPdfPage() {
     <ToolLayout
       label="OCR PDF"
       title="OCR scanned PDF to text privately"
-      description="Recognize English text in scanned or image-based PDF pages using Kukureku's browser OCR engine. Pages are rendered and recognized sequentially to reduce browser memory pressure."
+      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add clearly labelled, unverified review notes for identifiers, checklists and possible columns."
       tips={[
         {
           title:
@@ -267,7 +265,7 @@ export default function OcrPdfPage() {
           title:
             "Download the text",
           description:
-            "Save the recognized content as a page-by-page TXT file.",
+            "Save the page-by-page OCR text with separate, explicitly unverified review notes where supported.",
         },
       ]}
       maxWidthClassName="max-w-5xl"
