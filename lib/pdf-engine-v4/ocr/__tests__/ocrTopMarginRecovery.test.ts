@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   acceptRecoveredTopHeading,
+  mergeRecoveredTopHeading,
   planTopMarginRecovery,
 } from "../ocrTopMarginRecovery";
 
@@ -69,7 +70,7 @@ describe("OCR top-margin heading recovery", () => {
 
   it("rejects untrustworthy multi-line crop results", () => {
     expect(acceptRecoveredTopHeading(
-      "COMMUNITY SERVICE\nCustomer name",
+      "Customer name\nCOMMUNITY SERVICE",
       96,
       body,
     )).toBeNull();
@@ -79,10 +80,31 @@ describe("OCR top-margin heading recovery", () => {
       body,
     )).toBeNull();
     expect(acceptRecoveredTopHeading(
-      "ONE TITLE\nTWO TITLE\nTHREE TITLE\nFOUR TITLE",
+      "ONE TITLE\nTWO TITLE\nTHREE TITLE\nFOUR TITLE\nFIVE TITLE",
       96,
       body,
     )).toBeNull();
+  });
+
+
+  it("merges missing subtitle into correct heading order without duplicates", () => {
+    const original = "COMMUNITY SERVICE\nBULLETIN\nNotice ID: HX-2026-005\nIssued: 09 October 2026";
+    const recovered = "COMMUNITY SERVICE\nBULLETIN\nOCTOBER MAINTENANCE UPDATE";
+    const merged = mergeRecoveredTopHeading(recovered, 95, original);
+    expect(merged).toBe(
+      "COMMUNITY SERVICE\nBULLETIN\nOCTOBER MAINTENANCE UPDATE\n\n" +
+      "Notice ID: HX-2026-005\nIssued: 09 October 2026",
+    );
+    expect(merged.match(/COMMUNITY SERVICE/g)).toHaveLength(1);
+  });
+
+  it("restores missing initial lines before an already recognized subtitle", () => {
+    const bodyWithSubtitle = "OCTOBER MAINTENANCE UPDATE\nOCR HEADING REGRESSION TEST\nNotice ID: HX-2026-005";
+    const cropped = "COMMUNITY SERVICE\nBULLETIN\nOCTOBER MAINTENANCE UPDATE\nOCR HEADING REGRESSION TEST";
+    const merged = mergeRecoveredTopHeading(cropped, 97, bodyWithSubtitle);
+    expect(merged).toMatch(/^COMMUNITY SERVICE\nBULLETIN\nOCTOBER MAINTENANCE UPDATE\nOCR HEADING REGRESSION TEST\n\nNotice ID/);
+    expect(merged.match(/OCTOBER MAINTENANCE UPDATE/g)).toHaveLength(1);
+    expect(mergeRecoveredTopHeading(cropped, 60, bodyWithSubtitle)).toBe(bodyWithSubtitle);
   });
 
 });
