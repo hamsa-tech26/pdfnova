@@ -86,6 +86,37 @@ describe("Native PDF numbered guide and continuous table recovery",()=>{
     ]);
   });
 
+  it("separates left-aligned short values when Name and GP/VC occur in one heading",()=>{
+    const pages=syntheticPages();
+    pages[0].tokens.push(
+      token("Block",209,232,580),
+      token("Name",251,276,573),
+      token("GP/VC",290,316,573),
+    );
+    // A fictional boundary case: a short first word begins immediately
+    // after the Block column, before the midpoint of printed guide 3/4.
+    for(let i=0;i<4;i++){
+      const word=pages[2].tokens.filter(t=>t.text==="Council")[i];
+      const second=pages[2].tokens.filter(t=>t.text==="Delta")[i];
+      expect(word).toBeDefined();
+      expect(second).toBeDefined();
+      word.text="West";
+      word.x=248;
+      word.right=269.5;
+      second.x=271.8;
+      second.right=317;
+    }
+    const plan=recoverEightColumnRowsFromNativePositions(pages);
+    expect(plan).not.toBeNull();
+    const rows=plan!.tables[0].rows;
+    expect(rows).toHaveLength(88);
+    expect(rows.every(row=>row.length===8)).toBe(true);
+    const repaired=rows.slice(58,62);
+    expect(repaired).toHaveLength(4);
+    expect(repaired.every(row=>row[3]==="West Delta" && row[2]==="Sector Beta"))
+      .toBe(true);
+  });
+
   it("refuses missing record 42 across the second page",()=>{
     const pages=syntheticPages();
     pages[1].tokens=pages[1].tokens.filter(t=>t.y!==(525-(42-25)*12));
