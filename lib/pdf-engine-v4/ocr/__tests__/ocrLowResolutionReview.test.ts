@@ -87,7 +87,7 @@ describe("Low-resolution OCR retry is bounded and review-only", () => {
       lowResolutionReview: reRead,
     });
     expect(formatted).toContain("[OPTIONAL IMAGE-ENHANCED LOW-RES OCR - NOT VERIFIED]");
-    expect(formatted).toContain("Original" === "wrong" ? "unexpected" : "Raw OCR above is unchanged");
+    expect(formatted).toContain("Raw OCR above is unchanged");
     expect(formatted.indexOf("Record ID: DC-T316")).toBeLessThan(
       formatted.indexOf("Record ID: DC-7316"),
     );
