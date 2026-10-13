@@ -9,6 +9,8 @@ import ToolLayout from "@/components/pdf/ToolLayout";
 import {
   recognizePdfV4OcrFilePages,
 } from "@/lib/pdf-engine-v4/ocr/ocrRecognizer";
+import { formatPdfV4OcrPageExport } from "@/lib/pdf-engine-v4/ocr/ocrTextExport";
+import { extractEmbeddedPdfTextPreviews } from "@/lib/pdf-engine-v4/ocr/pdfEmbeddedTextPreview";
 import {
   loadPdfWithoutMetadataMutation,
 } from "@/lib/pdf/safeDocument";
@@ -143,7 +145,7 @@ export default function OcrPdfPage() {
             (_, index) =>
               index + 1,
           ),
-          { recoverMissingTopHeading: true },
+          { recoverMissingTopHeading: true, reviewLowResolution: true },
           (completed) => {
             setCompletedPages(
               completed,
@@ -151,12 +153,30 @@ export default function OcrPdfPage() {
           },
         );
 
+      // Some source PDFs already contain selectable text. Keep OCR unchanged
+      // and provide a separate, source-derived review alternative only when
+      // enough embedded text exists. Scanned PDFs remain OCR-only.
+      let sourceTextCheckFailed = false;
+      const embedded = await extractEmbeddedPdfTextPreviews(
+        file,
+        results.map((result) => result.pageNumber),
+      ).catch(() => {
+        sourceTextCheckFailed = true;
+        return new Map<number, string>();
+      });
+
       const text =
         results
-          .map(
-            (result) =>
-              `--- Page ${result.pageNumber} ---\n${result.text}`,
-          )
+          .map((result) => {
+            const originalOcr = formatPdfV4OcrPageExport(result);
+            const alternative = embedded.get(result.pageNumber);
+            if (alternative) {
+              return originalOcr + "\n\n[OPTIONAL PDF EMBEDDED TEXT - NOT OCR; VERIFY AGAINST PAGE]\n" + alternative;
+            }
+            return sourceTextCheckFailed
+              ? originalOcr + "\n\n[PDF TEXT-LAYER CHECK UNAVAILABLE]\nThe optional source-text check failed; the original OCR above is unchanged."
+              : originalOcr;
+          })
           .join("\n\n");
 
       if (
@@ -208,7 +228,7 @@ export default function OcrPdfPage() {
     <ToolLayout
       label="OCR PDF"
       title="OCR scanned PDF to text privately"
-      description="Recognize English text in scanned or image-based PDF pages using Kukureku's browser OCR engine. Pages are rendered and recognized sequentially to reduce browser memory pressure."
+      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve raw OCR and add review notes for identifiers, checklists and possible columns. For difficult IDs in scans, a targeted image-line reread can provide a separately labelled, unverified alternative. Some selectable-text PDFs with clearly separated columns also include a separate embedded-text preview."
       tips={[
         {
           title:
@@ -227,6 +247,12 @@ export default function OcrPdfPage() {
             "Memory-aware processing",
           description:
             "Pages are rendered and recognized one at a time instead of keeping every full-resolution OCR image in memory.",
+        },
+        {
+          title:
+            "Low-resolution review",
+          description:
+            "If identifiers look unreliable, Kukureku may reread the relevant image line separately. It never rewrites the original ID, and any conflicting reading is marked UNVERIFIED. Broader enhanced text was disabled after physical tests showed it could introduce mistakes.",
         },
         {
           title:
@@ -267,7 +293,7 @@ export default function OcrPdfPage() {
           title:
             "Download the text",
           description:
-            "Save the recognized content as a page-by-page TXT file.",
+            "Save page-by-page OCR text and review notes. Where two columns are clearly identified in the PDF text layer, an optional reading-order preview is shown separately.",
         },
       ]}
       maxWidthClassName="max-w-5xl"

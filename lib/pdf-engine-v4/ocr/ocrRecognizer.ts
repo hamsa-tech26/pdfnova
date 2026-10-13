@@ -11,7 +11,7 @@ import {
   estimatePdfV4DeskewRadiansFromBlocks,
 } from "./ocrSkewEstimator";
 import {
-  acceptRecoveredTopHeading,
+  mergeRecoveredTopHeading,
   cropTopMarginOcrImage,
   planTopMarginRecovery,
 } from "./ocrTopMarginRecovery";
@@ -19,6 +19,12 @@ import {
 import type {
   PdfV4PreparedOcrPage,
 } from "./ocrPageRenderer";
+import {
+  shouldReviewLowResolutionOcr,
+  prepareLowResolutionReviewImage,
+  planLowResolutionIdentifierLine,
+  acceptIdentifierLineReview,
+} from "./ocrLowResolutionReview";
 
 export type PdfV4OcrRectangle = {
   left: number;
@@ -57,6 +63,8 @@ export type PdfV4OcrPageResult = {
  detectedSkewRadians: number | null;
   language: "eng";
   source: "ocr-tesseract";
+  /** A separate, unverified read of the source-image identifier line. */
+  lowResolutionIdentifierReview?: string | null;
 };
 
 export type PdfV4OcrRegionResult = {
@@ -143,6 +151,7 @@ export type PdfV4OcrRecognitionOptions = {
   rotateAuto?: boolean;
   allowQuarterTurnFallback?: boolean;
   recoverMissingTopHeading?: boolean;
+  reviewLowResolution?: boolean;
 };
 
 type PdfV4OcrWorker =
@@ -306,17 +315,50 @@ async function recognizePdfV4OcrPageWithWorker(
           { rotateAuto: false },
           { text: true, blocks: true },
         );
-        const heading = acceptRecoveredTopHeading(
+        recognizedText = mergeRecoveredTopHeading(
           topRead.data.text,
           topRead.data.confidence,
           recognizedText,
         );
-        if (heading) {
-          // Text export only. The source scan and word geometry are unchanged.
-          recognizedText = heading + "\n\n" + recognizedText;
-        }
       } catch {
         // Keep the full-page OCR output if the optional crop fails.
+      }
+    }
+  }
+
+  // No full-page enhanced retry: physical low-resolution testing showed it
+  // introduced extra text errors. Only the bounded identifier-line review
+  // below remains, and it never edits the recognized page transcript.
+
+  let lowResolutionIdentifierReview: string | null = null;
+  if (
+    options.reviewLowResolution &&
+    page.source === "pdf-render" &&
+    shouldReviewLowResolutionOcr(recognizedText, recognition.data.confidence)
+  ) {
+    const idRegion = planLowResolutionIdentifierLine({
+      words, renderedWidth: page.width, renderedHeight: page.height,
+    });
+    if (idRegion) {
+      try {
+        const cropped = await prepareLowResolutionReviewImage(
+          page.imageDataUrl, idRegion, 2.25,
+        );
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE });
+        try {
+          const read = await worker.recognize(
+            cropped,
+            { rotateAuto: false },
+            { text: true },
+          );
+          lowResolutionIdentifierReview = acceptIdentifierLineReview(
+            recognizedText, read.data.text, read.data.confidence,
+          );
+        } finally {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+        }
+      } catch {
+        // Optional line recognition cannot alter raw OCR or block export.
       }
     }
   }
@@ -336,6 +378,7 @@ async function recognizePdfV4OcrPageWithWorker(
     detectedSkewRadians,
     language: "eng",
     source: "ocr-tesseract",
+    lowResolutionIdentifierReview,
   };
 }
 
