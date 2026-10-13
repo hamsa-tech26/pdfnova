@@ -8,6 +8,12 @@ import JSZip from "jszip";
 export type PdfXlsxTable = {
   name: string;
   rows: readonly (readonly unknown[])[];
+  /** Explicit opt-in: only canonical, safe integer cells in these columns are typed as numbers. */
+  numericColumns?: readonly number[];
+  /** Opt-in for verified tabular data; freezes the first row and adds an Excel filter. */
+  freezeHeader?: boolean;
+  /** Optional bounded widths for verified tables. */
+  columnWidths?: readonly number[];
 };
 export type PdfXlsxInput = {
   tables: readonly PdfXlsxTable[];
@@ -45,7 +51,8 @@ function cellColumn(index: number): string {
   return result;
 }
 
-function sheetXml(rows: readonly (readonly unknown[])[]): string {
+function sheetXml(table: PdfXlsxTable): string {
+  const rows = table.rows;
   if (rows.length === 0 || rows.length > MAX_ROWS) {
     throw new Error("Each exported table must contain 1–2,000 rows.");
   }
@@ -56,23 +63,50 @@ function sheetXml(rows: readonly (readonly unknown[])[]): string {
   if (rows.length * width > MAX_CELLS) {
     throw new Error("Table exceeds the 50,000-cell spreadsheet safety limit.");
   }
+
+  const typed = new Set(table.numericColumns ?? []);
+  if (typed.size !== (table.numericColumns?.length ?? 0) ||
+      [...typed].some(index => !Number.isInteger(index) || index < 0 || index >= width)) {
+    throw new Error("Invalid explicitly typed numeric column.");
+  }
+  if (table.columnWidths && (table.columnWidths.length !== width ||
+      table.columnWidths.some(n => !Number.isFinite(n) || n < 8 || n > 55))) {
+    throw new Error("Invalid bounded worksheet column widths.");
+  }
   const data = rows.map((row, rowIndex) => {
     if (!Array.isArray(row) || row.length > MAX_COLUMNS) {
       throw new Error("Invalid table row.");
     }
     const cells = row.map((value, columnIndex) => {
       const label = cellColumn(columnIndex) + (rowIndex + 1);
-      // An inline string is never an Excel formula, even when it starts with =+-@.
+      // Only explicit metric columns can become numbers. Canonical nonnegative
+      // integers up to 15 digits avoid Excel precision loss and text coercion.
+      // Identifiers, leading-zero codes and formula-like strings stay literal.
+      const literal = String(value ?? "");
+      if (rowIndex > 0 && typed.has(columnIndex) &&
+          /^(?:0|[1-9][0-9]{0,14})$/.test(literal) &&
+          Number.isSafeInteger(Number(literal))) {
+        return '<c r="' + label + '" t="n"><v>' + literal + '</v></c>';
+      }
+      // Inline string cells cannot execute spreadsheet formulas.
       return '<c r="' + label + '" t="inlineStr"><is><t xml:space="preserve">' +
         xmlSafe(value) + "</t></is></c>";
     }).join("");
     return '<row r="' + (rowIndex + 1) + '">' + cells + "</row>";
   }).join("");
   const range = "A1:" + cellColumn(width - 1) + rows.length;
+  const view = table.freezeHeader && rows.length > 1 ?
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : "";
+  const cols = table.columnWidths?.length ?
+    '<cols>' + table.columnWidths.map((n, i) =>
+      '<col min="' + (i + 1) + '" max="' + (i + 1) +
+      '" width="' + n + '" customWidth="1"/>').join("") + '</cols>' : "";
+  const filter = table.freezeHeader && rows.length > 1 ?
+    '<autoFilter ref="' + range + '"/>' : "";
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
-    '<dimension ref="' + range + '"/>' +
-    '<sheetData>' + data + '</sheetData></worksheet>';
+    '<dimension ref="' + range + '"/>' + view + cols +
+    '<sheetData>' + data + '</sheetData>' + filter + '</worksheet>';
 }
 
 function safeSheetName(raw: string, index: number, existing: Set<string>): string {
@@ -163,7 +197,7 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
     sheetRelationships + '</Relationships>');
   sheets.forEach((table, index) => {
-    zip.file("xl/worksheets/sheet" + (index + 1) + ".xml", sheetXml(table.rows));
+    zip.file("xl/worksheets/sheet" + (index + 1) + ".xml", sheetXml(table));
   });
   return zip.generateAsync({ type: "uint8array", compression: "DEFLATE",
     compressionOptions: { level: 6 } });
