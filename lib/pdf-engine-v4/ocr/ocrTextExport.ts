@@ -128,9 +128,6 @@ export function buildPdfV4OcrTextExport(
   if (checkboxPreview) {
     warnings.push("OCR X positions suggest possible checklist column associations, but statuses are NOT VERIFIED. Check the original PDF before use.");
   }
-  if (page.lowResolutionReview) {
-    warnings.push("Image-enhanced OCR offers a different, UNVERIFIED reading. It may contain new mistakes. Compare both interpretations with the original before copying exact identifiers.");
-  }
   if (page.lowResolutionIdentifierReview) {
     warnings.push("A separate enhanced source-image identifier line DISAGREES with the raw OCR. Neither interpretation is verified; compare characters to the original PDF.");
   }
@@ -157,11 +154,6 @@ export function formatPdfV4OcrPageExport(
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
       output.columnPreview);
-  }
-  if (page.lowResolutionReview) {
-    sections.push("[OPTIONAL IMAGE-ENHANCED LOW-RES OCR - NOT VERIFIED]\n" +
-      "Alternative recognized directly from enhanced page pixels. Raw OCR above is unchanged. Verify conflicting identifiers and words against the original PDF.\n" +
-      page.lowResolutionReview);
   }
   if (page.lowResolutionIdentifierReview) {
     sections.push("[OPTIONAL TARGETED IDENTIFIER OCR - NOT VERIFIED]\n" +
