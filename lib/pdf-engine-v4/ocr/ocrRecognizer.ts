@@ -19,6 +19,12 @@ import {
 import type {
   PdfV4PreparedOcrPage,
 } from "./ocrPageRenderer";
+import {
+  shouldReviewLowResolutionOcr,
+  planLowResolutionRetryRegion,
+  prepareLowResolutionReviewImage,
+  acceptLowResolutionReviewCandidate,
+} from "./ocrLowResolutionReview";
 
 export type PdfV4OcrRectangle = {
   left: number;
@@ -57,6 +63,8 @@ export type PdfV4OcrPageResult = {
  detectedSkewRadians: number | null;
   language: "eng";
   source: "ocr-tesseract";
+  /** Raw text from an additional image-enhanced OCR read; never verified. */
+  lowResolutionReview?: string | null;
 };
 
 export type PdfV4OcrRegionResult = {
@@ -143,6 +151,7 @@ export type PdfV4OcrRecognitionOptions = {
   rotateAuto?: boolean;
   allowQuarterTurnFallback?: boolean;
   recoverMissingTopHeading?: boolean;
+  reviewLowResolution?: boolean;
 };
 
 type PdfV4OcrWorker =
@@ -317,6 +326,43 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  let lowResolutionReview: string | null = null;
+  if (
+    options.reviewLowResolution &&
+    page.source === "pdf-render" &&
+    shouldReviewLowResolutionOcr(recognizedText, recognition.data.confidence)
+  ) {
+    const region = planLowResolutionRetryRegion({
+      words,
+      renderedWidth: page.width,
+      renderedHeight: page.height,
+    });
+    if (region) {
+      try {
+        const enhancedImage = await prepareLowResolutionReviewImage(
+          page.imageDataUrl, region,
+        );
+        // This retry is a *separate, unverified OCR observation*, not an
+        // automatic edit of identifiers or other content.
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
+        try {
+          const enhancedRead = await worker.recognize(
+            enhancedImage,
+            { rotateAuto: false },
+            { text: true },
+          );
+          lowResolutionReview = acceptLowResolutionReviewCandidate(
+            recognizedText, enhancedRead.data.text, enhancedRead.data.confidence,
+          );
+        } finally {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+        }
+      } catch {
+        // Optional enhancement must never prevent delivery of the raw OCR.
+      }
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
@@ -332,6 +378,7 @@ async function recognizePdfV4OcrPageWithWorker(
     detectedSkewRadians,
     language: "eng",
     source: "ocr-tesseract",
+    lowResolutionReview,
   };
 }
 
