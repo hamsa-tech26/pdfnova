@@ -47,8 +47,8 @@ function linesAsText(items: EmbeddedPdfTextItem[]): string {
 /**
  * A cautious, geometric preview that reads a left content column to the end
  * before a right sidebar. It never invents words or changes the OCR transcript.
- * If column evidence is not strong, the digital text is still presented in
- * visual row order and explicitly marked as a preview.
+ * If there is no strong column evidence, no alternative is added; that
+ * prevents duplicate headings on ordinary single-column digital PDFs.
  */
 export function reconstructEmbeddedPdfTextPreview(
   items: EmbeddedPdfTextItem[],
@@ -57,7 +57,7 @@ export function reconstructEmbeddedPdfTextPreview(
   if (!Number.isFinite(pageWidth) || pageWidth <= 0) return null;
   const valid = readableItems(items, pageWidth);
   const characters = valid.reduce((sum, item) => sum + item.text.trim().length, 0);
-  if (valid.length < 12 || characters < 100) return null;
+  if (valid.length < 12 || valid.length > 4000 || characters < 100) return null;
 
   let best: { left: EmbeddedPdfTextItem[]; right: EmbeddedPdfTextItem[]; score: number } | null = null;
   for (let ratio = 0.54; ratio <= 0.72; ratio += 0.02) {
@@ -73,10 +73,9 @@ export function reconstructEmbeddedPdfTextPreview(
     const score = Math.min(left.length, right.length) - crossing * 10;
     if (!best || score > best.score) best = { left, right, score };
   }
-  if (!best) {
-    return "[EMBEDDED TEXT - VISUAL ROW ORDER, REVIEW LAYOUT]\n" +
-      linesAsText(valid);
-  }
+  // A single-column text layer is not enough evidence to append a second
+  // transcript: repeating the same heading would be misleading.
+  if (!best) return null;
   return "[EMBEDDED TEXT - LEFT CONTENT COLUMN]\n" +
     linesAsText(best.left) +
     "\n\n[EMBEDDED TEXT - RIGHT SIDEBAR]\n" +
