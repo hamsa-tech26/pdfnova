@@ -37,9 +37,18 @@ function makePage(page: number, offset = 0): LogicalTable {
       })),
     };
   });
+  // The source's first page has a two-line heading, which is not a data
+  // record and must not be carried into the reconstructed worksheet as data.
+  const headerRows = page === 1 ? [0, 1].map(h => ({
+    ...rows[0], id: "source-header-" + h, rowIndex: -2 + h,
+    cells: rows[0].cells.map((cell, k) => ({
+      ...cell, id: "source-heading-" + h + "-" + k,
+      text: "Heading " + (k + 1), words: [],
+    })),
+  })) : [];
   return {
     id: "table-" + page, pageNumber: page,
-    columnCount: 5, rows,
+    columnCount: 5, rows: [...headerRows, ...rows],
     confidence: 0.92, bounds: { x: 30, y: 140, width: 870, height: 450 },
     extractionProvenance: { source: "native-pdf", pageNumbers: [page],
       wordCount: 72, nativeWordCount: 72, ocrWordCount: 0,
@@ -92,6 +101,23 @@ describe("Test 3 conservative 8-column multi-page recovery", () => {
         textExtraction: { status: "sufficient" } }],
       tables: [t],
     })).toThrow(/columns are merged/);
+  });
+
+  it("rejects incomplete document coverage before attempting recovery", () => {
+    expect(() => preparePdfV4XlsxExport(nativeSource([
+      makePage(1), makePage(2),
+    ]))).toThrow(/columns are merged/);
+  });
+
+  it("refuses to omit a non-record row on continuation pages", () => {
+    const page2 = makePage(2);
+    const extra = { ...page2.rows[0], id: "anomalous-source-row",
+      cells: page2.rows[0].cells.map(c => ({ ...c,
+        id: c.id + "-extra", text: "UNMAPPED FIELD", words: [] })) };
+    page2.rows.push(extra);
+    expect(() => preparePdfV4XlsxExport(nativeSource([
+      makePage(1), page2, makePage(3),
+    ]))).toThrow(/columns are merged/);
   });
 
   it("refuses sequence gaps rather than silently joining incomplete pages", () => {
