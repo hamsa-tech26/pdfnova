@@ -30,6 +30,46 @@ describe("PDF to genuine XLSX OOXML export", () => {
     expect(rel).toContain('Target="worksheets/sheet1.xml"');
   });
 
+  it("types only canonical opt-in metric columns, preserving padded IDs and formulas", async () => {
+    const bytes = await createPdfXlsxWorkbook({ tables: [{
+      name: "Verified metrics",
+      rows: [
+        ["Sl No", "Households", "FHTCs"],
+        ["00071", "16", "12"],
+        ["00072", "0", "0013"],
+        ["=HYPERLINK(1)", "=1+1", "9999999999999999"],
+      ],
+      numericColumns: [1, 2],
+      freezeHeader: true,
+      columnWidths: [16, 19, 20],
+    }]});
+    const zip = await JSZip.loadAsync(bytes);
+    const xml = await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(xml).toContain('<c r="A2" t="inlineStr">');
+    expect(xml).toContain('<c r="B2" t="n"><v>16</v></c>');
+    expect(xml).toContain('<c r="C2" t="n"><v>12</v></c>');
+    expect(xml).toContain('<c r="B3" t="n"><v>0</v></c>');
+    expect(xml).toContain('<c r="C3" t="inlineStr"><is><t xml:space="preserve">0013');
+    expect(xml).toContain("9999999999999999");
+    expect(xml).toContain("=HYPERLINK(1)");
+    expect(xml).not.toContain("<f>");
+    expect(xml).toContain('<pane ySplit="1"');
+    expect(xml).toContain('<autoFilter ref="A1:C4"/>');
+    expect(xml).toContain('<col min="1" max="1" width="16" customWidth="1"/>');
+  });
+
+  it("refuses malformed column typing metadata rather than inferring numeric identifiers", async () => {
+    await expect(createPdfXlsxWorkbook({tables:[{
+      name:"bad",rows:[["ID","Count"],["00001","12"]],numericColumns:[1,1],
+    }]})).rejects.toThrow(/numeric column/);
+    await expect(createPdfXlsxWorkbook({tables:[{
+      name:"bad",rows:[["ID","Count"],["00001","12"]],numericColumns:[2],
+    }]})).rejects.toThrow(/numeric column/);
+    await expect(createPdfXlsxWorkbook({tables:[{
+      name:"bad",rows:[["ID","Count"],["00001","12"]],columnWidths:[20,1000],
+    }]})).rejects.toThrow(/column widths/);
+  });
+
   it("keeps formula-like payloads as Excel strings, never executable formulas", async () => {
     const bytes = await createPdfXlsxWorkbook({ tables: [{
       name: "Unsafe",
