@@ -143,6 +143,13 @@ export function reconstructConsecutiveNativeTable(
   const pages = tables.map(nativeRecords);
   if (pages.some(p => p === null)) return null;
   const safePages = pages as PageTable[];
+  // Every logical data row on continuation pages must be accounted for.
+  // The first page may contain a short heading / column-number preamble,
+  // but never silently discard arbitrary rows from a data continuation.
+  if (tables.some((table, i) =>
+    table.rows.length - safePages[i].records.length > (i === 0 ? 4 : 0))) {
+    return null;
+  }
   for (let i = 1; i < safePages.length; i++) {
     if (safePages[i].page !== safePages[i - 1].page + 1 ||
         safePages[i].records[0].serial !==
