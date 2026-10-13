@@ -109,10 +109,10 @@ function sourceSupportedHeadings(
     header.some(t => name.test(t.text) &&
       Math.abs(t.x - centers[col]) <= radius);
   const verified = [
-    has(0, /^Sl$/i, 25) && has(0, /^No\\.?$/i, 25),
+    has(0, /^Sl$/i, 25) && has(0, /^No[.]?$/i, 25),
     has(1, /^District$/i, 35),
     has(2, /^Block$/i, 35),
-    has(3, /^GP\\/VC$/i, 50),
+    has(3, new RegExp("^GP/VC$", "i"), 50),
     has(4, /^Habitation$/i, 65) && has(4, /^Name$/i, 65),
     has(5, /^households?$/i, 50),
     has(6, /^FHTC$/i, 45),
