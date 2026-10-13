@@ -196,13 +196,21 @@ test("native numbered 8-column guide reconstructs 87 fictional rows over three p
   const counts=[24,33,30], anchors=[109,158,218,295,394,495,598,672];
   let serial=0;
   for(let p=0;p<counts.length;p++){
-    const sheet=pdf.addPage([792,700]);
+    const sheet=pdf.addPage([792,730]);
     if(p===0){
       anchors.forEach((x,j)=>sheet.drawText(String(j+1),{
         x:x-3,y:680,size:10,font,
       }));
+      const sourceLabels=[
+        [101,"Sl No"],[146,"District"],[209,"Block"],
+        [251,"Name of GP/VC"],[354,"Habitation Name"],
+        [475,"households"],[586,"FHTC"],[662,"PVTG"],
+      ];
+      sourceLabels.forEach(([x,label])=>sheet.drawText(label,{
+        x:Number(x),y:708,size:10,font,
+      }));
       sheet.drawText("SYNTHETIC TEST ONLY",{
-        x:250,y:690,size:10,font,
+        x:250,y:723,size:10,font,
       });
     }
     for(let i=0;i<counts[p];i++){
@@ -238,18 +246,23 @@ test("native numbered 8-column guide reconstructs 87 fictional rows over three p
   const script=[
     "import sys,io",
     "from openpyxl import load_workbook",
-    "w=load_workbook(io.BytesIO(open(sys.argv[1],'rb').read()),read_only=True,data_only=False)",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1],'rb').read()),read_only=False,data_only=False)",
     "assert w.sheetnames==['Table 1','Review Notes'],w.sheetnames",
     "rows=list(w['Table 1'].values)",
     "assert len(rows)==88,('record count',len(rows))",
     "assert all(len(r)==8 for r in rows), 'eight independent columns required'",
-    "assert rows[1]==('4001','North County','Sector Beta','Council Delta','Settlement 1','51','41','Y'),rows[1]",
+    "assert rows[1]==('4001','North County','Sector Beta','Council Delta','Settlement 1',51,41,'Y'),rows[1]",
     "assert rows[15][7] is None or rows[15][7]=='','blank flag damaged'",
-    "assert rows[-1]==('4087','North County','Sector Beta','Council Delta','Settlement 87','137','127','Y'),rows[-1]",
+    "assert rows[-1]==('4087','North County','Sector Beta','Council Delta','Settlement 87',137,127,'Y'),rows[-1]",
     "assert sum(int(r[5]) for r in rows[1:])==sum(range(51,138))",
     "assert sum(int(r[6]) for r in rows[1:])==sum(range(41,128))",
     "notes=' '.join(str(r[0]) for r in w['Review Notes'].values)",
-    "assert 'placeholders' in notes and 'EXTRACTION NOT VERIFIED' in notes",
+    "assert rows[0]==('Sl No','District','Block','GP/VC (IMIS)','Habitation Name','Households (IMIS)','FHTCs Provided (IMIS)','PVTG (Y/N)'),rows[0]",
+    "assert w['Table 1'].freeze_panes=='A2','header not frozen'",
+    "assert w['Table 1'].auto_filter.ref=='A1:H88','table filters missing'",
+    "assert isinstance(rows[1][5],int) and isinstance(rows[1][6],int),'metrics not usable as numbers'",
+    "assert isinstance(rows[1][0],str),'identifiers wrongly coerced to numbers'",
+    "assert 'Abbreviated column labels' in notes and 'EXTRACTION NOT VERIFIED' in notes",
     "print('NATIVE_87_ROWS_8_COLUMNS_OK')",
   ].join("; ");
   expect(execFileSync("python",["-c",script,saved],{encoding:"utf8"}))
