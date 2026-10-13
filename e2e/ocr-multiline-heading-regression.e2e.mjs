@@ -54,7 +54,9 @@ test("OCR TXT retains white multi-line banner title on an image-only scan", asyn
   const download = await pending;
   const output = await readFile(await download.path(), "utf8");
   expect(output).toMatch(/COMMUNITY\s+SERVICE\s+BULLETIN/);
+  expect(output).toMatch(/COMMUNITY SERVICE\s+BULLETIN\s+OCTOBER MAINTENANCE UPDATE/);
   expect(output).toContain("OCTOBER MAINTENANCE UPDATE");
+  expect((output.match(/OCTOBER MAINTENANCE UPDATE/g) ?? [])).toHaveLength(1);
   expect(output).toContain("HX-2026-005");
   expect((output.match(/COMMUNITY\s+SERVICE\s+BULLETIN/g) ?? [])).toHaveLength(1);
 });
