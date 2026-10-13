@@ -2,8 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { PdfV4OcrWord } from "../ocrRecognizer";
 import {
   shouldReviewLowResolutionOcr,
-  planLowResolutionRetryRegion,
-  acceptLowResolutionReviewCandidate,
   planLowResolutionIdentifierLine,
   acceptIdentifierLineReview,
 } from "../ocrLowResolutionReview";
@@ -46,54 +44,37 @@ describe("Low-resolution OCR retry is bounded and review-only", () => {
     )).toBe(false);
   });
 
-  it("crops top-focused text while retaining contextual margins", () => {
-    const words = Array.from({ length: 36 }, (_, i) =>
-      word("word" + i, 180 + (i % 6) * 155, 170 + Math.floor(i / 6) * 75),
-    );
-    const crop = planLowResolutionRetryRegion({
-      words, renderedWidth: 1785, renderedHeight: 2526,
-    });
-    expect(crop).not.toBeNull();
-    expect(crop!.left).toBeLessThan(180);
-    expect(crop!.top).toBeLessThan(170);
-    expect(crop!.height).toBeLessThan(2526 * 0.6);
-    expect(crop!.width).toBeGreaterThan(700);
-  });
-
-  it("rejects invalid/whole-page geometry and too-few words", () => {
-    expect(planLowResolutionRetryRegion({
-      words: [word("one", 140, 240)], renderedWidth: 1785, renderedHeight: 2526,
-    })).toBeNull();
-    const fullPage = Array.from({ length: 35 }, (_, i) =>
-      word("test", 180, i * 65),
-    );
-    expect(planLowResolutionRetryRegion({
-      words: fullPage, renderedWidth: 1785, renderedHeight: 2300,
-    })).toBeNull();
-  });
-
-  it("keeps raw identifier unchanged and labels the alternative as unverified", () => {
+  it("does not publish a misleading full-page enhanced transcript", () => {
     const raw = "Record ID: DC-T316\n" +
       "tems expected: 24\ntems received: 23\n" +
       "Oris iter is missing and two items have damaged corners.";
-    const reRead = "Record ID: DC-7316\n" +
-      "Items expected: 24\nItems received: 23\n" +
-      "One item is missing and two items have damaged corners.";
-    expect(acceptLowResolutionReviewCandidate(raw, reRead, 93)).toBe(reRead);
-    expect(acceptLowResolutionReviewCandidate(raw, reRead, 43)).toBeNull();
-    expect(acceptLowResolutionReviewCandidate(raw, raw, 94)).toBeNull();
-    const formatted = formatPdfV4OcrPageExport({
+    const sourceLine = "Record ID: DC-7316";
+    const transcript = formatPdfV4OcrPageExport({
       pageNumber: 1, text: raw, confidence: 89,
       renderedWidth: 1785, renderedHeight: 2526, words: [],
       detectedSkewRadians: null, language: "eng", source: "ocr-tesseract",
-      lowResolutionReview: reRead,
+      lowResolutionIdentifierReview: sourceLine,
     });
-    expect(formatted).toContain("[OPTIONAL IMAGE-ENHANCED LOW-RES OCR - NOT VERIFIED]");
-    expect(formatted).toContain("Raw OCR above is unchanged");
-    expect(formatted.indexOf("Record ID: DC-T316")).toBeLessThan(
-      formatted.indexOf("Record ID: DC-7316"),
-    );
-    expect((formatted.match(/Record ID: DC-7316/g) ?? [])).toHaveLength(1);
+    expect(transcript).toContain("Oris iter is missing and two items have damaged corners.");
+    expect(transcript).toContain("[OPTIONAL TARGETED IDENTIFIER OCR - NOT VERIFIED]");
+    expect(transcript).toContain("Record ID: DC-7316");
+    expect(transcript).not.toContain("[OPTIONAL IMAGE-ENHANCED LOW-RES OCR");
+    expect(transcript).not.toContain("Dre item i missing and Dwo items");
+    expect((transcript.match(/Record ID: DC-7316/g) ?? [])).toHaveLength(1);
+  });
+
+  it("does not invent corrections or enhanced text when no targeted reread exists", () => {
+    const baseline = "Record ID: DC-T316\ntems expected: 24\nOris iter is missing.";
+    const transcript = formatPdfV4OcrPageExport({
+      pageNumber: 1, text: baseline, confidence: 88,
+      renderedWidth: 1785, renderedHeight: 2526, words: [],
+      detectedSkewRadians: null, language: "eng", source: "ocr-tesseract",
+    });
+    expect(transcript).toContain(baseline);
+    expect(transcript).not.toContain("DC-7316");
+    expect(transcript).not.toContain("OPTIONAL IMAGE-ENHANCED");
+    expect(transcript).not.toContain("OPTIONAL TARGETED IDENTIFIER");
+    expect(transcript).toContain("Verify exact identifiers character by character");
   });
 
   it("finds the source-image line of a record ID, not nearby body copy", () => {
