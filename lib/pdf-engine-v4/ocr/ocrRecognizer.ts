@@ -11,7 +11,7 @@ import {
   estimatePdfV4DeskewRadiansFromBlocks,
 } from "./ocrSkewEstimator";
 import {
-  acceptRecoveredTopHeading,
+  mergeRecoveredTopHeading,
   cropTopMarginOcrImage,
   planTopMarginRecovery,
 } from "./ocrTopMarginRecovery";
@@ -306,15 +306,11 @@ async function recognizePdfV4OcrPageWithWorker(
           { rotateAuto: false },
           { text: true, blocks: true },
         );
-        const heading = acceptRecoveredTopHeading(
+        recognizedText = mergeRecoveredTopHeading(
           topRead.data.text,
           topRead.data.confidence,
           recognizedText,
         );
-        if (heading) {
-          // Text export only. The source scan and word geometry are unchanged.
-          recognizedText = heading + "\n\n" + recognizedText;
-        }
       } catch {
         // Keep the full-page OCR output if the optional crop fails.
       }
