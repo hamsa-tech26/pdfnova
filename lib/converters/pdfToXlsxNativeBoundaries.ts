@@ -88,6 +88,44 @@ function sourceColumnBorders(
   return borders;
 }
 
+/**
+ * Only attach meaningful headings when each of the eight field categories
+ * is independently attested by first-page text ABOVE the numbered guide.
+ * This is a conservative, abbreviated label set, not a transcription of
+ * visually merged multi-line source headings.
+ */
+function sourceSupportedHeadings(
+  originalTokens: readonly NativeTextToken[],
+  grouped: readonly NativeTextToken[][],
+  centers: readonly number[],
+): string[] | null {
+  const guides = grouped.filter(row =>
+    row.length === 8 && row.every((t, i) => t.text === String(i + 1)));
+  if (guides.length !== 1) return null;
+  const guideY = guides[0][0].y;
+  const header = originalTokens.filter(t =>
+    t.y > guideY + 4 && t.y < guideY + 140);
+  const has = (col: number, name: RegExp, radius: number) =>
+    header.some(t => name.test(t.text) &&
+      Math.abs(t.x - centers[col]) <= radius);
+  const verified = [
+    has(0, /^Sl$/i, 25) && has(0, /^No\\.?$/i, 25),
+    has(1, /^District$/i, 35),
+    has(2, /^Block$/i, 35),
+    has(3, /^GP\\/VC$/i, 50),
+    has(4, /^Habitation$/i, 65) && has(4, /^Name$/i, 65),
+    has(5, /^households?$/i, 50),
+    has(6, /^FHTC$/i, 45),
+    has(7, /^PVTG$/i, 50),
+  ];
+  if (!verified.every(Boolean)) return null;
+  return [
+    "Sl No", "District", "Block", "GP/VC (IMIS)",
+    "Habitation Name", "Households (IMIS)",
+    "FHTCs Provided (IMIS)", "PVTG (Y/N)",
+  ];
+}
+
 function distribute(row: readonly NativeTextToken[], borders: readonly number[]) {
   const cells: NativeTextToken[][] = Array.from({ length: COLUMN_COUNT }, () => []);
   for (const token of row) {
@@ -116,6 +154,7 @@ export function recoverEightColumnRowsFromNativePositions(
   const perPage = pages.map(p => groupedRows(p.tokens));
   const centers = numberedGuide(perPage[0]);
   if (!centers) return null;
+  const verifiedHeadings = sourceSupportedHeadings(pages[0].tokens, perPage[0], centers);
   const borders = sourceColumnBorders(pages[0].tokens, centers);
   const records: Row[] = [];
 
@@ -163,14 +202,22 @@ export function recoverEightColumnRowsFromNativePositions(
     tables:[{
       name:"Table 1",
       rows:[
-        Array.from({length:COLUMN_COUNT},(_,i)=>"Column "+(i+1)),
+        verifiedHeadings ?? Array.from({length:COLUMN_COUNT},(_,i)=>"Column "+(i+1)),
         ...records.map(r=>r.fields),
       ],
+      // The parser verified that fields 6 and 7 are digit-only native
+      // household/connection metrics. All other fields, especially the
+      // identifier, must remain literal text (including leading zeros).
+      numericColumns:[5,6],
+      freezeHeader:true,
+      columnWidths:[16,22,22,28,34,22,23,18],
     }],
     reviewNotes:[
       "EXTRACTION NOT VERIFIED: eight data columns were reconstructed from the PDF's numbered 1–8 source guide and native text positions. Verify all records against the source.",
-      "Original multi-line headings were not reliably reconstructed; Column 1–8 are placeholders, not verified source labels.",
-      "A separate printed row counter was excluded; document IDs, text, counts and flags are literal Excel strings.",
+      verifiedHeadings
+        ? "Abbreviated column labels were recognized from all eight categories in the source header; verify full wording, dates and units against the original PDF."
+        : "Original multi-line headings could not all be confirmed; Column 1–8 are review-required placeholders, not verified source labels.",
+      "The separate printed row counter was excluded. Identifiers, names, and flags remain literal text; canonical safe household/connection counts export as Excel integers. Padded and unsafe numeric values remain text.",
       "Sequential source records across pages 1–"+pages.length+" were independently checked before export; the source must still be inspected.",
       "Scanned, unnumbered, incomplete and geometrically ambiguous layouts are not supported by this fallback.",
     ],
