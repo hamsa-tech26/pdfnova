@@ -21,9 +21,7 @@ import type {
 } from "./ocrPageRenderer";
 import {
   shouldReviewLowResolutionOcr,
-  planLowResolutionRetryRegion,
   prepareLowResolutionReviewImage,
-  acceptLowResolutionReviewCandidate,
   planLowResolutionIdentifierLine,
   acceptIdentifierLineReview,
 } from "./ocrLowResolutionReview";
@@ -65,8 +63,6 @@ export type PdfV4OcrPageResult = {
  detectedSkewRadians: number | null;
   language: "eng";
   source: "ocr-tesseract";
-  /** Raw text from an additional image-enhanced OCR read; never verified. */
-  lowResolutionReview?: string | null;
   /** A separate, unverified read of the source-image identifier line. */
   lowResolutionIdentifierReview?: string | null;
 };
@@ -330,42 +326,9 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
-  let lowResolutionReview: string | null = null;
-  if (
-    options.reviewLowResolution &&
-    page.source === "pdf-render" &&
-    shouldReviewLowResolutionOcr(recognizedText, recognition.data.confidence)
-  ) {
-    const region = planLowResolutionRetryRegion({
-      words,
-      renderedWidth: page.width,
-      renderedHeight: page.height,
-    });
-    if (region) {
-      try {
-        const enhancedImage = await prepareLowResolutionReviewImage(
-          page.imageDataUrl, region,
-        );
-        // This retry is a *separate, unverified OCR observation*, not an
-        // automatic edit of identifiers or other content.
-        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_BLOCK });
-        try {
-          const enhancedRead = await worker.recognize(
-            enhancedImage,
-            { rotateAuto: false },
-            { text: true },
-          );
-          lowResolutionReview = acceptLowResolutionReviewCandidate(
-            recognizedText, enhancedRead.data.text, enhancedRead.data.confidence,
-          );
-        } finally {
-          await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
-        }
-      } catch {
-        // Optional enhancement must never prevent delivery of the raw OCR.
-      }
-    }
-  }
+  // No full-page enhanced retry: physical low-resolution testing showed it
+  // introduced extra text errors. Only the bounded identifier-line review
+  // below remains, and it never edits the recognized page transcript.
 
   let lowResolutionIdentifierReview: string | null = null;
   if (
@@ -415,7 +378,6 @@ async function recognizePdfV4OcrPageWithWorker(
     detectedSkewRadians,
     language: "eng",
     source: "ocr-tesseract",
-    lowResolutionReview,
     lowResolutionIdentifierReview,
   };
 }
