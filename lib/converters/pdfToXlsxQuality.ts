@@ -1,6 +1,7 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
 import type { PdfXlsxInput } from "./pdfToXlsx";
+import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
 
 /**
  * Release 60: auditable, fail-closed XLSX export for native-text logical tables.
@@ -92,6 +93,25 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   }
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
+  }
+
+
+  // Before trusting the engine's logical column count, verify whether a
+  // repeated numeric serial and ID were silently merged into the same cell.
+  // Reflow is allowed only for strongly aligned native source word positions
+  // on *consecutive* pages with a proven serial sequence; otherwise refuse.
+  const nativeOnly = source.tables.every(t =>
+    Number.isFinite(t.confidence) && t.confidence >= 0.65 &&
+    (!t.extractionProvenance || t.extractionProvenance.source === "native-pdf") &&
+    t.rows.every(r => r.cells.every(c =>
+      !String(c.text ?? "").trim() ||
+      !c.extractionProvenance || c.extractionProvenance.source === "native-pdf")));
+  if (nativeOnly) {
+    const recovered = reconstructConsecutiveNativeTable(source.tables);
+    if (recovered) return recovered;
+  }
+  if (source.tables.some(hasCollapsedSerialAndIdColumns)) {
+    throw new Error("Table columns are merged together (including the row number and identifier); XLSX export was withheld because source column separation cannot be verified.");
   }
 
   const covered = new Set<number>();
