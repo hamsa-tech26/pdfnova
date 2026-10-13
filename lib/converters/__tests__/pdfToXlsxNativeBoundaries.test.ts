@@ -67,6 +67,25 @@ describe("Native PDF numbered guide and continuous table recovery",()=>{
     expect(result?.reviewNotes?.join(" ")).toContain("placeholder");
   });
 
+  it("uses source heading gap to separate a short group value in an uneven-width table",()=>{
+    const pages=syntheticPages();
+    pages[0].tokens.push(
+      token("Block",209,232,580),
+      token("Name",251,276,573),
+    );
+    const shortGroup=pages[1].tokens.find(t=>t.text==="Council");
+    expect(shortGroup).toBeDefined();
+    shortGroup!.text="Area";
+    shortGroup!.x=244;
+    shortGroup!.right=264;
+    const result=recoverEightColumnRowsFromNativePositions(pages);
+    expect(result).not.toBeNull();
+    expect(result!.tables[0].rows[25]).toEqual([
+      "4025","North County","Sector Beta","Area Delta",
+      "Settlement 25","75","65","Y",
+    ]);
+  });
+
   it("refuses missing record 42 across the second page",()=>{
     const pages=syntheticPages();
     pages[1].tokens=pages[1].tokens.filter(t=>t.y!==(525-(42-25)*12));
