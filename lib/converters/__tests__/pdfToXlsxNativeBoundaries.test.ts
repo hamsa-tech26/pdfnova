@@ -67,6 +67,39 @@ describe("Native PDF numbered guide and continuous table recovery",()=>{
     expect(result?.reviewNotes?.join(" ")).toContain("placeholder");
   });
 
+  it("uses headings only when all eight labels are attested above the source guide",()=>{
+    const pages=syntheticPages();
+    const labels=[
+      token("Sl",100,109,585),token("No",111,123,585),
+      token("District",145,174,585),
+      token("Block",209,232,585),
+      token("Name",251,277,585),token("GP/VC",289,317,585),
+      token("Habitation",355,400,585),token("Name",403,427,585),
+      token("households",480,533,585),
+      token("FHTC",588,614,585),
+      token("PVTG",663,686,585),
+    ];
+    pages[0].tokens.push(...labels);
+    const result=recoverEightColumnRowsFromNativePositions(pages);
+    expect(result).not.toBeNull();
+    expect(result!.tables[0].rows[0]).toEqual([
+      "Sl No","District","Block","GP/VC (IMIS)",
+      "Habitation Name","Households (IMIS)",
+      "FHTCs Provided (IMIS)","PVTG (Y/N)",
+    ]);
+    expect(result!.tables[0].numericColumns).toEqual([5,6]);
+    expect(result!.tables[0].freezeHeader).toBe(true);
+    expect(result!.reviewNotes!.join(" ")).toContain("Abbreviated column labels");
+    const missing=syntheticPages();
+    missing[0].tokens.push(...labels.filter(t=>t.text!=="PVTG"));
+    const fallback=recoverEightColumnRowsFromNativePositions(missing);
+    expect(fallback).not.toBeNull();
+    expect(fallback!.tables[0].rows[0]).toEqual([
+      "Column 1","Column 2","Column 3","Column 4",
+      "Column 5","Column 6","Column 7","Column 8",
+    ]);
+  });
+
   it("uses source heading gap to separate a short group value in an uneven-width table",()=>{
     const pages=syntheticPages();
     pages[0].tokens.push(
