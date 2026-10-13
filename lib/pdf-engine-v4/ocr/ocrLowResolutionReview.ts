@@ -52,6 +52,79 @@ export function planLowResolutionRetryRegion(
   return { left, top, width: right - left, height: bottom - top };
 }
 
+
+function centeredY(word: { bounds: { y0: number; y1: number } }): number {
+  return (word.bounds.y0 + word.bounds.y1) / 2;
+}
+
+/**
+ * Target a *single source-image line* containing an identifier label.
+ * Do not make corrections from the document's meaning or from patterns
+ * such as a guessed digit where raw OCR read a letter.
+ */
+export function planLowResolutionIdentifierLine(
+  page: Pick<PdfV4OcrPageResult, "words" | "renderedWidth" | "renderedHeight">,
+): LowResolutionRetryRegion | null {
+  const { renderedWidth: width, renderedHeight: height } = page;
+  if (!(width >= 200 && height >= 300)) return null;
+  const words = page.words
+    .filter((w) =>
+      w.text.trim() &&
+      [w.bounds.x0, w.bounds.x1, w.bounds.y0, w.bounds.y1].every(Number.isFinite) &&
+      w.bounds.x1 > w.bounds.x0 && w.bounds.y1 > w.bounds.y0 &&
+      w.bounds.x0 >= 0 && w.bounds.y0 >= 0 &&
+      w.bounds.x1 <= width + 2 && w.bounds.y1 <= height + 2,
+    )
+    .sort((a, b) => centeredY(a) - centeredY(b) || a.bounds.x0 - b.bounds.x0);
+  if (words.length < 8 || words.length > 1500) return null;
+  for (const word of words) {
+    const base = word.text.replace(/[^A-Za-z]/g, "").toLowerCase();
+    if (!/^(record|invoice|application|serial|facility|package|reference)$/.test(base)) continue;
+    const heightPx = Math.max(8, word.bounds.y1 - word.bounds.y0);
+    const line = words.filter((candidate) =>
+      Math.abs(centeredY(candidate) - centeredY(word)) <= heightPx * 0.65 &&
+      candidate.bounds.x0 >= word.bounds.x0 - heightPx,
+    ).sort((a, b) => a.bounds.x0 - b.bounds.x0);
+    const index = line.indexOf(word);
+    if (index < 0 || index + 2 >= line.length) continue;
+    const key = line[index + 1].text.replace(/[^A-Za-z]/g, "").toLowerCase();
+    if (!/^(id|number|code)$/.test(key)) continue;
+    const rest = line.slice(index + 2).filter((w) => w.text.trim().length);
+    if (!rest.length) continue;
+    const range = line.slice(index);
+    const minX = Math.min(...range.map((w) => w.bounds.x0));
+    const maxX = Math.max(...range.map((w) => w.bounds.x1));
+    const minY = Math.min(...range.map((w) => w.bounds.y0));
+    const maxY = Math.max(...range.map((w) => w.bounds.y1));
+    const padX = Math.max(14, 1.1 * heightPx);
+    const padY = Math.max(7, 0.35 * heightPx);
+    const left = Math.max(0, Math.floor(minX - padX));
+    const top = Math.max(0, Math.floor(minY - padY));
+    const right = Math.min(width, Math.ceil(maxX + padX));
+    const bottom = Math.min(height, Math.ceil(maxY + padY));
+    if (right - left < 90 || bottom - top < 12 ||
+        bottom - top > height * 0.075) continue;
+    return { left, top, width: right - left, height: bottom - top };
+  }
+  return null;
+}
+
+export function acceptIdentifierLineReview(
+  rawOcrText: string,
+  candidateLine: string,
+  confidence: number,
+): string | null {
+  if (!Number.isFinite(confidence) || confidence < 55) return null;
+  const candidate = candidateLine.trim().replace(/\s+/g, " ");
+  const match = candidate.match(/\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/i);
+  if (!match || candidate.length > 150) return null;
+  const raw = rawOcrText.match(/\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/i);
+  if (!raw || raw[1].toLowerCase() !== match[1].toLowerCase() ||
+      raw[2].toLowerCase() === match[2].toLowerCase()) return null;
+  // The new candidate is extra evidence, not an authoritative replacement.
+  return match[0];
+}
+
 function percentile(hist: Uint32Array, total: number, fraction: number): number {
   let cumulative = 0;
   const threshold = Math.max(1, Math.floor(total * fraction));
@@ -71,6 +144,7 @@ function percentile(hist: Uint32Array, total: number, fraction: number): number 
 export async function prepareLowResolutionReviewImage(
   imageDataUrl: string,
   region: LowResolutionRetryRegion,
+  scaleLimit = 1.45,
 ): Promise<string> {
   if (typeof Image === "undefined" || typeof document === "undefined") {
     throw new Error("OCR image enhancement requires a browser.");
@@ -85,7 +159,8 @@ export async function prepareLowResolutionReviewImage(
     image.onerror = () => reject(new Error("Cannot load rendered OCR image."));
     image.src = imageDataUrl;
   });
-  const scale = Math.min(1.45, 2400 / Math.max(region.width, region.height));
+  const safeScale = Number.isFinite(scaleLimit) && scaleLimit >= 1 && scaleLimit <= 3 ? scaleLimit : 1.45;
+  const scale = Math.min(safeScale, 2400 / Math.max(region.width, region.height));
   const canvas = document.createElement("canvas");
   canvas.width = Math.round(region.width * scale);
   canvas.height = Math.round(region.height * scale);
