@@ -24,6 +24,8 @@ import {
   planLowResolutionRetryRegion,
   prepareLowResolutionReviewImage,
   acceptLowResolutionReviewCandidate,
+  planLowResolutionIdentifierLine,
+  acceptIdentifierLineReview,
 } from "./ocrLowResolutionReview";
 
 export type PdfV4OcrRectangle = {
@@ -65,6 +67,8 @@ export type PdfV4OcrPageResult = {
   source: "ocr-tesseract";
   /** Raw text from an additional image-enhanced OCR read; never verified. */
   lowResolutionReview?: string | null;
+  /** A separate, unverified read of the source-image identifier line. */
+  lowResolutionIdentifierReview?: string | null;
 };
 
 export type PdfV4OcrRegionResult = {
@@ -363,6 +367,39 @@ async function recognizePdfV4OcrPageWithWorker(
     }
   }
 
+  let lowResolutionIdentifierReview: string | null = null;
+  if (
+    options.reviewLowResolution &&
+    page.source === "pdf-render" &&
+    shouldReviewLowResolutionOcr(recognizedText, recognition.data.confidence)
+  ) {
+    const idRegion = planLowResolutionIdentifierLine({
+      words, renderedWidth: page.width, renderedHeight: page.height,
+    });
+    if (idRegion) {
+      try {
+        const cropped = await prepareLowResolutionReviewImage(
+          page.imageDataUrl, idRegion, 2.25,
+        );
+        await worker.setParameters({ tessedit_pageseg_mode: PSM.SINGLE_LINE });
+        try {
+          const read = await worker.recognize(
+            cropped,
+            { rotateAuto: false },
+            { text: true },
+          );
+          lowResolutionIdentifierReview = acceptIdentifierLineReview(
+            recognizedText, read.data.text, read.data.confidence,
+          );
+        } finally {
+          await worker.setParameters({ tessedit_pageseg_mode: PSM.AUTO });
+        }
+      } catch {
+        // Optional line recognition cannot alter raw OCR or block export.
+      }
+    }
+  }
+
   return {
     pageNumber:
       page.pageNumber,
@@ -379,6 +416,7 @@ async function recognizePdfV4OcrPageWithWorker(
     language: "eng",
     source: "ocr-tesseract",
     lowResolutionReview,
+    lowResolutionIdentifierReview,
   };
 }
 
