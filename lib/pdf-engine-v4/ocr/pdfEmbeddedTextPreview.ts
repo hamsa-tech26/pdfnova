@@ -122,7 +122,22 @@ export async function extractEmbeddedPdfTextPreviews(
           }];
         });
         const preview = reconstructEmbeddedPdfTextPreview(items, width);
-        if (preview) previews.set(pageNumber, preview);
+        if (preview) {
+          previews.set(pageNumber, preview);
+        } else {
+          // Do not silently imply that source-text extraction succeeded
+          // when a digital PDF has text but geometry is ambiguous. This
+          // status contains no additional document text or guessed words.
+          const count = readableItems(items, width).reduce(
+            (sum, item) => sum + item.text.trim().length, 0,
+          );
+          if (count >= 100) previews.set(
+            pageNumber,
+            "[EMBEDDED TEXT DETECTED - COLUMN ORDER UNVERIFIED]\n" +
+            "The PDF has a selectable text layer, but a reliable two-column " +
+            "ordering could not be determined. Compare with the original.",
+          );
+        }
       } finally {
         page.cleanup();
       }
