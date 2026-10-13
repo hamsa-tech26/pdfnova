@@ -75,8 +75,13 @@ function sourceColumnBorders(
   const names=pageTokens.filter(t=>
     /^(Name|Group|GP\/VC)$/i.test(t.text) &&
     t.x>block.right+4 && t.x<centers[3] &&
-    t.x-block.right<65);
-  if(names.length!==1)return borders;
+    t.x-block.right<65).sort((a,b)=>a.x-b.x);
+  // A multi-word heading such as "Name of GP/VC" yields both Name and
+  // GP/VC tokens. The leftmost *distinctly separated* label defines where
+  // the next column begins; rejecting both would fall back to the midpoint
+  // and misplace short left-aligned values in narrow source columns.
+  if(names.length===0 ||
+    (names.length>1 && names[1].x-names[0].x<18))return borders;
   const proposed=(block.right+names[0].x)/2;
   if(proposed<=centers[2]+8 || proposed>=centers[3]-15)return borders;
   borders[2]=proposed;
