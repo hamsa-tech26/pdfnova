@@ -20,39 +20,6 @@ export function shouldReviewLowResolutionOcr(
   return truncatedCommonLabel || unreliableIdentifier;
 }
 
-/**
- * Bound retry work to a text-dense region instead of re-reading blank page
- * margins. Rectangles refer to already-rendered page image coordinates.
- */
-export function planLowResolutionRetryRegion(
-  page: Pick<PdfV4OcrPageResult, "words" | "renderedWidth" | "renderedHeight">,
-): LowResolutionRetryRegion | null {
-  const { renderedWidth: width, renderedHeight: height } = page;
-  if (!(width >= 200 && height >= 300 && width * height <= 11_000_000)) return null;
-  const words = page.words.filter((w) =>
-    w.text.trim() && [w.bounds.x0, w.bounds.x1, w.bounds.y0, w.bounds.y1].every(Number.isFinite) &&
-    w.bounds.x0 >= 0 && w.bounds.y0 >= 0 &&
-    w.bounds.x1 > w.bounds.x0 && w.bounds.y1 > w.bounds.y0 &&
-    w.bounds.x1 <= width + 2 && w.bounds.y1 <= height + 2,
-  );
-  if (words.length < 14 || words.length > 1500) return null;
-  const minX = Math.min(...words.map((w) => w.bounds.x0));
-  const maxX = Math.max(...words.map((w) => w.bounds.x1));
-  const minY = Math.min(...words.map((w) => w.bounds.y0));
-  const maxY = Math.max(...words.map((w) => w.bounds.y1));
-  const padX = width * 0.06;
-  const padY = height * 0.035;
-  const left = Math.max(0, Math.floor(minX - padX));
-  const top = Math.max(0, Math.floor(minY - padY));
-  const right = Math.min(width, Math.ceil(maxX + padX));
-  const bottom = Math.min(height, Math.ceil(maxY + padY));
-  if (right - left < 170 || bottom - top < 140) return null;
-  // A retry only makes sense when we can remove meaningful blank margins.
-  if ((bottom - top) / height > 0.82) return null;
-  return { left, top, width: right - left, height: bottom - top };
-}
-
-
 function centeredY(word: { bounds: { y0: number; y1: number } }): number {
   return (word.bounds.y0 + word.bounds.y1) / 2;
 }
@@ -136,10 +103,9 @@ function percentile(hist: Uint32Array, total: number, fraction: number): number 
 }
 
 /**
- * Browser-local; never uploads pixels. Crop to the recognized content, expand
- * with high-quality canvas interpolation and apply grayscale percentile
- * contrast + mild unsharp masking. This only creates a review candidate and
- * never changes the original OCR transcript or declares an ID correct.
+ * Browser-local enhancement for a bounded ID line only. Never uploads pixels,
+ * rewrites identifiers or changes the original OCR transcript. The result is
+ * separately marked UNVERIFIED even if it disagrees with the original read.
  */
 export async function prepareLowResolutionReviewImage(
   imageDataUrl: string,
@@ -220,13 +186,4 @@ export async function prepareLowResolutionReviewImage(
   canvas.width = 0;
   canvas.height = 0;
   return result;
-}
-
-export function acceptLowResolutionReviewCandidate(
-  original: string, candidate: string, confidence: number,
-): string | null {
-  const normalized = candidate.trim();
-  if (!Number.isFinite(confidence) || confidence < 55 ||
-      normalized.length < 50 || normalized === original.trim()) return null;
-  return normalized;
 }
