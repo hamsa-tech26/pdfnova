@@ -106,7 +106,11 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
     t.rows.every(r => r.cells.every(c =>
       !String(c.text ?? "").trim() ||
       !c.extractionProvenance || c.extractionProvenance.source === "native-pdf")));
-  if (nativeOnly) {
+  // Reflow is never used for only part of a document: unaccounted source
+  // pages could hide omitted rows or a conflicting additional table.
+  const completePageCoverage = source.tables.length === pageCount &&
+    source.tables.every((t, i) => t.pageNumber === i + 1);
+  if (nativeOnly && completePageCoverage) {
     const recovered = reconstructConsecutiveNativeTable(source.tables);
     if (recovered) return recovered;
   }
