@@ -109,6 +109,15 @@
       "limitations": "Verified documented primary workflow on the tested fixtures; no guarantee for arbitrary PDFs."
     },
     {
+      "route": "/pdf-to-excel",
+      "level": "content",
+      "file": "e2e/pdf_to_excel.e2e.mjs",
+      "claim": "Browser conversion downloads an actual OOXML XLSX workbook, preserves representative literal cells, validates spreadsheet readability independently and tests scanned-only refusal",
+      "verdict": "PASS_WITH_WARNING",
+      "qualificationScope": "Scoped synthetic selectable-text PDF browser tests only; review acceptance is conditional on the final branch CI including an independent XLSX reader.",
+      "limitations": "Image-only, mixed-content, uncertain geometry, merged-cell structures and arbitrary real-world accuracy are not certified. Valid XLSX output does not prove that every source cell was captured."
+    },
+    {
       "route": "/pdf-to-text",
       "level": "content",
       "file": "e2e/release47-output-certification.e2e.mjs",
@@ -283,7 +292,7 @@
   "certificationPolicy": {
     "name": "Kukureku internal functional qualification v1",
     "kind": "internal, scoped, automated; NOT external security or accessibility certification",
-    "requiredPrimaryOutputCoverage": "30 of 30 tools have operation-specific browser output evidence and passed CI",
+    "requiredPrimaryOutputCoverage": "31 tool routes have operation-specific browser evidence definitions; XLSX qualification requires passing current-commit browser roundtrip and independent reader tests",
     "resultAlwaysConditional": "Only applicable to the exact tested fixtures and software revision",
     "excludes": [
       "arbitrary real-world document correctness",
@@ -293,6 +302,6 @@
       "pixel-perfect visual similarity",
       "unlimited sizes/complex documents"
     ],
-    "finalReleaseGate": "Validate, Browser Reliability Smoke, and production post-deployment verification all passing at same build"
+    "finalReleaseGate": "Validate, Phase 10.14, Browser Reliability Smoke, Release 57 XLSX Browser Roundtrip, and post-deployment verification on the accepted commit"
   }
 }
