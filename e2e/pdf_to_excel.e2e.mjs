@@ -120,3 +120,70 @@ test("two-page selectable tables retain first/last records and source-page revie
     file],{encoding:"utf8"}).trim();
   expect(verified).toContain("R60_MULTIPAGE_OPENPYXL_OK");
 });
+
+
+test("3-page sanitized eight-field PDF never silently downloads collapsed five-column XLSX", async ({ page }) => {
+  test.setTimeout(180_000);
+  const pdf = await PDFDocument.create();
+  const font = await pdf.embedFont(StandardFonts.Helvetica);
+  const xs = [38, 82, 132, 231, 344, 470, 603, 714, 815];
+  for (let p = 0; p < 3; p++) {
+    const sheet = pdf.addPage([1000, 790]);
+    if (p === 0) {
+      const headers = ["Row", "Identifier", "District", "Block", "Group",
+        "Habitation", "Households", "Connections", "Flag"];
+      headers.forEach((v, j) => sheet.drawText(v, { x: xs[j], y: 754, size: 10, font }));
+    }
+    for (let i = 0; i < 12; i++) {
+      const n = p * 12 + i + 1;
+      const cells = [String(n), String(9000 + n), "District Alpha", "Block Beta",
+        "Group Gamma", "Site " + n, String(50 + n), String(40 + n), "N"];
+      cells.forEach((v, j) => sheet.drawText(v, {
+        x: xs[j], y: 715 - i * 36, size: 10, font,
+      }));
+    }
+  }
+  const buffer = Buffer.from(await pdf.save());
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').setInputFiles({
+    name: "synthetic_8_field_3page_structure.pdf",
+    mimeType: "application/pdf", buffer,
+  });
+
+  const downloadPromise = page.waitForEvent("download", { timeout: 110_000 })
+    .then(download => ({ kind: "download", download }));
+  const refusalPromise = page.getByText("Excel conversion withheld")
+    .waitFor({ timeout: 110_000 })
+    .then(() => ({ kind: "refused" }));
+  await page.getByRole("button", { name: /Convert to Excel/i }).click();
+  const outcome = await Promise.race([downloadPromise, refusalPromise]);
+
+  if (outcome.kind === "refused") {
+    // Safe, reviewable refusal is acceptable while nonconforming geometry is
+    // still unsupported. A downloadable but silently damaged table is not.
+    await expect(page.getByText(/columns are merged|uncertain|reliable/i).first())
+      .toBeVisible();
+    return;
+  }
+  const file = await outcome.download.path();
+  expect(file).toBeTruthy();
+  const script = [
+    "import sys, io",
+    "from openpyxl import load_workbook",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1],'rb').read()),read_only=True)",
+    "sheets=[s for s in w if s.title!='Review Notes']",
+    "assert len(sheets)==1, 'Continuation split across worksheets'",
+    "rows=list(sheets[0].values)",
+    "data=[list(map(lambda x: str(x or ''),r)) for r in rows]",
+    "ids=[str(9000+i) for i in range(1,37)]",
+    "matches=[r for r in data if len(r)>=8 and any(v in r for v in ids)]",
+    "assert len(matches)==36,'Missing source rows'",
+    "assert all('District Alpha' in r and 'Block Beta' in r and 'Group Gamma' in r for r in matches),'Source columns fused'",
+    "assert all(len(r)>=8 for r in matches),'Collapsed source table'",
+    "assert any('9036' in r and 'Site 36' in r for r in matches),'Missing final page'",
+    "print('STRUCTURAL_XLSX_OK')",
+  ].join("; ");
+  expect(execFileSync("python", ["-c", script, file], {
+    encoding: "utf8",
+  })).toContain("STRUCTURAL_XLSX_OK");
+});
