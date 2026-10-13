@@ -9,6 +9,7 @@ import ToolLayout from "@/components/pdf/ToolLayout";
 import { analyzePdfV4 } from "@/lib/pdf-engine-v4/pipeline/analyzePdfV4";
 import { preparePdfV4XlsxExport } from "@/lib/converters/pdfToXlsxQuality";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import { recoverEightColumnNativePdf } from "@/lib/converters/pdfToXlsxNativeBoundaries";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { saveAs } from "file-saver";
 import { useRef, useState, type ChangeEvent } from "react";
@@ -62,7 +63,21 @@ export default function PdfToExcelPage() {
       const analyzed = await analyzePdfV4(file, { enableControlledOcr: false });
       // Centralized fail-closed quality checks preserve multi-page row
       // provenance, do not infer merged-cell formatting, and report omissions.
-      const exportPlan = preparePdfV4XlsxExport(analyzed);
+      let exportPlan;
+      try {
+        exportPlan = preparePdfV4XlsxExport(analyzed);
+      } catch (structureError) {
+        // This is a narrow fallback for the exact documented V4 column
+        // collapse. Other failures (scanned, OCR, invalid provenance) still
+        // refuse without opening a second native-PDF processing path.
+        if (!(structureError instanceof Error) ||
+            !structureError.message.startsWith("Table columns are merged together")) {
+          throw structureError;
+        }
+        const recovered = await recoverEightColumnNativePdf(file);
+        if (!recovered) throw structureError;
+        exportPlan = recovered;
+      }
       const review = [...(exportPlan.reviewNotes ?? [])];
       const bytes = await createPdfXlsxWorkbook(exportPlan);
       const safe = new Uint8Array(bytes.byteLength);
