@@ -221,7 +221,7 @@ export default function OcrPdfPage() {
     <ToolLayout
       label="OCR PDF"
       title="OCR scanned PDF to text privately"
-      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add review notes for identifiers, checklists and possible columns. PDFs with substantial selectable text also include a separate embedded-text preview."
+      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add review notes for identifiers, checklists and possible columns. Some selectable-text PDFs with clearly separated columns also include a separate embedded-text preview."
       tips={[
         {
           title:
@@ -280,7 +280,7 @@ export default function OcrPdfPage() {
           title:
             "Download the text",
           description:
-            "Save page-by-page OCR text and review notes. If the original PDF has selectable text, its embedded-text alternative is shown separately.",
+            "Save page-by-page OCR text and review notes. Where two columns are clearly identified in the PDF text layer, an optional reading-order preview is shown separately.",
         },
       ]}
       maxWidthClassName="max-w-5xl"
