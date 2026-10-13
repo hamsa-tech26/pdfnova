@@ -74,66 +74,80 @@ export async function cropTopMarginOcrImage(
 // Only recover text actually recognized in the top strip. Some source titles
 // span multiple lines, and a high-contrast header may include a subtitle.
 // Validate every line to avoid promoting body prose or OCR noise to a title.
+function normalizeTopHeadingLine(value: string): string {
+  return value.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
+}
+
+// Crop recognition may include document metadata beneath the banner.
+// Extract only the leading contiguous uppercase heading lines and never
+// infer text from a document's meaning or from a known fixture.
+function recognizedTopHeadingLines(raw: string): string[] | null {
+  const lines = raw
+    .split(/\r?\n/)
+    .map((line) => line.trim().replace(/\s+/g, " "))
+    .filter(Boolean);
+  if (!lines.length) return null;
+  const headings: string[] = [];
+  for (const line of lines) {
+    const letters = line.match(/[A-Za-z]/g) ?? [];
+    const capitals = line.match(/[A-Z]/g) ?? [];
+    const valid =
+      line.length >= 6 &&
+      line.length <= 85 &&
+      /^[A-Za-z][A-Za-z0-9 ,.:/&()\-]*$/.test(line) &&
+      letters.length >= 6 &&
+      capitals.length / letters.length >= 0.8;
+    if (!valid) {
+      if (!headings.length) return null;
+      break;
+    }
+    headings.push(line);
+    if (headings.length > 4) return null;
+  }
+  const joined = headings.join(" ");
+  const words = joined.split(/\s+/);
+  if (
+    joined.length < 8 ||
+    joined.length > 255 ||
+    words.length < 2 ||
+    words.length > 28
+  ) return null;
+  return headings;
+}
+
 export function acceptRecoveredTopHeading(
   rawHeading: string,
   confidence: number,
   bodyText: string,
 ): string | null {
-  const lines = rawHeading
-    .split(/\r?\n/)
-    .map((line) => line.trim().replace(/\s+/g, " "))
-    .filter(Boolean);
-
-  if (
-    !Number.isFinite(confidence) ||
-    confidence < 78 ||
-    lines.length === 0
-  ) {
-    return null;
-  }
-
-  // Read the contiguous heading at the TOP of the crop. The wider crop may
-  // also include body lines such as "Notice ID", which are not part of the
-  // title and must not cause a valid recovered heading to be discarded.
-  // Do not skip a leading invalid line or guess missing characters.
-  const headingLines: string[] = [];
-  for (const line of lines) {
-    const letters = line.match(/[A-Za-z]/g) ?? [];
-    const uppercase = line.match(/[A-Z]/g) ?? [];
-    const validLine =
-      line.length >= 6 &&
-      line.length <= 85 &&
-      /^[A-Za-z][A-Za-z0-9 ,.:/&()\-]*$/.test(line) &&
-      letters.length >= 6 &&
-      uppercase.length / letters.length >= 0.8;
-
-    if (!validLine) {
-      if (headingLines.length === 0) return null;
-      break;
-    }
-
-    headingLines.push(line);
-    if (headingLines.length > 4) return null;
-  }
-
-  if (headingLines.length === 0) return null;
-  const heading = headingLines.join(" ");
-  const tokens = heading.split(/\s+/);
-  if (
-    heading.length < 8 ||
-    heading.length > 255 ||
-    tokens.length < 2 ||
-    tokens.length > 28
-  ) {
-    return null;
-  }
-
-  const normalized = (value: string) =>
-    value.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
-  const normalizedBody = normalized(bodyText);
-  // Exclude already-recognized lines; never rewrite primary OCR text.
-  const missingLines = headingLines.filter(
-    (line) => !normalizedBody.includes(normalized(line)),
+  if (!Number.isFinite(confidence) || confidence < 78) return null;
+  const headings = recognizedTopHeadingLines(rawHeading);
+  if (!headings) return null;
+  const normalizedBody = normalizeTopHeadingLine(bodyText);
+  const missing = headings.filter(
+    (heading) => !normalizedBody.includes(normalizeTopHeadingLine(heading)),
   );
-  return missingLines.length ? missingLines.join("\n") : null;
+  return missing.length ? missing.join("\n") : null;
+}
+
+// Reconstruct the banner in source order, retaining the full-page OCR body.
+// A second cropped OCR pass sometimes finds lines already in raw OCR and
+// sometimes finds only the missing ones. De-duplicate exact heading lines
+// near the top of the raw transcript before inserting the complete banner.
+// Never discard distant matching body text or modify the original PDF.
+export function mergeRecoveredTopHeading(
+  rawHeading: string,
+  confidence: number,
+  bodyText: string,
+): string {
+  if (!acceptRecoveredTopHeading(rawHeading, confidence, bodyText)) return bodyText;
+  const headings = recognizedTopHeadingLines(rawHeading);
+  if (!headings) return bodyText;
+  const headingKeys = new Set(headings.map(normalizeTopHeadingLine));
+  const kept = bodyText.split(/\r?\n/).filter((line, index) => {
+    if (index >= 12) return true;
+    const key = normalizeTopHeadingLine(line);
+    return !key || !headingKeys.has(key);
+  });
+  return headings.join("\n") + "\n\n" + kept.join("\n").replace(/^\s*\n/, "");
 }
