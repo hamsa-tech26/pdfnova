@@ -95,9 +95,11 @@ describe("Native PDF numbered guide and continuous table recovery",()=>{
     );
     // A fictional boundary case: a short first word begins immediately
     // after the Block column, before the midpoint of printed guide 3/4.
+    const groupStarts=pages[2].tokens.filter(t=>t.text==="Council");
+    const groupEnds=pages[2].tokens.filter(t=>t.text==="Delta");
     for(let i=0;i<4;i++){
-      const word=pages[2].tokens.filter(t=>t.text==="Council")[i];
-      const second=pages[2].tokens.filter(t=>t.text==="Delta")[i];
+      const word=groupStarts[i];
+      const second=groupEnds[i];
       expect(word).toBeDefined();
       expect(second).toBeDefined();
       word.text="West";
