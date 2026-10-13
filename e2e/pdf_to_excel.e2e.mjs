@@ -187,3 +187,71 @@ test("3-page sanitized eight-field PDF never silently downloads collapsed five-c
     encoding: "utf8",
   })).toContain("STRUCTURAL_XLSX_OK");
 });
+
+
+test("native numbered 8-column guide reconstructs 87 fictional rows over three pages into separate XLSX fields",async ({page})=>{
+  test.setTimeout(180_000);
+  const pdf=await PDFDocument.create();
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const counts=[24,33,30], anchors=[109,158,218,295,394,495,598,672];
+  let serial=0;
+  for(let p=0;p<counts.length;p++){
+    const sheet=pdf.addPage([792,700]);
+    if(p===0){
+      anchors.forEach((x,j)=>sheet.drawText(String(j+1),{
+        x:x-3,y:680,size:10,font,
+      }));
+      sheet.drawText("SYNTHETIC TEST ONLY",{
+        x:250,y:690,size:10,font,
+      });
+    }
+    for(let i=0;i<counts[p];i++){
+      serial++;
+      const y=650-i*16;
+      // Two independently placed native PDF text items each contain two
+      // visually distinct fields. No customer data is present in this PDF.
+      const cells=[
+        [94,String(serial)+" "+String(4000+serial)+" North County"],
+        [196,"Sector Beta Council Delta"],
+        [352,"Settlement "+serial],
+        [493,String(50+serial)],
+        [596,String(40+serial)],
+        ...(serial===15?[]:[[672,"Y"]]),
+      ];
+      cells.forEach(([x,v])=>sheet.drawText(v,{
+        x:Number(x),y,size:10,font,
+      }));
+    }
+  }
+  expect(serial).toBe(87);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').setInputFiles({
+    name:"synthetic_native_8_column_87_rows.pdf",
+    mimeType:"application/pdf",
+    buffer:Buffer.from(await pdf.save()),
+  });
+  const [download]=await Promise.all([
+    page.waitForEvent("download",{timeout:120000}),
+    page.getByRole("button",{name:/Convert to Excel/i}).click(),
+  ]);
+  const saved=await download.path();expect(saved).toBeTruthy();
+  const script=[
+    "import sys,io",
+    "from openpyxl import load_workbook",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1],'rb').read()),read_only=True,data_only=False)",
+    "assert w.sheetnames==['Table 1','Review Notes'],w.sheetnames",
+    "rows=list(w['Table 1'].values)",
+    "assert len(rows)==88,('record count',len(rows))",
+    "assert all(len(r)==8 for r in rows), 'eight independent columns required'",
+    "assert rows[1]==('4001','North County','Sector Beta','Council Delta','Settlement 1','51','41','Y'),rows[1]",
+    "assert rows[15][7] is None or rows[15][7]=='','blank flag damaged'",
+    "assert rows[-1]==('4087','North County','Sector Beta','Council Delta','Settlement 87','137','127','Y'),rows[-1]",
+    "assert sum(int(r[5]) for r in rows[1:])==sum(range(51,138))",
+    "assert sum(int(r[6]) for r in rows[1:])==sum(range(41,128))",
+    "notes=' '.join(str(r[0]) for r in w['Review Notes'].values)",
+    "assert 'placeholders' in notes and 'EXTRACTION NOT VERIFIED' in notes",
+    "print('NATIVE_87_ROWS_8_COLUMNS_OK')",
+  ].join("; ");
+  expect(execFileSync("python",["-c",script,saved],{encoding:"utf8"}))
+    .toContain("NATIVE_87_ROWS_8_COLUMNS_OK");
+});
