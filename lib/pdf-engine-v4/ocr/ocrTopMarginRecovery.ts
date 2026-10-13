@@ -71,8 +71,9 @@ export async function cropTopMarginOcrImage(
   return canvas.toDataURL("image/png");
 }
 
-// Accept only distinct high-confidence uppercase headings actually read
-// in a single crop line. Multi-line prose / OCR garbage are not headings.
+// Only recover text actually recognized in the top strip. Some source titles
+// span multiple lines, and a high-contrast header may include a subtitle.
+// Validate every line to avoid promoting body prose or OCR noise to a title.
 export function acceptRecoveredTopHeading(
   rawHeading: string,
   confidence: number,
@@ -86,39 +87,47 @@ export function acceptRecoveredTopHeading(
   if (
     !Number.isFinite(confidence) ||
     confidence < 78 ||
-    lines.length !== 1
+    lines.length === 0 ||
+    lines.length > 3
   ) {
     return null;
   }
 
-  const heading = lines[0];
-  const tokens = heading.split(" ");
+  // A wrapped title can contain a one-word continuation like "BULLETIN".
+  // Every recognized line must still look like an actual uppercase heading.
+  if (lines.some((line) => {
+    if (
+      line.length < 6 ||
+      line.length > 85 ||
+      !/^[A-Za-z][A-Za-z0-9 ,.:/&()\-]*$/.test(line)
+    ) {
+      return true;
+    }
 
+    const letters = line.match(/[A-Za-z]/g) ?? [];
+    const uppercase = line.match(/[A-Z]/g) ?? [];
+    return letters.length < 6 || uppercase.length / letters.length < 0.8;
+  })) {
+    return null;
+  }
+
+  const heading = lines.join(" ");
+  const tokens = heading.split(/\s+/);
   if (
     heading.length < 8 ||
-    heading.length > 85 ||
+    heading.length > 170 ||
     tokens.length < 2 ||
-    tokens.length > 9 ||
-    !/^[A-Za-z][A-Za-z0-9 ,.:/&()\-]*$/.test(heading)
-  ) {
-    return null;
-  }
-
-  const letters = heading.match(/[A-Za-z]/g) ?? [];
-  const uppercase = heading.match(/[A-Z]/g) ?? [];
-  if (
-    letters.length < 7 ||
-    uppercase.length / letters.length < 0.8
+    tokens.length > 18
   ) {
     return null;
   }
 
   const normalized = (value: string) =>
     value.toUpperCase().replace(/[^A-Z0-9]+/g, " ").trim();
-
-  if (normalized(bodyText).includes(normalized(heading))) {
-    return null;
-  }
-
-  return heading;
+  const normalizedBody = normalized(bodyText);
+  // Avoid repeating text which the full-page OCR already extracted.
+  const missingLines = lines.filter(
+    (line) => !normalizedBody.includes(normalized(line)),
+  );
+  return missingLines.length ? missingLines.join("\n") : null;
 }
