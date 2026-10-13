@@ -10,6 +10,7 @@ import {
   recognizePdfV4OcrFilePages,
 } from "@/lib/pdf-engine-v4/ocr/ocrRecognizer";
 import { formatPdfV4OcrPageExport } from "@/lib/pdf-engine-v4/ocr/ocrTextExport";
+import { extractEmbeddedPdfTextPreviews } from "@/lib/pdf-engine-v4/ocr/pdfEmbeddedTextPreview";
 import {
   loadPdfWithoutMetadataMutation,
 } from "@/lib/pdf/safeDocument";
@@ -152,9 +153,23 @@ export default function OcrPdfPage() {
           },
         );
 
+      // Some source PDFs already contain selectable text. Keep OCR unchanged
+      // and provide a separate, source-derived review alternative only when
+      // enough embedded text exists. Scanned PDFs remain OCR-only.
+      const embedded = await extractEmbeddedPdfTextPreviews(
+        file,
+        results.map((result) => result.pageNumber),
+      ).catch(() => new Map<number, string>());
+
       const text =
         results
-          .map(formatPdfV4OcrPageExport)
+          .map((result) => {
+            const originalOcr = formatPdfV4OcrPageExport(result);
+            const alternative = embedded.get(result.pageNumber);
+            return alternative
+              ? originalOcr + "\n\n[OPTIONAL PDF EMBEDDED TEXT - NOT OCR; VERIFY AGAINST PAGE]\n" + alternative
+              : originalOcr;
+          })
           .join("\n\n");
 
       if (
@@ -206,7 +221,7 @@ export default function OcrPdfPage() {
     <ToolLayout
       label="OCR PDF"
       title="OCR scanned PDF to text privately"
-      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add clearly labelled, unverified review notes for identifiers, checklists and possible columns."
+      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add review notes for identifiers, checklists and possible columns. PDFs with substantial selectable text also include a separate embedded-text preview."
       tips={[
         {
           title:
@@ -265,7 +280,7 @@ export default function OcrPdfPage() {
           title:
             "Download the text",
           description:
-            "Save the page-by-page OCR text with separate, explicitly unverified review notes where supported.",
+            "Save page-by-page OCR text and review notes. If the original PDF has selectable text, its embedded-text alternative is shown separately.",
         },
       ]}
       maxWidthClassName="max-w-5xl"
