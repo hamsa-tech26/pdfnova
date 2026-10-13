@@ -89,15 +89,22 @@ export function recoverEightColumnRowsFromNativePositions(
     let sawRecord = false;
     let recordsOnPage = 0;
     for (const nativeRow of perPage[p]) {
+      // The multi-line source headings may span/overlap grid boundaries.
+      // Detect a row counter + independent identifier before geometric
+      // classification, so these headings do not trigger false errors.
+      const leftTokens = nativeRow.filter(token =>
+        (token.x + token.right) / 2 < (centers[0] + centers[1]) / 2);
+      const recordCandidate = leftTokens.length === 2 &&
+        /^\d{1,4}$/.test(leftTokens[0].text) &&
+        /^\d{3,8}$/.test(leftTokens[1].text);
+      if (!recordCandidate) {
+        if (sawRecord) return null;
+        continue;
+      }
       const fields = distribute(nativeRow, centers);
       if (!fields) return null;
       const first = fields[0].match(/^(\d{1,4})\s+(\d{3,8})$/);
-      if (!first) {
-        // Allow the heading/preamble preceding the first data record only.
-        // A nonrecord *inside* or *after* the table could conceal lost data.
-        if (sawRecord && nativeRow.length > 0) return null;
-        continue;
-      }
+      if (!first) return null;
       const serial = Number(first[1]), id = Number(first[2]);
       if (fields.slice(1, 7).some(cell => !cell) ||
           !/^\d+$/.test(fields[5]) || !/^\d+$/.test(fields[6]) ||
