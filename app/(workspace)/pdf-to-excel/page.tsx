@@ -63,21 +63,21 @@ export default function PdfToExcelPage() {
       const analyzed = await analyzePdfV4(file, { enableControlledOcr: false });
       // Centralized fail-closed quality checks preserve multi-page row
       // provenance, do not infer merged-cell formatting, and report omissions.
-      let exportPlan;
-      try {
-        exportPlan = preparePdfV4XlsxExport(analyzed);
-      } catch (structureError) {
-        // This is a narrow fallback for the exact documented V4 column
-        // collapse. Other failures (scanned, OCR, invalid provenance) still
-        // refuse without opening a second native-PDF processing path.
-        if (!(structureError instanceof Error) ||
-            !structureError.message.startsWith("Table columns are merged together")) {
-          throw structureError;
-        }
-        const recovered = await recoverEightColumnNativePdf(file);
-        if (!recovered) throw structureError;
-        exportPlan = recovered;
-      }
+      // Only all-native, sufficiently selectable PDFs may enter the
+      // numbered eight-column positional recovery path. It must verify every
+      // page and data record before displacing the V4 output. Other documents
+      // retain the existing strict V4 quality gate, including OCR refusal.
+      const nativeOnly = analyzed.nativePageTextExtraction.length ===
+        analyzed.document.pages.length &&
+        analyzed.nativePageTextExtraction.every(page =>
+          page.textExtraction.status === "sufficient") &&
+        analyzed.tables.every(table =>
+          !table.extractionProvenance ||
+          table.extractionProvenance.source === "native-pdf");
+      const recovered = nativeOnly && analyzed.document.pages.length > 1
+        ? await recoverEightColumnNativePdf(file)
+        : null;
+      const exportPlan = recovered ?? preparePdfV4XlsxExport(analyzed);
       const review = [...(exportPlan.reviewNotes ?? [])];
       const bytes = await createPdfXlsxWorkbook(exportPlan);
       const safe = new Uint8Array(bytes.byteLength);
