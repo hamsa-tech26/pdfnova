@@ -56,6 +56,17 @@ describe("PDF to genuine XLSX OOXML export", () => {
     expect(workbook).toContain('name="Review Notes"');
   });
 
+  it("does not truncate review notes or exceed worksheet limits", async () => {
+    const tables = Array.from({ length: 12 }, (_, i) => ({
+      name: "Table " + i, rows: [["ID", String(i)]],
+    }));
+    await expect(createPdfXlsxWorkbook({ tables, reviewNotes: ["Must review"] }))
+      .rejects.toThrow(/review-notes worksheet/);
+    await expect(createPdfXlsxWorkbook({
+      tables: [tables[0]], reviewNotes: ["R".repeat(501)],
+    })).rejects.toThrow(/500 characters/);
+  });
+
   it("fails closed on empty/malformed or unbounded tables", async () => {
     await expect(createPdfXlsxWorkbook({tables: []})).rejects.toThrow();
     await expect(createPdfXlsxWorkbook({tables: [{name:"empty",rows:[]}]})).rejects.toThrow();
