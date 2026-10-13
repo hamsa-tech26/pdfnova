@@ -156,18 +156,25 @@ export default function OcrPdfPage() {
       // Some source PDFs already contain selectable text. Keep OCR unchanged
       // and provide a separate, source-derived review alternative only when
       // enough embedded text exists. Scanned PDFs remain OCR-only.
+      let sourceTextCheckFailed = false;
       const embedded = await extractEmbeddedPdfTextPreviews(
         file,
         results.map((result) => result.pageNumber),
-      ).catch(() => new Map<number, string>());
+      ).catch(() => {
+        sourceTextCheckFailed = true;
+        return new Map<number, string>();
+      });
 
       const text =
         results
           .map((result) => {
             const originalOcr = formatPdfV4OcrPageExport(result);
             const alternative = embedded.get(result.pageNumber);
-            return alternative
-              ? originalOcr + "\n\n[OPTIONAL PDF EMBEDDED TEXT - NOT OCR; VERIFY AGAINST PAGE]\n" + alternative
+            if (alternative) {
+              return originalOcr + "\n\n[OPTIONAL PDF EMBEDDED TEXT - NOT OCR; VERIFY AGAINST PAGE]\n" + alternative;
+            }
+            return sourceTextCheckFailed
+              ? originalOcr + "\n\n[PDF TEXT-LAYER CHECK UNAVAILABLE]\nThe optional source-text check failed; the original OCR above is unchanged."
               : originalOcr;
           })
           .join("\n\n");
