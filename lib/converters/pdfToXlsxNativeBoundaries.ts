@@ -54,8 +54,36 @@ function numberedGuide(rows: readonly NativeTextToken[][]): number[] | null {
   return candidates.length === 1 ? candidates[0] : null;
 }
 
-function distribute(row: readonly NativeTextToken[], centers: readonly number[]) {
-  const borders = centers.slice(0, -1).map((v, i) => (v + centers[i + 1]) / 2);
+
+/**
+ * Source labels may be left-aligned within uneven-width columns while the
+ * printed 1..8 guide is centered. Where a distinct "Block" heading ends and
+ * the following "Name" (group/GP) heading begins, use the actual visible gap
+ * instead of assuming the numeric header midpoint is the cell boundary.
+ * No user-specific coordinates, names or templates are embedded here.
+ */
+function sourceColumnBorders(
+  pageTokens: readonly NativeTextToken[],
+  centers: readonly number[],
+): number[] {
+  const borders=centers.slice(0,-1).map((v,i)=>(v+centers[i+1])/2);
+  const blocks=pageTokens.filter(t=>
+    /^Block$/i.test(t.text) &&
+    t.x>centers[1] && t.x<centers[2]+24);
+  if(blocks.length!==1)return borders;
+  const block=blocks[0];
+  const names=pageTokens.filter(t=>
+    /^(Name|Group|GP\/VC)$/i.test(t.text) &&
+    t.x>block.right+4 && t.x<centers[3] &&
+    t.x-block.right<65);
+  if(names.length!==1)return borders;
+  const proposed=(block.right+names[0].x)/2;
+  if(proposed<=centers[2]+8 || proposed>=centers[3]-15)return borders;
+  borders[2]=proposed;
+  return borders;
+}
+
+function distribute(row: readonly NativeTextToken[], borders: readonly number[]) {
   const cells: NativeTextToken[][] = Array.from({ length: COLUMN_COUNT }, () => []);
   for (const token of row) {
     const center = (token.x + token.right) / 2;
@@ -83,6 +111,7 @@ export function recoverEightColumnRowsFromNativePositions(
   const perPage = pages.map(p => groupedRows(p.tokens));
   const centers = numberedGuide(perPage[0]);
   if (!centers) return null;
+  const borders = sourceColumnBorders(pages[0].tokens, centers);
   const records: Row[] = [];
 
   for (let p = 0; p < pages.length; p++) {
@@ -101,7 +130,7 @@ export function recoverEightColumnRowsFromNativePositions(
         if (sawRecord) return null;
         continue;
       }
-      const fields = distribute(nativeRow, centers);
+      const fields = distribute(nativeRow, borders);
       if (!fields) return null;
       const first = fields[0].match(/^(\d{1,4})\s+(\d{3,8})$/);
       if (!first) return null;
