@@ -63,14 +63,12 @@ describe("source-embedded PDF text review", () => {
     expect(reconstructEmbeddedPdfTextPreview([item("Hello", 50, 70)], 595)).toBeNull();
   });
 
-  it("does not manufacture columns from one-column digital content", () => {
+  it("does not duplicate source text on one-column digital content", () => {
     const lines = Array.from({ length: 15 }, (_, i) =>
       item("Service report section " + (i + 1), 50, 70 + i * 18, 320),
     );
     const result = reconstructEmbeddedPdfTextPreview(lines, 595);
-    expect(result).toContain("[EMBEDDED TEXT - VISUAL ROW ORDER, REVIEW LAYOUT]");
-    expect(result).not.toContain("[EMBEDDED TEXT - RIGHT SIDEBAR]");
-    expect(result).toContain("Service report section 15");
+    expect(result).toBeNull();
   });
 
   it("ignores off-page and non-finite item geometry", () => {
