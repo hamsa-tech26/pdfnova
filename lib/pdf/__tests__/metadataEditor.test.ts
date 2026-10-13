@@ -79,7 +79,7 @@ describe("metadataEditor", () => {
     const saved = await pdf.save();
     const reopened = await PDFDocument.load(saved, { updateMetadata: false });
     expect(readPdfMetadata(reopened).keywords).toBe(values.keywords);
-    applyPdfMetadata(reopened, { ...values, keywords: "one; two\\nthree, four" });
+    applyPdfMetadata(reopened, { ...values, keywords: "one; two\nthree, four" });
     expect(readPdfMetadata(reopened).keywords).toBe("one, two, three, four");
     applyPdfMetadata(reopened, { ...values, keywords: "" });
     expect(readPdfMetadata(reopened).keywords).toBe("");
