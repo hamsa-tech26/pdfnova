@@ -45,4 +45,44 @@ describe("OCR top-margin heading recovery", () => {
     expect(acceptRecoveredTopHeading("SERVICE VISIT NOTE", Number.NaN, body))
       .toBeNull();
   });
+
+  it("recovers multi-line top banner and subtitle from the actual scan", () => {
+    expect(acceptRecoveredTopHeading(
+      "COMMUNITY NOTICE\nSAMPLE PUBLIC SERVICE INFORMATION - OCR TEST DOCUMENT",
+      95.6,
+      body,
+    )).toBe("COMMUNITY NOTICE\nSAMPLE PUBLIC SERVICE INFORMATION - OCR TEST DOCUMENT");
+    expect(acceptRecoveredTopHeading(
+      "COMMUNITY SERVICE\nBULLETIN",
+      95.9,
+      body,
+    )).toBe("COMMUNITY SERVICE\nBULLETIN");
+  });
+
+  it("does not duplicate already-recognized heading or subtitle lines", () => {
+    expect(acceptRecoveredTopHeading(
+      "COMMUNITY SERVICE\nBULLETIN\nOCTOBER MAINTENANCE UPDATE",
+      95,
+      body + "\nOCTOBER MAINTENANCE UPDATE",
+    )).toBe("COMMUNITY SERVICE\nBULLETIN");
+  });
+
+  it("rejects untrustworthy multi-line crop results", () => {
+    expect(acceptRecoveredTopHeading(
+      "COMMUNITY SERVICE\nCustomer name",
+      96,
+      body,
+    )).toBeNull();
+    expect(acceptRecoveredTopHeading(
+      "COMMUNITY SERVICE\nBULLETIN",
+      70,
+      body,
+    )).toBeNull();
+    expect(acceptRecoveredTopHeading(
+      "ONE TITLE\nTWO TITLE\nTHREE TITLE\nFOUR TITLE",
+      96,
+      body,
+    )).toBeNull();
+  });
+
 });
