@@ -145,7 +145,7 @@ export default function OcrPdfPage() {
             (_, index) =>
               index + 1,
           ),
-          { recoverMissingTopHeading: true },
+          { recoverMissingTopHeading: true, reviewLowResolution: true },
           (completed) => {
             setCompletedPages(
               completed,
@@ -228,7 +228,7 @@ export default function OcrPdfPage() {
     <ToolLayout
       label="OCR PDF"
       title="OCR scanned PDF to text privately"
-      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve OCR text and add review notes for identifiers, checklists and possible columns. Some selectable-text PDFs with clearly separated columns also include a separate embedded-text preview."
+      description="Recognize English text in scanned or image-based PDF pages locally. Exports preserve raw OCR and add review notes for identifiers, checklists and possible columns. A low-quality scan may also receive a separate, unverified image-enhanced reading. Some selectable-text PDFs with clearly separated columns also include a separate embedded-text preview."
       tips={[
         {
           title:
@@ -247,6 +247,12 @@ export default function OcrPdfPage() {
             "Memory-aware processing",
           description:
             "Pages are rendered and recognized one at a time instead of keeping every full-resolution OCR image in memory.",
+        },
+        {
+          title:
+            "Low-resolution review",
+          description:
+            "If OCR shows damaged labels or low-confidence identifiers, Kukureku may make an additional locally enhanced read. Any alternative text is unverified; the original transcript is always preserved.",
         },
         {
           title:
