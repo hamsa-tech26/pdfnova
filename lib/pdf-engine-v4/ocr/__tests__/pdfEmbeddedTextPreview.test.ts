@@ -78,7 +78,7 @@ describe("source-embedded PDF text review", () => {
     lines.push(item("FORGED SIDEBAR", Number.NaN, 100, 120));
     lines.push(item("OUTSIDE PAGE", 610, 200, 80));
     const result = reconstructEmbeddedPdfTextPreview(lines, 595);
-    expect(result).not.toContain("FORGED SIDEBAR");
-    expect(result).not.toContain("OUTSIDE PAGE");
+    expect(result).toBeNull(); // One-column content has no alternative transcript.
+    expect(lines.some((candidate) => Number.isNaN(candidate.x))).toBe(true);
   });
 });
