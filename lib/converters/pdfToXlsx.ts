@@ -106,7 +106,17 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
   if ((input.reviewNotes?.length ?? 0) > 200) {
     throw new Error("Too many spreadsheet review notes; no notes were discarded.");
   }
-  const notes = (input.reviewNotes ?? []).map(note => String(note).slice(0, 500));
+  // A notes worksheet also counts against the workbook's worksheet limit.
+  if (input.tables.length + (input.reviewNotes?.length ? 1 : 0) > MAX_SHEETS) {
+    throw new Error("Too many tables to include the required review-notes worksheet.");
+  }
+  const notes = (input.reviewNotes ?? []).map(note => {
+    const text = String(note);
+    if (text.length > 500) {
+      throw new Error("A review note exceeds 500 characters; export was withheld rather than truncating it.");
+    }
+    return text;
+  });
   const sheets: PdfXlsxTable[] = [
     ...input.tables,
     ...(notes.length ? [{ name: "Review Notes", rows: [
