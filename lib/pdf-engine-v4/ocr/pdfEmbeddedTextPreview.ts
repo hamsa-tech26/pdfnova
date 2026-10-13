@@ -62,15 +62,21 @@ export function reconstructEmbeddedPdfTextPreview(
   let best: { left: EmbeddedPdfTextItem[]; right: EmbeddedPdfTextItem[]; score: number } | null = null;
   for (let ratio = 0.54; ratio <= 0.72; ratio += 0.02) {
     const x = pageWidth * ratio;
-    const left = valid.filter((item) => item.x + item.width <= x);
+    // PDF.js may report text span widths that extend slightly into an
+    // adjacent column even when each span starts in the correct column.
+    // Assign by the actual text origin, not the estimated right edge;
+    // reject major overlap rather than suppressing the entire preview.
+    const left = valid.filter((item) => item.x < x);
     const right = valid.filter((item) => item.x >= x);
-    const crossing = valid.length - left.length - right.length;
-    if (left.length < 10 || right.length < 8 || crossing > 1) continue;
+    const significantSpill = left.filter((item) =>
+      item.x + item.width > x + pageWidth * 0.06,
+    ).length;
+    if (left.length < 10 || right.length < 8 || significantSpill > 2) continue;
     if (groupTextLines(left).length < 5 || groupTextLines(right).length < 5) continue;
     const leftTop = Math.min(...left.map((item) => item.y));
     const rightTop = Math.min(...right.map((item) => item.y));
     if (Math.abs(leftTop - rightTop) > 60) continue;
-    const score = Math.min(left.length, right.length) - crossing * 10;
+    const score = Math.min(left.length, right.length) - significantSpill * 8;
     if (!best || score > best.score) best = { left, right, score };
   }
   // A single-column text layer is not enough evidence to append a second
