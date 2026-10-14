@@ -15,46 +15,24 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      - name: Install current branch cleanly
+      - name: Verify clean committed dependency installation
         run: npm ci --no-audit --no-fund
-      - name: Test constrained Next ESLint glob adapter
+      - name: Test bounded Next ESLint directory glob adapter
         run: node --test vendor/next-eslint-glob/index.node.cjs
-      - name: Propose local fast-glob replacement in temporary working tree
+      - name: Verify expected replacement and absence of vulnerable packages
         run: |
-          npm pkg set 'devDependencies.fast-glob=file:vendor/next-eslint-glob'
-          npm pkg set 'overrides.fast-glob=$fast-glob'
-          npm install --no-audit --no-fund
-          npm ci --no-audit --no-fund
           npm ls fast-glob
-          npm explain braces || true
-          npm explain sprintf-js || true
-      - name: Verify full dependency tree has zero advisories
+          if npm ls braces; then echo 'Unexpected braces dependency'; exit 1; fi
+          if npm ls sprintf-js; then echo 'Unexpected sprintf-js dependency'; exit 1; fi
+      - name: Audit full dependency tree at moderate threshold
         run: npm audit --audit-level=moderate
-      - name: Verify official Next ESLint linting is preserved
+      - name: Verify official Next lint rules remain functional
         run: npm run lint
-      - name: Verify TypeScript
+      - name: Verify TypeScript compatibility
         run: npx tsc --noEmit
-      - name: Verify unit regressions under replacement
+      - name: Verify all unit regressions
         run: npm test
-      - name: Verify build under replacement
+      - name: Verify production build
         env:
           NEXT_TELEMETRY_DISABLED: 1
         run: npm run build
-
-      - name: Emit machine-readable lockfile delta for reviewed GitHub commit
-        run: |
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const cp = require('node:child_process');
-          const base = JSON.parse(cp.execFileSync('git', ['show','HEAD:package-lock.json'], {encoding:'utf8'}));
-          const current = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
-          const set = {};
-          const remove = [];
-          for (const [key,value] of Object.entries(current.packages)) {
-            if (JSON.stringify(base.packages[key]) !== JSON.stringify(value)) set[key] = value;
-          }
-          for (const key of Object.keys(base.packages)) {
-            if (!(key in current.packages)) remove.push(key);
-          }
-          console.log('LOCK_DIFF_JSON=' + JSON.stringify({set,remove}));
-          NODE
