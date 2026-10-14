@@ -18,7 +18,9 @@
     "golden:intake-plan": "node scripts/privateGoldenScaffold.mjs --plan",
     "golden:remediation": "node scripts/privateGoldenReport.mjs",
     "golden:quality-triage": "node scripts/privateGoldenReport.mjs",
-    "golden:quality-gate": "node scripts/privateGoldenReport.mjs --require-complete"
+    "golden:quality-gate": "node scripts/privateGoldenReport.mjs --require-complete",
+    "qualify:v4:stable": "node scripts/checkRelease37Gate.mjs",
+    "benchmark:v4:corpus": "node scripts/collectRelease37Corpus.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",
