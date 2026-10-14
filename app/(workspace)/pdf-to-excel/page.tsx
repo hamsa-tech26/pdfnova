@@ -137,8 +137,8 @@ export default function PdfToExcelPage() {
             fileName={outputName} onDownloadAgain={() => saveAs(output, outputName)}
             onStartAgain={reset} downloadLabel="Download XLSX Again"
             resetLabel="Convert Another PDF"/>
-          <div className="rounded-xl border border-amber-200 p-4 text-sm text-slate-700 dark:text-slate-200">
-            <p className="font-semibold">Extraction review — not certified</p>
+          <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800 dark:border-amber-900/70 dark:bg-slate-950 dark:text-slate-200">
+            <p className="font-semibold text-amber-950 dark:text-amber-200">Extraction review — not certified</p>
             {warnings.map((item, index) => <p className="mt-2" key={index}>{item}</p>)}
           </div>
         </>}
