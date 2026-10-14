@@ -47,6 +47,10 @@ describe("Release 60 XLSX quality and coverage gates", () => {
       ["Sl No","Code","Amount"],["1","00071","125.00"],["2","","0"],
     ]);
     expect(plan.reviewNotes?.join(" ")).toContain("1 partially filled row(s)");
+    expect(plan.reviewNotes?.join(" ")).toContain("For standard V4 exports, extracted cells remain literal text");
+    expect(plan.reviewNotes?.join(" ")).toContain("verified eight-column");
+    expect(plan.tables[0].numericColumns).toBeUndefined();
+
     const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
     const xml=await zip.file("xl/worksheets/sheet1.xml")!.async("string");
     expect(xml).toContain('<c r="B3" t="inlineStr"><is><t xml:space="preserve"></t></is></c>');
