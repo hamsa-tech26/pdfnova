@@ -41,3 +41,36 @@ test("record explicit mobile first-paint and layout diagnostic without performan
   await writeFile("benchmarks/website/reports/mobile-browser-baseline.json",JSON.stringify(report,null,2)+"\n");
   expect(measurements.every(m=>m.status===200)).toBe(true);
 });
+
+test("theme toggle preserves readable dashboard sidebar and consistent tool counts", async ({page}) => {
+  await page.goto("/dashboard");
+  const countLabel = `Browse all ${TOOL_ROUTES.length} tools`;
+  await expect(page.getByRole("link", {name: countLabel})).toBeVisible();
+  await expect(page.getByText("Working tools").locator("..")).toContainText(String(TOOL_ROUTES.length));
+
+  const toggle = page.getByRole("button", {name: "Toggle theme"});
+  const html = page.locator("html");
+  const brand = page.locator("aside").last().getByText("Kukureku PDF Workspace", {exact: true});
+  await expect(brand).toBeVisible();
+
+  if(await html.evaluate(element => element.classList.contains("dark"))) {
+    await toggle.click();
+  }
+  await expect(html).not.toHaveClass(/dark/);
+  const light = await brand.evaluate(element => ({
+    title: getComputedStyle(element).color,
+    card: getComputedStyle(element.parentElement.parentElement.parentElement).backgroundImage,
+  }));
+
+  await toggle.click();
+  await expect(html).toHaveClass(/dark/);
+  const dark = await brand.evaluate(element => ({
+    title: getComputedStyle(element).color,
+    card: getComputedStyle(element.parentElement.parentElement.parentElement).backgroundImage,
+  }));
+  expect(light.title).not.toBe(dark.title);
+  expect(light.card).not.toBe(dark.card);
+
+  await page.goto("/merge-pdf");
+  await expect(page.getByRole("link", {name: countLabel})).toHaveCount(2);
+});
