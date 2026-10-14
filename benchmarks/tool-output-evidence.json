@@ -112,9 +112,9 @@
       "route": "/pdf-to-excel",
       "level": "content",
       "file": "e2e/pdf_to_excel.e2e.mjs",
-      "claim": "Browser conversion downloads an actual OOXML XLSX workbook, preserves representative literal cells, validates spreadsheet readability independently and tests scanned-only refusal",
+      "claim": "Browser conversion downloads a valid OOXML XLSX, keeps identifiers and untrusted text literal, permits only explicit safe numeric household/FHTC cells in the verified native-table path, validates the workbook independently, and refuses scan-only inputs",
       "verdict": "PASS_WITH_WARNING",
-      "qualificationScope": "Scoped synthetic selectable-text PDF browser tests only; review acceptance is conditional on the final branch CI including an independent XLSX reader.",
+      "qualificationScope": "Automated selectable-text PDF tests include independent XLSX reading and preserve literal identifier/formula-like cells versus opted-in safe count columns; real-world confidence remains limited to individually compared documents.",
       "limitations": "Image-only, mixed-content, uncertain geometry, merged-cell structures and arbitrary real-world accuracy are not certified. Valid XLSX output does not prove that every source cell was captured."
     },
     {
