@@ -38,6 +38,38 @@ jobs:
           console.log('sprintf-js still present:', Boolean(data.vulnerabilities?.['sprintf-js']));
           NODE
           git checkout -- package.json package-lock.json
+      - name: Test alternative modern ESLint stack with full lint
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm pkg delete devDependencies.eslint-config-next
+          npm install --save-dev @eslint/js typescript-eslint eslint-plugin-react-hooks eslint-plugin-react eslint-plugin-jsx-a11y globals --no-audit --no-fund
+          cat > eslint.config.mjs <<'ESLINT'
+          import eslint from '@eslint/js';
+          import tseslint from 'typescript-eslint';
+          import hooks from 'eslint-plugin-react-hooks';
+          import react from 'eslint-plugin-react';
+          import jsxA11y from 'eslint-plugin-jsx-a11y';
+          import globals from 'globals';
+          export default tseslint.config(
+            { ignores: ['.next/**','out/**','build/**','next-env.d.ts','public/qpdf/qpdf.js'] },
+            eslint.configs.recommended,
+            ...tseslint.configs.recommended,
+            {
+              files: ['**/*.{js,jsx,ts,tsx,mjs}'],
+              languageOptions: { globals: { ...globals.browser, ...globals.node } },
+              plugins: { 'react-hooks': hooks, react, 'jsx-a11y': jsxA11y },
+              rules: {
+                ...hooks.configs.recommended.rules,
+                ...jsxA11y.configs.recommended.rules,
+                'react/react-in-jsx-scope': 'off'
+              }
+            }
+          );
+          ESLINT
+          npm run lint
+          npm audit --audit-level=high
+          git checkout -- package.json package-lock.json eslint.config.mjs
       - name: Check production advisory separately
         shell: bash
         run: |
