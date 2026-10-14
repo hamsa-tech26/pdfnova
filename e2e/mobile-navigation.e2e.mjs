@@ -129,6 +129,6 @@ test("mobile sidebar lists all registered tools and the final entry remains reac
   await lastTool.scrollIntoViewIfNeeded();
   await expect(lastTool).toBeInViewport();
   await lastTool.click();
-  await expect(page).toHaveURL(/\\/pdf-to-jpg$/);
+  await expect(page).toHaveURL(/\/pdf-to-jpg$/);
   await expect(page.getByRole("navigation", { name: "Mobile workspace navigation" })).toHaveCount(0);
 });
