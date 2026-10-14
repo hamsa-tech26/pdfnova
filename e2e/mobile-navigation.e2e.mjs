@@ -1,4 +1,5 @@
 import { test, expect } from "@playwright/test";
+import { TOOL_ROUTES } from "../scripts/indexNowRoutes.mjs";
 
 test("mobile public navigation remains accessible and closes on selected page", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
@@ -77,12 +78,12 @@ test("outside tap closes public mobile menu and opening focuses first link", asy
   await expect(menu).toHaveCount(0);
 });
 
-test("mobile workspace provides a direct all-30-tools link", async ({ page }) => {
+test("mobile workspace provides a direct link to all registered tools", async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto("/merge-pdf");
   await page.getByRole("button", { name: "Open workspace menu" }).click();
   const nav = page.getByRole("navigation", { name: "Mobile workspace navigation" });
-  await nav.getByRole("link", { name: "Browse all 30 tools" }).click();
+  await nav.getByRole("link", { name: `Browse all ${TOOL_ROUTES.length} tools` }).click();
   await expect(page).toHaveURL(/\/dashboard#all-tools$/);
   await expect(page.locator("#all-tools")).toBeVisible();
 });

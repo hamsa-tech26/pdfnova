@@ -2,6 +2,7 @@
 
 import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
+import { TOOL_SEO } from "@/lib/seo/tools";
 import {
   Archive,
   Database,
@@ -117,7 +118,7 @@ const navigationGroups: SidebarGroup[] = [
     label: "PDF Tools",
     links: [
       {
-        label: "Browse all 30 tools",
+        label: `Browse all ${Object.keys(TOOL_SEO).length} tools`,
         href: "/dashboard#all-tools",
         icon: LayoutDashboard,
       },
