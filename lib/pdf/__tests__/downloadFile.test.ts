@@ -13,7 +13,7 @@ describe("downloadFile browser lifecycle", () => {
     vi.useFakeTimers();
     click=vi.fn();remove=vi.fn();appendChild=vi.fn();revoke=vi.fn();
     create=vi.fn((_blob:Blob)=>"blob:kukureku-test");
-    link={href:"",download:"",click,remove};
+    link={href:"",download:"",click:()=>click(),remove:()=>remove()};
     vi.stubGlobal("document",{
       createElement:vi.fn((tag:string)=>{expect(tag).toBe("a");return link}),
       body:{appendChild},
