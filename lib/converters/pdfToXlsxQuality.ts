@@ -121,7 +121,7 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   const covered = new Set<number>();
   const notes = [
     "UNVERIFIED: XLSX cells were reconstructed from PDF text positions; verify all rows, headings, blank cells, numbers and column order against the original PDF.",
-    "Merged-cell structures, formats, formulas and PDF visual layout are NOT reconstructed; Excel values are literal text.",
+    "For standard V4 exports, extracted cells remain literal text. Only the separate, verified eight-column native-table path may encode safe household/FHTC integers as Excel numbers; identifiers and formula-like source text remain literal. Merged-cell formatting and PDF layout are not recreated.",
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
