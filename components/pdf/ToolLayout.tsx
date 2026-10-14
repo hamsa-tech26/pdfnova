@@ -9,6 +9,7 @@ import {
   Zap,
 } from "lucide-react";
 import Link from "next/link";
+import { TOOL_SEO } from "@/lib/seo/tools";
 import type { ReactNode } from "react";
 
 type ToolTip = {
@@ -348,7 +349,7 @@ export default function ToolLayout({
                 href="/#tools"
                 className="inline-flex min-h-11 items-center rounded-xl bg-blue-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-blue-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600"
               >
-                Browse all 30 tools
+                Browse all {Object.keys(TOOL_SEO).length} tools
               </Link>
             </div>
           </div>
