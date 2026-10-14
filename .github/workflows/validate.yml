@@ -40,9 +40,13 @@ jobs:
       - name: Verify installed Next.js and ESLint config are aligned
         if: always()
         run: npm ls next eslint-config-next
-      - name: Identify high-severity transitive advisory origin (diagnostic only)
+      - name: Verify remediated dependencies are absent from the complete install
         if: always()
-        run: npm explain braces && npm explain sprintf-js
+        run: |
+          if npm ls braces; then echo 'Vulnerable braces dependency unexpectedly installed'; exit 1; fi
+          if npm ls sprintf-js; then echo 'Vulnerable sprintf-js dependency unexpectedly installed'; exit 1; fi
+          npm ls fast-glob argparse
+          node --test vendor/next-eslint-glob/index.node.cjs
       - name: Audit production dependencies for high and critical advisories
         if: always()
         run: npm audit --omit=dev --audit-level=high
