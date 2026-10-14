@@ -40,3 +40,21 @@ jobs:
         env:
           NEXT_TELEMETRY_DISABLED: 1
         run: npm run build
+
+      - name: Emit machine-readable lockfile delta for reviewed GitHub commit
+        run: |
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const cp = require('node:child_process');
+          const base = JSON.parse(cp.execFileSync('git', ['show','HEAD:package-lock.json'], {encoding:'utf8'}));
+          const current = JSON.parse(fs.readFileSync('package-lock.json','utf8'));
+          const set = {};
+          const remove = [];
+          for (const [key,value] of Object.entries(current.packages)) {
+            if (JSON.stringify(base.packages[key]) !== JSON.stringify(value)) set[key] = value;
+          }
+          for (const key of Object.keys(base.packages)) {
+            if (!(key in current.packages)) remove.push(key);
+          }
+          console.log('LOCK_DIFF_JSON=' + JSON.stringify({set,remove}));
+          NODE
