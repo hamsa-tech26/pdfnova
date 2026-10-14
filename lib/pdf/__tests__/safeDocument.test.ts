@@ -1,5 +1,6 @@
 import {
   PDFDocument,
+  degrees,
 } from "pdf-lib";
 import {
   describe,
@@ -81,10 +82,7 @@ describe("safeDocument", () => {
 
     loaded
       .getPage(0)
-      .setRotation({
-        type: "degrees",
-        angle: 90,
-      });
+      .setRotation(degrees(90));
 
     const saved =
       await savePdfWithoutFormAppearanceMutation(
