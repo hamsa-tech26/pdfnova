@@ -43,7 +43,7 @@ jobs:
         run: |
           set -euo pipefail
           npm pkg delete devDependencies.eslint-config-next
-          npm install --save-dev @eslint/js typescript-eslint eslint-plugin-react-hooks eslint-plugin-react eslint-plugin-jsx-a11y globals --no-audit --no-fund
+          npm install --save-dev @eslint/js@^9 typescript-eslint eslint-plugin-react-hooks eslint-plugin-react eslint-plugin-jsx-a11y globals --no-audit --no-fund
           cat > eslint.config.mjs <<'ESLINT'
           import eslint from '@eslint/js';
           import tseslint from 'typescript-eslint';
