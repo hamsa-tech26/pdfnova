@@ -51,3 +51,8 @@ next-env.d.ts
 /test-fixtures/golden/
 /benchmarks/golden/reports/
 /benchmarks/golden/private/
+
+# Engine V4 real-world qualification: never commit source PDFs, annotations or raw outputs
+/benchmarks/release37/private/
+/benchmarks/release37/reports/
+/test-fixtures/release37/
