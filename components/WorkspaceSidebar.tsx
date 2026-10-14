@@ -2,7 +2,8 @@
 
 import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import ThemeToggle from "@/components/ThemeToggle";
-import { TOOL_SEO } from "@/lib/seo/tools";
+import { TOOL_SEO, type ToolSlug } from "@/lib/seo/tools";
+import { SIDEBAR_TOOL_GROUPS } from "@/lib/tools/sidebarToolGroups";
 import {
   Archive,
   Database,
@@ -21,6 +22,20 @@ import {
   Sparkles,
   UnlockKeyhole,
   WandSparkles,
+  ArrowDownUp,
+  Crop,
+  Eraser,
+  FileSpreadsheet,
+  Hash,
+  Layers3,
+  ListOrdered,
+  LockKeyhole,
+  PanelsTopLeft,
+  RotateCw,
+  ScanText,
+  FileOutput,
+  PenLine,
+  AlignLeft,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -37,6 +52,40 @@ type SidebarLink = {
 type SidebarGroup = {
   label: string;
   links: SidebarLink[];
+};
+
+const toolIcons: Partial<Record<ToolSlug, SidebarLink["icon"]>> = {
+  "merge-pdf": FileText,
+  "split-pdf": Scissors,
+  "compress-pdf": Archive,
+  "organize-pdf": Layers3,
+  "rotate-pdf": RotateCw,
+  "extract-pdf-pages": FileOutput,
+  "delete-pdf-pages": Eraser,
+  "flatten-pdf": PanelsTopLeft,
+  "reorder-pdf-pages": ListOrdered,
+  "reverse-pdf": ArrowDownUp,
+  "add-page-numbers": Hash,
+  "crop-pdf": Crop,
+  "resize-pdf-pages": FileOutput,
+  "header-footer-pdf": FileText,
+  "sign-pdf": PenLine,
+  "add-image-stamp-pdf": Images,
+  "watermark-pdf": WandSparkles,
+  "word-to-pdf": FileText,
+  "pdf-to-word": FileText,
+  "pdf-to-excel": FileSpreadsheet,
+  "pdf-to-text": AlignLeft,
+  "ocr-pdf": ScanText,
+  "protect-pdf": LockKeyhole,
+  "unlock-pdf": UnlockKeyhole,
+  "redact-pdf": Eraser,
+  "remove-pdf-metadata": Eraser,
+  "edit-pdf-metadata": FileText,
+  "pdf-form-filler": PanelsTopLeft,
+  "create-fillable-pdf": PanelsTopLeft,
+  "jpg-to-pdf": Images,
+  "pdf-to-jpg": FileImage,
 };
 
 const navigationGroups: SidebarGroup[] = [
@@ -114,76 +163,25 @@ const navigationGroups: SidebarGroup[] = [
       },
     ],
   },
-  {
-    label: "PDF Tools",
+  // The mobile drawer and the desktop sidebar share this complete live tool
+  // navigation. Never maintain a separate partial list of tool links.
+  ...SIDEBAR_TOOL_GROUPS.map(({ label, slugs }) => ({
+    label,
     links: [
-      {
-        label: `Browse all ${Object.keys(TOOL_SEO).length} tools`,
-        href: "/dashboard#all-tools",
-        icon: LayoutDashboard,
-      },
-      {
-        label: "Merge PDF",
-        href: "/merge-pdf",
-        icon: FileText,
-      },
-      {
-        label: "Split PDF",
-        href: "/split-pdf",
-        icon: Scissors,
-      },
-      {
-        label: "Compress PDF",
-        href: "/compress-pdf",
-        icon: Archive,
-      },
-      {
-        label: "Organize PDF",
-        href: "/organize-pdf",
-        icon: FileText,
-      },
-      {
-        label: "Watermark PDF",
-        href: "/watermark-pdf",
-        icon: WandSparkles,
-      },
-      {
-        label: "Unlock PDF",
-        href: "/unlock-pdf",
-        icon: UnlockKeyhole,
-      },
+      ...(label === "PDF Tools"
+        ? [{
+            label: `Browse all ${Object.keys(TOOL_SEO).length} tools`,
+            href: "/dashboard#all-tools",
+            icon: LayoutDashboard,
+          }]
+        : []),
+      ...slugs.map((slug) => ({
+        label: TOOL_SEO[slug].name,
+        href: `/${slug}`,
+        icon: toolIcons[slug] ?? FileText,
+      })),
     ],
-  },
-  {
-    label: "Office",
-    links: [
-      {
-        label: "Word to PDF",
-        href: "/word-to-pdf",
-        icon: FileText,
-      },
-      {
-        label: "PDF to Word",
-        href: "/pdf-to-word",
-        icon: FileText,
-      },
-    ],
-  },
-  {
-    label: "Images",
-    links: [
-      {
-        label: "JPG to PDF",
-        href: "/jpg-to-pdf",
-        icon: Images,
-      },
-      {
-        label: "PDF to JPG",
-        href: "/pdf-to-jpg",
-        icon: FileImage,
-      },
-    ],
-  },
+  })),
 ];
 
 function SidebarNavigationLink({
