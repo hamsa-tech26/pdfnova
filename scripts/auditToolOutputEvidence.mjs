@@ -37,8 +37,8 @@ const summary={
   limitations:"Per-tool claims are limited to inspected synthetic browser outputs. This is not an accreditation, OCR accuracy score, real-device audit, or a promise all documents work."
 };
 console.log(JSON.stringify(summary,null,2));
-const complete=matrix.entries.length===30 &&
+const complete=matrix.entries.length===expected.length &&
   matrix.entries.every(e=>e.level==="content" && e.verdict!=="FAILED");
 if(process.argv.includes("--require-complete") && !complete){
-  throw new Error("Internal 30-tool functional qualification incomplete: unresolved output gaps or FAIL verdicts.");
+  throw new Error("Internal functional qualification incomplete: unresolved output gaps or FAIL verdicts.");
 }

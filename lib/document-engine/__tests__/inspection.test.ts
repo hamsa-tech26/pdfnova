@@ -27,7 +27,7 @@ describe("document inspection", () => {
 
     const artifact =
       createDocumentArtifact(
-        new Blob([bytes], {
+        new Blob([new Uint8Array(bytes)], {
           type: "application/pdf",
         }),
         {
@@ -102,7 +102,7 @@ describe("document inspection", () => {
 
     const artifact =
       createDocumentArtifact(
-        new Blob([bytes], {
+        new Blob([new Uint8Array(bytes)], {
           type: "application/pdf",
         }),
         {

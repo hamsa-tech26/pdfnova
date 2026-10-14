@@ -16,7 +16,7 @@ jobs:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm run check:golden
@@ -28,7 +28,28 @@ jobs:
       - run: npm run check:output-evidence
       - run: npm run lint
       - run: npm test
+      - name: Explicit OCR and Phase 10.14 unit regressions
+        run: npx vitest run lib/pdf-engine-v4/ocr lib/pdf-engine-v4/pipeline/__tests__/phase10_14Benchmark.test.ts
       - run: npm run check:output-evidence -- --require-complete
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+      - name: Verify patched and pinned Next.js with matching ESLint config
+        if: always()
+        run: node scripts/checkNextSecurityBaseline.mjs
+      - name: Verify installed Next.js and ESLint config are aligned
+        if: always()
+        run: npm ls next eslint-config-next
+      - name: Verify remediated dependencies are absent from the complete install
+        if: always()
+        run: |
+          if npm ls braces; then echo 'Vulnerable braces dependency unexpectedly installed'; exit 1; fi
+          if npm ls sprintf-js; then echo 'Vulnerable sprintf-js dependency unexpectedly installed'; exit 1; fi
+          npm ls fast-glob argparse
+          node --test vendor/next-eslint-glob/index.node.cjs
+      - name: Audit production dependencies for high and critical advisories
+        if: always()
+        run: npm audit --omit=dev --audit-level=high
+      - name: Audit complete dependency tree for high and critical advisories
+        if: always()
+        run: npm audit --audit-level=high

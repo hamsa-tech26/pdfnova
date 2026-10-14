@@ -1,0 +1,38 @@
+name: PR65 Dependency Replacement Probe
+on:
+  pull_request:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  replacement-probe:
+    if: github.event.pull_request.number == 65
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Verify clean committed dependency installation
+        run: npm ci --no-audit --no-fund
+      - name: Test bounded Next ESLint directory glob adapter
+        run: node --test vendor/next-eslint-glob/index.node.cjs
+      - name: Verify expected replacement and absence of vulnerable packages
+        run: |
+          npm ls fast-glob
+          if npm ls braces; then echo 'Unexpected braces dependency'; exit 1; fi
+          if npm ls sprintf-js; then echo 'Unexpected sprintf-js dependency'; exit 1; fi
+      - name: Audit full dependency tree at moderate threshold
+        run: npm audit --audit-level=moderate
+      - name: Verify official Next lint rules remain functional
+        run: npm run lint
+      - name: Verify TypeScript compatibility
+        run: npx tsc --noEmit
+      - name: Verify all unit regressions
+        run: npm test
+      - name: Verify production build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+        run: npm run build

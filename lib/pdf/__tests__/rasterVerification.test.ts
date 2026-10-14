@@ -46,9 +46,7 @@ describe(
         await pdf.save();
       const result =
         await inspectRasterizedPages(
-          new Blob([
-            bytes,
-          ]),
+          new Blob([new Uint8Array(bytes)]),
         );
 
       expect(result).toMatchObject({
@@ -83,9 +81,7 @@ describe(
         await pdf.save();
       const result =
         await inspectRasterizedPages(
-          new Blob([
-            bytes,
-          ]),
+          new Blob([new Uint8Array(bytes)]),
         );
 
       expect(

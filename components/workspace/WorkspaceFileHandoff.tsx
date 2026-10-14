@@ -267,6 +267,12 @@ export default function WorkspaceFileHandoff() {
 
     return () => {
       cancelled = true;
+      // A React Strict Mode effect replay can cancel the first asynchronous
+      // restore before its file-input injection happens. Release the guard
+      // so the subsequent effect can safely load the workspace file again.
+      if (loadedRef.current === loadKey) {
+        loadedRef.current = null;
+      }
 
       if (
         timeoutId !==

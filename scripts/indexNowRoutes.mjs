@@ -7,6 +7,7 @@ export const PUBLIC_ROUTES = [
   "/split-pdf",
   "/compress-pdf",
   "/pdf-to-word",
+  "/pdf-to-excel",
   "/word-to-pdf",
   "/jpg-to-pdf",
   "/pdf-to-jpg",
