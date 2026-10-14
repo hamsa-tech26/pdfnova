@@ -46,7 +46,7 @@ test("theme toggle preserves readable dashboard sidebar and consistent tool coun
   await page.goto("/dashboard");
   const countLabel = `Browse all ${TOOL_ROUTES.length} tools`;
   await expect(page.getByRole("link", {name: countLabel})).toBeVisible();
-  await expect(page.getByText("Working tools").locator("..")).toContainText(String(TOOL_ROUTES.length));
+  await expect(page.getByText("Working tools", {exact: true}).locator("..")).toContainText(String(TOOL_ROUTES.length));
 
   const toggle = page.getByRole("button", {name: "Toggle theme"});
   const html = page.locator("html");
