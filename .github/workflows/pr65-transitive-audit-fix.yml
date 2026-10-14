@@ -1,0 +1,56 @@
+name: PR65 One-Time Transitive Security Lock Refresh
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - .github/workflows/pr65-transitive-audit-fix.yml
+permissions:
+  contents: write
+jobs:
+  patch-lock:
+    if: >
+      github.event.pull_request.head.repo.full_name == github.repository &&
+      github.event.pull_request.number == 65 &&
+      github.event.pull_request.head.ref == 'feature/kukureku-pdf-to-excel-v1'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: feature/kukureku-pdf-to-excel-v1
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Apply only nonbreaking npm advisory fixes, no install scripts or force
+        run: |
+          set +e
+          npm audit fix --package-lock-only --ignore-scripts --no-fund --no-progress
+          result=$?
+          set -e
+          echo "Advisory fix command exited: $result (unfixed advisories may remain)"
+      - name: Require unchanged direct pins and manifest
+        run: |
+          git diff --exit-code -- package.json
+          node - <<'NODE'
+          const p=require('./package.json'),l=require('./package-lock.json');
+          for(const name of ['next','eslint-config-next']){
+            if((p.dependencies?.[name] ?? p.devDependencies?.[name]) !== '16.3.8' ||
+               l.packages['node_modules/'+name]?.version !== '16.3.8'){
+              throw Error('Security pin drift: '+name);
+            }
+          }
+          NODE
+      - name: Verify generated lockfile can be installed reproducibly
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Commit only lockfile to same draft branch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "No compatible transitive lockfile changes"
+          else
+            git commit -m "chore(security): lock nonbreaking npm advisory fixes"
+            git push origin HEAD:refs/heads/feature/kukureku-pdf-to-excel-v1
+          fi
