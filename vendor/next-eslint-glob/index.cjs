@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- The Next ESLint plugin consumes this shim through CommonJS. */
 "use strict";
 
 // Constrained replacement for the single fast-glob API used by
