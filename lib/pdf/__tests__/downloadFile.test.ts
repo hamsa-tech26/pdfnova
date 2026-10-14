@@ -2,8 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { downloadFile } from "../../downloadFile";
 
 describe("downloadFile browser lifecycle", () => {
-  let click: ReturnType<typeof vi.fn>;
-  let remove: ReturnType<typeof vi.fn>;
+  let click: () => void;
+  let remove: () => void;
   let appendChild: ReturnType<typeof vi.fn>;
   let revoke: ReturnType<typeof vi.fn>;
   let create: ReturnType<typeof vi.fn>;
@@ -11,7 +11,7 @@ describe("downloadFile browser lifecycle", () => {
 
   beforeEach(() => {
     vi.useFakeTimers();
-    click=vi.fn();remove=vi.fn();appendChild=vi.fn();revoke=vi.fn();
+    click=vi.fn<() => void>();remove=vi.fn<() => void>();appendChild=vi.fn();revoke=vi.fn();
     create=vi.fn((_blob:Blob)=>"blob:kukureku-test");
     link={href:"",download:"",click:()=>click(),remove:()=>remove()};
     vi.stubGlobal("document",{
