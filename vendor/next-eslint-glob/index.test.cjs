@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-require-imports -- The Next ESLint plugin consumes this shim through CommonJS. */
 "use strict";
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
