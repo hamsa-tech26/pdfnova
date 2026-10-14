@@ -6,7 +6,7 @@ import JSZip from "jszip";
 
 const c = (columnIndex: number, text: string, x: number, width = 24) => ({
   columnIndex, text, bounds: {x,y:10,width,height:12},
-  extractionProvenance: {source:"native-pdf" as const},
+  extractionProvenance: {source:"native-pdf" as const, wordCount:0,\n    nativeWordCount:0, ocrWordCount:0, unknownWordCount:0, pageNumbers:[1]},
 });
 function table(pages: number[], rows?: Array<Array<ReturnType<typeof c>>>): LogicalTable {
   const basic = rows ?? [
