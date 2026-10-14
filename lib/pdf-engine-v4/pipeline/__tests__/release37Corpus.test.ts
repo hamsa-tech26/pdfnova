@@ -42,7 +42,7 @@ describe("Release 37 rights-checked local-only real corpus intake",()=>{
  it("cannot certify scanned Hindi by scoring native English text",()=>{
   const record=measured();record.categories=["hindi"];
   const report=buildRelease37CorpusReport([record]);
-  expect(report.metrics.hindi.actualOcrAttempted).toBe(false);
+  expect((report.metrics as Record<string, { actualOcrAttempted: boolean }>).hindi.actualOcrAttempted).toBe(false);
  });
  it("fails closed for an entirely empty corpus",()=>{
   const r=buildRelease37CorpusReport([]);
