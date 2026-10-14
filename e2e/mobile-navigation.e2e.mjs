@@ -97,3 +97,38 @@ test("desktop navigation remains usable without the mobile controls", async ({ p
   await expect(page.getByRole("navigation", { name: "Desktop workspace navigation" })).toBeVisible();
   await expect(page.getByRole("button", { name: "Open workspace menu" })).toBeHidden();
 });
+
+test("desktop sidebar lists all 31 registered PDF tools exactly once and scrolls to the last category", async ({ page }) => {
+  await page.setViewportSize({ width: 1280, height: 800 });
+  await page.goto("/dashboard");
+  const nav = page.getByRole("navigation", { name: "Desktop workspace navigation" });
+  const hrefs = await nav.locator("a[href]").evaluateAll(
+    (links) => links.map((link) => link.getAttribute("href")),
+  );
+  const found = hrefs.filter((href) => TOOL_ROUTES.includes(href));
+  expect(found.sort()).toEqual([...TOOL_ROUTES].sort());
+  expect(new Set(found).size).toBe(TOOL_ROUTES.length);
+  await expect(nav.getByRole("link", { name: `Browse all ${TOOL_ROUTES.length} tools` })).toBeVisible();
+  const lastTool = nav.locator('a[href="/pdf-to-jpg"]');
+  await lastTool.scrollIntoViewIfNeeded();
+  await expect(lastTool).toBeInViewport();
+});
+
+test("mobile sidebar lists all registered tools and the final entry remains reachable", async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto("/dashboard");
+  await page.getByRole("button", { name: "Open workspace menu" }).click();
+  const nav = page.getByRole("navigation", { name: "Mobile workspace navigation" });
+  const hrefs = await nav.locator("a[href]").evaluateAll(
+    (links) => links.map((link) => link.getAttribute("href")),
+  );
+  const found = hrefs.filter((href) => TOOL_ROUTES.includes(href));
+  expect(found.sort()).toEqual([...TOOL_ROUTES].sort());
+  expect(new Set(found).size).toBe(TOOL_ROUTES.length);
+  const lastTool = nav.locator('a[href="/pdf-to-jpg"]');
+  await lastTool.scrollIntoViewIfNeeded();
+  await expect(lastTool).toBeInViewport();
+  await lastTool.click();
+  await expect(page).toHaveURL(/\/pdf-to-jpg$/);
+  await expect(page.getByRole("navigation", { name: "Mobile workspace navigation" })).toHaveCount(0);
+});
