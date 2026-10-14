@@ -34,10 +34,10 @@ describe("Release 37 rights-checked local-only real corpus intake",()=>{
  });
  it("never converts missing evidence for other categories to a passing score",()=>{
   const r=buildRelease37CorpusReport([measured()]);
-  expect(r.metrics.native.status).toBe("MEASURED");
-  expect(r.metrics.native.cellPct).toBe(80);
-  expect(r.metrics.bengali.status).toBe("NOT_VERIFIED");
-  expect(r.metrics.scanned.actualOcrAttempted).toBe(false);
+  expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).native.status).toBe("MEASURED");
+  expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).native.cellPct).toBe(80);
+  expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).bengali.status).toBe("NOT_VERIFIED");
+  expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).scanned.actualOcrAttempted).toBe(false);
  });
  it("cannot certify scanned Hindi by scoring native English text",()=>{
   const record=measured();record.categories=["hindi"];
@@ -47,6 +47,6 @@ describe("Release 37 rights-checked local-only real corpus intake",()=>{
  it("fails closed for an entirely empty corpus",()=>{
   const r=buildRelease37CorpusReport([]);
   expect(r.corpus.documents).toHaveLength(0);
-  expect(r.metrics.native.status).toBe("NOT_VERIFIED");
+  expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).native.status).toBe("NOT_VERIFIED");
  });
 });
