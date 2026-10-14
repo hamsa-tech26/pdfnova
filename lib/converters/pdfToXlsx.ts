@@ -1,9 +1,10 @@
 import JSZip from "jszip";
 
 /**
- * Genuine Office Open XML spreadsheet package. Cells are always inline strings:
- * PDF values are not reinterpreted as formulas, dates, or numeric identifiers.
- * This intentionally favours safety/precision over inferred Excel types.
+ * Genuine Office Open XML spreadsheet package. Values are inline strings by
+ * default. Only explicitly opted-in verified metric columns can emit safe,
+ * canonical nonnegative integer cells; identifiers and leading-zero values
+ * remain literal strings. No PDF value is ever interpreted as a formula or date.
  */
 export type PdfXlsxTable = {
   name: string;
