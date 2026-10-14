@@ -70,6 +70,20 @@ jobs:
           npm run lint
           npm audit --audit-level=high
           git checkout -- package.json package-lock.json eslint.config.mjs
+      - name: Test dependency-free argparse 2 for Mammoth
+        shell: bash
+        if: always()
+        run: |
+          set -euo pipefail
+          git checkout -- package.json package-lock.json eslint.config.mjs
+          npm pkg set 'overrides.mammoth.argparse=2.0.1'
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+          npm ci --no-audit --no-fund
+          npm explain sprintf-js || true
+          npm audit --omit=dev --audit-level=high
+          node -e "const m=require('mammoth'); if(typeof m.convertToHtml!=='function')process.exit(1); console.log('Mammoth browser conversion API available')"
+          if [ -x node_modules/.bin/mammoth ]; then node_modules/.bin/mammoth --help > /dev/null; fi
+          git checkout -- package.json package-lock.json eslint.config.mjs
       - name: Check production advisory separately
         shell: bash
         run: |
