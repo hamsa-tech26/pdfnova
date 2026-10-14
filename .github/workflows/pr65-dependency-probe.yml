@@ -21,7 +21,8 @@ jobs:
         run: node --test vendor/next-eslint-glob/index.test.cjs
       - name: Propose local fast-glob replacement in temporary working tree
         run: |
-          npm pkg set 'overrides.fast-glob=file:vendor/next-eslint-glob'
+          npm pkg set 'devDependencies.fast-glob=file:vendor/next-eslint-glob'
+          npm pkg set 'overrides.fast-glob=$fast-glob'
           npm install --no-audit --no-fund
           npm ci --no-audit --no-fund
           npm ls fast-glob
