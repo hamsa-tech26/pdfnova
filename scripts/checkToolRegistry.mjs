@@ -66,7 +66,7 @@ function hrefRoutes(relativePath) {
 
 function sidebarRoutes() {
   const source = read("lib/tools/sidebarToolGroups.ts");
-  const slugs = [...source.matchAll(/^\\s+"([a-z0-9-]+)",?$/gm)]
+  const slugs = [...source.matchAll(/^\s+"([a-z0-9-]+)",?$/gm)]
     .map((match) => match[1]);
   const unique = new Set(slugs);
   if (unique.size !== slugs.length) {
