@@ -19,7 +19,8 @@ function makePage(page: number, offset = 0): LogicalTable {
       bounds: { x: xs[k] + (k === 6 && j % 2 ? 2 : 0) + offset,
         y: 600 - j * 24, width: Math.min(33, text.length * 4), height: 10 },
       font: { size: 10 }, rotation: 0,
-      extractionProvenance: { source: "native-pdf" as const, wordCount:1,\n        nativeWordCount:1, ocrWordCount:0, unknownWordCount:0, pageNumbers:[page] },
+      extractionProvenance: { source: "native-pdf" as const, wordCount:1,
+        nativeWordCount:1, ocrWordCount:0, unknownWordCount:0, pageNumbers:[page] },
     }));
     const pieces = [words.slice(0, 4), words.slice(4, 6),
       words.slice(6, 7), words.slice(7, 8), words.slice(8)];
@@ -33,7 +34,9 @@ function makePage(page: number, offset = 0): LogicalTable {
         text: chunk.map(w => w.text).join(" "),
         words: chunk, bounds: { x: chunk[0].bounds.x, y: words[0].bounds.y,
           width: 110, height: 10 }, confidence: 0.9,
-        extractionProvenance: { source: "native-pdf" as const,\n          wordCount:chunk.length, nativeWordCount:chunk.length,\n          ocrWordCount:0, unknownWordCount:0, pageNumbers:[page] },
+        extractionProvenance: { source: "native-pdf" as const,
+          wordCount:chunk.length, nativeWordCount:chunk.length,
+          ocrWordCount:0, unknownWordCount:0, pageNumbers:[page] },
       })),
     };
   });
