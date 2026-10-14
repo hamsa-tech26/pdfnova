@@ -64,7 +64,7 @@ describe("Release 37 independent positional and structural document scoring",()=
   });
   it("rejects overlapping reference spans and unbounded reference grids",()=>{
     const overlap=ref();
-    overlap.tables[0].cells[0].columnSpan=2;
+    Object.assign(overlap.tables[0].cells[0], {columnSpan:2});
     expect(()=>scoreRelease37Case(overlap,observed())).toThrow(/Overlapping reference/);
     const huge=ref();huge.tables[0].rowCount=10000;huge.tables[0].columnCount=500;
     expect(()=>scoreRelease37Case(huge,observed())).toThrow(/bounded dimensions/);
@@ -85,7 +85,7 @@ describe("Release 37 independent positional and structural document scoring",()=
   });
   it("rejects observed spans overlapping existing cells instead of rewarding geometry",()=>{
     const bad=observed();
-    bad.tables[0].rows[0].cells[0].columnSpan=2;
+    Object.assign(bad.tables[0].rows[0].cells[0], {columnSpan:2});
     expect(scoreRelease37Case(ref(),bad).structure.pct).toBeLessThan(100);
   });
 
