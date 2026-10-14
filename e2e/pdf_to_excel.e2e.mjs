@@ -56,6 +56,72 @@ test("browser downloads real XLSX from an independent five-column PDF", async ({
     path,
   ], {encoding:"utf8"}).trim();
   expect(independentlyParsed).toContain("OPENPYXL_OK");
+
+  // A real successful conversion must remain readable in BOTH theme modes.
+  // Browser-computed colors detect failures caused by conflicting dark styles.
+  await expect(page.getByRole("heading", {name: "Excel workbook created"})).toBeVisible();
+  await expect(page.getByText("Extraction review — not certified")).toBeVisible();
+  const themeToggle = page.getByRole("button", {name: "Toggle theme"});
+  const html = page.locator("html");
+  if (await html.evaluate(element => element.classList.contains("dark"))) {
+    await themeToggle.click();
+  }
+  await expect(html).not.toHaveClass(/dark/);
+
+  async function inspectResultContrast() {
+    return page.evaluate(() => {
+      const title = [...document.querySelectorAll("h2")].find(
+        element => element.textContent?.trim() === "Excel workbook created");
+      const reviewTitle = [...document.querySelectorAll("p")].find(
+        element => element.textContent?.trim() === "Extraction review — not certified");
+      if (!title || !reviewTitle || !reviewTitle.parentElement) {
+        throw new Error("Missing success/review result panel");
+      }
+      const reviewPanel = reviewTitle.parentElement;
+      const reviewMessage = reviewTitle.nextElementSibling;
+      if (!reviewMessage) throw new Error("Missing review warning");
+      function rgba(value) {
+        const canvas = document.createElement("canvas");
+        canvas.width = canvas.height = 1;
+        const context = canvas.getContext("2d");
+        if (!context) throw new Error("Canvas color support unavailable");
+        context.fillStyle = value;
+        context.fillRect(0, 0, 1, 1);
+        return [...context.getImageData(0, 0, 1, 1).data].slice(0, 3);
+      }
+      function luminance(color) {
+        return rgba(color).map(x => {
+          const value = x / 255;
+          return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+        }).reduce((sum, component, index) =>
+          sum + component * [0.2126, 0.7152, 0.0722][index], 0);
+      }
+      function ratio(fg, bg) {
+        const a = luminance(fg), b = luminance(bg);
+        return (Math.max(a, b) + 0.05) / (Math.min(a, b) + 0.05);
+      }
+      const background = getComputedStyle(reviewPanel).backgroundColor;
+      return {
+        titleColor: getComputedStyle(title).color,
+        successGradient: getComputedStyle(title.closest("section")).backgroundImage,
+        reviewBackground: background,
+        reviewTitleContrast: ratio(getComputedStyle(reviewTitle).color, background),
+        reviewTextContrast: ratio(getComputedStyle(reviewMessage).color, background),
+      };
+    });
+  }
+  const lightStyles = await inspectResultContrast();
+  await themeToggle.click();
+  await expect(html).toHaveClass(/dark/);
+  const darkStyles = await inspectResultContrast();
+  for (const result of [lightStyles, darkStyles]) {
+    expect(result.reviewTitleContrast).toBeGreaterThanOrEqual(4.5);
+    expect(result.reviewTextContrast).toBeGreaterThanOrEqual(4.5);
+  }
+  expect(lightStyles.titleColor).not.toBe(darkStyles.titleColor);
+  expect(lightStyles.successGradient).not.toBe(darkStyles.successGradient);
+  expect(lightStyles.reviewBackground).not.toBe(darkStyles.reviewBackground);
+
 });
 
 
