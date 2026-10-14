@@ -18,7 +18,7 @@ jobs:
       - name: Install current branch cleanly
         run: npm ci --no-audit --no-fund
       - name: Test constrained Next ESLint glob adapter
-        run: node --test vendor/next-eslint-glob/index.test.cjs
+        run: node --test vendor/next-eslint-glob/index.node.cjs
       - name: Propose local fast-glob replacement in temporary working tree
         run: |
           npm pkg set 'devDependencies.fast-glob=file:vendor/next-eslint-glob'
