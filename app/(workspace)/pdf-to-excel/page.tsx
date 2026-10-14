@@ -104,7 +104,7 @@ export default function PdfToExcelPage() {
       tips={[
         { title: "Text-selectable PDF only", description: "Scanned or mixed image-only PDFs cannot be converted with this version." },
         { title: "Verify the spreadsheet", description: "Rows, columns, values, and headings must be checked against the source document before professional use." },
-        { title: "Preserves literal text", description: "Cell data remains text, including leading zeros and formula-like strings. No formulas are executed." },
+        { title: "Safe cell types", description: "Identifiers, leading zeros and formula-like inputs remain text. Only verified household and FHTC count columns in supported layouts become Excel numbers; no PDF content is executed as formulas." },
       ]}
       faqs={[
         { question: "Will my PDF be uploaded?", answer: "No. Extraction and XLSX generation happen in the browser." },
@@ -133,7 +133,7 @@ export default function PdfToExcelPage() {
           onClick={convert} disabled={busy}/>}
         {!busy && output && <>
           <SuccessCard title="Excel workbook created"
-            description="Every exported value is text. Please review it against the original PDF."
+            description="Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."
             fileName={outputName} onDownloadAgain={() => saveAs(output, outputName)}
             onStartAgain={reset} downloadLabel="Download XLSX Again"
             resetLabel="Convert Another PDF"/>
