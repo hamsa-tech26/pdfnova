@@ -1,0 +1,11 @@
+{
+  "name": "fast-glob",
+  "version": "3.3.4-kukureku.0",
+  "private": true,
+  "description": "Constrained Node 24 directory glob compatibility for Next ESLint plugin",
+  "main": "index.cjs",
+  "engines": {
+    "node": ">=24"
+  },
+  "license": "MIT"
+}
