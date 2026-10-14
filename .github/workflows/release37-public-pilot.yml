@@ -1,0 +1,62 @@
+name: Engine V4 Public Document Pilot
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/downloadRelease37PublicPilot.mjs"
+      - "e2e/release37_public.pilot.mjs"
+      - "playwright.pilot.config.mjs"
+      - "benchmarks/release37/**"
+      - ".github/workflows/release37-public-pilot.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release37-public-pilot-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  published-document-intake:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+
+      - name: Confirm formal V4 Stable gate remains BLOCKED without real-world evidence
+        run: |
+          node --input-type=module -e '
+          import {readFileSync} from "node:fs";
+          import {checkRelease37Gate} from "./scripts/checkRelease37Gate.mjs";
+          const report = JSON.parse(readFileSync("benchmarks/release37/report.json", "utf8"));
+          const outcome = checkRelease37Gate(report);
+          console.log(JSON.stringify({formalV4Gate:outcome.status, acceptedDocuments:outcome.documentCount, failureCount:outcome.failures.length}));
+          if (outcome.status !== "BLOCKED" || outcome.documentCount !== 0) process.exit(1);
+          '
+
+      - name: Download USGS source to ephemeral runner and derive first 3 real pages
+        run: node scripts/downloadRelease37PublicPilot.mjs
+
+      - name: Analyze publisher PDF pages in actual Chromium V4 Inspector
+        run: npx playwright test --config=playwright.pilot.config.mjs
+
+      # Deliberately exclude source PDF bytes and raw text/Inspector output.
+      - name: Upload bounded metadata-only diagnostic report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release37-public-usgs-diagnostic
+          path: |
+            benchmarks/release37/reports/public-usgs-pilot.json
+            benchmarks/release37/private/usgs-public-pilot-metadata.json
+          retention-days: 7
+          if-no-files-found: warn
