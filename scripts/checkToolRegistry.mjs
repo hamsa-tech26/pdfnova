@@ -64,6 +64,20 @@ function hrefRoutes(relativePath) {
   );
 }
 
+function sidebarRoutes() {
+  const source = read("lib/tools/sidebarToolGroups.ts");
+  const slugs = [...source.matchAll(/^\\s+"([a-z0-9-]+)",?$/gm)]
+    .map((match) => match[1]);
+  const unique = new Set(slugs);
+  if (unique.size !== slugs.length) {
+    throw new Error("Sidebar tool groups contain duplicate tool routes.");
+  }
+  if (!slugs.length) {
+    throw new Error("Sidebar tool registry is empty.");
+  }
+  return sorted(slugs.map((slug) => `/${slug}`));
+}
+
 function sitemapRoutes() {
   const source = read("app/sitemap.ts");
 
@@ -139,6 +153,7 @@ const registries = [
   ["SEO registry", seoRoutes()],
   ["Homepage tool cards", hrefRoutes("components/ToolsSection.tsx")],
   ["Dashboard tool cards", hrefRoutes("app/(workspace)/dashboard/page.tsx")],
+  ["Sidebar tool navigation", sidebarRoutes()],
   ["Sitemap", sitemapRoutes()],
   ["IndexNow route registry", indexNowRoutes],
 ];
@@ -151,5 +166,5 @@ assertToolLayouts(liveRoutes);
 assertHomepageCount(liveRoutes.length);
 
 console.log(
-  `Tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sitemap, and IndexNow.`,
+  `Tool registry check passed: ${liveRoutes.length} live tools are synchronized across routes, SEO, homepage, dashboard, sidebar, sitemap, and IndexNow.`,
 );
