@@ -22,7 +22,7 @@ async function fixtureReport() {
 
   const artifact =
     createDocumentArtifact(
-      new Blob([bytes], {
+      new Blob([new Uint8Array(bytes)], {
         type: "application/pdf",
       }),
       {
