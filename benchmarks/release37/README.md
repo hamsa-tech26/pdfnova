@@ -10,6 +10,19 @@ The current Golden Document workflow remains the release-level, privacy-preservi
 
 The public OCR PDF tool is currently **English-only**. Hindi/Bengali recognition and reference datasets are future work; the formal gate correctly remains blocked until those are implemented, evaluated and approved. Do **not** change product claims to V4 Stable merely because unit tests pass.
 
+## Public USGS processing pilot (metadata-only, not a corpus document)
+
+A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.yml`, runs on changes to this pilot. It fetches one USGS Scientific Investigations Report from the [USGS Publications Warehouse](https://pubs.usgs.gov/publication/sir20245103), copies only its first three pages in an ephemeral runner, analyzes those pages using the current browser V4 Inspector, and uploads only bounded page-count, hash, routing, and timing metadata.
+
+- `scripts/downloadRelease37PublicPilot.mjs` refuses non-USGS redirects, non-PDF responses and inputs over 25 MB. The input/derivative PDF and complete Inspector JSON are **not uploaded** to GitHub Actions artifacts.
+- `e2e/release37_public.pilot.mjs` validates actual Inspector execution, **not** reference-correct OCR or table extraction. It does **not** expect the old PR #39 `release37Audit` engine field, which was intentionally not migrated into production.
+- `benchmarks/release37/candidates.json` is a source-discovery tracker, not approved rights or reviewed reference data.
+- The USGS generally treats its authored reports as U.S. public-domain works, but third-party photos, graphics, and other inclusions may have separate rights. The pilot does not grant itself rights approval; report-specific human review is still mandatory before formally accepting or redistributing materials.
+- This three-page excerpt provides **zero credit toward the 20 distinct, independently annotated real-document requirement**. It has no independent reference annotations, tested accuracy percentages, or multilingual evidence.
+- The formal `npm run qualify:v4:stable` command is expected to exit nonzero with `BLOCKED`; the pilot workflow confirms that expectation on the no-evidence baseline.
+
+You can reproduce the non-qualifying diagnostic with `node scripts/downloadRelease37PublicPilot.mjs` and `npx playwright test --config=playwright.pilot.config.mjs` after installing the browser runner and Chromium. This is not required for the user to run on their laptop; CI executes it on an ephemeral machine.
+
 ## Local-only usage
 
 1. Work with licensed, public-domain, properly consented or safely de-identified PDFs. Obtain human-confirmed usage rights and separately reviewed reference annotations. Never add document bytes or identifiable text to GitHub, commit messages, CI artifacts, or issue comments.
