@@ -1290,6 +1290,44 @@ function convertBlockToTableCandidate(
   };
 }
 
+/**
+ * Recover captioned numeric tables swallowed by a large prose block.
+ * This never changes the existing default candidate thresholds for prose.
+ * Detected columns, logical rows, and cells are still independently gated.
+ */
+function createCaptionAnchoredCandidates(blocks: PdfVisualBlock[]): PdfVisualBlock[] {
+  const candidates: PdfVisualBlock[] = [];
+  for (const block of blocks) {
+    if (block.type !== "paragraph" || block.lines.length < 6) continue;
+    for (let start=0;start<block.lines.length;start+=1) {
+      if (!/^table\s+\d{1,3}\s*[.:]\s/i.test(block.lines[start]?.text.trim() ?? "")) continue;
+      const remaining=block.lines.slice(start+1,Math.min(start+26,block.lines.length));
+      const next=remaining.findIndex(line=>/^table\s+\d{1,3}\s*[.:]\s/i.test(line.text.trim()));
+      const lines=(next<0?remaining:remaining.slice(0,next)).slice(0,22);
+      if (lines.length<4) continue;
+      const numericRows=lines.filter(line=>{
+        const words=[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x);
+        const numeric=words.filter(word=>/^[-+]?\d[\d,.]*(?:%|[)])?$/.test(word.text.trim()));
+        const spread=words.length<3?0:words[words.length-1].bounds.x-words[0].bounds.x;
+        return numeric.length>=2 && spread>=85;
+      }).length;
+      // A caption or two dates in running prose cannot create a table.
+      if(numericRows<2)continue;
+      const minX=Math.min(...lines.map(l=>l.bounds.x));
+      const minY=Math.min(...lines.map(l=>l.bounds.y));
+      const maxX=Math.max(...lines.map(l=>l.bounds.x+l.bounds.width));
+      const maxY=Math.max(...lines.map(l=>l.bounds.y+l.bounds.height));
+      candidates.push({
+        id:"caption-table-"+block.pageNumber+"-"+block.id+"-"+start,
+        type:"paragraph",pageNumber:block.pageNumber,
+        bounds:{x:minX,y:minY,width:maxX-minX,height:maxY-minY},
+        lines,text:lines.map(l=>l.text).join(" "),confidence:block.confidence,
+      });
+    }
+  }
+  return candidates;
+}
+
 export function detectTableRegionsForPage(
   blocks: PdfVisualBlock[],
   options?: TableRegionDetectorOptions,
@@ -1320,16 +1358,23 @@ const candidateBlocks = [
   ...blocks,
   ...crossBlockCandidates,
   ...ocrCrossBlockCandidates,
+  ...createCaptionAnchoredCandidates(blocks),
 ];
 
-  const regions =
-    candidateBlocks.map((block) => ({
-      block,
-      analysis: analyzeBlock(
-        block,
-        resolvedOptions,
-      ),
-    }));
+  const regions=candidateBlocks.map(block=>{
+    const analysis=analyzeBlock(block,resolvedOptions);
+    // Only isolated source-captioned, numeric multi-row grids qualify for
+    // this scoped recovery; normal prose scoring is unchanged.
+    if(block.id.startsWith("caption-table-") &&
+       analysis.breakdown.alignment.score>=16 &&
+       analysis.totalScore>=30){
+      return {block,analysis:{
+        ...analysis,isTable:true,
+        totalScore:Math.max(analysis.totalScore,resolvedOptions.tableThreshold),
+      }};
+    }
+    return {block,analysis};
+  });
 
 const scoredTableRegions =
   regions.filter(
