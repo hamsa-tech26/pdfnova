@@ -41,6 +41,30 @@ The **full original PDF** (not a three-page derivative excerpt) must be independ
 
 This diagnostic can be repeated via GitHub CI without Vercel deployments or a user's local laptop. Artifacts contain only the bounded diagnostic JSON, publisher metadata, and unapproved reviewer queue. The three source documents must not be reported as `3/20` approved until the independent review and ground-truth requirements pass.
 
+## Phase 10.20 — Blind original-PDF table-reference intake (Release 69)
+
+The live Engine V4 Inspector output **must never be used to generate expected cell contents or to decide the true reference table geometry**. A reviewer should examine an authorized **original full PDF** separately, identify its actual tables, and manually annotate all cells, including empty cells. This new tooling only prepares an EMPTY, unapproved draft and structurally checks a finished reference.
+
+1. Obtain a legally usable full real-world original PDF and verify that all third-party content rights are suitable. Place it privately at \`benchmarks/release37/private/<id>.pdf\` (replace \`<id>\` with a safe unique document ID). Do not use the derivative three-page pilot excerpts to claim another independent source document.
+2. Independently inspect the original PDF WITHOUT reading the V4 Inspector's table predictions. Prepare \`benchmarks/release37/private/<id>-layout.json\` with only the human-observed table layouts. Example:
+
+\`\`\`json
+{
+  "tables": [
+    { "pageNumber": 14, "rowCount": 4, "columnCount": 3 }
+  ]
+}
+\`\`\`
+
+3. Execute \`npm run v4:blind-reference -- <id>\` **locally**. The script validates the source signature, actual PDF page count, privacy path/symlinks and input bounds, hashes original PDF bytes, then creates \`<id>-reference.draft.json\` with every cell \`"text": null\`. It never opens a previous Inspector result. It refuses to overwrite an existing draft or run in CI.
+4. A first human annotator uses the source PDF to fill every \`text\` value. Even truly empty cells require \`"text": ""\`. For source-visible merged cells, put \`rowSpan\` / \`columnSpan\` on the anchor cell and remove all corresponding covered slots. Do not copy text, rows, cell order or merge spans from V4.
+5. A **different** reviewer cross-checks *every table and cell against the original source PDF*, corrects errors, and approves the reference. Update \`provenance\` to \`INDEPENDENT_REFERENCE_REVIEW\` and set the \`review\` fields: distinct \`annotatorId\` / \`reviewerId\`, ISO \`reviewedAt\` date, \`sourceInspected: true\`, \`reviewerApproved: true\`, \`method: "SOURCE_PDF_BLIND_TO_ENGINE_OUTPUT"\`. Rename the finished reference to \`<id>-reference.json\` (keep all bytes private).
+6. Export actual Inspector JSON from the SAME original source PDF into the private directory. Prepare the existing \`private/manifest.json\`, making \`id\`, source SHA-256, \`reviewedBy\`, \`reviewedAt\` and original file locations match the completed reviewed reference.
+7. Run \`npm run benchmark:v4:corpus\` locally. A reference now **fails closed** if draft/null, lacks independent review, has duplicated or missing cell slots, mismatches the original source hash, or disagrees with the manifest reviewer/date. A structurally valid attestation enables **scoring**, not automatic V4 Stable certification. It is still incumbent on the human reviewer to confirm the truth of the attestation.
+8. Finally check \`npm run qualify:v4:stable\`; the formal 20-document, language, error, performance and cancellation gate remains BLOCKED until independently measured full evidence exists.
+
+**Privacy:** only the local \`benchmarks/release37/private/\` folder contains original PDFs, raw engine outputs, private annotation text, or reviewer identities. This folder and score-report folder are gitignored; do not upload them to GitHub artifacts. The public 3-document USGS CI pilot remains diagnostic and contributes **0/20** to formal quality evidence.
+
 ## Local-only usage
 
 1. Work with licensed, public-domain, properly consented or safely de-identified PDFs. Obtain human-confirmed usage rights and separately reviewed reference annotations. Never add document bytes or identifiable text to GitHub, commit messages, CI artifacts, or issue comments.
