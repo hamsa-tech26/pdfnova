@@ -23,6 +23,24 @@ A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.ym
 
 You can reproduce the non-qualifying diagnostic with `node scripts/downloadRelease37PublicPilot.mjs` and `npx playwright test --config=playwright.pilot.config.mjs` after installing the browser runner and Chromium. This is not required for the user to run on their laptop; CI executes it on an ephemeral machine.
 
+## Current three-document diagnostic queue (15 October 2026)
+
+The public pilot now downloads **three distinct published USGS source PDFs** to ephemeral GitHub CI, rather than assuming the first document's first pages adequately test tables:
+
+| Source | Original publisher PDF | Original pages selected for diagnostic | Review target |
+| --- | --- | --- | --- |
+| USGS SIR 2024-5103 | `https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf` | 1–3 | Native and introductory layouts |
+| USGS FS 2024-3013 | `https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf` | 1–2 | Two-page factsheet with graphics and multiple reading areas |
+| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 17, 18 | Real published table layouts, including multi-column cells |
+
+Sources are declared in `benchmarks/release37/pilot-sources.json`. `scripts/downloadRelease37PublicPilot.mjs` verifies HTTPS USGS-only sources, actual PDF signatures, original SHA-256, unique source bytes, bounded sizes, and selected page validity. `e2e/release37_public.pilot.mjs` independently processes each excerpt in browser and saves **numbers/statuses only**; no PDF or raw Inspector JSON is an uploaded artifact.
+
+`scripts/createRelease37ReviewQueue.mjs` reads the metadata and generates `benchmarks/release37/reports/review-queue.json`. Its `rightsConfirmed` and `independentReferenceReview` remain **false**. The queue is a list of tasks for a genuinely independent reviewer, **not** an automatically approved annotation. The workflow asserts all three pilots have **zero acceptance credit**.
+
+The **full original PDF** (not a three-page derivative excerpt) must be independently annotated and rights-reviewed before being entered into `benchmark:v4:corpus`; subset hashes never count as independent additional documents. Actual English OCR errors, scanned documents, rotated pages, complex tables, Hindi/Bengali recognition and full-document performance are separate pending objectives. The product's OCR is still English-only.
+
+This diagnostic can be repeated via GitHub CI without Vercel deployments or a user's local laptop. Artifacts contain only the bounded diagnostic JSON, publisher metadata, and unapproved reviewer queue. The three source documents must not be reported as `3/20` approved until the independent review and ground-truth requirements pass.
+
 ## Local-only usage
 
 1. Work with licensed, public-domain, properly consented or safely de-identified PDFs. Obtain human-confirmed usage rights and separately reviewed reference annotations. Never add document bytes or identifiable text to GitHub, commit messages, CI artifacts, or issue comments.
