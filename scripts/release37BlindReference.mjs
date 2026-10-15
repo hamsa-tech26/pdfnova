@@ -55,7 +55,7 @@ export function makeRelease37BlindReferenceDraft({id,originalPdfSha256,sourcePag
   };
 }
 
-export function validateRelease37ReviewedReference(reference,actualPdfHash,entry){
+export function validateRelease37ReviewedReference(reference,actualPdfHash,entry,actualPageCount=null){
   const errors=[];
   if(reference?.schema!==BLIND_REFERENCE_SCHEMA ||
      reference?.provenance!=="INDEPENDENT_REFERENCE_REVIEW")
@@ -79,6 +79,10 @@ export function validateRelease37ReviewedReference(reference,actualPdfHash,entry
     errors.push("Manifest reviewer claim differs from reviewed source evidence.");
   if(!Number.isSafeInteger(reference?.sourcePageCount)||reference.sourcePageCount<1||reference.sourcePageCount>500)
     errors.push("Original PDF page-count evidence missing or invalid.");
+  if(actualPageCount!==null&&(
+       !Number.isSafeInteger(actualPageCount)||
+       reference?.sourcePageCount!==actualPageCount))
+    errors.push("Reviewed page count differs from parsed original PDF.");
   if(!Array.isArray(reference?.tables)||!reference.tables.length||reference.tables.length>40)
     errors.push("Reviewed tables must be present.");
   else {
