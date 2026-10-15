@@ -39,17 +39,10 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
     expect(result.tableRegions.some(r=>r.block.id.startsWith("caption-table-"))).toBe(true);
     expect(result.tableRegions.some(r=>r.block.id.startsWith("caption-table-")&&r.analysis.isTable)).toBe(true);
   });
-  it("keeps the original mixed block's score unchanged by candidate recovery",()=>{
-    const block=mixedPage();
-    const withCaption=detectTableRegionsForPage([block]);
-    const original=withCaption.regions.find(r=>r.block.id==="mixed-native-report");
-    const baselineBlock=makeBlock(block.lines.map(line=>(
-      line.text.startsWith("Table 4.")
-        ? {...line,text:"Report section: number of tagged fish"}
-        : line
-    )));
-    const baseline=detectTableRegionsForPage([baselineBlock]).regions.find(r=>r.block.id==="mixed-native-report");
-    expect(original?.analysis.totalScore).toBe(baseline?.analysis.totalScore);
+  it("excludes the oversized prose parent to prevent duplicate cross-page continuation",()=>{
+    const result=detectTableRegionsForPage([mixedPage()]);
+    expect(result.regions.some(r=>r.block.id==="mixed-native-report")).toBe(false);
+    expect(result.tableRegions.filter(r=>r.block.id.startsWith("caption-table-"))).toHaveLength(1);
   });
   it("rejects ordinary paragraphs that merely mention Table 4 in their text",()=>{
     const lines=Array.from({length:16},(_,i)=>makeLine(i,[
