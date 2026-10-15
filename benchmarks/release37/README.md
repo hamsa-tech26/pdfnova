@@ -12,7 +12,7 @@ The public OCR PDF tool is currently **English-only**. Hindi/Bengali recognition
 
 ## Public USGS processing pilot (metadata-only, not a corpus document)
 
-A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.yml`, runs on changes to this pilot. It fetches one USGS Scientific Investigations Report from the [USGS Publications Warehouse](https://pubs.usgs.gov/publication/sir20245103), copies only its first three pages in an ephemeral runner, analyzes those pages using the current browser V4 Inspector, and uploads only bounded page-count, hash, routing, and timing metadata.
+A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.yml`, runs on changes to this pilot. It fetches three independently sourced USGS publications from the [USGS Publications Warehouse](https://pubs.usgs.gov/), creates bounded diagnostic excerpts in an ephemeral runner, analyzes those pages using the current browser V4 Inspector, and uploads only page-count, hash, routing, and timing metadata.
 
 - `scripts/downloadRelease37PublicPilot.mjs` refuses non-USGS redirects, non-PDF responses and inputs over 25 MB. The input/derivative PDF and complete Inspector JSON are **not uploaded** to GitHub Actions artifacts.
 - `e2e/release37_public.pilot.mjs` validates actual Inspector execution, **not** reference-correct OCR or table extraction. It does **not** expect the old PR #39 `release37Audit` engine field, which was intentionally not migrated into production.
@@ -31,7 +31,9 @@ The public pilot now downloads **three distinct published USGS source PDFs** to 
 | --- | --- | --- | --- |
 | USGS SIR 2024-5103 | `https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf` | 1–3 | Native and introductory layouts |
 | USGS FS 2024-3013 | `https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf` | 1–2 | Two-page factsheet with graphics and multiple reading areas |
-| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 17, 18 | Real published table layouts, including multi-column cells |
+| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 19, 20 | A simple deployment table, a grouped detection table and a hierarchical travel-time table |
+
+The original OFR report's table of contents identifies **five tables** on PDF pages **14, 17, 18, 19 and 20**. They are inventoried, but not annotated, in `benchmarks/release37/public-table-inventory.json`. The reviewer must independently confirm all five, their geometry, and any additional content in the original 30-page PDF. `scripts/checkRelease37PublicTableInventory.mjs` binds this **zero-credit** inventory to the original source SHA-256 and current public pilot metadata; it cannot make the annotations approved.
 
 Sources are declared in `benchmarks/release37/pilot-sources.json`. `scripts/downloadRelease37PublicPilot.mjs` verifies HTTPS USGS-only sources, actual PDF signatures, original SHA-256, unique source bytes, bounded sizes, and selected page validity. `e2e/release37_public.pilot.mjs` independently processes each excerpt in browser and saves **numbers/statuses only**; no PDF or raw Inspector JSON is an uploaded artifact.
 
