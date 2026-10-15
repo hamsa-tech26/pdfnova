@@ -45,7 +45,7 @@ export function makeRelease37BlindReferenceDraft({id,originalPdfSha256,sourcePag
     provenance:"DRAFT_NOT_REVIEWED",
     review:{
       annotatorId:"",reviewerId:"",reviewedAt:"",
-      sourceInspected:false,reviewerApproved:false,
+      sourceInspected:false,reviewerApproved:false,allSourceTablesReviewed:false,
       method:"SOURCE_PDF_BLIND_TO_ENGINE_OUTPUT"
     },
     // Remove covered non-anchor slots and add rowSpan / columnSpan to the
@@ -69,6 +69,7 @@ export function validateRelease37ReviewedReference(reference,actualPdfHash,entry
   const reviewer=typeof review?.reviewerId==="string"?review.reviewerId.trim():"";
   if(annotator.length<3||reviewer.length<3||annotator===reviewer ||
      review?.sourceInspected!==true||review?.reviewerApproved!==true ||
+     review?.allSourceTablesReviewed!==true ||
      review?.method!=="SOURCE_PDF_BLIND_TO_ENGINE_OUTPUT"||
      !DATE.test(String(review?.reviewedAt??""))||
      Number.isNaN(Date.parse(review?.reviewedAt??"")))
@@ -76,6 +77,8 @@ export function validateRelease37ReviewedReference(reference,actualPdfHash,entry
   if(entry?.reviewedBy!==reviewer||entry?.reviewedAt!==review?.reviewedAt ||
      entry?.independentReferenceReview!==true)
     errors.push("Manifest reviewer claim differs from reviewed source evidence.");
+  if(!Number.isSafeInteger(reference?.sourcePageCount)||reference.sourcePageCount<1||reference.sourcePageCount>500)
+    errors.push("Original PDF page-count evidence missing or invalid.");
   if(!Array.isArray(reference?.tables)||!reference.tables.length||reference.tables.length>40)
     errors.push("Reviewed tables must be present.");
   else {
