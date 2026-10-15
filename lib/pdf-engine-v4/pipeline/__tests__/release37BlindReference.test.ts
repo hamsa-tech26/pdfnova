@@ -21,10 +21,10 @@ function annotated(){
     reviewedAt:"2026-10-15",sourceInspected:true,reviewerApproved:true,
     allSourceTablesReviewed:true
   });
-  ref.tables[0].cells[0].text="Serial";
-  ref.tables[0].cells[1].text="Amount";
-  ref.tables[0].cells[2].text="1";
-  ref.tables[0].cells[3].text="";
+  Object.assign(ref.tables[0].cells[0],{text:"Serial"});
+  Object.assign(ref.tables[0].cells[1],{text:"Amount"});
+  Object.assign(ref.tables[0].cells[2],{text:"1"});
+  Object.assign(ref.tables[0].cells[3],{text:""});
   return ref;
 }
 describe("Engine V4 source-first blind table reference intake",()=>{
@@ -89,7 +89,7 @@ describe("Engine V4 source-first blind table reference intake",()=>{
     Object.assign(head,{columnSpan:2});
     ref.tables[0].cells.splice(1,1);
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("REVIEW_METADATA_VALID");
-    ref.tables[0].cells.push({rowIndex:0,columnIndex:1,text:"duplicated"});
+    ref.tables[0].cells.push(Object.assign({},ref.tables[0].cells[0],{rowIndex:0,columnIndex:1}));
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("BLOCKED");
   });
   it("bounds unsafe reference sizes and source page numbers",()=>{
