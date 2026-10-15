@@ -18,7 +18,8 @@ function annotated(){
   ref.provenance="INDEPENDENT_REFERENCE_REVIEW";
   Object.assign(ref.review,{
     annotatorId:"Annotator One",reviewerId:"Reviewer Two",
-    reviewedAt:"2026-10-15",sourceInspected:true,reviewerApproved:true
+    reviewedAt:"2026-10-15",sourceInspected:true,reviewerApproved:true,
+    allSourceTablesReviewed:true
   });
   ref.tables[0].cells[0].text="Serial";
   ref.tables[0].cells[1].text="Amount";
@@ -32,7 +33,7 @@ describe("Engine V4 source-first blind table reference intake",()=>{
     expect(d.schema).toBe(BLIND_REFERENCE_SCHEMA);
     expect(d.provenance).toBe("DRAFT_NOT_REVIEWED");
     expect(d.tables[0].cells).toHaveLength(4);
-    expect(d.tables[0].cells.every((x:any)=>x.text===null)).toBe(true);
+    expect(d.tables[0].cells.every(x=>x.text===null)).toBe(true);
     expect(validateRelease37ReviewedReference(d,PDF_HASH,validEntry()).status).toBe("BLOCKED");
   });
   it("blocks unreviewed or copied placeholders despite fake manifest approval",()=>{
@@ -75,7 +76,7 @@ describe("Engine V4 source-first blind table reference intake",()=>{
   it("supports legitimate merge spans only when all covered slots are explicitly represented",()=>{
     const ref=annotated();
     const head=ref.tables[0].cells[0];
-    head.columnSpan=2;
+    Object.assign(head,{columnSpan:2});
     ref.tables[0].cells.splice(1,1);
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("REVIEW_METADATA_VALID");
     ref.tables[0].cells.push({rowIndex:0,columnIndex:1,text:"duplicated"});
