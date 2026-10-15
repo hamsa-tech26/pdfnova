@@ -34,10 +34,10 @@
       "sourceUrl": "https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf",
       "selectedPageNumbers": [
         14,
-        17,
-        18
+        19,
+        20
       ],
-      "reviewFocus": "genuine multi-column tables, published pages 14,17,18",
+      "reviewFocus": "original source PDF pages 14,19,20: simple tabular deployments, grouped detection counts, hierarchical travel-time headers; diagnostic only",
       "rightsStatus": "REVIEW_REQUIRED"
     }
   ]
