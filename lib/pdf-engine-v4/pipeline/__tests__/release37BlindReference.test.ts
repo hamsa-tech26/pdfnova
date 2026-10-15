@@ -59,6 +59,16 @@ describe("Engine V4 source-first blind table reference intake",()=>{
     ref.review.reviewerApproved=true;
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,{...validEntry(),reviewedAt:"2026-10-14"}).status).toBe("BLOCKED");
   });
+  it("never measures a selected-only table subset as complete-source accuracy",()=>{
+    const ref=annotated();
+    ref.review.allSourceTablesReviewed=false;
+    expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("BLOCKED");
+  });
+  it("rejects missing full-original PDF page count in reviewed metadata",()=>{
+    const ref=annotated();
+    ref.sourcePageCount=undefined;
+    expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("BLOCKED");
+  });
   it("blocks duplicate or missing cells and unsupported spans",()=>{
     const ref=annotated();
     ref.tables[0].cells.push({...ref.tables[0].cells[0]});
