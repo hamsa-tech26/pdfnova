@@ -1354,11 +1354,19 @@ const ocrCrossBlockCandidates =
     blocks,
   );
 
+const captionAnchoredCandidates=createCaptionAnchoredCandidates(blocks);
+const captionedSourceIds=new Set(
+  blocks.filter(block=>captionAnchoredCandidates.some(candidate=>
+    candidate.id.startsWith("caption-table-"+block.pageNumber+"-"+block.id+"-"),
+  )).map(block=>block.id),
+);
 const candidateBlocks = [
-  ...blocks,
+  // The broad prose parent must not be admitted as a false continuation
+  // alongside its caption-isolated table region on subsequent PDF pages.
+  ...blocks.filter(block=>!captionedSourceIds.has(block.id)),
   ...crossBlockCandidates,
   ...ocrCrossBlockCandidates,
-  ...createCaptionAnchoredCandidates(blocks),
+  ...captionAnchoredCandidates,
 ];
 
   const regions=candidateBlocks.map(block=>{
