@@ -8,6 +8,7 @@ on:
       - "e2e/release37_public.pilot.mjs"
       - "playwright.pilot.config.mjs"
       - "benchmarks/release37/**"
+      - "scripts/createRelease37ReviewQueue.mjs"
       - ".github/workflows/release37-public-pilot.yml"
   workflow_dispatch:
 
@@ -21,7 +22,7 @@ concurrency:
 jobs:
   published-document-intake:
     runs-on: ubuntu-latest
-    timeout-minutes: 25
+    timeout-minutes: 35
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -43,10 +44,10 @@ jobs:
           if (outcome.status !== "BLOCKED" || outcome.documentCount !== 0) process.exit(1);
           '
 
-      - name: Download USGS source to ephemeral runner and derive first 3 real pages
+      - name: Download three real USGS sources to ephemeral runner and derive bounded excerpts
         run: node scripts/downloadRelease37PublicPilot.mjs
 
-      - name: Analyze publisher PDF pages in actual Chromium V4 Inspector
+      - name: Analyze each actual publisher PDF in Chromium V4 Inspector
         run: npx playwright test --config=playwright.pilot.config.mjs
 
       # Deliberately exclude source PDF bytes and raw text/Inspector output.
@@ -54,9 +55,10 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: release37-public-usgs-diagnostic
+          name: release37-three-publication-diagnostics
           path: |
-            benchmarks/release37/reports/public-usgs-pilot.json
-            benchmarks/release37/private/usgs-public-pilot-metadata.json
+            benchmarks/release37/reports/*-diagnostic.json
+            benchmarks/release37/reports/review-queue.json
+            benchmarks/release37/private/*-metadata.json
           retention-days: 7
           if-no-files-found: warn
