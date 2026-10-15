@@ -31,6 +31,12 @@ for(const entry of config.sources){
     expect(Array.isArray(inspector.tables)).toBe(true);
     expect(inspector.ocrDecision).toBeTruthy();
     expect(inspector.processingTimes).toBeTruthy();
+    if(entry.id==="usgs-ofr20241025"){
+      // Publisher pages 14, 19, 20 each contain a labelled table.
+      // This is a table-presence smoke check, NOT an independently
+      // scored per-cell, per-row or V4 Stable accuracy qualification.
+      expect(inspector.tables.length).toBe(3);
+    }
     // Public debug payload is numeric/enum only, never PDF text or coordinates.
     const scores=Array.isArray(inspector.candidateRegionDiagnostics)
       ? inspector.candidateRegionDiagnostics.map(candidate=>({
