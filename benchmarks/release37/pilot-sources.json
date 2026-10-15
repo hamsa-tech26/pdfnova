@@ -1,0 +1,44 @@
+{
+  "status": "PILOT_ONLY_NOT_ANNOTATED",
+  "version": 1,
+  "acceptedCountCredit": 0,
+  "publisher": "U.S. Geological Survey",
+  "rightsGuidanceUrl": "https://pubs.usgs.gov/documentation/faq",
+  "sources": [
+    {
+      "id": "usgs-sir20245103",
+      "publicationPage": "https://pubs.usgs.gov/publication/sir20245103",
+      "sourceUrl": "https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf",
+      "selectedPageNumbers": [
+        1,
+        2,
+        3
+      ],
+      "reviewFocus": "native text and opening-pages layouts",
+      "rightsStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "id": "usgs-fs20243013",
+      "publicationPage": "https://pubs.usgs.gov/publication/fs20243013",
+      "sourceUrl": "https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf",
+      "selectedPageNumbers": [
+        1,
+        2
+      ],
+      "reviewFocus": "two-page, multi-column factsheet graphics and captions",
+      "rightsStatus": "REVIEW_REQUIRED"
+    },
+    {
+      "id": "usgs-ofr20241025",
+      "publicationPage": "https://pubs.usgs.gov/publication/ofr20241025",
+      "sourceUrl": "https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf",
+      "selectedPageNumbers": [
+        14,
+        17,
+        18
+      ],
+      "reviewFocus": "genuine multi-column tables, published pages 14,17,18",
+      "rightsStatus": "REVIEW_REQUIRED"
+    }
+  ]
+}
