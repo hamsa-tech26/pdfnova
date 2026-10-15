@@ -66,7 +66,7 @@ describe("Engine V4 source-first blind table reference intake",()=>{
   });
   it("rejects missing full-original PDF page count in reviewed metadata",()=>{
     const ref=annotated();
-    ref.sourcePageCount=undefined;
+    Object.assign(ref,{sourcePageCount:undefined});
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("BLOCKED");
   });
   it("blocks duplicate or missing cells and unsupported spans",()=>{
