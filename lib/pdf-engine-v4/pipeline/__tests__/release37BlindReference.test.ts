@@ -64,6 +64,11 @@ describe("Engine V4 source-first blind table reference intake",()=>{
     ref.review.allSourceTablesReviewed=false;
     expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry()).status).toBe("BLOCKED");
   });
+  it("rejects reference page counts that disagree with the independently parsed original PDF",()=>{
+    const ref=annotated();
+    expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry(),4).status).toBe("REVIEW_METADATA_VALID");
+    expect(validateRelease37ReviewedReference(ref,PDF_HASH,validEntry(),5).status).toBe("BLOCKED");
+  });
   it("rejects missing full-original PDF page count in reviewed metadata",()=>{
     const ref=annotated();
     Object.assign(ref,{sourcePageCount:undefined});
