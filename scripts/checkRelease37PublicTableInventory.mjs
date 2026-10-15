@@ -7,6 +7,8 @@ import {readFile} from "node:fs/promises";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
 
+/** @typedef {{id:string,sourceSha256:string,sourcePages:number,selectedPageNumbers:number[],referenceStatus:string,realDocumentCountCredit:number}} PublicSourceMetadata */
+/** @param {PublicSourceMetadata | null} [sourceMetadata] */
 export function checkRelease37PublicInventory(doc,sourceMetadata=null){
   const failures=[];
   if(doc?.schema!=="kukureku-v4-original-table-inventory-v1"||
