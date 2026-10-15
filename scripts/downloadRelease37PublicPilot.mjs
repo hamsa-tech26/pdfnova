@@ -1,57 +1,98 @@
 import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
-import {mkdir,writeFile} from "node:fs/promises";
+import {mkdir,readFile,writeFile} from "node:fs/promises";
 import path from "node:path";
 
-const SOURCE = "https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf";
-const RIGHTS = "https://pubs.usgs.gov/documentation/faq";
-const SOURCE_PAGE = "https://pubs.usgs.gov/publication/sir20245103";
-const MAX_BYTES = 25*1024*1024;
-const outputDir=path.resolve("benchmarks/release37/private");
-const sha=data=>createHash("sha256").update(data).digest("hex");
+const MAX_BYTES=25*1024*1024;
+const MAX_PILOTS=5;
+const pilotRoot=path.resolve("benchmarks/release37/private");
+const configPath=path.resolve("benchmarks/release37/pilot-sources.json");
+const sha=bytes=>createHash("sha256").update(bytes).digest("hex");
+
+function validatePilotConfig(config){
+  if(config?.status!=="PILOT_ONLY_NOT_ANNOTATED"||config.acceptedCountCredit!==0||
+      !Array.isArray(config.sources)||!config.sources.length||config.sources.length>MAX_PILOTS)
+    throw new Error("Unverified pilot manifest must contain 1–5 non-qualifying sources.");
+  const ids=new Set(),urls=new Set();
+  for(const candidate of config.sources){
+    if(!/^usgs-[a-z0-9-]{5,45}$/.test(candidate?.id)||ids.has(candidate.id))
+      throw new Error("Pilot ID invalid or duplicated.");
+    ids.add(candidate.id);
+    if(typeof candidate.sourceUrl!=="string"||urls.has(candidate.sourceUrl))
+      throw new Error("Source URL duplicated.");
+    urls.add(candidate.sourceUrl);
+    const uri=new URL(candidate.sourceUrl);
+    if(uri.protocol!=="https:"||uri.hostname!=="pubs.usgs.gov"||
+       uri.username||uri.password||!uri.pathname.endsWith(".pdf"))
+      throw new Error("Only approved HTTPS publisher PDF URLs are allowed.");
+    if(!Array.isArray(candidate.selectedPageNumbers)||!candidate.selectedPageNumbers.length||
+       candidate.selectedPageNumbers.length>3||
+       candidate.selectedPageNumbers.some(p=>!Number.isInteger(p)||p<1||p>200)||
+       new Set(candidate.selectedPageNumbers).size!==candidate.selectedPageNumbers.length)
+      throw new Error("Pilot must choose 1–3 unique, bounded PDF page numbers.");
+    if(candidate.rightsStatus!=="REVIEW_REQUIRED")
+      throw new Error("Pilot rights review may not be auto-approved.");
+  }
+}
 
 async function fetchPublisherPdf(url){
   const response=await fetch(url,{redirect:"follow",signal:AbortSignal.timeout(90000),headers:{
-    "User-Agent":"Kukureku-PDF-Release37-Public-Pilot/1.0 (research benchmark; no redistribution)",
-    "Accept":"application/pdf",
+    "User-Agent":"Kukureku-EngineV4-Research-Pilot/1.0 (no redistribution)",
+    "Accept":"application/pdf"
   }});
   if(!response.ok)throw new Error("Publisher returned HTTP "+response.status);
-  const redirected=new URL(response.url);
-  if(redirected.protocol!=="https:"||redirected.hostname!=="pubs.usgs.gov"){
-    throw new Error("Unexpected public source redirect host.");
-  }
-  const sizeHeader=Number(response.headers.get("content-length")??0);
-  if(sizeHeader>MAX_BYTES)throw new Error("Public source exceeds 25 MB benchmark limit.");
-  const chunks=[];let length=0;
+  const resolved=new URL(response.url);
+  if(resolved.protocol!=="https:"||resolved.hostname!=="pubs.usgs.gov")
+    throw new Error("Unexpected publisher redirect host.");
+  const declared=Number(response.headers.get("content-length")??0);
+  if(declared>MAX_BYTES)throw new Error("Publisher PDF exceeds 25 MB.");
+  if(!response.body)throw new Error("Publisher returned no PDF body.");
+  const chunks=[];let size=0;
   for await(const item of response.body){
-    const chunk=Buffer.from(item);
-    length+=chunk.length;
-    if(length>MAX_BYTES)throw new Error("Public source exceeds 25 MB benchmark limit.");
+    const chunk=Buffer.from(item);size+=chunk.length;
+    if(size>MAX_BYTES)throw new Error("Publisher PDF exceeds 25 MB.");
     chunks.push(chunk);
   }
   const bytes=Buffer.concat(chunks);
-  if(bytes.subarray(0,5).toString("ascii")!=="%PDF-")throw new Error("USGS response was not a PDF.");
+  if(bytes.subarray(0,5).toString("ascii")!=="%PDF-")
+    throw new Error("Publisher response was not PDF.");
   return bytes;
 }
 
-const source=await fetchPublisherPdf(SOURCE);
-const original=await PDFDocument.load(source,{ignoreEncryption:false});
-const pages=Math.min(3,original.getPageCount());
-if(pages<1)throw new Error("No pages in public PDF");
-const sampled=await PDFDocument.create();
-const indices=Array.from({length:pages},(_,i)=>i);
-for(const p of await sampled.copyPages(original,indices))sampled.addPage(p);
-const subset=Buffer.from(await sampled.save());
-await mkdir(outputDir,{recursive:true});
-await writeFile(path.join(outputDir,"usgs-public-pilot.pdf"),subset);
-const metadata={
-  id:"usgs-sir20245103-pilot",originalSourceUrl:SOURCE,publicationPage:SOURCE_PAGE,rightsGuidanceUrl:RIGHTS,
-  sourceSha256:sha(source),subsetSha256:sha(subset),
-  originalBytes:source.length,subsetBytes:subset.length,sourcePages:original.getPageCount(),
-  selectedPageNumbers:indices.map(i=>i+1),sourceType:"real published USGS report",
-  selection:"First three pages copied from a real publication into a derivative pilot PDF; NOT an independent source document",
-  rightsStatus:"PUBLISHER_GUIDANCE_CHECKED; REPORT-SPECIFIC THIRD-PARTY RIGHTS NOT INDEPENDENTLY REVIEWED; NO REDISTRIBUTION",
-  referenceStatus:"NOT_ANNOTATED",realDocumentCountCredit:0,isRelease37AcceptanceEvidence:false,
-};
-await writeFile(path.join(outputDir,"usgs-public-pilot-metadata.json"),JSON.stringify(metadata,null,2)+"\n");
-console.log(JSON.stringify(metadata));
+const config=JSON.parse(await readFile(configPath,"utf8"));
+validatePilotConfig(config);
+await mkdir(pilotRoot,{recursive:true});
+const sourceHashes=new Set();
+for(const candidate of config.sources){
+  const source=await fetchPublisherPdf(candidate.sourceUrl);
+  const digest=sha(source);
+  if(sourceHashes.has(digest))throw new Error("Different pilots share identical publisher PDF bytes.");
+  sourceHashes.add(digest);
+  const original=await PDFDocument.load(source,{ignoreEncryption:false});
+  const sourcePages=original.getPageCount();
+  if(candidate.selectedPageNumbers.some(p=>p>sourcePages))
+    throw new Error(candidate.id+": selected page outside publisher PDF.");
+  const copied=await PDFDocument.create();
+  const indices=candidate.selectedPageNumbers.map(p=>p-1);
+  for(const page of await copied.copyPages(original,indices))copied.addPage(page);
+  const excerpt=Buffer.from(await copied.save());
+  const metadata={
+    id:candidate.id,sourceUrl:candidate.sourceUrl,
+    publicationPage:candidate.publicationPage,
+    rightsGuidanceUrl:config.rightsGuidanceUrl,
+    sourceSha256:digest,subsetSha256:sha(excerpt),
+    originalBytes:source.length,subsetBytes:excerpt.length,sourcePages,
+    selectedPageNumbers:[...candidate.selectedPageNumbers],
+    reviewFocus:candidate.reviewFocus,
+    rightsStatus:"REVIEW_REQUIRED: third-party content not independently cleared",
+    referenceStatus:"NOT_ANNOTATED",
+    realDocumentCountCredit:0,
+    isRelease37AcceptanceEvidence:false,
+  };
+  // Source bytes only exist on the ephemeral CI runner; never upload or commit.
+  await writeFile(path.join(pilotRoot,candidate.id+"-pilot.pdf"),excerpt);
+  await writeFile(path.join(pilotRoot,candidate.id+"-metadata.json"),JSON.stringify(metadata,null,2)+"\n");
+  console.log(JSON.stringify({id:metadata.id,sourcePages,selectedPageNumbers:metadata.selectedPageNumbers,
+    originalBytes:metadata.originalBytes,subsetBytes:metadata.subsetBytes,
+    sourceSha256:metadata.sourceSha256,acceptedCountCredit:0,referenceStatus:"NOT_ANNOTATED"}));
+}
