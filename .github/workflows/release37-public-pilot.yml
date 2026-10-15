@@ -50,6 +50,17 @@ jobs:
       - name: Analyze each actual publisher PDF in Chromium V4 Inspector
         run: npx playwright test --config=playwright.pilot.config.mjs
 
+      - name: Prepare incomplete external reviewer queue (zero accepted documents)
+        run: |
+          node scripts/createRelease37ReviewQueue.mjs
+          node --input-type=module -e '
+          import {readFileSync} from "node:fs";
+          const q=JSON.parse(readFileSync("benchmarks/release37/reports/review-queue.json","utf8"));
+          if(q.pilotCount!==3||q.acceptedDistinctRealDocuments!==0||
+             q.queue.some(x=>x.rightsConfirmed!==false||x.independentReferenceReview!==false||x.acceptedDocumentCredit!==0))
+             process.exit(1);
+          '
+
       # Deliberately exclude source PDF bytes and raw text/Inspector output.
       - name: Upload bounded metadata-only diagnostic report
         if: always()
