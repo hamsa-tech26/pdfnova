@@ -55,6 +55,7 @@ export function makeRelease37BlindReferenceDraft({id,originalPdfSha256,sourcePag
   };
 }
 
+/** @param {number | null} [actualPageCount] - parsed page count of original PDF. */
 export function validateRelease37ReviewedReference(reference,actualPdfHash,entry,actualPageCount=null){
   const errors=[];
   if(reference?.schema!==BLIND_REFERENCE_SCHEMA ||
