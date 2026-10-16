@@ -31,44 +31,28 @@ for(const entry of config.sources){
     expect(Array.isArray(inspector.tables)).toBe(true);
     expect(inspector.ocrDecision).toBeTruthy();
     expect(inspector.processingTimes).toBeTruthy();
-    // Report deterministic numeric rejection counters and enum outcomes only.
-    // No block IDs, geometry, cell contents, page words or raw OCR output.
-    const statisticKeys=[
-      "wordCount","lineCount","blockCount","candidateTableRegionCount",
-      "continuationAdmissionCount","analyzedTableRegionCount",
-      "confirmedTableRegionCount","rejectedForInsufficientColumns",
-      "rejectedForNoRows","rejectedForTableBuildFailure",
-      "rejectedWithZeroColumns","rejectedWithOneColumn",
-      "rejectedColumnTooFewLines","rejectedColumnLowSupport",
-      "rejectedColumnUnstableAlignment","logicalTableCount",
-      "detectedColumnCount","detectedRowCount","populatedCellCount"
-    ];
-    const counters=Object.fromEntries(statisticKeys.map(key=>[
-      key,Number.isFinite(inspector.statistics?.[key])
-        ? inspector.statistics[key] : null
-    ]));
-    const allowedOutcomes=[
-      "below-threshold","pending","rejected-insufficient-columns",
-      "rejected-no-rows","rejected-table-build","confirmed"
-    ];
-    const candidates=Array.isArray(inspector.candidateRegionDiagnostics)
-      ? inspector.candidateRegionDiagnostics : [];
-    const candidateOutcomeCounts=Object.fromEntries(allowedOutcomes.map(outcome=>[
-      outcome,candidates.filter(candidate=>candidate.outcome===outcome).length
-    ]));
-    const pageCandidates=metadata.selectedPageNumbers.map((originalPageNumber,index)=>{
-      const perPage=candidates.filter(candidate=>candidate.pageNumber===index+1);
-      return {
-        originalPageNumber,
-        inspectedExcerptPageNumber:index+1,
-        candidateRegions:perPage.length,
-        confirmed:perPage.filter(x=>x.outcome==="confirmed").length,
-        belowThreshold:perPage.filter(x=>x.outcome==="below-threshold").length,
-        rejectedInsufficientColumns:perPage.filter(x=>x.outcome==="rejected-insufficient-columns").length,
-        rejectedNoRows:perPage.filter(x=>x.outcome==="rejected-no-rows").length,
-        rejectedTableBuild:perPage.filter(x=>x.outcome==="rejected-table-build").length,
-      };
-    });
+    if(entry.id==="usgs-ofr20241025"){
+      // Publisher pages 14, 19, 20 each contain a labelled table.
+      // This is a table-presence smoke check, NOT an independently
+      // scored per-cell, per-row or V4 Stable accuracy qualification.
+      expect(inspector.tables.length).toBe(3);
+    }
+    // Public debug payload is numeric/enum only, never PDF text or coordinates.
+    const scores=Array.isArray(inspector.candidateRegionDiagnostics)
+      ? inspector.candidateRegionDiagnostics.map(candidate=>({
+        pageIndex:candidate.pageNumber,
+        originalPage:metadata.selectedPageNumbers[candidate.pageNumber-1]??null,
+        kind:candidate.blockType,
+        lines:candidate.lineCount,
+        outcome:candidate.outcome,
+        total:Number((candidate.analysis?.totalScore??0).toFixed(2)),
+        alignment:Number((candidate.analysis?.breakdown?.alignment?.score??0).toFixed(2)),
+        spacing:Number((candidate.analysis?.breakdown?.spacing?.score??0).toFixed(2)),
+        density:Number((candidate.analysis?.breakdown?.density?.score??0).toFixed(2)),
+        header:Number((candidate.analysis?.breakdown?.header?.score??0).toFixed(2)),
+        numericColumn:Number((candidate.analysis?.breakdown?.numericColumn?.score??0).toFixed(2))
+      })) : [];
+    const stats=inspector.statistics??{};
     const evidence={
       sourceId:metadata.id,
       sourceSha256:metadata.sourceSha256,
@@ -78,10 +62,15 @@ for(const entry of config.sources){
       selectedPageNumbers:metadata.selectedPageNumbers,
       pageCount:inspector.statistics?.pageCount??inspector.document.pages.length,
       tableCount:inspector.tables.length,
-      analysisOutcome:typeof inspector.analysisOutcome==="string"?inspector.analysisOutcome:null,
-      tableDetectionCounters:counters,
-      candidateOutcomeCounts,
-      pageCandidates,
+      analysisOutcome:inspector.analysisOutcome,
+      candidateRegionCount:scores.length,
+      regionScores:scores,
+      tableStatistics:Object.fromEntries([
+        "wordCount","lineCount","blockCount","candidateTableRegionCount",
+        "analyzedTableRegionCount","confirmedTableRegionCount",
+        "rejectedForInsufficientColumns","rejectedForNoRows",
+        "rejectedForTableBuildFailure"
+      ].map(key=>[key,Number.isFinite(stats[key])?stats[key]:null])),
       // Only numeric/enum metadata. Do not export snippets, word objects,
       // PDF URLs embedded in page text, raw OCR decisions, or raw Inspector data.
       nativeExtraction:(inspector.nativePageTextExtraction??[]).map(x=>({

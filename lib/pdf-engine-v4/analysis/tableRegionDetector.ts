@@ -1290,75 +1290,172 @@ function convertBlockToTableCandidate(
   };
 }
 
+/**
+ * Recover captioned numeric tables swallowed by a large prose block.
+ * Keep each original line exactly once: caption/prose remain as paragraph
+ * fragments, while only the numeric grid is analyzed as a table candidate.
+ */
+type CaptionAnchoredCandidate = {
+  sourceBlock: Extract<PdfVisualBlock, { type: "paragraph" }>;
+  block: PdfVisualBlock;
+  firstLineIndex: number;
+  lastLineIndex: number;
+};
+
+function getBoundsForLines(lines: PdfLine[]) {
+  const minX = Math.min(...lines.map(line => line.bounds.x));
+  const minY = Math.min(...lines.map(line => line.bounds.y));
+  const maxX = Math.max(...lines.map(line => line.bounds.x + line.bounds.width));
+  const maxY = Math.max(...lines.map(line => line.bounds.y + line.bounds.height));
+  return { x: minX, y: minY, width: maxX - minX, height: maxY - minY };
+}
+
+function createCaptionAnchoredCandidates(
+  blocks: PdfVisualBlock[],
+): CaptionAnchoredCandidate[] {
+  const candidates: CaptionAnchoredCandidate[] = [];
+  const isCaption = (text: string) => /^table\s+\d{1,3}\s*[.:]\s/i.test(text.trim());
+  for (const block of blocks) {
+    if (block.type !== "paragraph" || block.lines.length < 6) continue;
+    for (let start = 0; start < block.lines.length; start += 1) {
+      if (!isCaption(block.lines[start]?.text ?? "")) continue;
+      // The next caption terminates this grid even when it shares a paragraph.
+      const nextCaptionOffset = block.lines.slice(start + 1)
+        .findIndex(line => isCaption(line.text));
+      const nextCaptionIndex = nextCaptionOffset < 0
+        ? block.lines.length
+        : start + 1 + nextCaptionOffset;
+      const windowLines = block.lines.slice(
+        start + 1,
+        Math.min(block.lines.length, start + 23, nextCaptionIndex),
+      );
+      if (windowLines.length < 4) continue;
+      const numericIndexes = windowLines.flatMap((line, index) => {
+        const words = [...line.words].sort((a, b) => a.bounds.x - b.bounds.x);
+        const numeric = words.filter(word =>
+          /^[-+]?\d[\d,.]*(?:%|[)])?$/.test(word.text.trim()),
+        );
+        const spread = words.length < 3
+          ? 0
+          : words[words.length - 1].bounds.x - words[0].bounds.x;
+        return numeric.length >= 2 && spread >= 85 ? [index] : [];
+      });
+      if (numericIndexes.length < 2) continue;
+      // Do not swallow the article's trailing prose into the table region.
+      const tableLines = windowLines.slice(
+        0,
+        numericIndexes[numericIndexes.length - 1] + 1,
+      );
+      if (tableLines.length < 4) continue;
+      candidates.push({
+        sourceBlock: block,
+        firstLineIndex: start + 1,
+        lastLineIndex: start + tableLines.length,
+        block: {
+          id: "caption-table-" + block.pageNumber + "-" + block.id + "-" + start,
+          type: "paragraph",
+          pageNumber: block.pageNumber,
+          bounds: getBoundsForLines(tableLines),
+          lines: tableLines,
+          text: tableLines.map(line => line.text).join(" "),
+          confidence: block.confidence,
+        },
+      });
+    }
+  }
+  return candidates;
+}
+
 export function detectTableRegionsForPage(
   blocks: PdfVisualBlock[],
   options?: TableRegionDetectorOptions,
 ): TableRegionDetectionResult {
   const resolvedOptions: Required<TableRegionDetectorOptions> = {
-    tableThreshold:
-      options?.tableThreshold ??
-      DEFAULT_TABLE_THRESHOLD,
-    possibleTableThreshold:
-      options?.possibleTableThreshold ??
-      DEFAULT_POSSIBLE_TABLE_THRESHOLD,
-    xAlignmentTolerance:
-      options?.xAlignmentTolerance ??
-      DEFAULT_X_ALIGNMENT_TOLERANCE,
+    tableThreshold: options?.tableThreshold ?? DEFAULT_TABLE_THRESHOLD,
+    possibleTableThreshold: options?.possibleTableThreshold ?? DEFAULT_POSSIBLE_TABLE_THRESHOLD,
+    xAlignmentTolerance: options?.xAlignmentTolerance ?? DEFAULT_X_ALIGNMENT_TOLERANCE,
   };
 
-const crossBlockCandidates =
-  createCrossBlockCandidates(
-    blocks,
+  const crossBlockCandidates = createCrossBlockCandidates(blocks);
+  const ocrCrossBlockCandidates = createOcrCrossBlockCandidates(blocks);
+
+  // Never discard a source paragraph merely because it contains a caption.
+  // Split only if the recovered grid passes the same scoped evidence gate as
+  // PR #71. A rejected candidate leaves its original paragraph untouched.
+  const admitted = createCaptionAnchoredCandidates(blocks)
+    .map(candidate => ({
+      ...candidate,
+      analysis: analyzeBlock(candidate.block, resolvedOptions),
+    }))
+    .filter(candidate =>
+      candidate.analysis.breakdown.alignment.score >= 16 &&
+      candidate.analysis.totalScore >= 30,
+    );
+  const bySource = new Map<PdfVisualBlock, typeof admitted>();
+  const captionAnalyses = new Map<PdfVisualBlock, TableRegionAnalysis>();
+  for (const candidate of admitted) {
+    const previous = bySource.get(candidate.sourceBlock) ?? [];
+    previous.push(candidate);
+    bySource.set(candidate.sourceBlock, previous);
+    captionAnalyses.set(candidate.block, {
+      ...candidate.analysis,
+      isTable: true,
+      totalScore: Math.max(candidate.analysis.totalScore, resolvedOptions.tableThreshold),
+    });
+  }
+
+  const proseFragments = new Set<PdfVisualBlock>();
+  const splitBlocks = blocks.flatMap(block => {
+    const captions = bySource.get(block);
+    if (block.type !== "paragraph" || !captions?.length) return [block];
+    let cursor = 0;
+    const fragments: PdfVisualBlock[] = [];
+    const preserveProse = (end: number) => {
+      if (end <= cursor) return;
+      const lines = block.lines.slice(cursor, end);
+      const prose: PdfVisualBlock = {
+        ...block,
+        id: "caption-prose-" + block.pageNumber + "-" + block.id + "-" + cursor,
+        bounds: getBoundsForLines(lines),
+        lines,
+        text: lines.map(line => line.text).join(" "),
+      };
+      fragments.push(prose);
+      proseFragments.add(prose);
+    };
+    for (const caption of captions) {
+      if (caption.firstLineIndex < cursor) continue;
+      preserveProse(caption.firstLineIndex); // includes the published table caption
+      fragments.push(caption.block);
+      cursor = caption.lastLineIndex + 1;
+    }
+    preserveProse(block.lines.length); // includes trailing paragraphs and footnotes
+    return fragments;
+  });
+
+  const candidateBlocks = [
+    ...splitBlocks,
+    ...crossBlockCandidates,
+    ...ocrCrossBlockCandidates,
+  ];
+  const regions = candidateBlocks.map(block => ({
+    block,
+    analysis: proseFragments.has(block)
+      ? createZeroAnalysis() // never reclassify a retained prose fragment as a table
+      : captionAnalyses.get(block) ?? analyzeBlock(block, resolvedOptions),
+  }));
+
+  const scoredTableRegions = regions.filter(region =>
+    region.analysis.totalScore >= resolvedOptions.possibleTableThreshold,
+  );
+  const recoveredOcrRegions = scoredTableRegions.filter(region =>
+    region.block.id.startsWith("ocr-cross-block-"),
+  );
+  const tableRegions = scoredTableRegions.filter(region =>
+    !isContainedByRecoveredOcrRegion(region, recoveredOcrRegions),
   );
 
-const ocrCrossBlockCandidates =
-  createOcrCrossBlockCandidates(
-    blocks,
-  );
-
-const candidateBlocks = [
-  ...blocks,
-  ...crossBlockCandidates,
-  ...ocrCrossBlockCandidates,
-];
-
-  const regions =
-    candidateBlocks.map((block) => ({
-      block,
-      analysis: analyzeBlock(
-        block,
-        resolvedOptions,
-      ),
-    }));
-
-const scoredTableRegions =
-  regions.filter(
-    (region) =>
-      region.analysis.totalScore >=
-      resolvedOptions.possibleTableThreshold,
-  );
-
-const recoveredOcrRegions =
-  scoredTableRegions.filter(
-    (region) =>
-      region.block.id.startsWith(
-        "ocr-cross-block-",
-      ),
-  );
-
-const tableRegions =
-  scoredTableRegions.filter(
-    (region) =>
-      !isContainedByRecoveredOcrRegion(
-        region,
-        recoveredOcrRegions,
-      ),
-  );
-
-  return {
-    regions,
-    tableRegions,
-  };
+  return { regions, tableRegions };
 }
 
 export function applyTableRegionDetection(
