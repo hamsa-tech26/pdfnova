@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "lib/converters/pdfToXlsx.ts"
+      - "lib/converters/pdfToXlsxQuality.ts"
       - "lib/pdf-engine-v4/**"
       - "app/(workspace)/pdf-to-excel/**"
       - "e2e/pdf_to_excel.e2e.mjs"
