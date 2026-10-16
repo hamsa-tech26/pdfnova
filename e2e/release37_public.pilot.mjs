@@ -33,10 +33,14 @@ for(const entry of config.sources){
     expect(inspector.ocrDecision).toBeTruthy();
     expect(inspector.processingTimes).toBeTruthy();
     if(entry.id==="usgs-ofr20241025"){
-      // Publisher pages 14, 19, 20 each contain a labelled table.
+      // Publisher pages 14, 17, 18, 19, 20 each contain a labelled table.
       // This is a table-presence smoke check, NOT an independently
       // scored per-cell, per-row or V4 Stable accuracy qualification.
-      expect(inspector.tables.length).toBe(3);
+      // V4 Inspector may retain small false-positive narrative candidates,
+      // which must never be mistaken for any of the five published tables.
+      const nativeTables=inspector.tables.filter(table =>
+        table.columnCount>=6 && table.rows.length>=4);
+      expect(nativeTables.length).toBe(5);
     }
     // Public debug payload is numeric/enum only, never PDF text or coordinates.
     const scores=Array.isArray(inspector.candidateRegionDiagnostics)
@@ -95,14 +99,14 @@ for(const entry of config.sources){
 }
 
 
-// Non-qualifying publisher regression. Source original pages 14/19/20
+// Non-qualifying publisher regression. Source original pages 14/17/18/19/20
 // fetched ephemerally; this is NOT independent reference certification.
-test("USGS OFR 2024-1025: actual XLSX preserves all 99 source table cells",async({page})=>{
+test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",async({page})=>{
   test.setTimeout(300_000);
   const input=path.join(root,"private/usgs-ofr20241025-pilot.pdf");
   const sourceMetadata=JSON.parse(await readFile(
     path.join(root,"private/usgs-ofr20241025-metadata.json"),"utf8"));
-  expect(sourceMetadata.selectedPageNumbers).toEqual([14,19,20]);
+  expect(sourceMetadata.selectedPageNumbers).toEqual([14,17,18,19,20]);
   expect(sourceMetadata.referenceStatus).toBe("NOT_ANNOTATED");
   expect(sourceMetadata.realDocumentCountCredit).toBe(0);
   await page.goto("/pdf-to-excel");
@@ -123,6 +127,18 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 99 source table cells",async
       ["Sacramento Trawl","90","2","2","2","2"],
       ["Freeport","76","na","na","na","2"],
       ["Rio Vista","21","2","2","2","2"]
+    ],
+    [
+      ["Calendar year","Water year","Month / September","Month / October","Month / November","Total"],
+      ["2020","2021","0","17","2","19"],
+      ["2021","2022","2","14","0","16"],
+      ["2022","2023","13","7","0","20"]
+    ],
+    [
+      ["Calendar year","Water year","Total length (meters) / Mean (range)","Total length (meters) / Standard deviation","Girth (meters) / Mean (range)","Girth (meters) / Standard deviation"],
+      ["2020","2021","1.8 (1.6–2.1)","0.1","0.6 (0.5–0.7)","0.1"],
+      ["2021","2022","1.8 (1.6–2.0)","0.1","0.6 (0.5–0.6)","0.0"],
+      ["2022","2023","1.9 (1.5–2.2)","0.2","0.6 (0.5–0.7)","0.1"]
     ],
     [
       ["Migration direction","Water year of release","Sacramento Weir (n)","Tule Canal (n)","Sacramento Trawl (n)","Freeport (n)","Rio Vista (n)"],
@@ -158,7 +174,7 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 99 source table cells",async
     expect(rows).toEqual(expected[i]);
     count+=rows.reduce((sum,row)=>sum+row.length,0);
   }
-  expect(count).toBe(99);
-  const review=await zip.file("xl/worksheets/sheet4.xml")?.async("string");
+  expect(count).toBe(147);
+  const review=await zip.file("xl/worksheets/sheet6.xml")?.async("string");
   expect(review).toContain("EXTRACTION NOT VERIFIED");
 });

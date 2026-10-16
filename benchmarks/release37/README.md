@@ -18,7 +18,7 @@ A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.ym
 - `e2e/release37_public.pilot.mjs` validates actual Inspector execution, **not** reference-correct OCR or table extraction. It does **not** expect the old PR #39 `release37Audit` engine field, which was intentionally not migrated into production.
 - `benchmarks/release37/candidates.json` is a source-discovery tracker, not approved rights or reviewed reference data.
 - The USGS generally treats its authored reports as U.S. public-domain works, but third-party photos, graphics, and other inclusions may have separate rights. The pilot does not grant itself rights approval; report-specific human review is still mandatory before formally accepting or redistributing materials.
-- This three-page excerpt provides **zero credit toward the 20 distinct, independently annotated real-document requirement**. It has no independent reference annotations, tested accuracy percentages, or multilingual evidence.
+- These five-table diagnostic excerpts provide **zero credit toward the 20 distinct, independently annotated real-document requirement**. It has no independent reference annotations, tested accuracy percentages, or multilingual evidence.
 - The formal `npm run qualify:v4:stable` command is expected to exit nonzero with `BLOCKED`; the pilot workflow confirms that expectation on the no-evidence baseline.
 
 You can reproduce the non-qualifying diagnostic with `node scripts/downloadRelease37PublicPilot.mjs` and `npx playwright test --config=playwright.pilot.config.mjs` after installing the browser runner and Chromium. This is not required for the user to run on their laptop; CI executes it on an ephemeral machine.
@@ -31,7 +31,7 @@ The public pilot now downloads **three distinct published USGS source PDFs** to 
 | --- | --- | --- | --- |
 | USGS SIR 2024-5103 | `https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf` | 1–3 | Native and introductory layouts |
 | USGS FS 2024-3013 | `https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf` | 1–2 | Two-page factsheet with graphics and multiple reading areas |
-| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 19, 20 | A simple deployment table, a grouped detection table and a hierarchical travel-time table |
+| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 17, 18, 19, 20 | All five published tables, including month, length/girth and median-unit grouped headers |
 
 The original OFR report's table of contents identifies **five tables** on PDF pages **14, 17, 18, 19 and 20**. They are inventoried, but not annotated, in `benchmarks/release37/public-table-inventory.json`. The reviewer must independently confirm all five, their geometry, and any additional content in the original 30-page PDF. `scripts/checkRelease37PublicTableInventory.mjs` binds this **zero-credit** inventory to the original source SHA-256 and current public pilot metadata; it cannot make the annotations approved.
 
@@ -41,7 +41,7 @@ The pilot's metadata report now also includes **numeric V4 table-region rejectio
 
 `scripts/createRelease37ReviewQueue.mjs` reads the metadata and generates `benchmarks/release37/reports/review-queue.json`. Its `rightsConfirmed` and `independentReferenceReview` remain **false**. The queue is a list of tasks for a genuinely independent reviewer, **not** an automatically approved annotation. The workflow asserts all three pilots have **zero acceptance credit**.
 
-The **full original PDF** (not a three-page derivative excerpt) must be independently annotated and rights-reviewed before being entered into `benchmark:v4:corpus`; subset hashes never count as independent additional documents. Actual English OCR errors, scanned documents, rotated pages, complex tables, Hindi/Bengali recognition and full-document performance are separate pending objectives. The product's OCR is still English-only.
+The **full original PDF** (not a five-page derivative excerpt) must be independently annotated and rights-reviewed before being entered into `benchmark:v4:corpus`; subset hashes never count as independent additional documents. Actual English OCR errors, scanned documents, rotated pages, complex tables, Hindi/Bengali recognition and full-document performance are separate pending objectives. The product's OCR is still English-only.
 
 This diagnostic can be repeated via GitHub CI without Vercel deployments or a user's local laptop. Artifacts contain only the bounded diagnostic JSON, publisher metadata, and unapproved reviewer queue. The three source documents must not be reported as `3/20` approved until the independent review and ground-truth requirements pass.
 
@@ -49,7 +49,7 @@ This diagnostic can be repeated via GitHub CI without Vercel deployments or a us
 
 The live Engine V4 Inspector output **must never be used to generate expected cell contents or to decide the true reference table geometry**. A reviewer should examine an authorized **original full PDF** separately, identify its actual tables, and manually annotate all cells, including empty cells. This new tooling only prepares an EMPTY, unapproved draft and structurally checks a finished reference.
 
-1. Obtain a legally usable full real-world original PDF and verify that all third-party content rights are suitable. Place it privately at `benchmarks/release37/private/<id>.pdf` (replace `<id>` with a safe unique document ID). Do not use the derivative three-page pilot excerpts to claim another independent source document.
+1. Obtain a legally usable full real-world original PDF and verify that all third-party content rights are suitable. Place it privately at `benchmarks/release37/private/<id>.pdf` (replace `<id>` with a safe unique document ID). Do not use the derivative five-page pilot excerpts to claim another independent source document.
 2. Independently inspect the original PDF WITHOUT reading the V4 Inspector's table predictions. Prepare `benchmarks/release37/private/<id>-layout.json` with only the human-observed table layouts. Example:
 
 ```json

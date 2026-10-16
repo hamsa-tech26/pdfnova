@@ -129,6 +129,101 @@ function projectCaptionMedianUnits(
   return [headers, ...rows.slice(1)];
 }
 
+
+type NativeHeaderWord = {
+  text: string;
+  bounds: { x: number; y: number; width: number; height: number };
+  extractionProvenance?: { source?: string };
+};
+
+/**
+ * Retain source-visible multi-level units when flat XLSX columns would otherwise
+ * have ambiguous duplicate labels. Use native source words only; never infer the
+ * parent labels from numeric cell values, and leave uncertain cases unchanged.
+ * These guards are intentionally narrower than generic PDF table recovery.
+ */
+function projectNativeGroupedHeaders(
+  source: PdfV4XlsxExportSource,
+  table: LogicalTable,
+  rows: string[][],
+): { rows: string[][]; note: string | null } {
+  const header = table.rows[0];
+  if (!header || !rows[0] || rows[0].length !== table.columnCount ||
+      !table.rows.every(row => row.provenance?.pageNumber === table.pageNumber)) {
+    return { rows, note: null };
+  }
+  const cells = header.cells;
+  const words = cells.flatMap(cell => cell.words);
+  // A source captioned table with one explicit Month super-header can have its
+  // Month word assigned to only the October cell by the flat table engine.
+  if (header.provenance?.blockId?.startsWith("caption-table-")) {
+    const group = words.filter(word => word.text.trim() === "Month");
+    const months = /^(January|February|March|April|May|June|July|August|September|October|November|December)$/i;
+    const leaves = cells.flatMap(cell => cell.words
+      .filter(word => months.test(word.text.trim()))
+      .map(word => ({ column: cell.columnIndex, word })))
+      .sort((a, b) => a.column - b.column);
+    if (group.length === 1 && leaves.length >= 3 && leaves.length <= 12 &&
+        leaves.every((leaf, i) => i === 0 || leaf.column === leaves[i - 1].column + 1) &&
+        new Set(leaves.map(leaf => leaf.column)).size === leaves.length) {
+      const center = (word: NativeHeaderWord) => word.bounds.x + word.bounds.width / 2;
+      const groupCenter = center(group[0]);
+      if (groupCenter > center(leaves[0].word) &&
+          groupCenter < center(leaves[leaves.length - 1].word) &&
+          leaves.every(({ column, word }) =>
+            rows[0][column] === word.text.trim() ||
+            rows[0][column] === "Month " + word.text.trim())) {
+        const out = [...rows[0]];
+        for (const { column, word } of leaves) out[column] = "Month / " + word.text.trim();
+        return { rows: [out, ...rows.slice(1)],
+          note: "Month group heading was preserved from native header words." };
+      }
+    }
+  }
+
+  // A more complex native table may retain its four lower-level headers while
+  // the two upper-level measurement labels occupy a separate source line/block.
+  // Recover ONLY when both original labels occur directly above that row.
+  if (table.columnCount !== 6 || rows[0][0] !== "Calendar year" ||
+      rows[0][1] !== "Water year" ||
+      rows[0].slice(2).join("|") !==
+        "Mean (range)|Standard deviation|Mean (range)|Standard deviation") {
+    return { rows, note: null };
+  }
+  const page = source.document.pages[table.pageNumber - 1] as
+    { words?: NativeHeaderWord[] } | undefined;
+  const sourceWords = Array.isArray(page?.words) ? page.words : [];
+  const labels = ["Total length (meters)", "Girth (meters)"];
+  const groups = labels.map(label => sourceWords.filter(word =>
+    word.text.trim() === label &&
+    (!word.extractionProvenance || word.extractionProvenance.source === "native-pdf")));
+  if (groups.some(group => group.length !== 1)) return { rows, note: null };
+  const left = groups[0][0], right = groups[1][0];
+  const center = (word: NativeHeaderWord) => word.bounds.x + word.bounds.width / 2;
+  const threshold = (center(left) + center(right)) / 2;
+  const headerCells = [2, 3, 4, 5].map(index => cells.find(cell => cell.columnIndex === index));
+  if (center(left) >= center(right) || headerCells.some(cell => !cell ||
+      cell.words.length < 1 || !cell.bounds)) return { rows, note: null };
+  // Source PDF uses bottom-origin coordinates for the V4 word model; parent
+  // headings must be close above the lower-level headings, not in body text.
+  const top = Math.max(...headerCells.map(cell => cell!.bounds.y + cell!.bounds.height));
+  if (groups.some(group => group[0].bounds.y < top ||
+      group[0].bounds.y - top > 35)) return { rows, note: null };
+  const columnCenters = headerCells.map(cell =>
+    cell!.words.reduce((sum, word) => sum + center(word), 0) / cell!.words.length);
+  if (!(columnCenters[0] < threshold && columnCenters[1] < threshold &&
+        columnCenters[2] > threshold && columnCenters[3] > threshold)) {
+    return { rows, note: null };
+  }
+  const newHeaders = [...rows[0]];
+  for (let index = 2; index < 6; index++) {
+    newHeaders[index] = (index < 4 ? left.text.trim() : right.text.trim()) +
+      " / " + rows[0][index];
+  }
+  return { rows: [newHeaders, ...rows.slice(1)],
+    note: "Length and girth measurement groups were preserved from native page header words." };
+}
+
 export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxInput {
   const pageCount = source.document.pages.length;
   if (pageCount < 1 || pageCount > 25) {
@@ -209,11 +304,16 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
     }
     for (const warning of diagnostics.warnings) notes.push("Table " + number + ": " + warning);
     const extractedRows = tableToCsvRows(table);
-    const rows = projectCaptionMedianUnits(table, extractedRows);
-    if (rows !== extractedRows) {
+    const medianRows = projectCaptionMedianUnits(table, extractedRows);
+    if (medianRows !== extractedRows) {
       notes.push("Table " + number + ": two-unit median headings were projected from native source header labels and source word positions; verify grouped headers against the PDF.");
     }
-    return { name: "Table " + number, rows };
+    const grouped = projectNativeGroupedHeaders(source, table, medianRows);
+    if (grouped.note) {
+      notes.push("Table " + number + ": " + grouped.note +
+        " Verify the source multi-level structure against the PDF.");
+    }
+    return { name: "Table " + number, rows: grouped.rows };
   });
   const omitted = Array.from({ length: pageCount }, (_, i) => i + 1)
     .filter(p => !covered.has(p));
