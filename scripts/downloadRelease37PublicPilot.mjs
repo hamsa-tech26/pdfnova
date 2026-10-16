@@ -26,10 +26,10 @@ function validatePilotConfig(config){
        uri.username||uri.password||!uri.pathname.endsWith(".pdf"))
       throw new Error("Only approved HTTPS publisher PDF URLs are allowed.");
     if(!Array.isArray(candidate.selectedPageNumbers)||!candidate.selectedPageNumbers.length||
-       candidate.selectedPageNumbers.length>3||
+       candidate.selectedPageNumbers.length>5||
        candidate.selectedPageNumbers.some(p=>!Number.isInteger(p)||p<1||p>200)||
        new Set(candidate.selectedPageNumbers).size!==candidate.selectedPageNumbers.length)
-      throw new Error("Pilot must choose 1–3 unique, bounded PDF page numbers.");
+      throw new Error("Pilot must choose 1–5 unique, bounded PDF page numbers.");
     if(candidate.rightsStatus!=="REVIEW_REQUIRED")
       throw new Error("Pilot rights review may not be auto-approved.");
   }

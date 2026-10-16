@@ -6,7 +6,7 @@
       "publisher": "US Geological Survey",
       "sourceUrl": "https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf",
       "rightsUrl": "https://pubs.usgs.gov/documentation/faq",
-      "title": "Federal Lands Greenhouse Gas Emissions and Sequestration, Estimates for 2005–22",
+      "title": "Federal Lands Greenhouse Gas Emissions and Sequestration, Estimates for 2005\u201322",
       "status": "PILOT_ONLY_RIGHTS_AND_GROUND_TRUTH_REVIEW_PENDING",
       "notes": "Official USGS 2024 report; report-specific copyrighted material must be checked. Pilot uses first three pages only; no GT."
     },
@@ -34,7 +34,7 @@
       "sourceUrl": "https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf",
       "rightsUrl": "https://pubs.usgs.gov/documentation/faq",
       "publicationPage": "https://pubs.usgs.gov/publication/fs20243013",
-      "title": "READI-Net—Providing tools for early detection and management of aquatic invasive species",
+      "title": "READI-Net\u2014Providing tools for early detection and management of aquatic invasive species",
       "status": "PILOT_ONLY_RIGHTS_AND_GROUND_TRUTH_REVIEW_PENDING",
       "notes": "Actual publisher PDF, 2-page layout; full original source and report-specific rights still require review; diagnostic only."
     },
@@ -44,9 +44,9 @@
       "sourceUrl": "https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf",
       "rightsUrl": "https://pubs.usgs.gov/documentation/faq",
       "publicationPage": "https://pubs.usgs.gov/publication/ofr20241025",
-      "title": "Adult green sturgeon movements in the Sacramento–San Joaquin River Delta",
+      "title": "Adult green sturgeon movements in the Sacramento\u2013San Joaquin River Delta",
       "status": "PILOT_ONLY_RIGHTS_AND_GROUND_TRUTH_REVIEW_PENDING",
-      "notes": "Original USGS open-file report includes real table examples, pilot pages 14,17,18. Do not infer independently labeled table correctness from browser success."
+      "notes": "Original 30-page USGS report has five published tables on PDF pages 14,17,18,19,20. Five-page pilot is developer regression only; never count it as an independently reviewed document."
     }
   ],
   "summary": {

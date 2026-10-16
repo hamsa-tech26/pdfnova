@@ -4,7 +4,8 @@
     "deploymentEnabled": {
       "fix/kukureku-usgs-row-reconstruction": false,
       "feature/kukureku-v4-blind-reference-review-v1": false,
-      "integration/kukureku-usgs-blind-reference-20261016": false
+      "integration/kukureku-usgs-blind-reference-20261016": false,
+      "fix/kukureku-usgs-five-table-headers": false
     }
   }
 }

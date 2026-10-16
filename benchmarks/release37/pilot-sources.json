@@ -34,10 +34,12 @@
       "sourceUrl": "https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf",
       "selectedPageNumbers": [
         14,
+        17,
+        18,
         19,
         20
       ],
-      "reviewFocus": "Three real published table pages with distinct grouping, for diagnostic only; no reference approval",
+      "reviewFocus": "Five real published table pages, including Month and length/girth grouped headings; developer regression only, no independently reviewed reference.",
       "rightsStatus": "REVIEW_REQUIRED"
     }
   ]
