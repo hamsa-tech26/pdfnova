@@ -12,7 +12,7 @@ The public OCR PDF tool is currently **English-only**. Hindi/Bengali recognition
 
 ## Public USGS processing pilot (metadata-only, not a corpus document)
 
-A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.yml`, runs on changes to this pilot. It fetches one USGS Scientific Investigations Report from the [USGS Publications Warehouse](https://pubs.usgs.gov/publication/sir20245103), copies only its first three pages in an ephemeral runner, analyzes those pages using the current browser V4 Inspector, and uploads only bounded page-count, hash, routing, and timing metadata.
+A separate GitHub Actions workflow, `.github/workflows/release37-public-pilot.yml`, runs on changes to this pilot. It fetches three independently sourced USGS publications from the [USGS Publications Warehouse](https://pubs.usgs.gov/), creates bounded diagnostic excerpts in an ephemeral runner, analyzes those pages using the current browser V4 Inspector, and uploads only page-count, hash, routing, and timing metadata.
 
 - `scripts/downloadRelease37PublicPilot.mjs` refuses non-USGS redirects, non-PDF responses and inputs over 25 MB. The input/derivative PDF and complete Inspector JSON are **not uploaded** to GitHub Actions artifacts.
 - `e2e/release37_public.pilot.mjs` validates actual Inspector execution, **not** reference-correct OCR or table extraction. It does **not** expect the old PR #39 `release37Audit` engine field, which was intentionally not migrated into production.
@@ -31,15 +31,43 @@ The public pilot now downloads **three distinct published USGS source PDFs** to 
 | --- | --- | --- | --- |
 | USGS SIR 2024-5103 | `https://pubs.usgs.gov/sir/2024/5103/sir20245103.pdf` | 1–3 | Native and introductory layouts |
 | USGS FS 2024-3013 | `https://pubs.usgs.gov/fs/2024/3013/fs20243013.pdf` | 1–2 | Two-page factsheet with graphics and multiple reading areas |
-| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 17, 18 | Real published table layouts, including multi-column cells |
+| USGS OFR 2024-1025 | `https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf` | 14, 19, 20 | A simple deployment table, a grouped detection table and a hierarchical travel-time table |
+
+The original OFR report's table of contents identifies **five tables** on PDF pages **14, 17, 18, 19 and 20**. They are inventoried, but not annotated, in `benchmarks/release37/public-table-inventory.json`. The reviewer must independently confirm all five, their geometry, and any additional content in the original 30-page PDF. `scripts/checkRelease37PublicTableInventory.mjs` binds this **zero-credit** inventory to the original source SHA-256 and current public pilot metadata; it cannot make the annotations approved.
 
 Sources are declared in `benchmarks/release37/pilot-sources.json`. `scripts/downloadRelease37PublicPilot.mjs` verifies HTTPS USGS-only sources, actual PDF signatures, original SHA-256, unique source bytes, bounded sizes, and selected page validity. `e2e/release37_public.pilot.mjs` independently processes each excerpt in browser and saves **numbers/statuses only**; no PDF or raw Inspector JSON is an uploaded artifact.
+
+The pilot's metadata report now also includes **numeric V4 table-region rejection counters and enumerated outcomes by original PDF page**. These diagnose why published tables were not returned as logical tables, without exporting source text, block IDs, coordinates or extracted cell contents. A zero table count on a page containing published tables is an **investigation signal, not an accuracy score**; see [Issue #70](https://github.com/hamsa-tech26/pdfnova/issues/70).
 
 `scripts/createRelease37ReviewQueue.mjs` reads the metadata and generates `benchmarks/release37/reports/review-queue.json`. Its `rightsConfirmed` and `independentReferenceReview` remain **false**. The queue is a list of tasks for a genuinely independent reviewer, **not** an automatically approved annotation. The workflow asserts all three pilots have **zero acceptance credit**.
 
 The **full original PDF** (not a three-page derivative excerpt) must be independently annotated and rights-reviewed before being entered into `benchmark:v4:corpus`; subset hashes never count as independent additional documents. Actual English OCR errors, scanned documents, rotated pages, complex tables, Hindi/Bengali recognition and full-document performance are separate pending objectives. The product's OCR is still English-only.
 
 This diagnostic can be repeated via GitHub CI without Vercel deployments or a user's local laptop. Artifacts contain only the bounded diagnostic JSON, publisher metadata, and unapproved reviewer queue. The three source documents must not be reported as `3/20` approved until the independent review and ground-truth requirements pass.
+
+## Phase 10.20 — Blind original-PDF table-reference intake (Release 69)
+
+The live Engine V4 Inspector output **must never be used to generate expected cell contents or to decide the true reference table geometry**. A reviewer should examine an authorized **original full PDF** separately, identify its actual tables, and manually annotate all cells, including empty cells. This new tooling only prepares an EMPTY, unapproved draft and structurally checks a finished reference.
+
+1. Obtain a legally usable full real-world original PDF and verify that all third-party content rights are suitable. Place it privately at `benchmarks/release37/private/<id>.pdf` (replace `<id>` with a safe unique document ID). Do not use the derivative three-page pilot excerpts to claim another independent source document.
+2. Independently inspect the original PDF WITHOUT reading the V4 Inspector's table predictions. Prepare `benchmarks/release37/private/<id>-layout.json` with only the human-observed table layouts. Example:
+
+```json
+{
+  "tables": [
+    { "pageNumber": 14, "rowCount": 4, "columnCount": 3 }
+  ]
+}
+```
+
+3. Execute `npm run v4:blind-reference -- <id>` **locally**. The script validates the source signature, actual PDF page count, privacy path/symlinks and input bounds, hashes original PDF bytes, then creates `<id>-reference.draft.json` with every cell `"text": null`. It never opens a previous Inspector result. It refuses to overwrite an existing draft or run in CI.
+4. A first human annotator uses the source PDF to fill every `text` value. Even truly empty cells require `"text": ""`. For source-visible merged cells, put `rowSpan` / `columnSpan` on the anchor cell and remove all corresponding covered slots. Do not copy text, rows, cell order or merge spans from V4.
+5. A **different** reviewer cross-checks *all source tables and their cells against the original source PDF*, corrects errors, and approves the reference. Update `provenance` to `INDEPENDENT_REFERENCE_REVIEW` and set the `review` fields: distinct `annotatorId` / `reviewerId`, ISO `reviewedAt` date, `sourceInspected: true`, `reviewerApproved: true`, `allSourceTablesReviewed: true`, `method: "SOURCE_PDF_BLIND_TO_ENGINE_OUTPUT"`. Rename the finished reference to `<id>-reference.json` (keep all bytes private).
+6. Export actual Inspector JSON from the SAME original source PDF into the private directory. Prepare the existing `private/manifest.json`, making `id`, source SHA-256, `reviewedBy`, `reviewedAt` and original file locations match the completed reviewed reference.
+7. Run `npm run benchmark:v4:corpus` locally. A reference now **fails closed** if draft/null, lacks independent review, has duplicated or missing cell slots, mismatches the original source hash or original PDF's independently parsed page count, or disagrees with the manifest reviewer/date. A structurally valid attestation enables **scoring**, not automatic V4 Stable certification. It is still incumbent on the human reviewer to confirm the truth of the attestation.
+8. Finally check `npm run qualify:v4:stable`; the formal 20-document, language, error, performance and cancellation gate remains BLOCKED until independently measured full evidence exists.
+
+**Privacy:** only the local `benchmarks/release37/private/` folder contains original PDFs, raw engine outputs, private annotation text, or reviewer identities. This folder and score-report folder are gitignored; do not upload them to GitHub artifacts. The public 3-document USGS CI pilot remains diagnostic and contributes **0/20** to formal quality evidence.
 
 ## Local-only usage
 

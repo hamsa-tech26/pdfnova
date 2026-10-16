@@ -1,8 +1,10 @@
 import {readFile,writeFile,mkdir,realpath} from "node:fs/promises";
+import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
 import path from "node:path";
 import {pathToFileURL} from "node:url";
 import {scoreRelease37Case,aggregateRelease37Scores} from "./scoreRelease37Cases.mjs";
+import {validateRelease37ReviewedReference} from "./release37BlindReference.mjs";
 
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const allowedCategories=new Set(["native","scanned","hybrid","complex","multipage","rotated","hindi","bengali"]);
@@ -103,6 +105,16 @@ export async function collectRelease37Corpus(manifest){
     const resultBytes=await readPrivateFile(entry.inspectorJson,".json");
     const gold=JSON.parse(goldBytes.toString("utf8"));
     const result=JSON.parse(resultBytes.toString("utf8"));
+    let originalPageCount;
+    try {
+      const original=await PDFDocument.load(pdf,{updateMetadata:false});
+      originalPageCount=original.getPageCount();
+    }catch {
+      throw new Error(entry.id+": original PDF page-count audit failed.");
+    }
+    const reviewGate=validateRelease37ReviewedReference(gold,pdfSha,entry,originalPageCount);
+    if(reviewGate.status!=="REVIEW_METADATA_VALID")
+      throw new Error(entry.id+": independent original-source reference review BLOCKED: "+reviewGate.errors.join("; "));
     // Requiring a full Inspector result discourages fabricated CSV-only metrics.
     if(!Array.isArray(result.document?.pages)||!Array.isArray(result.tables)||
        !result.processingTimes || !result.ocrDecision)throw new Error(entry.id+": incomplete V4 Inspector output");
