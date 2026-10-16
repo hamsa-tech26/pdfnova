@@ -1373,6 +1373,84 @@ function prependLineToRow(
   };
 }
 
+
+/**
+ * Narrow recovery for publisher-captioned native numeric grids.
+ * Do not relax generic OCR/serial row thresholds. Require at least three
+ * geometrically distinct rows occupying four or more stable columns.
+ */
+function detectCaptionGridRows(
+  block: PdfVisualBlock,
+  columns: ColumnCandidate[],
+): AdaptiveRowDetectionResult | null {
+  if (!block.id.startsWith("caption-table-") || columns.length < 4) return null;
+  const lines = getBlockLines(block);
+  if (lines.length < 4) return null;
+  const numeric = /^[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|\))?$/;
+  const occupied = (line: PdfLine) => getPopulatedColumnIndexes(line, columns).length;
+  const qualifies = (line: PdfLine) =>
+    occupied(line) >= 4 &&
+    line.words.filter(word => numeric.test(word.text.trim()) ||
+      word.text.trim().toLowerCase() === "na").length >= 2;
+  const first = lines.findIndex(qualifies);
+  if (first < 0) return null;
+  let last = first;
+  while (last < lines.length && qualifies(lines[last])) last += 1;
+  const dataLines = lines.slice(first, last);
+  if (dataLines.length < 3) return null;
+  const gaps = dataLines.slice(1).map((line, index) =>
+    dataLines[index].bounds.y - line.bounds.y);
+  if (gaps.some(gap => gap < 7 || gap > 30)) return null;
+
+  let headerStart = first;
+  while (headerStart > 0 && first - headerStart < 7) {
+    const preceding = lines[headerStart - 1];
+    const gap = preceding.bounds.y - lines[headerStart].bounds.y;
+    if (gap < 3 || gap > 20 || preceding.words.length === 0) break;
+    headerStart -= 1;
+  }
+  if (headerStart === first) return null;
+  const groups = [lines.slice(headerStart, first), ...dataLines.map(line => [line])];
+  const rows = groups.map((group, index): LogicalRowCandidate => {
+    const allWords = group.flatMap(line => line.words);
+    const typicalSize = [...allWords].map(word => word.font.size)
+      .filter(size => Number.isFinite(size) && size > 0)
+      .sort((a, b) => a - b)[Math.floor(allWords.length / 2)] ?? 0;
+    // Ignore only the small raised superscript immediately adjacent to an
+    // ordinary numeric word. Preserve the source PDF's unchanged word model.
+    const words = index > 0 ? allWords.filter(word => !(
+      /^[1-9]$/.test(word.text.trim()) &&
+      typicalSize > 0 && word.font.size < typicalSize * 0.75 &&
+      allWords.some(other =>
+        other !== word && other.font.size >= typicalSize * 0.95 &&
+        /^\d/.test(other.text.trim()) &&
+        other.bounds.x >= word.bounds.x + word.bounds.width - 1 &&
+        other.bounds.x - (word.bounds.x + word.bounds.width) < 7 &&
+        word.bounds.y - other.bounds.y >= 1.5
+      )
+    )) : allWords;
+    const fraction = Math.max(...group.map(occupied)) / columns.length;
+    const confidence = clamp(0.7 + fraction * 0.25, 0, 0.95);
+    return {
+      id: createId(index), index,
+      lines: index > 0 ? group.map(line => ({
+        ...line,
+        words: line.words.filter(word => words.some(accepted => accepted.id === word.id)),
+      })) : group,
+      words,
+      startY: getLineCenterY(group[0]),
+      endY: getLineCenterY(group[group.length - 1]),
+      isNewRecord: true, score: confidence * 100, confidence,
+      breakdown: {
+        serialNumber: 0, verticalGap: 0, leftAlignment: 0,
+        emptyLeadingColumns: 0, wrappedText: 0,
+      },
+      reason: "caption-native-numeric-grid",
+    };
+  });
+  return { rows, confidence: average(rows.map(row => row.confidence)) };
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1401,6 +1479,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const captionGrid = detectCaptionGridRows(block, columns);
+  if (captionGrid) return captionGrid;
 
   const lines =
     getBlockLines(block);

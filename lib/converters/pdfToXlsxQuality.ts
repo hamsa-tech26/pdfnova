@@ -68,11 +68,65 @@ function inspectOverlappingCells(table: LogicalTable): void {
         // bbox tolerance is not considered evidence of merged cells.
         if (overlap > Math.min(a.width, b.width) * 0.35 &&
             verticalOverlap > Math.min(a.height, b.height) * 0.5) {
+          // Only a caption-derived multi-level header can use the finer
+          // word-level collision check. Keep ordinary and data-row guards.
+          const isCaptionHeader = row.rowIndex === 0 &&
+            row.provenance?.blockId?.startsWith("caption-table-") === true &&
+            filled[i].words.length > 0 && filled[j].words.length > 0;
+          const wordsOverlap = filled[i].words.some(first =>
+            filled[j].words.some(second => {
+              const dx = Math.min(first.bounds.x + first.bounds.width,
+                second.bounds.x + second.bounds.width) -
+                Math.max(first.bounds.x, second.bounds.x);
+              const dy = Math.min(first.bounds.y + first.bounds.height,
+                second.bounds.y + second.bounds.height) -
+                Math.max(first.bounds.y, second.bounds.y);
+              return dx > Math.min(first.bounds.width, second.bounds.width) * 0.35 &&
+                dy > Math.min(first.bounds.height, second.bounds.height) * 0.5;
+            })
+          );
+          if (isCaptionHeader && !wordsOverlap) continue;
           throw new Error("Overlapping table cells suggest ambiguous layout or merged cells; XLSX export was withheld.");
         }
       }
     }
   }
+}
+
+
+/**
+ * For a captioned two-unit median grid, use original header word geometry to
+ * give each worksheet column an explicit unit. Reject ambiguous alternatives.
+ * Body cells are never modified.
+ */
+function projectCaptionMedianUnits(
+  table: LogicalTable,
+  rows: string[][],
+): string[][] {
+  const head = table.rows[0];
+  if (!head || !head.provenance?.blockId?.startsWith("caption-table-") ||
+      !rows.length || rows[0].length < 5) return rows;
+  const groups = head.cells.flatMap(cell => cell.words)
+    .map(word => ({
+      label: /^Median \((minutes|hours|seconds|days)\)$/i.exec(word.text.trim()),
+      centerX: word.bounds.x + word.bounds.width / 2,
+    }))
+    .filter(item => item.label !== null)
+    .sort((a, b) => a.centerX - b.centerX);
+  if (groups.length !== 2 || groups[0].label?.[1] === groups[1].label?.[1])
+    return rows;
+  const threshold = (groups[0].centerX + groups[1].centerX) / 2;
+  const headers = [...rows[0]];
+  for (let column = 1; column < table.columnCount; column += 1) {
+    const cell = head.cells.find(item => item.columnIndex === column);
+    if (!cell) return rows;
+    const yearWord = cell.words.find(word => /^WY\s+\d{4}$/i.test(word.text.trim()));
+    if (!yearWord) return rows;
+    const unit = (yearWord.bounds.x < threshold ? groups[0] : groups[1]).label?.[1];
+    if (!unit) return rows;
+    headers[column] = yearWord.text.trim() + " (" + unit.toLowerCase() + ")";
+  }
+  return [headers, ...rows.slice(1)];
 }
 
 export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxInput {
@@ -154,7 +208,12 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
       notes.push("Table " + number + ": multi-page continuation was determined by the PDF table engine; review the boundary and possible duplicated/missing header rows.");
     }
     for (const warning of diagnostics.warnings) notes.push("Table " + number + ": " + warning);
-    return { name: "Table " + number, rows: tableToCsvRows(table) };
+    const extractedRows = tableToCsvRows(table);
+    const rows = projectCaptionMedianUnits(table, extractedRows);
+    if (rows !== extractedRows) {
+      notes.push("Table " + number + ": two-unit median headings were projected from native source header labels and source word positions; verify grouped headers against the PDF.");
+    }
+    return { name: "Table " + number, rows };
   });
   const omitted = Array.from({ length: pageCount }, (_, i) => i + 1)
     .filter(p => !covered.has(p));

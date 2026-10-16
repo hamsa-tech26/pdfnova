@@ -1,3 +1,4 @@
+import JSZip from "jszip";
 import {test,expect} from "@playwright/test";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
@@ -92,3 +93,72 @@ for(const entry of config.sources){
     await writeFile(path.join(root,"reports",entry.id+"-diagnostic.json"),JSON.stringify(evidence,null,2)+"\n");
   });
 }
+
+
+// Non-qualifying publisher regression. Source original pages 14/19/20
+// fetched ephemerally; this is NOT independent reference certification.
+test("USGS OFR 2024-1025: actual XLSX preserves all 99 source table cells",async({page})=>{
+  test.setTimeout(300_000);
+  const input=path.join(root,"private/usgs-ofr20241025-pilot.pdf");
+  const sourceMetadata=JSON.parse(await readFile(
+    path.join(root,"private/usgs-ofr20241025-metadata.json"),"utf8"));
+  expect(sourceMetadata.selectedPageNumbers).toEqual([14,19,20]);
+  expect(sourceMetadata.referenceStatus).toBe("NOT_ANNOTATED");
+  expect(sourceMetadata.realDocumentCountCredit).toBe(0);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles(input);
+  const downloadPromise=page.waitForEvent("download",{timeout:160000});
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+  const file=await download.path();
+  if(!file)throw Error("No real USGS XLSX file");
+  const zip=await JSZip.loadAsync(await readFile(file));
+
+  const expected=[
+    [
+      ["Site","rkm","12-04-20","10-19-21","03-01-22","11-10-22"],
+      ["Sacramento Weir","103","4","4","6","6"],
+      ["Tule Canal","101","na","2","2","2"],
+      ["Sacramento Trawl","90","2","2","2","2"],
+      ["Freeport","76","na","na","na","2"],
+      ["Rio Vista","21","2","2","2","2"]
+    ],
+    [
+      ["Migration direction","Water year of release","Sacramento Weir (n)","Tule Canal (n)","Sacramento Trawl (n)","Freeport (n)","Rio Vista (n)"],
+      ["Downstream","2021","19 (100)","0 (0)","19 (100)","0 (0)","15 (79)"],
+      ["","2022","16 (100)","0 (0)","16 (100)","0 (0)","16 (100)"],
+      ["","2023","20 (100)","0 (0)","19 (95)","16 (80)","20 (100)"]
+    ],
+    [
+      ["Reach","WY 2021 (minutes)","WY 2022 (minutes)","WY 2023 (minutes)","WY 2021 (hours)","WY 2022 (hours)","WY 2023 (hours)"],
+      ["Sacramento Weir to Sacramento Trawl","321","185","215","5.4","3.1","3.6"],
+      ["Sacramento Trawl to Freeport","na","na","303","na","na","5.1"],
+      ["Freeport to Rio Vista","na","na","1,779","na","na","29.7"],
+      ["Sacramento Weir to Rio Vista","3,546","1,554","2,508","59.1","25.9","41.8"]
+    ]
+  ];
+  const unescape=value=>value.replace(/&amp;/g,"&").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  let count=0;
+  for(let i=0;i<expected.length;i++){
+    const xml=await zip.file("xl/worksheets/sheet"+(i+1)+".xml")?.async("string");
+    expect(xml).toBeTruthy();
+    expect(xml).not.toContain("<f>");
+    const rows=[...xml.matchAll(/<row r="(\d+)"[^>]*>([\s\S]*?)<\/row>/g)]
+      .map(match=>{
+        const values=[];
+        for(const cell of match[2].matchAll(/<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)){
+          const index=[...cell[1]].reduce((n,letter)=>n*26+letter.charCodeAt(0)-64,0)-1;
+          const v=cell[2].match(/<(?:t|v)(?:\s[^>]*)?>([\s\S]*?)<\/(?:t|v)>/);
+          values[index]=unescape(v?.[1]??"");
+        }
+        return Array.from({length:expected[i][0].length},(_,index)=>values[index]??"");
+      });
+    expect(rows).toEqual(expected[i]);
+    count+=rows.reduce((sum,row)=>sum+row.length,0);
+  }
+  expect(count).toBe(99);
+  const review=await zip.file("xl/worksheets/sheet4.xml")?.async("string");
+  expect(review).toContain("EXTRACTION NOT VERIFIED");
+});
