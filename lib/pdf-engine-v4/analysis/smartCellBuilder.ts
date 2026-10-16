@@ -197,6 +197,9 @@ function getLinesForCellAssignment(
   columns: ColumnCandidate[],
   isFirstLogicalRow: boolean,
 ) {
+  // A scoped caption-grid header was already separated from article prose.
+  // Its compact first line may identify grouped column names, not a title.
+  if (row.reason === "caption-native-numeric-grid") return row.lines;
   if (
     !isFirstLogicalRow ||
     row.lines.length < 2 ||

@@ -9,6 +9,7 @@ on:
       - "playwright.pilot.config.mjs"
       - "benchmarks/release37/**"
       - "scripts/createRelease37ReviewQueue.mjs"
+      - "scripts/checkRelease37PublicTableInventory.mjs"
       - ".github/workflows/release37-public-pilot.yml"
   workflow_dispatch:
 
@@ -46,6 +47,11 @@ jobs:
 
       - name: Download three real USGS sources to ephemeral runner and derive bounded excerpts
         run: node scripts/downloadRelease37PublicPilot.mjs
+
+      - name: Cross-check actual USGS source hash and all five unreviewed table locations
+        run: |
+          node scripts/checkRelease37PublicTableInventory.mjs
+          node scripts/checkRelease37PublicTableInventory.mjs benchmarks/release37/private/usgs-ofr20241025-metadata.json
 
       - name: Analyze each actual publisher PDF in Chromium V4 Inspector
         run: npx playwright test --config=playwright.pilot.config.mjs

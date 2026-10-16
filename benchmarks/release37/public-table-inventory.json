@@ -1,0 +1,80 @@
+{
+  "schema": "kukureku-v4-original-table-inventory-v1",
+  "sourceId": "usgs-ofr20241025",
+  "publicationPage": "https://pubs.usgs.gov/publication/ofr20241025",
+  "sourceUrl": "https://pubs.usgs.gov/of/2024/1025/ofr20241025.pdf",
+  "originalPdfSha256FromPilot": "4f7e28475dfb538ca30d220ee3ca71ecec466b32de6f424de640f06d41852203",
+  "originalPdfPagesFromPilot": 30,
+  "inventoryProvenance": "PUBLIC_PUBLISHER_TABLE_LIST_NOT_HUMAN_REVIEWED",
+  "confidenceStatement": "Table page locations derived from publisher document text/contents. A qualified reviewer must verify every original page and geometry independently.",
+  "independentSourceReview": false,
+  "allSourceTablesReviewed": false,
+  "rightsConfirmed": false,
+  "acceptedDocumentCredit": 0,
+  "reviewStatus": "PENDING_ORIGINAL_PDF_VISUAL_AND_RIGHTS_REVIEW",
+  "tables": [
+    {
+      "id": "T1",
+      "originalPdfPageNumber": 14,
+      "topic": "Acoustic receiver deployment changes",
+      "reviewFocus": "Basic rectangular table and footnote; verify superscript marker",
+      "rowCount": null,
+      "columnCount": null,
+      "cells": null,
+      "referenceStatus": "NOT_ANNOTATED",
+      "verifiedBy": null
+    },
+    {
+      "id": "T2",
+      "originalPdfPageNumber": 17,
+      "topic": "Sturgeon release counts by year and month",
+      "reviewFocus": "Multi-level Month column heading; verify headers and row spans",
+      "rowCount": null,
+      "columnCount": null,
+      "cells": null,
+      "referenceStatus": "NOT_ANNOTATED",
+      "verifiedBy": null
+    },
+    {
+      "id": "T3",
+      "originalPdfPageNumber": 18,
+      "topic": "Length and girth by release year",
+      "reviewFocus": "Multi-level measurement headers and numeric ranges",
+      "rowCount": null,
+      "columnCount": null,
+      "cells": null,
+      "referenceStatus": "NOT_ANNOTATED",
+      "verifiedBy": null
+    },
+    {
+      "id": "T4",
+      "originalPdfPageNumber": 19,
+      "topic": "Detection counts and percentages by station",
+      "reviewFocus": "Repeated water-year rows with grouped migration direction",
+      "rowCount": null,
+      "columnCount": null,
+      "cells": null,
+      "referenceStatus": "NOT_ANNOTATED",
+      "verifiedBy": null
+    },
+    {
+      "id": "T5",
+      "originalPdfPageNumber": 20,
+      "topic": "Median travel times between stations",
+      "reviewFocus": "Two-level minute/hour year groups; verify empty and na cells",
+      "rowCount": null,
+      "columnCount": null,
+      "cells": null,
+      "referenceStatus": "NOT_ANNOTATED",
+      "verifiedBy": null
+    }
+  ],
+  "pendingActions": [
+    "Review publisher rights, third-party inclusion exceptions and publication version",
+    "Open and inspect all 30 original PDF pages and verify the complete table inventory",
+    "For each table, independently record true rows, columns, merged spans and all cells, including blank cells",
+    "Have a different reviewer cross-check against the original PDF rather than V4 extraction",
+    "Export and score the same original PDF in local private corpus; never treat excerpt as second source",
+    "Do not mark V4 Stable until all formal multilingual, accuracy, stress and cancellation gates are passed"
+  ]
+}
