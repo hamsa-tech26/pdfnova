@@ -226,7 +226,7 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
 
   it("rejects long narrative blocks without a fixed multi-column word grid",()=>{
     const lines=Array.from({length:35},(_,i)=>makeLine(i,[
-      "The","scientific","text","varies","in","length",String(i),
+      "The","scientific","text","varies","in","length",
     ],false));
     // Deliberately perturb successive column positions to emulate prose.
     for(let i=0;i<lines.length;i++){
