@@ -1451,6 +1451,43 @@ function detectCaptionGridRows(
   return { rows, confidence: average(rows.map(row => row.confidence)) };
 }
 
+
+/**
+ * High-specificity single-physical-line rows for native grids that have already
+ * passed the repeated-column geometrical gate in tableRegionDetector.
+ * Do not apply this shortcut to OCR, ordinary paragraphs or caption tables.
+ */
+function detectAlignedNativeGridRows(
+  block: PdfVisualBlock,
+  columns: ColumnCandidate[],
+): AdaptiveRowDetectionResult | null {
+  if (!block.id.startsWith("aligned-grid-") || columns.length < 5) return null;
+  const lines = getBlockLines(block);
+  if (lines.length < 10 || lines.length > 120) return null;
+  if (lines.some(line =>
+    line.words.some(word => word.extractionProvenance?.source === "ocr-tesseract")
+  )) return null;
+  const supports = lines.map(line => getPopulatedColumnIndexes(line, columns).length);
+  const minimumColumns = columns.length - 1;
+  if (supports.filter(n => n >= minimumColumns).length < Math.max(10, Math.ceil(lines.length * 0.85)))
+    return null;
+  const gaps = lines.slice(1).map((line,index) =>
+    lines[index].bounds.y - line.bounds.y);
+  if (gaps.some(gap => gap < 7 || gap > 30)) return null;
+  const rows: LogicalRowCandidate[] = lines.map((line,index) => {
+    const confidence = clamp(0.7 + (supports[index] / columns.length) * 0.25,0,0.95);
+    return {
+      id:createId(index),index,lines:[line],words:[...line.words],
+      startY:getLineCenterY(line),endY:getLineCenterY(line),
+      isNewRecord:true,score:confidence*100,confidence,
+      breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+        emptyLeadingColumns:0,wrappedText:0},
+      reason:"aligned-native-grid-physical-row",
+    };
+  });
+  return {rows,confidence:average(rows.map(row=>row.confidence))};
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1482,6 +1519,8 @@ export function detectAdaptiveRowsV4(
 
   const captionGrid = detectCaptionGridRows(block, columns);
   if (captionGrid) return captionGrid;
+  const alignedGrid = detectAlignedNativeGridRows(block, columns);
+  if (alignedGrid) return alignedGrid;
 
   const lines =
     getBlockLines(block);
