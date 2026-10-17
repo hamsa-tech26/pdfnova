@@ -301,9 +301,24 @@ for(const source of release77PmcCases){
             outcome:region.outcome,
             acceptedColumns:region.acceptedColumnCount??null,
           }));
+        const lineGeometry=(pdfPage?.blocks??[]).flatMap(block=>
+          (block.lines??[]).map((line,index)=>{
+            const words=[...(line.words??[])].sort((a,b)=>a.bounds.x-b.bounds.x);
+            const numericScientific=words.filter(w=>
+              /^[+\\-\\u2212]?\\d+(?:[.,]\\d+)?(?:\\(\\d+\\))?(?:[eE][+\\-]?\\d+)?$/.test(w.text?.trim()??"")
+            ).length;
+            const numericWithLeading=words.filter(w=>
+              /^[+\\-\\u2212]?(?:\\d|\\.\\d)/.test(w.text?.trim()??"")
+            ).length;
+            return {index,wordCount:words.length,scientificCount:numericScientific,
+              numericLeadingCount:numericWithLeading,
+              y:Math.round(line.bounds.y),
+              starts:words.slice(0,10).map(w=>Math.round(w.bounds.x)),
+              lineWidth:Math.round(line.bounds.width)};
+          }));
         console.log("R77_PMC_PAGE_GEOMETRY "+JSON.stringify({
           id:source.id,sourcePage:source.pageNumber,visualBlocks:blocks,
-          diagnosticRegions,acceptedDocumentCredit:0,
+          lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
