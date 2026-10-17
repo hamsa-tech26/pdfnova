@@ -163,22 +163,23 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
       makeLine(1,["Species","Year","North","South","East","West"]),
       makeLine(2,["Salmon","2024","10","11","12","13"]),
       makeLine(3,["Salmon","2025","14","15","16","17"]),
-      makeLine(4,["Discussion begins here without a tabular format."]),
-      makeLine(5,["The observations should remain in the document narrative."]),
-      makeLine(6,["This explanation separates the following numeric passage."]),
-      makeLine(7,["The following examples are not part of the first table."]),
-      makeLine(8,["Other","2026","90","91","92","93"]),
-      makeLine(9,["Other","2027","94","95","96","97"]),
+      makeLine(4,["Salmon","2026","18","19","20","21"]),
+      makeLine(5,["Discussion begins here without a tabular format."]),
+      makeLine(6,["The observations should remain in the document narrative."]),
+      makeLine(7,["This explanation separates the following numeric passage."]),
+      makeLine(8,["The following examples are not part of the first table."]),
+      makeLine(9,["Other","2027","90","91","92","93"]),
+      makeLine(10,["Other","2028","94","95","96","97"]),
     ];
     const result=detectTableRegionsForPage([makeBlock(lines)]);
     const grid=result.tableRegions.find(region=>region.block.id.startsWith("caption-table-"));
     expect(grid).toBeDefined();
     if(!grid||grid.block.type!=="paragraph") return;
-    expect(grid.block.lines.map(line=>line.id)).toEqual(["line-1","line-2","line-3"]);
+    expect(grid.block.lines.map(line=>line.id)).toEqual(["line-1","line-2","line-3","line-4"]);
     const prose=result.regions.filter(region=>region.block.id.startsWith("caption-prose-"))
       .flatMap(region=>region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]);
-    expect(prose).toContain("line-8");
     expect(prose).toContain("line-9");
+    expect(prose).toContain("line-10");
   });
 
   it("does not interpret a prose sentence starting with a table reference as a caption",()=>{
