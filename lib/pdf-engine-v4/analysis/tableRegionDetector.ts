@@ -1413,11 +1413,11 @@ function createRepeatedColumnGridCandidates(
       const base = signatures[index];
       if (!base) { index += 1; continue; }
       let end = index + 1;
-      while (
-        end < signatures.length &&
-        signatures[end] &&
-        isSameSignature(base, signatures[end])
-      ) end += 1;
+      while (end < signatures.length) {
+        const next = signatures[end];
+        if (!next || !isSameSignature(base, next)) break;
+        end += 1;
+      }
       const count = end - index;
       if (count >= 10) {
         let start = index;
