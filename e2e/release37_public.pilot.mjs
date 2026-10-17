@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import {createHash} from "node:crypto";
 import {test,expect} from "@playwright/test";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
@@ -178,3 +179,106 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",asyn
   const review=await zip.file("xl/worksheets/sheet6.xml")?.async("string");
   expect(review).toContain("EXTRACTION NOT VERIFIED");
 });
+
+
+/**
+ * Release 77 external real-PDF diagnostic. These sources are original PMC
+ * articles, not created/synthetic crops. Reference row/column shapes and
+ * prior baseline shapes come from Issue #75 / #38, remain provisional and
+ * DO NOT qualify a full-document gold-standard acceptance claim.
+ *
+ * No PDF bytes, OCR, table text or raw Inspector JSON enter artifacts/logs.
+ */
+const release77PmcCases=[
+  {
+    id:"PMC2147049",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC2147049.1/PMC2147049.1.pdf",
+    sha256:"465b9e4c260dcc2d7b3532efe7ef2ef7d88d9ef88502ca4dc689cdd77d726e",
+    pageNumber:3,sourcePageCount:21,
+    publishedRows:40,publishedColumns:2,
+    previousRows:14,previousColumns:6,
+  },
+  {
+    id:"PMC3297222",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC3297222.1/PMC3297222.1.pdf",
+    sha256:"9313ad1420a750c43f6ed53b8a81cf2b2009e86a28d37721bd8e3e66db973d58",
+    pageNumber:9,sourcePageCount:13,
+    publishedRows:34,publishedColumns:7,
+    previousRows:5,previousColumns:10,
+  },
+];
+
+async function boundedPmcPdf(url){
+  const response=await fetch(url,{
+    redirect:"error",
+    signal:AbortSignal.timeout(90000),
+    headers:{"Accept":"application/pdf"},
+  });
+  if(!response.ok||!response.body)throw Error("PMC original source unavailable");
+  if(new URL(response.url).hostname!=="pmc-oa-opendata.s3.amazonaws.com")
+    throw Error("Unexpected source hostname");
+  const max=25*1024*1024;
+  if(Number(response.headers.get("content-length")||0)>max)
+    throw Error("PMC original exceeds upload safety limit");
+  const chunks=[];let total=0;
+  for await(const chunk of response.body){
+    total+=chunk.byteLength;
+    if(total>max)throw Error("PMC original exceeds upload safety limit");
+    chunks.push(Buffer.from(chunk));
+  }
+  const bytes=Buffer.concat(chunks);
+  if(bytes.subarray(0,5).toString("ascii")!=="%PDF-")
+    throw Error("Publisher did not return a PDF");
+  return bytes;
+}
+
+for(const source of release77PmcCases){
+  test("Release 77 original PMC table-shape diagnostic (not certification): "+source.id,
+    async({page})=>{
+      test.setTimeout(300_000);
+      const bytes=await boundedPmcPdf(source.sourceUrl);
+      expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+      await page.goto("/engine-inspector");
+      await page.locator('input[type="file"]').first().setInputFiles({
+        name:source.id+".pdf",mimeType:"application/pdf",buffer:bytes,
+      });
+      const button=page.getByRole("button",{name:"Download complete result JSON"});
+      await expect(button).toBeVisible({timeout:270_000});
+      const downloadPromise=page.waitForEvent("download");
+      await button.click();
+      const download=await downloadPromise;
+      const filename=await download.path();
+      if(!filename)throw Error("No downloadable V4 Inspector result");
+      const inspector=JSON.parse(await readFile(filename,"utf8"));
+      expect(inspector.document?.pages?.length).toBe(source.sourcePageCount);
+      expect(Array.isArray(inspector.tables)).toBe(true);
+      const pageTables=inspector.tables.filter(t=>t.pageNumber===source.pageNumber);
+      const dimensionError=(rows,columns)=>
+        Math.abs(rows-source.publishedRows)+Math.abs(columns-source.publishedColumns);
+      const shapes=pageTables.map(t=>({
+        rows:Array.isArray(t.rows)?t.rows.length:0,
+        columns:Number(t.columnCount)||0,
+      }));
+      const closest=shapes.sort((a,b)=>
+        dimensionError(a.rows,a.columns)-dimensionError(b.rows,b.columns))[0]??null;
+      const baselineError=dimensionError(source.previousRows,source.previousColumns);
+      const observedError=closest?dimensionError(closest.rows,closest.columns):null;
+      console.log("R77_REPRO "+JSON.stringify({
+        id:source.id,sourceHashVerified:true,
+        originalPageCount:source.sourcePageCount,
+        provisionalTablePage:source.pageNumber,
+        publishedTableShape:[source.publishedRows,source.publishedColumns],
+        earlierObservedShape:[source.previousRows,source.previousColumns],
+        candidateCountOnPage:pageTables.length,
+        nearestCandidateShape:closest?[closest.rows,closest.columns]:null,
+        baselineDimensionDistance:baselineError,
+        currentDimensionDistance:observedError,
+        structuralImprovement:observedError!==null&&observedError<baselineError,
+        formalAcceptedDocumentCredit:0,
+      }));
+      // Fail closed on absent/unchanged shapes. Even an improvement here is
+      // provisional and must not be described as full per-cell accuracy.
+      expect(observedError).not.toBeNull();
+      expect(observedError).toBeLessThan(baselineError);
+    });
+}
