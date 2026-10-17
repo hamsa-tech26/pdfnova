@@ -130,4 +130,110 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
     const result=detectTableRegionsForPage([makeBlock(lines)]);
     expect(result.regions.some(r=>r.block.id.startsWith("caption-table-"))).toBe(false);
   });
+  it("recovers all 34 numeric data rows under a standalone scientific caption, without losing prose",()=>{
+    const lines=[
+      makeLine(0,["Narrative introduction before the table."]),
+      makeLine(1,["Table 1"]),
+      makeLine(2,["Species","Year","North","South","East","West"]),
+      ...Array.from({length:34},(_,i)=>makeLine(i+3,[
+        "Salmon",String(1990+i),String(i+1),String(i+2),String(i+3),String(i+4),
+      ])),
+      ...Array.from({length:5},(_,i)=>makeLine(i+37,[
+        "Discussion of population characteristics after the recorded observations.",
+      ])),
+    ];
+    const original=makeBlock(lines);
+    const result=detectTableRegionsForPage([original]);
+    const grid=result.tableRegions.find(region=>region.block.id.startsWith("caption-table-"));
+    expect(grid).toBeDefined();
+    expect(grid?.block.type).toBe("paragraph");
+    if(!grid||grid.block.type!=="paragraph") return;
+    expect(grid.block.lines).toHaveLength(35); // header + 34 data rows
+    expect(grid.block.lines[34]?.id).toBe("line-36");
+    expect(result.regions.flatMap(region=>
+      region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]
+    )).toEqual(lines.map(line=>line.id));
+    expect(result.regions.filter(region=>region.block.id.startsWith("caption-prose-")))
+      .toHaveLength(2);
+  });
+
+  it("stops at prose and does not absorb a later unrelated numeric passage",()=>{
+    const lines=[
+      makeLine(0,["Table S2: Experimental cell counts"]),
+      makeLine(1,["Species","Year","North","South","East","West"]),
+      makeLine(2,["Salmon","2024","10","11","12","13"]),
+      makeLine(3,["Salmon","2025","14","15","16","17"]),
+      makeLine(4,["Salmon","2026","18","19","20","21"]),
+      makeLine(5,["Discussion begins here without a tabular format."]),
+      makeLine(6,["The observations should remain in the document narrative."]),
+      makeLine(7,["This explanation separates the following numeric passage."]),
+      makeLine(8,["The following examples are not part of the first table."]),
+      makeLine(9,["Other","2027","90","91","92","93"]),
+      makeLine(10,["Other","2028","94","95","96","97"]),
+    ];
+    const result=detectTableRegionsForPage([makeBlock(lines)]);
+    const grid=result.tableRegions.find(region=>region.block.id.startsWith("caption-table-"));
+    expect(grid).toBeDefined();
+    if(!grid||grid.block.type!=="paragraph") return;
+    expect(grid.block.lines.map(line=>line.id)).toEqual(["line-1","line-2","line-3","line-4"]);
+    const prose=result.regions.filter(region=>region.block.id.startsWith("caption-prose-"))
+      .flatMap(region=>region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]);
+    expect(prose).toContain("line-9");
+    expect(prose).toContain("line-10");
+  });
+
+  it("does not interpret a prose sentence starting with a table reference as a caption",()=>{
+    const source=makeBlock([
+      makeLine(0,["Table 1 describes results from the previous season."]),
+      ...Array.from({length:6},(_,i)=>makeLine(i+1,["Narrative evidence only."])),
+    ]);
+    expect(detectTableRegionsForPage([source]).regions.some(region=>
+      region.block.id.startsWith("caption-table-")
+    )).toBe(false);
+  });
+
+  it("isolates long seven-column native scientific tables without treating prose as cells",()=>{
+    const anchors=[60,100,175,249,324,399,474];
+    const mk=(i:number,values:string[],xs=anchors):PdfLine=>{
+      const y=760-i*13;
+      const pieces=values.map((text,j):PdfWord=>({
+        id:"science-word-"+i+"-"+j,text,pageNumber:1,rotation:0,
+        font:{size:9},bounds:{x:xs[j],y,width:Math.max(8,Math.min(30,text.length*4)),height:10},
+      }));
+      return {id:"scientific-line-"+i,pageNumber:1,words:pieces,
+        text:values.join(" "),
+        bounds:{x:xs[0],y,width:xs[xs.length-1]+35-xs[0],height:10}};
+    };
+    const pre=Array.from({length:8},(_,i)=>mk(i,["The text preceding this table is an ordinary paragraph."],[60]));
+    const header=mk(8,["x","y","z","U11","U22","U33"],anchors.slice(1));
+    const grid=Array.from({length:33},(_,i)=>mk(i+9,[
+      "C"+(i+1),"0.354(2)","0.651(4)","1.234(6)","0.019(2)","0.012(3)","0.031(5)",
+    ]));
+    const post=Array.from({length:5},(_,i)=>mk(i+42,["Discussion continues below the structure parameters."],[60]));
+    const original=makeBlock([...pre,header,...grid,...post]);
+    const output=detectTableRegionsForPage([original]);
+    const recovered=output.tableRegions.find(r=>r.block.id.startsWith("aligned-grid-"));
+    expect(recovered).toBeDefined();
+    if(!recovered||recovered.block.type!=="paragraph") return;
+    expect(recovered.block.lines).toHaveLength(34);
+    expect(recovered.block.lines[0].id).toBe("scientific-line-8");
+    expect(recovered.block.lines[33].id).toBe("scientific-line-41");
+    const allLines=output.regions.flatMap(region=>
+      region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]);
+    expect(allLines).toEqual(original.lines.map(line=>line.id));
+    expect(new Set(allLines).size).toBe(original.lines.length);
+  });
+
+  it("rejects long narrative blocks without a fixed multi-column word grid",()=>{
+    const lines=Array.from({length:35},(_,i)=>makeLine(i,[
+      "The","scientific","text","varies","in","length",
+    ],false));
+    // Deliberately perturb successive column positions to emulate prose.
+    for(let i=0;i<lines.length;i++){
+      lines[i].words.forEach((word,j)=>{word.bounds.x+=i*3+j*2;});
+    }
+    const result=detectTableRegionsForPage([makeBlock(lines)]);
+    expect(result.tableRegions.some(x=>x.block.id.startsWith("aligned-grid-"))).toBe(false);
+  });
+
 });

@@ -2033,3 +2033,52 @@ it(
     );
   },
 );
+
+
+describe("Release 77 native aligned grids",()=>{
+  it("preserves 34 native physical rows and seven column positions without serial numbers",()=>{
+    const anchors=[60,100,175,249,324,399,474];
+    const wordsFor=(row:number,values:string[],positions=anchors):PdfWord[]=>
+      values.map((text,index)=>({
+        id:"native-"+row+"-"+index,text,pageNumber:1,
+        bounds:{x:positions[index],y:740-row*13,width:12,height:10},
+        font:{size:9},rotation:0,
+        extractionProvenance:{source:"native-pdf"},
+      }));
+    const lines:PdfLine[]=[
+      {id:"header",pageNumber:1,
+        words:wordsFor(0,["x","y","z","U11","U22","U33"],anchors.slice(1)),
+        bounds:{x:100,y:740,width:400,height:10},text:"x y z U11 U22 U33"},
+      ...Array.from({length:33},(_,i)=>{
+        const words=wordsFor(i+1,["C"+(i+1),"0.351(2)","0.654(2)","0.541(2)","0.012(2)","0.019(3)","0.031(3)"]);
+        return {id:"native-row-"+i,pageNumber:1,words,
+          bounds:{x:60,y:740-(i+1)*13,width:450,height:10},
+          text:words.map(w=>w.text).join(" ")};
+      }),
+    ];
+    const block:PdfParagraphBlock={
+      id:"aligned-grid-1-source-4",pageNumber:1,type:"paragraph",
+      lines,text:lines.map(line=>line.text).join(" "),confidence:0.9,
+      bounds:{x:60,y:300,width:450,height:450},
+    };
+    const columnDefs:ColumnCandidate[]=anchors.map((x,index)=>({
+      id:"c"+index,x,minX:x,maxX:x,leftBoundary:x-15,
+      rightBoundary:index===anchors.length-1?530:(x+anchors[index+1])/2,
+      occurrences:33,distinctLineCount:33,averageDeviation:0,
+      stability:1,confidence:1,accepted:true,reason:"test",
+    }));
+    const result=detectAdaptiveRowsV4(block,columnDefs);
+    expect(result.rows).toHaveLength(34);
+    expect(result.rows.every(row=>row.lines.length===1)).toBe(true);
+    expect(result.rows.map(row=>row.lines[0].id)).toEqual(lines.map(line=>line.id));
+    expect(result.rows[1].reason).toBe("aligned-native-grid-physical-row");
+  });
+
+  it("does not apply physical-line override to ordinary paragraphs",()=>{
+    const paragraphs:PdfParagraphBlock={
+      id:"regular-paragraph",type:"paragraph",pageNumber:1,
+      lines:[],text:"",confidence:0.8,bounds:{x:0,y:0,width:0,height:0},
+    };
+    expect(detectAdaptiveRowsV4(paragraphs,[]).rows).toHaveLength(0);
+  });
+});
