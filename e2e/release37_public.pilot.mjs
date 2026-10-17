@@ -364,8 +364,24 @@ for(const source of release77PmcCases){
           .filter(r=>r.pageNumber===source.pageNumber)
           .map(r=>({kind:r.blockType,lines:r.lineCount,score:Math.round(r.analysis?.totalScore??0),
             status:r.outcome,columns:r.acceptedColumnCount??null}));
+        const extractionAnalysis=(inspector.tableAnalyses??[])
+          .filter(a=>a.pageNumber===source.pageNumber).slice(0,6)
+          .map(a=>({
+            regionIdPrefix:a.blockId?.split("-").slice(0,3).join("-"),
+            accepted:(a.columnDetection?.columns??[]).map(c=>({
+              x:Math.round(c.x),support:c.distinctLineCount,
+              stability:Number(c.stability?.toFixed(2)),
+            })),
+            rejected:(a.columnDetection?.rejectedCandidates??[]).map(c=>({
+              x:Math.round(c.x),support:c.distinctLineCount,
+              stability:Number(c.stability?.toFixed(2)),
+              reason:c.reason,
+            })).filter(c=>c.x<240).slice(0,20),
+            physicalRows:a.rowDetection?.rows?.length??null,
+            rowLineCounts:(a.rowDetection?.rows??[]).map(r=>r.lines?.length??0),
+          }));
         console.log("R79_PMC599_TABLE_LAYOUT "+JSON.stringify({
-          id:source.id,tableDiagnostics,regionProfile,formalReferenceCredit:0,
+          id:source.id,tableDiagnostics,regionProfile,extractionAnalysis,formalReferenceCredit:0,
         }));
       }
       // R78: The six-anchor PMC2147049 candidate is not the published
