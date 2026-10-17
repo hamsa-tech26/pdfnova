@@ -339,6 +339,35 @@ for(const source of release77PmcCases){
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
+      if(source.id==="PMC5995222"){
+        // Geometric debug only: no source words, cell text, or PDF bytes.
+        const tableDiagnostics=pageTables.slice(0,6).map((table,index)=>({
+          index,
+          idPrefix:table.id?.split("-").slice(0,2).join("-")??null,
+          rows:table.rows?.length??0,
+          cols:table.columnCount,
+          bounds:table.bounds&&{
+            x:Math.round(table.bounds.x),y:Math.round(table.bounds.y),
+            w:Math.round(table.bounds.width),h:Math.round(table.bounds.height),
+          },
+          rowProfiles:(table.rows??[]).map((row,r)=>({
+            r,
+            bounds:row.bounds&&{y:Math.round(row.bounds.y),h:Math.round(row.bounds.height)},
+            populated:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).length,
+            occupiedCols:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).map(c=>c.columnIndex),
+            cellXs:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).map(c=>Math.round(c.bounds?.x??0)),
+            spans:(row.cells??[]).filter(c=>(c.columnSpan??1)>1||(c.rowSpan??1)>1)
+              .map(c=>[c.columnIndex,c.columnSpan,c.rowSpan]),
+          })),
+        }));
+        const regionProfile=(inspector.candidateRegionDiagnostics??[])
+          .filter(r=>r.pageNumber===source.pageNumber)
+          .map(r=>({kind:r.blockType,lines:r.lineCount,score:Math.round(r.analysis?.totalScore??0),
+            status:r.outcome,columns:r.acceptedColumnCount??null}));
+        console.log("R79_PMC599_TABLE_LAYOUT "+JSON.stringify({
+          id:source.id,tableDiagnostics,regionProfile,formalReferenceCredit:0,
+        }));
+      }
       // R78: The six-anchor PMC2147049 candidate is not the published
       // two-column table. Record the strict acceptance gate separately from
       // the legacy improvement-vs-baseline check; do not certify this source.
