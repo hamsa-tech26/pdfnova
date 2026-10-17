@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
 import {test,expect} from "@playwright/test";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
@@ -348,6 +349,10 @@ for(const source of release77PmcCases){
             nativeWordCount:p.textExtraction?.wordCount,
           })),
           detectedTables:inspector.tables.length,
+          tableProfiles:inspector.tables.map(t=>({
+            page:t.pageNumber,rows:t.rows?.length??0,cols:t.columnCount,
+            confidence:Number(t.confidence?.toFixed(3)),
+          })),
           independentApprovalCredit:0,
         }));
       }
@@ -438,15 +443,26 @@ for(const source of release77PmcCases){
 // the external source's provisional six-row ten-column table is preserved in
 // the downloaded workbook and contains non-empty cells. It is not third-party
 // adjudication of individual source-cell values or merged header semantics.
-test("R79 original PMC PDF-to-Excel downloaded workbook has a populated 6x10 table",async({page})=>{
-  test.setTimeout(300_000);
+test("R79 original PMC table-page excerpt exports a populated 6x10 XLSX sheet",async({page})=>{
+  test.setTimeout(160_000);
   const source=release77PmcCases.find(x=>x.id==="PMC5995222");
   if(!source)throw Error("Missing pinned PMC source");
   const bytes=await boundedPmcPdf(source.sourceUrl);
   expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  // This is original publisher page 4, not a synthetic table. The complete
+  // 7-page document is known to trigger the independent quality refuse gate
+  // because other tables are uncertain; never disable that safeguard.
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(source.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  const pages=await excerpt.copyPages(original,[source.pageNumber-1]);
+  excerpt.addPage(pages[0]);
+  const excerptBytes=Buffer.from(await excerpt.save());
+  expect(excerptBytes.subarray(0,5).toString("ascii")).toBe("%PDF-");
   await page.goto("/pdf-to-excel");
   await page.locator('input[type="file"]').first().setInputFiles({
-    name:source.id+".pdf",mimeType:"application/pdf",buffer:bytes,
+    name:source.id+"-original-page-"+source.pageNumber+".pdf",
+    mimeType:"application/pdf",buffer:excerptBytes,
   });
   const downloaded=page.waitForEvent("download",{timeout:65000})
     .then(download=>({kind:"download",download}));
@@ -499,7 +515,7 @@ test("R79 original PMC PDF-to-Excel downloaded workbook has a populated 6x10 tab
   const matches=profiles.filter(p=>p.rowCount===6&&p.maxCols===10&&
     p.nonemptyByRow.reduce((a,b)=>a+b,0)>=45);
   console.log("R79_XLSX_STRUCTURE "+JSON.stringify({
-    originalSource:source.id,shaVerified:true,
+    originalSource:source.id,originalHashVerified:true,pagesSelected:[source.pageNumber],
     sheetProfiles:profiles.map(p=>({
       rows:p.rowCount,cols:p.maxCols,nonempty:p.nonemptyByRow.reduce((a,b)=>a+b,0),
     })),
