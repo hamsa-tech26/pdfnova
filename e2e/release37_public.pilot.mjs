@@ -276,9 +276,9 @@ for(const source of release77PmcCases){
         structuralImprovement:observedError!==null&&observedError<baselineError,
         formalAcceptedDocumentCredit:0,
       }));
-      // Metadata-only bounded page diagnostic for the still-failing PMC
-      // case. Raw word text, source PDF and Inspector JSON never leave CI.
-      if(source.id==="PMC3297222"){
+      // Metadata-only page diagnostics for both original PMC table failures.
+      // No word text, source PDF, or Inspector JSON is written to CI artifacts.
+      if(source.id==="PMC3297222"||source.id==="PMC2147049"){
         const pdfPage=inspector.document.pages[source.pageNumber-1];
         const blocks=(pdfPage?.blocks??[]).slice(0,40).map((block,index)=>{
           const lines=Array.isArray(block.lines)?block.lines:[];
@@ -316,7 +316,7 @@ for(const source of release77PmcCases){
               starts:words.slice(0,10).map(w=>Math.round(w.bounds.x)),
               lineWidth:Math.round(line.bounds.width)};
           }));
-        console.log("R77_PMC_PAGE_GEOMETRY "+JSON.stringify({
+        console.log("R78_PMC_PAGE_GEOMETRY "+JSON.stringify({
           id:source.id,sourcePage:source.pageNumber,visualBlocks:blocks,
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
