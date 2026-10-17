@@ -321,6 +321,22 @@ for(const source of release77PmcCases){
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
+      // R78: The six-anchor PMC2147049 candidate is not the published
+      // two-column table. Record the strict acceptance gate separately from
+      // the legacy improvement-vs-baseline check; do not certify this source.
+      const matchesPublishedShape=closest!==null &&
+        closest.rows===source.publishedRows &&
+        closest.columns===source.publishedColumns;
+      console.log("R78_ORIGINAL_TABLE_ACCEPTANCE "+JSON.stringify({
+        id:source.id,exactPublishedShape:matchesPublishedShape,
+        observedShape:closest?[closest.rows,closest.columns]:null,
+        requiredShape:[source.publishedRows,source.publishedColumns],
+        decision:matchesPublishedShape?"SHAPE_ONLY_NOT_CELL_VERIFIED":"BLOCKED",
+        independentAcceptanceCredit:0,
+      }));
+      if(source.id==="PMC2147049"){
+        expect(matchesPublishedShape).toBe(false); // Documented known failure.
+      }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
       // provisional and must not be described as full per-cell accuracy.
       expect(observedError).not.toBeNull();
