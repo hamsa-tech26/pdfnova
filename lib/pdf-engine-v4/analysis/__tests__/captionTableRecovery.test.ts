@@ -130,4 +130,65 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
     const result=detectTableRegionsForPage([makeBlock(lines)]);
     expect(result.regions.some(r=>r.block.id.startsWith("caption-table-"))).toBe(false);
   });
+  it("recovers all 34 numeric data rows under a standalone scientific caption, without losing prose",()=>{
+    const lines=[
+      makeLine(0,["Narrative introduction before the table."]),
+      makeLine(1,["Table 1"]),
+      makeLine(2,["Species","Year","North","South","East","West"]),
+      ...Array.from({length:34},(_,i)=>makeLine(i+3,[
+        "Salmon",String(1990+i),String(i+1),String(i+2),String(i+3),String(i+4),
+      ])),
+      ...Array.from({length:5},(_,i)=>makeLine(i+37,[
+        "Discussion of population characteristics after the recorded observations.",
+      ])),
+    ];
+    const original=makeBlock(lines);
+    const result=detectTableRegionsForPage([original]);
+    const grid=result.tableRegions.find(region=>region.block.id.startsWith("caption-table-"));
+    expect(grid).toBeDefined();
+    expect(grid?.block.type).toBe("paragraph");
+    if(!grid||grid.block.type!=="paragraph") return;
+    expect(grid.block.lines).toHaveLength(35); // header + 34 data rows
+    expect(grid.block.lines[34]?.id).toBe("line-36");
+    expect(result.regions.flatMap(region=>
+      region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]
+    )).toEqual(lines.map(line=>line.id));
+    expect(result.regions.filter(region=>region.block.id.startsWith("caption-prose-")))
+      .toHaveLength(2);
+  });
+
+  it("stops at prose and does not absorb a later unrelated numeric passage",()=>{
+    const lines=[
+      makeLine(0,["Table S2: Experimental cell counts"]),
+      makeLine(1,["Species","Year","North","South","East","West"]),
+      makeLine(2,["Salmon","2024","10","11","12","13"]),
+      makeLine(3,["Salmon","2025","14","15","16","17"]),
+      makeLine(4,["Discussion begins here without a tabular format."]),
+      makeLine(5,["The observations should remain in the document narrative."]),
+      makeLine(6,["This explanation separates the following numeric passage."]),
+      makeLine(7,["The following examples are not part of the first table."]),
+      makeLine(8,["Other","2026","90","91","92","93"]),
+      makeLine(9,["Other","2027","94","95","96","97"]),
+    ];
+    const result=detectTableRegionsForPage([makeBlock(lines)]);
+    const grid=result.tableRegions.find(region=>region.block.id.startsWith("caption-table-"));
+    expect(grid).toBeDefined();
+    if(!grid||grid.block.type!=="paragraph") return;
+    expect(grid.block.lines.map(line=>line.id)).toEqual(["line-1","line-2","line-3"]);
+    const prose=result.regions.filter(region=>region.block.id.startsWith("caption-prose-"))
+      .flatMap(region=>region.block.type==="paragraph"?region.block.lines.map(line=>line.id):[]);
+    expect(prose).toContain("line-8");
+    expect(prose).toContain("line-9");
+  });
+
+  it("does not interpret a prose sentence starting with a table reference as a caption",()=>{
+    const source=makeBlock([
+      makeLine(0,["Table 1 describes results from the previous season."]),
+      ...Array.from({length:6},(_,i)=>makeLine(i+1,["Narrative evidence only."])),
+    ]);
+    expect(detectTableRegionsForPage([source]).regions.some(region=>
+      region.block.id.startsWith("caption-table-")
+    )).toBe(false);
+  });
+
 });
