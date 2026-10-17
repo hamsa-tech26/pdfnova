@@ -215,6 +215,7 @@ const release77PmcCases=[
     publishedRows:6,publishedColumns:10,
     previousRows:5,previousColumns:10,
     requireImprovement:false,
+    requireExactShape:true,
   },
   {
     id:"PMC3297222",
@@ -408,6 +409,15 @@ for(const source of release77PmcCases){
       expect(observedError).not.toBeNull();
       if(source.requireImprovement!==false) {
         expect(observedError).toBeLessThan(baselineError);
+      }
+      if(source.requireExactShape===true){
+        expect(matchesPublishedShape).toBe(true);
+        const exact=pageTables.find(table=>
+          table.rows?.length===source.publishedRows &&
+          table.columnCount===source.publishedColumns);
+        expect(exact?.rows?.length).toBe(6);
+        // A correct 10-column *shape* alone is not an accuracy claim.
+        expect(exact?.rows?.every(row=>row.cells?.length===10)).toBe(true);
       }
     });
 }
