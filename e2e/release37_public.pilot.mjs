@@ -421,3 +421,63 @@ for(const source of release77PmcCases){
       }
     });
 }
+
+
+// R79: Test a real *exported* XLSX, not just an Inspector object. This verifies
+// the external source's provisional six-row ten-column table is preserved in
+// the downloaded workbook and contains non-empty cells. It is not third-party
+// adjudication of individual source-cell values or merged header semantics.
+test("R79 original PMC PDF-to-Excel downloaded workbook has a populated 6x10 table",async({page})=>{
+  test.setTimeout(300_000);
+  const source=release77PmcCases.find(x=>x.id==="PMC5995222");
+  if(!source)throw Error("Missing pinned PMC source");
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:source.id+".pdf",mimeType:"application/pdf",buffer:bytes,
+  });
+  const promise=page.waitForEvent("download",{timeout:180000});
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const download=await promise;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
+  const file=await download.path();
+  if(!file)throw Error("No real XLSX download");
+  const zip=await JSZip.loadAsync(await readFile(file));
+  const names=Object.keys(zip.files).filter(name=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  expect(names.length).toBeGreaterThanOrEqual(2);
+  const unescape=value=>value.replace(/&amp;/g,"&").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  const profiles=[];
+  for(const name of names){
+    const xml=await zip.file(name)?.async("string")??"";
+    const rows=[...xml.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)].map(match=>{
+      const cells=[...match[1].matchAll(/<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)];
+      const vals=[];
+      for(const cell of cells){
+        const index=[...cell[1]].reduce((v,c)=>v*26+c.charCodeAt(0)-64,0)-1;
+        const v=cell[2].match(/<(?:t|v)(?:\s[^>]*)?>([\s\S]*?)<\/(?:t|v)>/);
+        vals[index]=unescape(v?.[1]??"").trim();
+      }
+      return vals;
+    });
+    const maxCols=rows.reduce((n,row)=>Math.max(n,row.length),0);
+    const nonemptyByRow=rows.map(row=>row.filter(x=>Boolean(x?.trim())).length);
+    profiles.push({name,rowCount:rows.length,maxCols,nonemptyByRow});
+  }
+  const matches=profiles.filter(p=>p.rowCount===6&&p.maxCols===10&&
+    p.nonemptyByRow.reduce((a,b)=>a+b,0)>=45);
+  console.log("R79_XLSX_STRUCTURE "+JSON.stringify({
+    originalSource:source.id,shaVerified:true,
+    sheetProfiles:profiles.map(p=>({
+      rows:p.rowCount,cols:p.maxCols,nonempty:p.nonemptyByRow.reduce((a,b)=>a+b,0),
+    })),
+    matched6x10PopulatedSheet:matches.length>0,
+    independentlyReviewedCellCredit:0,
+  }));
+  expect(matches.length).toBeGreaterThanOrEqual(1);
+  // Human review warnings remain visible for unverified extraction.
+  const xmls=await Promise.all(names.map(async name=>zip.file(name)?.async("string")));
+  expect(xmls.some(xml=>xml?.includes("EXTRACTION NOT VERIFIED"))).toBe(true);
+});
