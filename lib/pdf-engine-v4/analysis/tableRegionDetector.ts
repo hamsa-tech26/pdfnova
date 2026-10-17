@@ -1377,6 +1377,83 @@ function createCaptionAnchoredCandidates(
   return candidates;
 }
 
+
+/**
+ * An intentionally high-specificity native-PDF rescue for long, uniformly
+ * aligned scientific grids swallowed by one large paragraph block.
+ *
+ * Never lower global table thresholds. A qualifying run needs at least ten
+ * consecutive rows with 5+ well-separated, nearly identical word anchors;
+ * multi-column narrative text and short enumerations are not sufficient.
+ */
+function createRepeatedColumnGridCandidates(
+  blocks: PdfVisualBlock[],
+): CaptionAnchoredCandidate[] {
+  const result: CaptionAnchoredCandidate[] = [];
+  const tolerance = 7;
+  const positions = (line: PdfLine): number[] | null => {
+    if (line.words.length < 5 || line.words.length > 14) return null;
+    // This isolated research release does not change OCR table behavior.
+    if (line.words.some(word => word.extractionProvenance?.source === "ocr-tesseract"))
+      return null;
+    const words = [...line.words].sort((a, b) => a.bounds.x - b.bounds.x);
+    const xs = words.map(word => word.bounds.x);
+    if (xs[xs.length - 1] - xs[0] < 230) return null;
+    if (xs.slice(1).some((x, index) => x - xs[index] < 20)) return null;
+    return xs;
+  };
+  const isSameSignature = (a: number[], b: number[]) =>
+    a.length === b.length &&
+    a.every((x, index) => Math.abs(x - b[index]) <= tolerance);
+  for (const block of blocks) {
+    if (block.type !== "paragraph" || block.lines.length < 16) continue;
+    const signatures = block.lines.map(positions);
+    let index = 0;
+    while (index < block.lines.length) {
+      const base = signatures[index];
+      if (!base) { index += 1; continue; }
+      let end = index + 1;
+      while (
+        end < signatures.length &&
+        signatures[end] &&
+        isSameSignature(base, signatures[end])
+      ) end += 1;
+      const count = end - index;
+      if (count >= 10) {
+        let start = index;
+        // A source-observed 6-column header may align with columns 2..7.
+        // Include at most one preceding header row; never absorb prose above.
+        if (start > 0 && block.lines[start - 1]) {
+          const preceding = [...block.lines[start - 1].words]
+            .sort((a, b) => a.bounds.x - b.bounds.x)
+            .map(word => word.bounds.x);
+          if (
+            preceding.length === base.length - 1 &&
+            preceding.every((x, j) => Math.abs(x - base[j + 1]) <= 10)
+          ) start -= 1;
+        }
+        const lines = block.lines.slice(start, end);
+        result.push({
+          sourceBlock: block,
+          firstLineIndex: start,
+          lastLineIndex: end - 1,
+          block: {
+            id: "aligned-grid-" + block.pageNumber + "-" + block.id + "-" + start,
+            type: "paragraph",
+            pageNumber: block.pageNumber,
+            bounds: getBoundsForLines(lines),
+            lines,
+            text: lines.map(line => line.text).join(" "),
+            confidence: block.confidence,
+          },
+        });
+      }
+      index = end;
+    }
+  }
+  return result;
+}
+
 export function detectTableRegionsForPage(
   blocks: PdfVisualBlock[],
   options?: TableRegionDetectorOptions,
@@ -1402,9 +1479,22 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.alignment.score >= 16 &&
       candidate.analysis.totalScore >= 30,
     );
-  const bySource = new Map<PdfVisualBlock, typeof admitted>();
+  const alignedCandidates = createRepeatedColumnGridCandidates(blocks)
+    .filter(candidate => !admitted.some(existing =>
+      existing.sourceBlock === candidate.sourceBlock))
+    .map(candidate => ({
+      ...candidate,
+      analysis: analyzeBlock(candidate.block, resolvedOptions),
+    }))
+    .filter(candidate =>
+      candidate.analysis.breakdown.alignment.score >= 24 &&
+      candidate.analysis.breakdown.spacing.score >= 12 &&
+      candidate.analysis.totalScore >= resolvedOptions.tableThreshold,
+    );
+  const allAdmitted = [...admitted, ...alignedCandidates];
+  const bySource = new Map<PdfVisualBlock, typeof allAdmitted>();
   const captionAnalyses = new Map<PdfVisualBlock, TableRegionAnalysis>();
-  for (const candidate of admitted) {
+  for (const candidate of allAdmitted) {
     const previous = bySource.get(candidate.sourceBlock) ?? [];
     previous.push(candidate);
     bySource.set(candidate.sourceBlock, previous);
