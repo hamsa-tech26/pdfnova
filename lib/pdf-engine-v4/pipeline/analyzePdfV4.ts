@@ -27,6 +27,7 @@ import {
   detectStableColumnsV4,
   type StableColumnDetectionResult,
 } from "../analysis/stableColumnDetector";
+import {recoverSparseLeftNativeCaptionColumn} from "../analysis/scopedDenseCaptionGridRecovery";
 import {
   detectAdaptiveRowsV4,
   type AdaptiveRowDetectionResult,
@@ -1547,6 +1548,12 @@ if (
   }
 }
 
+// Preserve a sparse first column only when the original six-line captioned
+// region passes a strict native-grid evidence gate. Never lower global support.
+const scopedDenseCaptionColumns =
+  recoverSparseLeftNativeCaptionColumn(region.block, columnDetection);
+if (scopedDenseCaptionColumns) columnDetection = scopedDenseCaptionColumns;
+
 const regionDiagnostic =
   candidateRegionDiagnostics.find(
     (diagnostic) =>
@@ -1614,6 +1621,7 @@ if (
 }
 
 const tableContentStartLineIndex =
+  scopedDenseCaptionColumns ? 0 :
   region.block.type === "paragraph" ||
   region.block.type === "heading"
     ? getTableContentStartLineIndex(
@@ -1645,7 +1653,9 @@ const rowAnalysisBlock =
 
 const rowDetection =
   detectAdaptiveRowsV4(
-    rowAnalysisBlock,
+    scopedDenseCaptionColumns && rowAnalysisBlock.type === "paragraph"
+      ? {...rowAnalysisBlock, id:"dense-caption-grid-"+rowAnalysisBlock.id}
+      : rowAnalysisBlock,
     columnDetection.columns,
   );
 

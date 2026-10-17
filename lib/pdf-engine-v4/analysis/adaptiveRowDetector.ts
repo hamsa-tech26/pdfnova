@@ -1488,6 +1488,31 @@ function detectAlignedNativeGridRows(
   return {rows,confidence:average(rows.map(row=>row.confidence))};
 }
 
+// A six-physical-line scientific table is admitted here only after the
+// independent sparse-leading-column gate in scopedDenseCaptionGridRecovery.
+// Do not route OCR or ordinary six-line paragraphs through this shortcut.
+function detectDenseCaptionPhysicalRows(
+  block: PdfVisualBlock,
+  columns: ColumnCandidate[],
+): AdaptiveRowDetectionResult | null {
+  if (!block.id.startsWith("dense-caption-grid-") || block.type!=="paragraph" ||
+    block.lines.length!==6 || columns.length!==10) return null;
+  const lines=block.lines;
+  if (lines.some(line => line.words.some(word =>
+    word.extractionProvenance?.source==="ocr-tesseract"))) return null;
+  const gaps=lines.slice(1).map((line,i)=>lines[i].bounds.y-line.bounds.y);
+  if (gaps.some(gap=>gap<8||gap>26)) return null;
+  if (lines.slice(2).some(line =>
+    getPopulatedColumnIndexes(line,columns).length<8)) return null;
+  const rows=lines.map((line,index)=>createLogicalRow(line,index,{
+    score:90,confidence:0.9,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"dense-native-caption-physical-line",
+  }));
+  return {rows,confidence:0.9};
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1516,6 +1541,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const denseCaptionGrid = detectDenseCaptionPhysicalRows(block, columns);
+  if (denseCaptionGrid) return denseCaptionGrid;
 
   const captionGrid = detectCaptionGridRows(block, columns);
   if (captionGrid) return captionGrid;

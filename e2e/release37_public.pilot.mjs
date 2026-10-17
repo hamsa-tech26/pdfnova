@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
 import {test,expect} from "@playwright/test";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
@@ -215,6 +216,7 @@ const release77PmcCases=[
     publishedRows:6,publishedColumns:10,
     previousRows:5,previousColumns:10,
     requireImprovement:false,
+    requireExactShape:true,
   },
   {
     id:"PMC3297222",
@@ -339,6 +341,66 @@ for(const source of release77PmcCases){
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
+      if(source.id==="PMC5995222"){
+        console.log("R79_ORIGINAL_NATIVE_ROUTING "+JSON.stringify({
+          source:source.id,
+          pageStatuses:(inspector.nativePageTextExtraction??[]).map(p=>({
+            page:p.pageNumber,status:p.textExtraction?.status,
+            nativeWordCount:p.textExtraction?.wordCount,
+          })),
+          detectedTables:inspector.tables.length,
+          tableProfiles:inspector.tables.map(t=>({
+            page:t.pageNumber,rows:t.rows?.length??0,cols:t.columnCount,
+            confidence:Number(t.confidence?.toFixed(3)),
+          })),
+          independentApprovalCredit:0,
+        }));
+      }
+      if(source.id==="PMC5995222"){
+        // Geometric debug only: no source words, cell text, or PDF bytes.
+        const tableDiagnostics=pageTables.slice(0,6).map((table,index)=>({
+          index,
+          idPrefix:table.id?.split("-").slice(0,2).join("-")??null,
+          rows:table.rows?.length??0,
+          cols:table.columnCount,
+          bounds:table.bounds&&{
+            x:Math.round(table.bounds.x),y:Math.round(table.bounds.y),
+            w:Math.round(table.bounds.width),h:Math.round(table.bounds.height),
+          },
+          rowProfiles:(table.rows??[]).map((row,r)=>({
+            r,
+            bounds:row.bounds&&{y:Math.round(row.bounds.y),h:Math.round(row.bounds.height)},
+            populated:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).length,
+            occupiedCols:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).map(c=>c.columnIndex),
+            cellXs:(row.cells??[]).filter(c=>Boolean(c.text?.trim())).map(c=>Math.round(c.bounds?.x??0)),
+            spans:(row.cells??[]).filter(c=>(c.columnSpan??1)>1||(c.rowSpan??1)>1)
+              .map(c=>[c.columnIndex,c.columnSpan,c.rowSpan]),
+          })),
+        }));
+        const regionProfile=(inspector.candidateRegionDiagnostics??[])
+          .filter(r=>r.pageNumber===source.pageNumber)
+          .map(r=>({kind:r.blockType,lines:r.lineCount,score:Math.round(r.analysis?.totalScore??0),
+            status:r.outcome,columns:r.acceptedColumnCount??null}));
+        const extractionAnalysis=(inspector.tableAnalyses??[])
+          .filter(a=>a.pageNumber===source.pageNumber).slice(0,6)
+          .map(a=>({
+            regionIdPrefix:a.blockId?.split("-").slice(0,3).join("-"),
+            accepted:(a.columnDetection?.columns??[]).map(c=>({
+              x:Math.round(c.x),support:c.distinctLineCount,
+              stability:Number(c.stability?.toFixed(2)),
+            })),
+            rejected:(a.columnDetection?.rejectedCandidates??[]).map(c=>({
+              x:Math.round(c.x),support:c.distinctLineCount,
+              stability:Number(c.stability?.toFixed(2)),
+              reason:c.reason,
+            })).filter(c=>c.x<240).slice(0,20),
+            physicalRows:a.rowDetection?.rows?.length??null,
+            rowLineCounts:(a.rowDetection?.rows??[]).map(r=>r.lines?.length??0),
+          }));
+        console.log("R79_PMC599_TABLE_LAYOUT "+JSON.stringify({
+          id:source.id,tableDiagnostics,regionProfile,extractionAnalysis,formalReferenceCredit:0,
+        }));
+      }
       // R78: The six-anchor PMC2147049 candidate is not the published
       // two-column table. Record the strict acceptance gate separately from
       // the legacy improvement-vs-baseline check; do not certify this source.
@@ -364,5 +426,104 @@ for(const source of release77PmcCases){
       if(source.requireImprovement!==false) {
         expect(observedError).toBeLessThan(baselineError);
       }
+      if(source.requireExactShape===true){
+        expect(matchesPublishedShape).toBe(true);
+        const exact=pageTables.find(table=>
+          table.rows?.length===source.publishedRows &&
+          table.columnCount===source.publishedColumns);
+        expect(exact?.rows?.length).toBe(6);
+        // A correct 10-column *shape* alone is not an accuracy claim.
+        expect(exact?.rows?.every(row=>row.cells?.length===10)).toBe(true);
+      }
     });
 }
+
+
+// R79: Test a real *exported* XLSX, not just an Inspector object. This verifies
+// the external source's provisional six-row ten-column table is preserved in
+// the downloaded workbook and contains non-empty cells. It is not third-party
+// adjudication of individual source-cell values or merged header semantics.
+test("R79 original PMC table-page excerpt exports a populated 6x10 XLSX sheet",async({page})=>{
+  test.setTimeout(160_000);
+  const source=release77PmcCases.find(x=>x.id==="PMC5995222");
+  if(!source)throw Error("Missing pinned PMC source");
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  // This is original publisher page 4, not a synthetic table. The complete
+  // 7-page document is known to trigger the independent quality refuse gate
+  // because other tables are uncertain; never disable that safeguard.
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(source.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  const pages=await excerpt.copyPages(original,[source.pageNumber-1]);
+  excerpt.addPage(pages[0]);
+  const excerptBytes=Buffer.from(await excerpt.save());
+  expect(excerptBytes.subarray(0,5).toString("ascii")).toBe("%PDF-");
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:source.id+"-original-page-"+source.pageNumber+".pdf",
+    mimeType:"application/pdf",buffer:excerptBytes,
+  });
+  const downloaded=page.waitForEvent("download",{timeout:65000})
+    .then(download=>({kind:"download",download}));
+  const withheld=page.getByRole("heading",{name:"Excel conversion withheld"})
+    .waitFor({state:"visible",timeout:65000})
+    .then(()=>({kind:"withheld",download:null}));
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const result=await Promise.any([downloaded,withheld]);
+  if(result.kind==="withheld"||!result.download){
+    const label=await page.getByRole("alert").locator("p").nth(1).innerText();
+    const reason=/image-only or low-text/i.test(label)?"LOW_NATIVE_TEXT_PAGE"
+      :/columns are merged together/i.test(label)?"COLLAPSED_COLUMN_GUARD"
+      :/uncertain row or column structure/i.test(label)?"UNCERTAIN_TABLE_GUARD"
+      :/Overlapping/i.test(label)?"OVERLAPPING_CELLS"
+      :/more than 12|maximum of 12/i.test(label)?"TOO_MANY_TABLES"
+      :"OTHER_FAIL_CLOSED_REASON";
+    console.log("R79_ORIGINAL_EXPORT_REFUSAL "+JSON.stringify({
+      source:source.id,reason,sourceHashVerified:true,
+      errorMessageNotLogged:true,acceptance:"BLOCKED",
+    }));
+    throw Error("R79 original PDF-to-Excel conversion withheld: "+reason);
+  }
+  const download=result.download;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
+  const file=await download.path();
+  if(!file)throw Error("No real XLSX download");
+  const zip=await JSZip.loadAsync(await readFile(file));
+  const names=Object.keys(zip.files).filter(name=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  expect(names.length).toBeGreaterThanOrEqual(2);
+  const unescape=value=>value.replace(/&amp;/g,"&").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  const profiles=[];
+  for(const name of names){
+    const xml=await zip.file(name)?.async("string")??"";
+    const rows=[...xml.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)].map(match=>{
+      const cells=[...match[1].matchAll(/<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)];
+      const vals=[];
+      for(const cell of cells){
+        const index=[...cell[1]].reduce((v,c)=>v*26+c.charCodeAt(0)-64,0)-1;
+        const v=cell[2].match(/<(?:t|v)(?:\s[^>]*)?>([\s\S]*?)<\/(?:t|v)>/);
+        vals[index]=unescape(v?.[1]??"").trim();
+      }
+      return vals;
+    });
+    const maxCols=rows.reduce((n,row)=>Math.max(n,row.length),0);
+    const nonemptyByRow=rows.map(row=>row.filter(x=>Boolean(x?.trim())).length);
+    profiles.push({name,rowCount:rows.length,maxCols,nonemptyByRow});
+  }
+  const matches=profiles.filter(p=>p.rowCount===6&&p.maxCols===10&&
+    p.nonemptyByRow.reduce((a,b)=>a+b,0)>=45);
+  console.log("R79_XLSX_STRUCTURE "+JSON.stringify({
+    originalSource:source.id,originalHashVerified:true,pagesSelected:[source.pageNumber],
+    sheetProfiles:profiles.map(p=>({
+      rows:p.rowCount,cols:p.maxCols,nonempty:p.nonemptyByRow.reduce((a,b)=>a+b,0),
+    })),
+    matched6x10PopulatedSheet:matches.length>0,
+    independentlyReviewedCellCredit:0,
+  }));
+  expect(matches.length).toBeGreaterThanOrEqual(1);
+  // Human review warnings remain visible for unverified extraction.
+  const xmls=await Promise.all(names.map(async name=>zip.file(name)?.async("string")));
+  expect(xmls.some(xml=>xml?.includes("EXTRACTION NOT VERIFIED"))).toBe(true);
+});
