@@ -1405,6 +1405,30 @@ function createRepeatedColumnGridCandidates(
   const isSameSignature = (a: number[], b: number[]) =>
     a.length === b.length &&
     a.every((x, index) => Math.abs(x - b[index]) <= tolerance);
+  // Recover at most one sparse header/last row adjacent to a substantial
+  // fixed-column grid. Require distinct column-anchor matches and normal
+  // row spacing; this never classifies narrative alone as a table.
+  const isSparseEdge = (
+    edge: PdfLine | undefined,
+    neighbor: PdfLine | undefined,
+    anchors: number[],
+    before: boolean,
+  ) => {
+    if (!edge || !neighbor || edge.words.length < 4 ||
+        edge.words.length >= anchors.length) return false;
+    if (edge.words.some(word =>
+      word.extractionProvenance?.source === "ocr-tesseract")) return false;
+    const xs = [...edge.words].map(word => word.bounds.x).sort((a,b)=>a-b);
+    const indices = xs.map(x => anchors.findIndex(a => Math.abs(a-x)<=8));
+    if (indices.some(i=>i<0) || new Set(indices).size !== indices.length)
+      return false;
+    if (xs[xs.length-1]-xs[0] < (anchors[anchors.length-1]-anchors[0])*0.65)
+      return false;
+    const gap = before
+      ? edge.bounds.y - neighbor.bounds.y
+      : neighbor.bounds.y - edge.bounds.y;
+    return gap>=7 && gap<=22;
+  };
   for (const block of blocks) {
     if (block.type !== "paragraph" || block.lines.length < 16) continue;
     const signatures = block.lines.map(positions);
@@ -1421,22 +1445,18 @@ function createRepeatedColumnGridCandidates(
       const count = end - index;
       if (count >= 10) {
         let start = index;
-        // A source-observed 6-column header may align with columns 2..7.
-        // Include at most one preceding header row; never absorb prose above.
-        if (start > 0 && block.lines[start - 1]) {
-          const preceding = [...block.lines[start - 1].words]
-            .sort((a, b) => a.bounds.x - b.bounds.x)
-            .map(word => word.bounds.x);
-          if (
-            preceding.length === base.length - 1 &&
-            preceding.every((x, j) => Math.abs(x - base[j + 1]) <= 10)
-          ) start -= 1;
-        }
-        const lines = block.lines.slice(start, end);
+        let stop = end;
+        if (isSparseEdge(
+          block.lines[start-1],block.lines[start],base,true,
+        )) start -= 1;
+        if (isSparseEdge(
+          block.lines[stop],block.lines[stop-1],base,false,
+        )) stop += 1;
+        const lines = block.lines.slice(start, stop);
         result.push({
           sourceBlock: block,
           firstLineIndex: start,
-          lastLineIndex: end - 1,
+          lastLineIndex: stop - 1,
           block: {
             id: "aligned-grid-" + block.pageNumber + "-" + block.id + "-" + start,
             type: "paragraph",

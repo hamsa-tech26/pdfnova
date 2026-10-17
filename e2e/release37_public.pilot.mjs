@@ -199,6 +199,24 @@ const release77PmcCases=[
     previousRows:14,previousColumns:6,
   },
   {
+    id:"PMC4595315",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC4595315.1/PMC4595315.1.pdf",
+    sha256:"372415d319a25872bc2b3d1ed5c1c6f518f3296a05b28b757026de48df3d9624",
+    pageNumber:6,sourcePageCount:15,
+    publishedRows:21,publishedColumns:7,
+    previousRows:19,previousColumns:9,
+    requireImprovement:false,
+  },
+  {
+    id:"PMC5995222",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC5995222.1/PMC5995222.1.pdf",
+    sha256:"4308f0d709cb73137cdcda1a321870c3b747b6f3ed5052438a9c699bc33311ec",
+    pageNumber:4,sourcePageCount:7,
+    publishedRows:6,publishedColumns:10,
+    previousRows:5,previousColumns:10,
+    requireImprovement:false,
+  },
+  {
     id:"PMC3297222",
     sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC3297222.1/PMC3297222.1.pdf",
     sha256:"9313ad1420a750c43f6ed53b8a81cf2b2009e86a28d37721bd8e3e66db973d58",
@@ -233,7 +251,7 @@ async function boundedPmcPdf(url){
 }
 
 for(const source of release77PmcCases){
-  test("Release 77 original PMC table-shape diagnostic (not certification): "+source.id,
+  test("Release 78 original PMC table-shape diagnostic (not certification): "+source.id,
     async({page})=>{
       test.setTimeout(300_000);
       const bytes=await boundedPmcPdf(source.sourceUrl);
@@ -276,9 +294,9 @@ for(const source of release77PmcCases){
         structuralImprovement:observedError!==null&&observedError<baselineError,
         formalAcceptedDocumentCredit:0,
       }));
-      // Metadata-only bounded page diagnostic for the still-failing PMC
-      // case. Raw word text, source PDF and Inspector JSON never leave CI.
-      if(source.id==="PMC3297222"){
+      // Metadata-only page diagnostics for both original PMC table failures.
+      // No word text, source PDF, or Inspector JSON is written to CI artifacts.
+      if(["PMC3297222","PMC2147049","PMC4595315","PMC5995222"].includes(source.id)){
         const pdfPage=inspector.document.pages[source.pageNumber-1];
         const blocks=(pdfPage?.blocks??[]).slice(0,40).map((block,index)=>{
           const lines=Array.isArray(block.lines)?block.lines:[];
@@ -316,14 +334,35 @@ for(const source of release77PmcCases){
               starts:words.slice(0,10).map(w=>Math.round(w.bounds.x)),
               lineWidth:Math.round(line.bounds.width)};
           }));
-        console.log("R77_PMC_PAGE_GEOMETRY "+JSON.stringify({
+        console.log("R78_PMC_PAGE_GEOMETRY "+JSON.stringify({
           id:source.id,sourcePage:source.pageNumber,visualBlocks:blocks,
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
+      // R78: The six-anchor PMC2147049 candidate is not the published
+      // two-column table. Record the strict acceptance gate separately from
+      // the legacy improvement-vs-baseline check; do not certify this source.
+      const matchesPublishedShape=closest!==null &&
+        closest.rows===source.publishedRows &&
+        closest.columns===source.publishedColumns;
+      console.log("R78_ORIGINAL_TABLE_ACCEPTANCE "+JSON.stringify({
+        id:source.id,exactPublishedShape:matchesPublishedShape,
+        observedShape:closest?[closest.rows,closest.columns]:null,
+        requiredShape:[source.publishedRows,source.publishedColumns],
+        decision:matchesPublishedShape?"SHAPE_ONLY_NOT_CELL_VERIFIED":"BLOCKED",
+        independentAcceptanceCredit:0,
+      }));
+      // This is diagnostic-only until a separately reviewed reference exists.
+      // Do not assert that a known bug must remain broken: an eventual real
+      // repair must be allowed to satisfy the exact-shape acceptance check.
+      if(source.id==="PMC2147049" && !matchesPublishedShape){
+        console.warn("R78_KNOWN_FAILURE: PMC2147049 still lacks the published 40x2 shape");
+      }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
       // provisional and must not be described as full per-cell accuracy.
       expect(observedError).not.toBeNull();
-      expect(observedError).toBeLessThan(baselineError);
+      if(source.requireImprovement!==false) {
+        expect(observedError).toBeLessThan(baselineError);
+      }
     });
 }

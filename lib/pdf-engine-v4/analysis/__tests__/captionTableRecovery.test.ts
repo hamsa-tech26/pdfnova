@@ -236,4 +236,66 @@ describe("Issue 70: caption-anchored real table region recovery",()=>{
     expect(result.tableRegions.some(x=>x.block.id.startsWith("aligned-grid-"))).toBe(false);
   });
 
+  it("preserves two sparse edge rows of a long native seven-column table",()=>{
+    const anchors=[57,153,226,291,364,429,502];
+    const build=(i:number,indexes:number[]):PdfLine=>{
+      const y=760-i*14;
+      const words:PdfWord[]=indexes.map((column,j)=>({
+        id:"sparse-"+i+"-"+j,
+        text:"Value"+i+"-"+j,
+        pageNumber:1,rotation:0,font:{size:9},
+        bounds:{x:anchors[column],y,width:25,height:10},
+      }));
+      return {id:"sparse-line-"+i,pageNumber:1,words,
+        bounds:{x:anchors[indexes[0]],y,
+          width:anchors[indexes[indexes.length-1]]+25-anchors[indexes[0]],
+          height:10},text:words.map(w=>w.text).join(" ")};
+    };
+    const proseBefore=Array.from({length:3},(_,i)=>build(i,[0]));
+    const header=build(3,[0,1,3,5]);
+    const body=Array.from({length:19},(_,i)=>build(i+4,[0,1,2,3,4,5,6]));
+    const trailing=build(23,[0,2,4,6]);
+    const proseAfter=Array.from({length:2},(_,i)=>build(i+24,[0]));
+    const original=makeBlock([...proseBefore,header,...body,trailing,...proseAfter]);
+    const output=detectTableRegionsForPage([original]);
+    const grid=output.tableRegions.find(r=>r.block.id.startsWith("aligned-grid-"));
+    expect(grid).toBeDefined();
+    if(!grid||grid.block.type!=="paragraph")return;
+    expect(grid.block.lines).toHaveLength(21);
+    expect(grid.block.lines[0].id).toBe("sparse-line-3");
+    expect(grid.block.lines[20].id).toBe("sparse-line-23");
+    expect(output.regions.flatMap(r=>
+      r.block.type==="paragraph"?r.block.lines.map(l=>l.id):[]
+    )).toEqual(original.lines.map(l=>l.id));
+    expect(output.regions.some(r=>r.block.id.startsWith("caption-prose-"))).toBe(true);
+  });
+
+  it("rejects short caption-like neighbors that do not align across enough columns",()=>{
+    const anchors=[57,153,226,291,364,429,502];
+    const build=(i:number,indexes:number[]):PdfLine=>{
+      const y=760-i*14;
+      const words:PdfWord[]=indexes.map((c,j)=>({
+        id:"word-"+i+"-"+j,text:"v"+j,pageNumber:1,rotation:0,
+        font:{size:9},bounds:{x:anchors[c],y,width:20,height:10},
+      }));
+      return {id:"other-"+i,pageNumber:1,words,
+        bounds:{x:anchors[indexes[0]],y,
+          width:anchors[indexes[indexes.length-1]]+20-anchors[indexes[0]],
+          height:10},text:words.map(w=>w.text).join(" ")};
+    };
+    const lines=[
+      build(0,[0,1]), // too few distinct aligned words
+      ...Array.from({length:19},(_,i)=>build(i+1,[0,1,2,3,4,5,6])),
+      build(20,[0,1,2]), // too few aligned words
+    ];
+    const source=makeBlock(lines);
+    const detected=detectTableRegionsForPage([source]);
+    const grid=detected.tableRegions.find(r=>r.block.id.startsWith("aligned-grid-"));
+    expect(grid).toBeDefined();
+    if(!grid||grid.block.type!=="paragraph")return;
+    expect(grid.block.lines).toHaveLength(19);
+    expect(grid.block.lines[0].id).toBe("other-1");
+    expect(grid.block.lines[18].id).toBe("other-19");
+  });
+
 });
