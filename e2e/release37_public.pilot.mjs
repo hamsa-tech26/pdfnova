@@ -276,6 +276,36 @@ for(const source of release77PmcCases){
         structuralImprovement:observedError!==null&&observedError<baselineError,
         formalAcceptedDocumentCredit:0,
       }));
+      // Metadata-only bounded page diagnostic for the still-failing PMC
+      // case. Raw word text, source PDF and Inspector JSON never leave CI.
+      if(source.id==="PMC3297222"){
+        const pdfPage=inspector.document.pages[source.pageNumber-1];
+        const blocks=(pdfPage?.blocks??[]).slice(0,40).map((block,index)=>{
+          const lines=Array.isArray(block.lines)?block.lines:[];
+          const words=lines.flatMap(line=>Array.isArray(line.words)?line.words:[]);
+          const numericRows=lines.filter(line=>
+            (line.words??[]).filter(w=>/^[-+]?\\d[\\d,.]*(?:%|[)])?$/.test(w.text?.trim()??"")).length>=2
+          ).length;
+          return {index,type:block.type,lines:lines.length,words:words.length,
+            numericRows,wideRows:lines.filter(line=>(line.words??[]).length>=5).length,
+            x:Math.round(block.bounds?.x??0),y:Math.round(block.bounds?.y??0),
+            width:Math.round(block.bounds?.width??0),
+            height:Math.round(block.bounds?.height??0)};
+        });
+        const diagnosticRegions=(inspector.candidateRegionDiagnostics??[])
+          .filter(region=>region.pageNumber===source.pageNumber).slice(0,35)
+          .map(region=>({
+            kind:region.blockType,
+            lines:region.lineCount,
+            total:Math.round(region.analysis?.totalScore??0),
+            outcome:region.outcome,
+            acceptedColumns:region.acceptedColumnCount??null,
+          }));
+        console.log("R77_PMC_PAGE_GEOMETRY "+JSON.stringify({
+          id:source.id,sourcePage:source.pageNumber,visualBlocks:blocks,
+          diagnosticRegions,acceptedDocumentCredit:0,
+        }));
+      }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
       // provisional and must not be described as full per-cell accuracy.
       expect(observedError).not.toBeNull();
