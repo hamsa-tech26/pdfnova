@@ -1314,7 +1314,8 @@ function createCaptionAnchoredCandidates(
   blocks: PdfVisualBlock[],
 ): CaptionAnchoredCandidate[] {
   const candidates: CaptionAnchoredCandidate[] = [];
-  const isCaption = (text: string) => /^table\s+\d{1,3}\s*[.:]\s/i.test(text.trim());
+  const isCaption = (text: string) =>
+    /^table\s+(?:\d{1,3}|s\d{1,3})(?:\s*[.:\u2013\u2014]\s*|\s*$)/i.test(text.trim());
   for (const block of blocks) {
     if (block.type !== "paragraph" || block.lines.length < 6) continue;
     for (let start = 0; start < block.lines.length; start += 1) {
@@ -1327,20 +1328,30 @@ function createCaptionAnchoredCandidates(
         : start + 1 + nextCaptionOffset;
       const windowLines = block.lines.slice(
         start + 1,
-        Math.min(block.lines.length, start + 23, nextCaptionIndex),
+        Math.min(block.lines.length, start + 1 + 85, nextCaptionIndex),
       );
       if (windowLines.length < 4) continue;
-      const numericIndexes = windowLines.flatMap((line, index) => {
-        const words = [...line.words].sort((a, b) => a.bounds.x - b.bounds.x);
-        const numeric = words.filter(word =>
-          /^[-+]?\d[\d,.]*(?:%|[)])?$/.test(word.text.trim()),
-        );
-        const spread = words.length < 3
-          ? 0
-          : words[words.length - 1].bounds.x - words[0].bounds.x;
-        return numeric.length >= 2 && spread >= 85 ? [index] : [];
-      });
-      if (numericIndexes.length < 2) continue;
+      // Long scientific grids may exceed 22 lines. Stop after repeated prose
+       // rather than including distant numbers in the table's bounds.
+       const numericIndexes: number[] = [];
+       let nonGridStreak = 0;
+       for (const [index, line] of windowLines.entries()) {
+         const words = [...line.words].sort((a, b) => a.bounds.x - b.bounds.x);
+         const numeric = words.filter(word =>
+           /^[-+]?\d[\d,.]*(?:%|[)])?$/.test(word.text.trim()),
+         );
+         const spread = words.length < 3
+           ? 0
+           : words[words.length - 1].bounds.x - words[0].bounds.x;
+         if (numeric.length >= 2 && spread >= 85) {
+           numericIndexes.push(index);
+           nonGridStreak = 0;
+         } else if (numericIndexes.length >= 2) {
+           nonGridStreak += 1;
+           if (nonGridStreak >= 3) break;
+         }
+       }
+       if (numericIndexes.length < 2) continue;
       // Do not swallow the article's trailing prose into the table region.
       const tableLines = windowLines.slice(
         0,
