@@ -334,8 +334,11 @@ for(const source of release77PmcCases){
         decision:matchesPublishedShape?"SHAPE_ONLY_NOT_CELL_VERIFIED":"BLOCKED",
         independentAcceptanceCredit:0,
       }));
-      if(source.id==="PMC2147049"){
-        expect(matchesPublishedShape).toBe(false); // Documented known failure.
+      // This is diagnostic-only until a separately reviewed reference exists.
+      // Do not assert that a known bug must remain broken: an eventual real
+      // repair must be allowed to satisfy the exact-shape acceptance check.
+      if(source.id==="PMC2147049" && !matchesPublishedShape){
+        console.warn("R78_KNOWN_FAILURE: PMC2147049 still lacks the published 40x2 shape");
       }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
       // provisional and must not be described as full per-cell accuracy.
