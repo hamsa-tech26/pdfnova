@@ -341,6 +341,17 @@ for(const source of release77PmcCases){
         }));
       }
       if(source.id==="PMC5995222"){
+        console.log("R79_ORIGINAL_NATIVE_ROUTING "+JSON.stringify({
+          source:source.id,
+          pageStatuses:(inspector.nativePageTextExtraction??[]).map(p=>({
+            page:p.pageNumber,status:p.textExtraction?.status,
+            nativeWordCount:p.textExtraction?.wordCount,
+          })),
+          detectedTables:inspector.tables.length,
+          independentApprovalCredit:0,
+        }));
+      }
+      if(source.id==="PMC5995222"){
         // Geometric debug only: no source words, cell text, or PDF bytes.
         const tableDiagnostics=pageTables.slice(0,6).map((table,index)=>({
           index,
@@ -437,9 +448,28 @@ test("R79 original PMC PDF-to-Excel downloaded workbook has a populated 6x10 tab
   await page.locator('input[type="file"]').first().setInputFiles({
     name:source.id+".pdf",mimeType:"application/pdf",buffer:bytes,
   });
-  const promise=page.waitForEvent("download",{timeout:180000});
+  const downloaded=page.waitForEvent("download",{timeout:65000})
+    .then(download=>({kind:"download",download}));
+  const withheld=page.getByRole("heading",{name:"Excel conversion withheld"})
+    .waitFor({state:"visible",timeout:65000})
+    .then(()=>({kind:"withheld",download:null}));
   await page.getByRole("button",{name:/Convert to Excel/i}).click();
-  const download=await promise;
+  const result=await Promise.any([downloaded,withheld]);
+  if(result.kind==="withheld"||!result.download){
+    const label=await page.getByRole("alert").locator("p").nth(1).innerText();
+    const reason=/image-only or low-text/i.test(label)?"LOW_NATIVE_TEXT_PAGE"
+      :/columns are merged together/i.test(label)?"COLLAPSED_COLUMN_GUARD"
+      :/uncertain row or column structure/i.test(label)?"UNCERTAIN_TABLE_GUARD"
+      :/Overlapping/i.test(label)?"OVERLAPPING_CELLS"
+      :/more than 12|maximum of 12/i.test(label)?"TOO_MANY_TABLES"
+      :"OTHER_FAIL_CLOSED_REASON";
+    console.log("R79_ORIGINAL_EXPORT_REFUSAL "+JSON.stringify({
+      source:source.id,reason,sourceHashVerified:true,
+      errorMessageNotLogged:true,acceptance:"BLOCKED",
+    }));
+    throw Error("R79 original PDF-to-Excel conversion withheld: "+reason);
+  }
+  const download=result.download;
   expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
   const file=await download.path();
   if(!file)throw Error("No real XLSX download");
