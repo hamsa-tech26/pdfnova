@@ -1381,7 +1381,7 @@ test("R90 real PMC3297222 dense native 34x7 XLSX publisher cell audit",async({pa
   expect(reference.sourcePdfPages).toBe(13);
   expect(reference.expectedTableRows).toBe(34);
   expect(reference.expectedTableColumns).toBe(7);
-  expect(reference.selectedRows).toHaveLength(11);
+  expect(reference.selectedRows).toHaveLength(33);
   expect(reference.selectedRows.every(r=>r.length===7)).toBe(true);
   expect(reference.acceptedFormalV4DocumentCredit).toBe(0);
 
@@ -1455,13 +1455,13 @@ test("R90 real PMC3297222 dense native 34x7 XLSX publisher cell audit",async({pa
   console.log("R90_REAL_PUBLISHER_ATOMIC_CELL_AUDIT "+JSON.stringify({
     originalSource:source.id,originalHashVerified:true,
     verifiedWorkbookDimensions:[34,7],firstMatchedSourceRow:start+1,
-    selectedPublisherSourceCells:77,matchingCells:matches,
+    selectedPublisherSourceCells:231,matchingCells:matches,
     mismatchCoordinates:failures,formulaCount:0,
     publisherHtmlReferenceProjectTranscribed:true,independentCredit:0,
   }));
   // Do not silently lower this gate: source values must be independently
   // adjudicated before counting any formal V4 Stable document.
   expect(start).toBeGreaterThanOrEqual(0);
-  expect(matches).toBe(77);
+  expect(matches).toBe(231);
   expect(failures).toEqual([]);
 });
