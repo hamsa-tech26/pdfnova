@@ -12,7 +12,8 @@
       "fix/kukureku-r80-pmc2147049-two-column": false,
       "feature/kukureku-r81-selective-pdf-xlsx": false,
       "feature/kukureku-r82-table-preview-golden-cells": false,
-      "fix/kukureku-r83-native-greek-symbol-fidelity": false
+      "fix/kukureku-r83-native-greek-symbol-fidelity": false,
+      "feature/kukureku-r84-second-publisher-cell-corpus": false
     }
   }
 }

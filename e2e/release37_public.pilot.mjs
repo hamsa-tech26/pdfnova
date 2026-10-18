@@ -814,3 +814,136 @@ test("R81 full original PMC5995222 selectively exports source page 4 table to XL
   expect(schema.hasUnverifiedWarning).toBe(true);
   expect(schema.excelFormulaNodes).toBe(false);
 });
+
+
+/**
+ * Second project-curated original-publisher reference (NOT independent V4
+ * certification). Checks all 133 reference data cell coordinates in the
+ * downloaded XLSX from original publisher PDF page 6.
+ */
+test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cells",async({page})=>{
+  test.setTimeout(240_000);
+  const source=release77PmcCases.find(x=>x.id==="PMC4595315");
+  if(!source)throw Error("Pinned publisher source not found");
+  const reference=JSON.parse(await readFile(
+    "benchmarks/release84/pmc4595315-table3-publisher-reference.json","utf8"));
+  expect(reference.originalPdfSha256).toBe(source.sha256);
+  expect(reference.referenceStatus).toBe(
+    "publisher-html-project-transcribed-not-independent-adjudication");
+  expect(reference.dataRows).toHaveLength(19);
+  expect(reference.dataRows.every(row=>row.length===7)).toBe(true);
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(source.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  const publisherPage=await excerpt.copyPages(original,[source.pageNumber-1]);
+  excerpt.addPage(publisherPage[0]);
+  const singlePage=Buffer.from(await excerpt.save());
+
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC4595315-original-publisher-page6.pdf",
+    mimeType:"application/pdf",buffer:singlePage,
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:160000});
+  const choice=page.locator("label").filter({
+    hasText:/21 rows × 7 columns/,
+  }).locator('input[type="radio"]');
+  await expect(choice).toHaveCount(1);
+  // Do not weaken the selected-table quality gate to make benchmark pass.
+  const choiceAllowed=await choice.isEnabled();
+  if(!choiceAllowed){
+    console.log("R84_TABLE3_REFUSAL "+JSON.stringify({
+      originalPdfHashVerified:true,sourcePage:source.pageNumber,
+      candidateRows:21,candidateColumns:7,
+      structuralSafetyWithheld:true,
+      sourceTextNotLogged:true,independentCredit:0,
+    }));
+  }
+  expect(choiceAllowed).toBe(true);
+  await choice.check();
+  const downloadPromise=page.waitForEvent("download",{timeout:70000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/i);
+  const filename=await download.path();
+  if(!filename)throw Error("No real original-source XLSX downloaded");
+  const zip=await JSZip.loadAsync(await readFile(filename));
+  const sheets=Object.keys(zip.files).filter(name=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  expect(sheets.length).toBe(2); // one explicitly selected table plus review
+  const unescape=text=>String(text??"").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  const xmls=await Promise.all(sheets.map(async name=>zip.file(name)?.async("string")??""));
+  const matrices=xmls.map(xml=>[...xml.matchAll(
+    /<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)].map(match=>{
+    const row=Array.from({length:7},()=>"");
+    for(const cell of match[1].matchAll(
+      /<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)){
+      const col=[...cell[1]].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0)-1;
+      if(col>=0&&col<7){
+        const inline=[...cell[2].matchAll(
+          /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
+          .map(m=>unescape(m[1])).join("");
+        const number=cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1]??"";
+        row[col]=inline||unescape(number);
+      }
+    }
+    return row;
+  }));
+  const tableIndex=matrices.findIndex(rows=>rows.length===21);
+  expect(tableIndex).toBeGreaterThanOrEqual(0);
+  const tableRows=matrices[tableIndex].slice(2);
+  expect(tableRows).toHaveLength(19);
+  const headerRows=matrices[tableIndex].slice(0,2);
+  const normalizeHeader=value=>String(value??"").normalize("NFKC")
+    .trim().toLowerCase().replace(/[\u00a0\u2009\u202f\s\/\-]+/g,"");
+  const headerMismatches=[];
+  for(let row=0;row<2;row++)for(let col=0;col<7;col++){
+    if(normalizeHeader(headerRows[row][col])!==
+      normalizeHeader(reference.publisherHeaderRows[row][col])){
+      headerMismatches.push([row+1,col+1]);
+    }
+  }
+  console.log("R84_GROUPED_HEADER_REFERENCE "+JSON.stringify({
+    publisherSource:source.id,headerCells:14,
+    matchingHeaderCells:14-headerMismatches.length,
+    headerMismatchCoordinates:headerMismatches,
+    sourceValuesNotLogged:true,semanticMergingNotVerified:true,
+    independentCredit:0,
+  }));
+  const clean=value=>String(value??"").normalize("NFKC").trim()
+    .replace(/[\u00a0\u2009\u202f,\s]/g,"").toLowerCase()
+    .replace(/[–−]/g,"-");
+  const discrepancies=[];
+  let matches=0;
+  for(let i=0;i<19;i++)for(let col=0;col<7;col++){
+    if(clean(tableRows[i]?.[col])===clean(reference.dataRows[i][col]))matches++;
+    else discrepancies.push([i+3,col+1]);
+  }
+  console.log("R84_SECOND_PUBLISHER_CELL_REFERENCE "+JSON.stringify({
+    originalSource:source.id,originalSha256Verified:true,
+    publisherArticle:reference.id,dataRows:19,columns:7,
+    comparedCells:133,exactNormalizedMatches:matches,
+    mismatchCoordinates:discrepancies,sourceValuesNotLogged:true,
+    independentAcceptanceCredit:0,
+  }));
+  // Full original-publisher reference observed as 133/133 on Release 83.
+  // A change that loses a real data cell or moves it to a different source
+  // column must fail this regression.
+  expect(matches).toBe(133);
+  expect(discrepancies).toEqual([]);
+  expect(headerMismatches).toEqual([]);
+  expect(xmls.some(xml=>xml.includes("UNVERIFIED"))).toBe(true);
+  const review=xmls.find((xml,i)=>i!==tableIndex&&
+    xml.includes("Grouped native column heading guide"));
+  expect(review).toBeDefined();
+  expect(review).toContain("Jonathan / No. of makers");
+  expect(review).toContain("Golden Delicious / Length(cM)");
+  expect(review).toContain("Consensus / Length(cM)");
+  expect(review).toContain("no Excel cell merges recreated");
+  expect(/<f(?:\s|>)/.test(xmls[tableIndex])).toBe(false);
+});
