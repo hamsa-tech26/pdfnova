@@ -898,6 +898,23 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
   expect(tableIndex).toBeGreaterThanOrEqual(0);
   const tableRows=matrices[tableIndex].slice(2);
   expect(tableRows).toHaveLength(19);
+  const headerRows=matrices[tableIndex].slice(0,2);
+  const normalizeHeader=value=>String(value??"").normalize("NFKC")
+    .trim().toLowerCase().replace(/[\u00a0\u2009\u202f\s\/\-]+/g,"");
+  const headerMismatches=[];
+  for(let row=0;row<2;row++)for(let col=0;col<7;col++){
+    if(normalizeHeader(headerRows[row][col])!==
+      normalizeHeader(reference.publisherHeaderRows[row][col])){
+      headerMismatches.push([row+1,col+1]);
+    }
+  }
+  console.log("R84_GROUPED_HEADER_REFERENCE "+JSON.stringify({
+    publisherSource:source.id,headerCells:14,
+    matchingHeaderCells:14-headerMismatches.length,
+    headerMismatchCoordinates:headerMismatches,
+    sourceValuesNotLogged:true,semanticMergingNotVerified:true,
+    independentCredit:0,
+  }));
   const clean=value=>String(value??"").normalize("NFKC").trim()
     .replace(/[\u00a0\u2009\u202f,\s]/g,"").toLowerCase()
     .replace(/[–−]/g,"-");
