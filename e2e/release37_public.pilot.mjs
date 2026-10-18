@@ -730,7 +730,10 @@ test("R80 original PMC2147049 Table 1 source page exports real 40x2 XLSX",async(
   }));
   // Safeguard a minimum plausible table while publishing the ENTIRE observed
   // mismatch set for further fixing; this is deliberately not a 100% claim.
-  expect(exact).toBeGreaterThanOrEqual(50);
+  // Baseline observed from the original source on 18 Oct 2026: 76/80
+  // matching positions; four label discrepancies remain visibly reported.
+  // Require no regression from that recorded real-document baseline.
+  expect(exact).toBeGreaterThanOrEqual(76);
 });
 
 
