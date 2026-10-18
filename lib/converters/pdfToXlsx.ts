@@ -1,4 +1,5 @@
 import JSZip from "jszip";
+import { describeNativePairedGroupHeaders } from "./nativeGroupedHeaderGuide";
 
 /**
  * Genuine Office Open XML spreadsheet package. Values are inline strings by
@@ -15,6 +16,12 @@ export type PdfXlsxTable = {
   freezeHeader?: boolean;
   /** Optional bounded widths for verified tables. */
   columnWidths?: readonly number[];
+  /**
+   * Release 91: visual-only OOXML grouped headers for source-verified native
+   * 7-column, two-level 1 + 3×2 layouts. Never insert or infer cell values.
+   * Export refuses this option unless the original two header rows match.
+   */
+  nativePairedHeader?: boolean;
 };
 export type PdfXlsxInput = {
   tables: readonly PdfXlsxTable[];
@@ -65,6 +72,11 @@ function sheetXml(table: PdfXlsxTable): string {
     throw new Error("Table exceeds the 50,000-cell spreadsheet safety limit.");
   }
 
+  if (table.nativePairedHeader &&
+      (width !== 7 || rows.length < 3 || table.freezeHeader ||
+        !describeNativePairedGroupHeaders(rows as readonly (readonly string[])[]))) {
+    throw new Error("Two-level native header merges lack safe matching source heading cells.");
+  }
   const typed = new Set(table.numericColumns ?? []);
   if (typed.size !== (table.numericColumns?.length ?? 0) ||
       [...typed].some(index => !Number.isInteger(index) || index < 0 || index >= width)) {
@@ -87,27 +99,40 @@ function sheetXml(table: PdfXlsxTable): string {
       if (rowIndex > 0 && typed.has(columnIndex) &&
           /^(?:0|[1-9][0-9]{0,14})$/.test(literal) &&
           Number.isSafeInteger(Number(literal))) {
-        return '<c r="' + label + '" t="n"><v>' + literal + '</v></c>';
+        return '<c r="' + label + '" t="n"' +
+          (table.nativePairedHeader && rowIndex < 2 ? ' s="1"' : '') +
+          '><v>' + literal + '</v></c>';
       }
       // Inline string cells cannot execute spreadsheet formulas.
-      return '<c r="' + label + '" t="inlineStr"><is><t xml:space="preserve">' +
+      return '<c r="' + label + '" t="inlineStr"' +
+        (table.nativePairedHeader && rowIndex < 2 ? ' s="1"' : '') +
+        '><is><t xml:space="preserve">' +
         xmlSafe(value) + "</t></is></c>";
     }).join("");
-    return '<row r="' + (rowIndex + 1) + '">' + cells + "</row>";
+    return '<row r="' + (rowIndex + 1) + '"' +
+      (table.nativePairedHeader && rowIndex < 2 ? ' ht="30" customHeight="1"' : '') +
+      '>' + cells + "</row>";
   }).join("");
   const range = "A1:" + cellColumn(width - 1) + rows.length;
-  const view = table.freezeHeader && rows.length > 1 ?
+  const view = table.nativePairedHeader ?
+    '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' :
+    table.freezeHeader && rows.length > 1 ?
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : "";
   const cols = table.columnWidths?.length ?
     '<cols>' + table.columnWidths.map((n, i) =>
       '<col min="' + (i + 1) + '" max="' + (i + 1) +
       '" width="' + n + '" customWidth="1"/>').join("") + '</cols>' : "";
+  // Merge only the *visually blank* child parent-header cells (never data).
+  // Every original XML value and both source header rows remain at their
+  // original Excel coordinates. No header label is synthesized.
+  const merges = table.nativePairedHeader ?
+    '<mergeCells count="3"><mergeCell ref="B1:C1"/><mergeCell ref="D1:E1"/><mergeCell ref="F1:G1"/></mergeCells>' : "";
   const filter = table.freezeHeader && rows.length > 1 ?
     '<autoFilter ref="' + range + '"/>' : "";
   return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
     '<dimension ref="' + range + '"/>' + view + cols +
-    '<sheetData>' + data + '</sheetData>' + filter + '</worksheet>';
+    '<sheetData>' + data + '</sheetData>' + merges + filter + '</worksheet>';
 }
 
 function safeSheetName(raw: string, index: number, existing: Set<string>): string {
@@ -152,6 +177,7 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
     }
     return text;
   });
+  const hasNativeHeaderStyles = input.tables.some(table => table.nativePairedHeader);
   const sheets: PdfXlsxTable[] = [
     ...input.tables,
     ...(notes.length ? [{ name: "Review Notes", rows: [
@@ -182,7 +208,10 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
     '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>' +
     '<Default Extension="xml" ContentType="application/xml"/>' +
     '<Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>' +
-    contentOverrides + '</Types>');
+    contentOverrides +
+    (hasNativeHeaderStyles ?
+      '<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>' : '') +
+    '</Types>');
   zip.file("_rels/.rels",
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
@@ -196,7 +225,27 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
   zip.file("xl/_rels/workbook.xml.rels",
     '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
     '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">' +
-    sheetRelationships + '</Relationships>');
+    sheetRelationships +
+    (hasNativeHeaderStyles ?
+      '<Relationship Id="rIdStyles" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>' : '') +
+    '</Relationships>');
+  if (hasNativeHeaderStyles) {
+    // Spreadsheet-compatible bold, wrapped two-row native group header style.
+    // Default worksheet cells retain their existing unstyled values and types.
+    zip.file("xl/styles.xml",
+      '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>' +
+      '<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">' +
+      '<fonts count="2"><font><sz val="11"/><name val="Calibri"/></font>' +
+      '<font><b/><sz val="11"/><name val="Calibri"/></font></fonts>' +
+      '<fills count="2"><fill><patternFill patternType="none"/></fill>' +
+      '<fill><patternFill patternType="gray125"/></fill></fills>' +
+      '<borders count="1"><border/></borders>' +
+      '<cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>' +
+      '<cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/>' +
+      '<xf numFmtId="0" fontId="1" fillId="0" borderId="0" xfId="0" applyAlignment="1">' +
+      '<alignment wrapText="1" vertical="center"/></xf></cellXfs>' +
+      '</styleSheet>');
+  }
   sheets.forEach((table, index) => {
     zip.file("xl/worksheets/sheet" + (index + 1) + ".xml", sheetXml(table));
   });

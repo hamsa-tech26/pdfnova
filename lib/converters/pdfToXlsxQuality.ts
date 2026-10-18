@@ -330,12 +330,29 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
         " Verify the source multi-level structure against the PDF.");
     }
     const headerGuide=describeNativePairedGroupHeaders(grouped.rows);
+    // Only original native words in both intact source header rows can
+    // authorize Excel visual merges. Never move data or assume spans for OCR,
+    // multi-page or projected/reworded headings.
+    const nativePairedHeader=!!headerGuide && pages.length===1 &&
+      medianRows===extractedRows && grouped.rows===extractedRows &&
+      table.rows.slice(0,2).every(row =>
+        row.provenance?.pageNumber===table.pageNumber &&
+        row.cells.filter(cell=>cell.text.trim()).every(cell=>
+          cell.words.length>0 && cell.words.every(word=>
+            word.extractionProvenance?.source==="native-pdf")));
+    if(nativePairedHeader){
+      notes.push("Table "+number+": Native two-tier parent headings were visually merged "+
+        "B1:C1, D1:E1 and F1:G1 in Excel. Both original header rows and every "+
+        "source cell value retain their positions; this formatting is NOT "+
+        "independent semantic verification. Review group boundaries in the PDF.");
+    }
     if(headerGuide){
       for(const message of headerGuide.notes)notes.push(
         "Table "+number+": "+message,
       );
     }
-    return { name: "Table " + number, rows: grouped.rows };
+    return { name: "Table " + number, rows: grouped.rows,
+      ...(nativePairedHeader ? {nativePairedHeader:true} : {}) };
   });
   const omitted = Array.from({ length: pageCount }, (_, i) => i + 1)
     .filter(p => !covered.has(p));
