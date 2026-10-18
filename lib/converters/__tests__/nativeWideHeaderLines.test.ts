@@ -52,7 +52,7 @@ describe("Release 103–105 native multi-baseline wide scientific header repair"
     expect(JSON.stringify(data)).toBe(prior);
   });
   it("rejects OCR, reverse baselines, an unsupported wide table or changed source text",()=>{
-    const original=source(),w=original.table.rows[0].cells[2].words;
+    const original=source();
     for(const altered of [
       [native("Interval",690),native("between",690),native("end",690),
         native("therapy",677,"ocr-tesseract"),native("(days)",664)],
@@ -63,7 +63,7 @@ describe("Release 103–105 native multi-baseline wide scientific header repair"
       const x=preserveNativeWideHeaderLines(t,[...source(altered).data]);
       expect(x.headerWrapped).toBe(false);
     }
-    const different=source(w,"DIFFERENT HEADER WORDS");
+    const different=source(undefined,"DIFFERENT HEADER WORDS");
     expect(preserveNativeWideHeaderLines(different.table,different.data).headerWrapped)
       .toBe(false);
     const width=source();width.table.columnCount=10;
