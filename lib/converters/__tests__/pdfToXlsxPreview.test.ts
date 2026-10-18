@@ -50,6 +50,7 @@ describe("Release 82 bounded exact-XLSX source table preview",()=>{
   });
   it("follows export-plan cell text without changing source data or numeric strings",()=>{
     const table=makeTable(3,3),doc=source(table);
+    table.rows[0].cells[0].text="Short header";
     table.rows[1].cells[2].text="";
     const old=JSON.stringify(table);
     const preview=buildPdfTablePreview(doc,0);
