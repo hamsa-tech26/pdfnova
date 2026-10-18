@@ -13,7 +13,7 @@ on:
       - "scripts/release85BlindAgreement.mjs"
       - "scripts/compareRelease85BlindAnnotations.mjs"
       - "scripts/prepareRelease85BlindPair.mjs"
-      - "scripts/__tests__/release85BlindAgreement.test.mjs"
+      - "scripts/__tests__/release85BlindAgreement.nodecheck.mjs"
       - "scripts/collectRelease37Corpus.mjs"
       - ".github/workflows/release37-public-pilot.yml"
   workflow_dispatch:

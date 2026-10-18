@@ -9,6 +9,8 @@ const entry=()=>({
  localPdf:"benchmarks/release37/private/usgs.pdf",
  referenceJson:"benchmarks/release37/private/usgs-gold.json",
  inspectorJson:"benchmarks/release37/private/usgs-actual.json",
+ blindAnnotatorAJson:"benchmarks/release37/private/usgs-annotator-a.json",
+ blindAnnotatorBJson:"benchmarks/release37/private/usgs-annotator-b.json",
 });
 const measured=()=>({
  id:"usgs-001",usageRights:"public-domain",rightsUrl:"https://pubs.usgs.gov/documentation/faq",
