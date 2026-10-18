@@ -1,5 +1,6 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
+import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
@@ -352,6 +353,7 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
       );
     }
     return { name: "Table " + number, rows: grouped.rows,
+      columnWidths:estimatePdfTableColumnWidths(grouped.rows),
       ...(nativePairedHeader ? {nativePairedHeader:true} : {}) };
   });
   const omitted = Array.from({ length: pageCount }, (_, i) => i + 1)
