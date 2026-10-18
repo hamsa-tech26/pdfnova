@@ -8,7 +8,8 @@
       "fix/kukureku-usgs-five-table-headers": false,
       "fix/kukureku-r77-long-caption-tables": false,
       "fix/kukureku-r78-real-table-diagnostics": false,
-      "fix/kukureku-r79-pmc5995222-layout": false
+      "fix/kukureku-r79-pmc5995222-layout": false,
+      "fix/kukureku-r80-pmc2147049-two-column": false
     }
   }
 }

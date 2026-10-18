@@ -1,3 +1,4 @@
+import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import type {
   PdfLine,
   PdfVisualBlock,
@@ -1484,13 +1485,14 @@ export function detectTableRegionsForPage(
     xAlignmentTolerance: options?.xAlignmentTolerance ?? DEFAULT_X_ALIGNMENT_TOLERANCE,
   };
 
-  const crossBlockCandidates = createCrossBlockCandidates(blocks);
-  const ocrCrossBlockCandidates = createOcrCrossBlockCandidates(blocks);
+  const splitNativeBlocks = splitParallelScientificTables(blocks);
+  const crossBlockCandidates = createCrossBlockCandidates(splitNativeBlocks);
+  const ocrCrossBlockCandidates = createOcrCrossBlockCandidates(splitNativeBlocks);
 
   // Never discard a source paragraph merely because it contains a caption.
   // Split only if the recovered grid passes the same scoped evidence gate as
   // PR #71. A rejected candidate leaves its original paragraph untouched.
-  const admitted = createCaptionAnchoredCandidates(blocks)
+  const admitted = createCaptionAnchoredCandidates(splitNativeBlocks)
     .map(candidate => ({
       ...candidate,
       analysis: analyzeBlock(candidate.block, resolvedOptions),
@@ -1499,7 +1501,7 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.alignment.score >= 16 &&
       candidate.analysis.totalScore >= 30,
     );
-  const alignedCandidates = createRepeatedColumnGridCandidates(blocks)
+  const alignedCandidates = createRepeatedColumnGridCandidates(splitNativeBlocks)
     .filter(candidate => !admitted.some(existing =>
       existing.sourceBlock === candidate.sourceBlock))
     .map(candidate => ({
@@ -1526,7 +1528,7 @@ export function detectTableRegionsForPage(
   }
 
   const proseFragments = new Set<PdfVisualBlock>();
-  const splitBlocks = blocks.flatMap(block => {
+  const splitBlocks = splitNativeBlocks.flatMap(block => {
     const captions = bySource.get(block);
     if (block.type !== "paragraph" || !captions?.length) return [block];
     let cursor = 0;
@@ -1561,7 +1563,13 @@ export function detectTableRegionsForPage(
   ];
   const regions = candidateBlocks.map(block => ({
     block,
-    analysis: proseFragments.has(block)
+    analysis: block.id.startsWith("parallel-native-prose-")
+      ? createZeroAnalysis()
+      : block.id.startsWith("native-two-col-grid-")
+        ? {...analyzeBlock(block,resolvedOptions),isTable:true,
+            totalScore:Math.max(resolvedOptions.tableThreshold,
+              analyzeBlock(block,resolvedOptions).totalScore)}
+    : proseFragments.has(block)
       ? createZeroAnalysis() // never reclassify a retained prose fragment as a table
       : captionAnalyses.get(block) ?? analyzeBlock(block, resolvedOptions),
   }));
