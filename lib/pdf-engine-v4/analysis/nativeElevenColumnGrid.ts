@@ -48,7 +48,7 @@ function anchors(lines:PdfLine[]):{x:number;count:number}[]{
     .map(g=>({x:median(g.xs),count:g.ids.size})).sort((a,b)=>a.x-b.x);
   return strong;
 }
-function dense(l:PdfLine)=>isNative(l)&&
+const dense=(l:PdfLine)=>isNative(l)&&
   l.words.length>=9&&l.words.length<=12&&
   l.bounds.width>=300;
 export function findNativeElevenColumnGrids(
