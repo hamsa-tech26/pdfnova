@@ -74,7 +74,6 @@ export function findNativeElevenColumnGrids(
       if(header.length<2||header.length>7||
          header.some(l=>!isNative(l))||!header.some(l=>l.words.length>=5))continue;
       const data:PdfLine[]=[];
-      const originalBody:PdfLine[]=[];
       let end=start-1;
       for(let j=start;j<Math.min(lines.length,start+31);j++){
         const line=lines[j];
@@ -83,14 +82,14 @@ export function findNativeElevenColumnGrids(
             const gap=data[data.length-1].bounds.y-line.bounds.y;
             if(gap<9||gap>28)break;
           }
-          data.push(line);originalBody.push(line);end=j;
+          data.push(line);end=j;
         }else if(line.words.length===1&&isNative(line)&&data.length&&
           data[data.length-1].bounds.y-line.bounds.y>=5&&
           data[data.length-1].bounds.y-line.bounds.y<=11&&
           line.words[0].bounds.x>200&&line.words[0].bounds.x<540){
           const previous=data.pop()!;
           const joined=combine([previous,line],"one-native-continuation");
-          data.push(joined);originalBody.push(line);end=j;
+          data.push(joined);end=j;
         }else break;
       }
       if(data.length<10||data.length>24)continue;

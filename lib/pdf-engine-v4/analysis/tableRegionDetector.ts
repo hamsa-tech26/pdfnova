@@ -1,5 +1,6 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
+import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import type {
   PdfLine,
   PdfVisualBlock,
@@ -1493,6 +1494,8 @@ export function detectTableRegionsForPage(
   // Never discard a source paragraph merely because it contains a caption.
   // Split only if the recovered grid passes the same scoped evidence gate as
   // PR #71. A rejected candidate leaves its original paragraph untouched.
+  const elevenGrids=findNativeElevenColumnGrids(splitNativeBlocks)
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   const pairedGrids = findPairedNativeCaptionGrids(splitNativeBlocks)
     .map(candidate => ({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   const admitted = createCaptionAnchoredCandidates(splitNativeBlocks)
@@ -1516,7 +1519,7 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.spacing.score >= 12 &&
       candidate.analysis.totalScore >= resolvedOptions.tableThreshold,
     );
-  const allAdmitted = [...pairedGrids, ...admitted, ...alignedCandidates];
+  const allAdmitted = [...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates];
   const bySource = new Map<PdfVisualBlock, typeof allAdmitted>();
   const captionAnalyses = new Map<PdfVisualBlock, TableRegionAnalysis>();
   for (const candidate of allAdmitted) {

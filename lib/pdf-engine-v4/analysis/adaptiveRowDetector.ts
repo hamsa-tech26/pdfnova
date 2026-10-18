@@ -1544,6 +1544,22 @@ function detectPairedNativePhysicalRows(
   return {rows,confidence:0.94};
 }
 
+function detectNativeElevenPhysicalRows(
+ block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+ if(block.type!=="paragraph"||!block.id.startsWith("dense-native-eleven-grid-")||
+    columns.length!==11||block.lines.length<11||block.lines.length>25)return null;
+ if(block.lines.some(line=>line.words.some(w=>
+    w.extractionProvenance?.source==="ocr-tesseract")))return null;
+ const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+    score:94,confidence:0.94,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"native-eleven-caption-physical-row",
+ }));
+ return {rows,confidence:0.94};
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1572,6 +1588,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const nativeEleven=detectNativeElevenPhysicalRows(block,columns);
+  if(nativeEleven)return nativeEleven;
 
   const pairedNative=detectPairedNativePhysicalRows(block,columns);
   if(pairedNative)return pairedNative;
