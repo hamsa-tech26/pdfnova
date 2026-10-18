@@ -17,6 +17,8 @@ export type PdfTablePreview={
   visibleRows:number;
   visibleColumns:number;
   trimmedCells:number;
+  /** Source-evidenced two-tier grouping, same visual spans as Excel. */
+  pairedHeaderLayout:boolean;
   rows:string[][];
 };
 function printable(value:unknown):{text:string;trimmed:boolean}{
@@ -45,5 +47,6 @@ export function buildPdfTablePreview(source:PdfV4XlsxExportSource,index:number):
     }));
   const sourcePages=[...new Set(t.rows.map(row=>row.provenance?.pageNumber??t.pageNumber))]
     .sort((a,b)=>a-b);
-  return {sourcePages,totalRows,totalColumns,visibleRows,visibleColumns,trimmedCells,rows};
+  return {sourcePages,totalRows,totalColumns,visibleRows,visibleColumns,trimmedCells,
+    pairedHeaderLayout:sheet.nativePairedHeader===true,rows};
 }
