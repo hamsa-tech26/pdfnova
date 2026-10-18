@@ -684,3 +684,72 @@ test("R80 original PMC2147049 Table 1 source page exports real 40x2 XLSX",async(
   expect(match).toBeTruthy();
   expect(profiles.some(x=>x.reviewWarning)).toBe(true);
 });
+
+
+/**
+ * R81 genuine user interaction: entire publisher 7-page PDF is loaded without
+ * pre-splitting, an unrelated one-row table remains refused, and the user
+ * explicitly selects its independently identified 6x10 native table.
+ * Tests workbook bytes, not Inspector-only synthetic dimensions.
+ */
+test("R81 full original PMC5995222 selectively exports source page 4 table to XLSX",async({page})=>{
+  test.setTimeout(230_000);
+  const src=release77PmcCases.find(x=>x.id==="PMC5995222");
+  if(!src)throw Error("Missing pinned original PDF");
+  const bytes=await boundedPmcPdf(src.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(src.sha256);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:src.id+".pdf",mimeType:"application/pdf",buffer:bytes,
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:140000});
+
+  // A separate invalid one-row table is visibly disabled.
+  const invalid=page.locator("label").filter({
+    hasText:/Page 5 — 1 rows × 9 columns/,
+  }).locator('input[type="radio"]');
+  await expect(invalid).toBeDisabled();
+  const selected=page.locator("label").filter({
+    hasText:/Page 4 — 6 rows × 10 columns/,
+  }).locator('input[type="radio"]');
+  await expect(selected).toBeEnabled();
+  await expect(page.getByRole("button",{name:"Export selected table (.xlsx)"}))
+    .toBeDisabled();
+
+  // The existing whole-document behavior is unchanged and correctly refused.
+  await page.getByRole("button",{name:"Convert to Excel (.xlsx)"}).click();
+  await expect(page.getByRole("heading",{name:"Excel conversion withheld"}))
+    .toBeVisible({timeout:70000});
+  await page.getByRole("button",{name:"Return to table choices"}).click();
+
+  await selected.check();
+  const downloadPromise=page.waitForEvent("download",{timeout:70000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const download=await downloadPromise;
+  expect(download.suggestedFilename()).toMatch(/-table-\d+\.xlsx$/i);
+  const saved=await download.path();
+  if(!saved)throw Error("No XLSX downloaded");
+  const zip=await JSZip.loadAsync(await readFile(saved));
+  const names=Object.keys(zip.files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  expect(names).toHaveLength(2); // just one table + explicit review sheet
+  const first=await zip.file("xl/worksheets/sheet1.xml")?.async("string")??"";
+  const notes=await zip.file("xl/worksheets/sheet2.xml")?.async("string")??"";
+  const rows=[...first.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)];
+  const cols=[...first.matchAll(/<c r="([A-Z]+)\d+"[^>]*>/g)]
+    .map(match=>[...match[1]].reduce((a,c)=>a*26+c.charCodeAt(0)-64,0));
+  const nonempty=[...first.matchAll(/<(?:t|v)(?:\s[^>]*)?>([\s\S]*?)<\/(?:t|v)>/g)]
+    .filter(m=>m[1].trim().length>0).length;
+  const schema={originalHashVerified:true,pagesInSource:src.sourcePageCount,
+    selectedSourcePage:src.pageNumber,rows:rows.length,cols:Math.max(...cols),
+    nonemptyCells:nonempty,hasSelectiveReview:notes.includes("SELECTIVE EXPORT"),
+    hasUnverifiedWarning:notes.includes("UNVERIFIED"),excelFormulaNodes:/<f(?:\s|>)/.test(first)};
+  console.log("R81_ORIGINAL_SELECTIVE_EXPORT "+JSON.stringify(schema));
+  expect(schema.rows).toBe(6);
+  expect(schema.cols).toBe(10);
+  expect(schema.nonemptyCells).toBeGreaterThanOrEqual(45);
+  expect(schema.hasSelectiveReview).toBe(true);
+  expect(schema.hasUnverifiedWarning).toBe(true);
+  expect(schema.excelFormulaNodes).toBe(false);
+});
