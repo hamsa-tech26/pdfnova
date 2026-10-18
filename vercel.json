@@ -14,7 +14,8 @@
       "feature/kukureku-r82-table-preview-golden-cells": false,
       "fix/kukureku-r83-native-greek-symbol-fidelity": false,
       "feature/kukureku-r84-second-publisher-cell-corpus": false,
-      "feature/kukureku-r85-double-blind-source-review": false
+      "feature/kukureku-r85-double-blind-source-review": false,
+      "fix/kukureku-r86-pmc5012829-native-table": false
     }
   }
 }
