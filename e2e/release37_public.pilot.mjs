@@ -1228,8 +1228,9 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
     hasUnverifiedWarning:reviews.includes("UNVERIFIED"),
   }));
   expect(reviews).toContain("UNVERIFIED");
+  expect(reviews).toContain("reconstructed from multiple physical PDF lines");
   expect(/<f(?:\s|>)/.test(sheet)).toBe(false);
-  // Report the actual measured errors on first run. Final release requires
-  // a grounded, enforced acceptance threshold and correct original shape.
-  expect(matches).toBeGreaterThanOrEqual(0);
+  // Enforce the observed 96/96 original-PDF measurement, not an empty baseline.
+  expect(matches).toBe(96);
+  expect(mismatches).toEqual([]);
 });
