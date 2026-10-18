@@ -235,7 +235,7 @@ export default function PdfToExcelPage() {
       description="Convert all eligible native-text PDF tables, or choose a table and inspect its actual exported cell values before downloading. Other tables are excluded explicitly. Processing stays on your device; source verification is still required."
       tips={[
         { title: "Text-selectable PDF only", description: "Scanned or mixed image-only PDFs cannot be converted with this version." },
-        { title: "Preview before exporting", description: "Inspect up to 12 rows and 8 columns of the selected table as they will appear in Excel; this is not accuracy certification." },
+        { title: "Review every source cell", description: "Browse the selected table in 12-row and 8-column windows, jump to any Excel cell, and inspect its complete extracted text before downloading. This is not accuracy certification." },
         { title: "Verify the spreadsheet", description: "Rows, columns, values, and headings must be checked against the source document before professional use." },
         { title: "Safe cell types", description: "Identifiers, leading zeros and formula-like inputs remain text. Only verified household and FHTC count columns in supported layouts become Excel numbers; no PDF content is executed as formulas." },
       ]}
@@ -413,8 +413,9 @@ export default function PdfToExcelPage() {
                   preview.totalColumns>preview.visibleColumns||
                   preview.trimmedCells>0) && (
                   <p className="text-xs text-amber-800 dark:text-amber-200">
-                    Preview shortened for display; the exported XLSX retains complete
-                    selected-table rows, columns and cell text.
+                    Only the current preview window and shortened long values are shown.
+                    Browse to other rows and columns or inspect exact cells; the downloaded
+                    XLSX and CSV retain the complete selected table text.
                   </p>
                 )}
               </div>
