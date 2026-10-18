@@ -198,6 +198,7 @@ const release77PmcCases=[
     pageNumber:3,sourcePageCount:21,
     publishedRows:40,publishedColumns:2,
     previousRows:14,previousColumns:6,
+    requireExactShape:true,
   },
   {
     id:"PMC4595315",
@@ -488,9 +489,9 @@ for(const source of release77PmcCases){
         const exact=pageTables.find(table=>
           table.rows?.length===source.publishedRows &&
           table.columnCount===source.publishedColumns);
-        expect(exact?.rows?.length).toBe(6);
+        expect(exact?.rows?.length).toBe(source.publishedRows);
         // A correct 10-column *shape* alone is not an accuracy claim.
-        expect(exact?.rows?.every(row=>row.cells?.length===10)).toBe(true);
+        expect(exact?.rows?.every(row=>row.cells?.length===source.publishedColumns)).toBe(true);
       }
     });
 }
