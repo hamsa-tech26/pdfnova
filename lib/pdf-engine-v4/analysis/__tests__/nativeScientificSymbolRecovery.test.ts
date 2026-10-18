@@ -17,16 +17,17 @@ describe("Release 83 narrow native scientific Greek glyph disambiguation",()=>{
   });
   it("does not replace common Latin s and e in prose or unrelated table cells",()=>{
     const ordinary=[
-      "family s factors predict sigma?","family s factors of proteins", // spellings? 
-      "A family s factors study","Very simple e-services",
-      "An e-Proteobacterial analysis","family S pairing",
+      "family science factors predict sigma?",
+      "family s genes of proteins",
+      "Family s-factor groups",
+      "Very simple e-services",
+      "An e-Proteobacterial analysis",
+      "family S pairing",
       "species e-Proteobacterial and family s value",
       "ECF family σ/anti-σ factor pairs",
       "Within ε-Proteobacterial taxa",
-      "Non-ECF family s factors but not when words are split?",
     ];
-    // Conditions below deliberately separate nonmatching from matching.
-    for(const value of ordinary.slice(1,7).concat(ordinary.slice(7,9))){
+    for(const value of ordinary){
       const result=inferNativeScientificSymbols(value);
       expect(result.text).toBe(value);
       expect(result.reasons).toHaveLength(0);
