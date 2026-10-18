@@ -345,6 +345,7 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
     const headerWords=sourceFirst?.cells ?? [];
     const headerTexts=grouped.rows[0] ?? [];
     const sourceFirstHeader=pages.length===1 && !headerGuide &&
+      !wideHeader.headerWrapped &&
       medianRows===extractedRows && grouped.rows===extractedRows &&
       table.rows.length>=3 &&
       headerTexts.length===table.columnCount &&
