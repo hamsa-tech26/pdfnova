@@ -89,6 +89,26 @@ function verifyAnnotation(a,label,sourceSha256,sourcePageCount){
   });
   return {errors,sections,slots};
 }
+
+/**
+ * Compare a human-adjudicated final reviewed reference with the two blind
+ * source-first annotations, WITHOUT printing values. Caller is responsible
+ * for the separate formal attestation/rights validation. This seals all
+ * original rows, columns, cell texts, blanks and merged-cell spans.
+ */
+export function release85CanonicalSourceGridDigest(reference){
+  if(!Array.isArray(reference?.tables))throw Error("Reviewed source table grid missing.");
+  const cells=reference.tables.map(t=>({
+    page:t.pageNumber,rows:t.rowCount,columns:t.columnCount,
+    anchors:(t.cells??[]).map(c=>({
+      row:c.rowIndex,column:c.columnIndex,
+      rowSpan:c.rowSpan??1,columnSpan:c.columnSpan??1,
+      text:typeof c.text==="string"?normalized(c.text):null,
+    })).sort((a,b)=>a.row-b.row||a.column-b.column),
+  }));
+  return fingerprint(cells);
+}
+
 /**
  * Both annotations must be created BEFORE viewing Kukureku predictions and
  * independently of each other. The software can validate their structures
