@@ -1513,6 +1513,20 @@ function detectDenseCaptionPhysicalRows(
   return {rows,confidence:0.9};
 }
 
+function detectParallelNativePhysicalRows(
+ block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+ if(block.type!=="paragraph"||!block.id.startsWith("native-two-col-grid-")||
+    columns.length!==2||block.lines.length<34)return null;
+ if(block.lines.some(l=>l.words.some(w=>
+    w.extractionProvenance?.source==="ocr-tesseract")))return null;
+ const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+   score:92,confidence:0.92,isNewRecord:true,
+   breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,emptyLeadingColumns:0,wrappedText:0},
+   reason:"parallel-native-scientific-physical-row",
+ }));
+ return {rows,confidence:0.92};
+}
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1545,6 +1559,8 @@ export function detectAdaptiveRowsV4(
   const denseCaptionGrid = detectDenseCaptionPhysicalRows(block, columns);
   if (denseCaptionGrid) return denseCaptionGrid;
 
+  const parallelRows=detectParallelNativePhysicalRows(block,columns);
+  if(parallelRows)return parallelRows;
   const captionGrid = detectCaptionGridRows(block, columns);
   if (captionGrid) return captionGrid;
   const alignedGrid = detectAlignedNativeGridRows(block, columns);

@@ -27,6 +27,7 @@ import {
   detectStableColumnsV4,
   type StableColumnDetectionResult,
 } from "../analysis/stableColumnDetector";
+import {detectParallelNativeColumns} from "../analysis/parallelScientificTableRecovery";
 import {recoverSparseLeftNativeCaptionColumn} from "../analysis/scopedDenseCaptionGridRecovery";
 import {
   detectAdaptiveRowsV4,
@@ -1354,6 +1355,8 @@ for (const region of regionsToAnalyze) {
   detectStableColumnsV4(
     region.block,
   );
+const parallelColumns=detectParallelNativeColumns(region.block,columnDetection);
+if(parallelColumns)columnDetection=parallelColumns;
 
 const previousAnalysis =
   tableAnalyses[
@@ -1621,6 +1624,7 @@ if (
 }
 
 const tableContentStartLineIndex =
+  parallelColumns ? 0 :
   scopedDenseCaptionColumns ? 0 :
   region.block.type === "paragraph" ||
   region.block.type === "heading"
