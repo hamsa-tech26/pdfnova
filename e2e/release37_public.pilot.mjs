@@ -484,6 +484,41 @@ for(const source of release77PmcCases){
       if(source.requireImprovement!==false) {
         expect(observedError).toBeLessThan(baselineError);
       }
+      if(source.id==="PMC2147049"&&matchesPublishedShape){
+        // Spot-check native cell strings against the source publisher's
+        // open-access HTML Table 1, not merely published table dimensions.
+        // This remains a bounded developer verification, not independent signoff.
+        const table=pageTables.find(t=>t.rows?.length===40&&t.columnCount===2);
+        expect(table).toBeDefined();
+        const normalize=text=>String(text??"").normalize("NFKC")
+          .toLowerCase().replace(/[^a-z0-9]/g,"");
+        const reference=[
+          ["Chromosome size","2341251"],
+          ["G+C content","2705"],
+          ["CDS numbers","2259"],
+          ["Pseudogenes","5"],
+          ["Prophage","1"],
+          ["Genetic islands","3"],
+          ["Ribosomal RNA operons","5"],
+          ["Plasmids","0"],
+          ["Chemotaxis proteins","46"],
+          ["Unique A. butzleri proteins","315"],
+        ];
+        const cells=(table?.rows??[]).map(row=>[
+          normalize(row.cells?.find(c=>c.columnIndex===0)?.text),
+          normalize(row.cells?.find(c=>c.columnIndex===1)?.text),
+        ]);
+        const decisions=reference.map(([label,value])=>
+          cells.some(([l,v])=>l.includes(normalize(label))&&v.includes(value)));
+        console.log("R80_PUBLISHER_CELL_SPOTCHECK "+JSON.stringify({
+          source:source.id,sourceVerified:true,
+          inspectedAnchors:reference.length,
+          matchedAnchors:decisions.filter(Boolean).length,
+          sourceWordTextNotLogged:true,
+          independentAcceptedDocumentCredit:0,
+        }));
+        expect(decisions.filter(Boolean).length).toBeGreaterThanOrEqual(7);
+      }
       if(source.requireExactShape===true){
         expect(matchesPublishedShape).toBe(true);
         const exact=pageTables.find(table=>
@@ -584,4 +619,68 @@ test("R79 original PMC table-page excerpt exports a populated 6x10 XLSX sheet",a
   // Human review warnings remain visible for unverified extraction.
   const xmls=await Promise.all(names.map(async name=>zip.file(name)?.async("string")));
   expect(xmls.some(xml=>xml?.includes("EXTRACTION NOT VERIFIED"))).toBe(true);
+});
+
+
+test("R80 original PMC2147049 Table 1 source page exports real 40x2 XLSX",async({page})=>{
+  test.setTimeout(160_000);
+  const src=release77PmcCases.find(s=>s.id==="PMC2147049");
+  if(!src)throw Error("Original PMC test source unavailable");
+  const bytes=await boundedPmcPdf(src.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(src.sha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(src.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  const pages=await excerpt.copyPages(original,[src.pageNumber-1]);
+  excerpt.addPage(pages[0]);
+  const sourcePage=Buffer.from(await excerpt.save());
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:src.id+"-publisher-table1-page.pdf",
+    mimeType:"application/pdf",buffer:sourcePage,
+  });
+  const downloaded=page.waitForEvent("download",{timeout:65000})
+    .then(download=>({kind:"download",download}));
+  const withheld=page.getByRole("heading",{name:"Excel conversion withheld"})
+    .waitFor({state:"visible",timeout:65000})
+    .then(()=>({kind:"withheld",download:null}));
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const result=await Promise.any([downloaded,withheld]);
+  if(result.kind==="withheld"||!result.download){
+    const detail=await page.getByRole("alert").locator("p").nth(1).innerText();
+    const why=/low-text|image-only/i.test(detail)?"NATIVE_TEXT_GATE":
+      /overlap/i.test(detail)?"OVERLAP_GUARD":
+      /merged together/i.test(detail)?"MERGED_COLUMN_GUARD":
+      /uncertain|no reliable/i.test(detail)?"STRUCTURAL_GUARD":
+      /maximum of 12|more than 12/i.test(detail)?"TABLE_COUNT_GATE":
+      "OTHER_FAIL_CLOSED";
+    console.log("R80_XLSX_REFUSAL "+JSON.stringify({source:src.id,
+      reason:why,originalHashVerified:true,safetyPreserved:true,
+      rawErrorTextNotLogged:true}));
+    throw Error("R80 original table-page XLSX refused: "+why);
+  }
+  const file=await result.download.path();
+  if(!file)throw Error("No XLSX artifact after source-page conversion");
+  const zip=await JSZip.loadAsync(await readFile(file));
+  const names=Object.keys(zip.files).filter(name=>/^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  const profiles=[];
+  for(const name of names){
+    const xml=await zip.file(name)?.async("string")??"";
+    const cells=[...xml.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)]
+      .map(m=>[...m[1].matchAll(/<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)]
+        .map(c=>({
+          col:[...c[1]].reduce((v,t)=>v*26+t.charCodeAt(0)-64,0)-1,
+          filled:Boolean(c[2].match(/<(?:t|v)(?:\s[^>]*)?>([\s\S]*?)<\/(?:t|v)>/)?.[1]?.trim()),
+        })));
+    profiles.push({rows:cells.length,cols:Math.max(0,...cells.flat().map(c=>c.col+1)),
+      filled:cells.flat().filter(c=>c.filled).length,
+      reviewWarning:xml.includes("EXTRACTION NOT VERIFIED")});
+  }
+  const match=profiles.find(x=>x.rows===40&&x.cols===2&&x.filled>=55);
+  console.log("R80_XLSX_STRUCTURE "+JSON.stringify({
+    originalHashVerified:true,extractedPublisherPage:src.pageNumber,
+    sheetProfiles:profiles,matched40x2:!!match,independentCredit:0,
+  }));
+  expect(match).toBeTruthy();
+  expect(profiles.some(x=>x.reviewWarning)).toBe(true);
 });
