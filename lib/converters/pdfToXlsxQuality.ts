@@ -349,7 +349,7 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
         table.columnCount &&
       headerTexts.filter(value=>/[a-zA-Z]{2,}/.test(String(value))).length>=2 &&
       grouped.rows.slice(1).some(row=>
-        row.some(value=>/^\\s*[-+−]?\\d/u.test(String(value))));
+        row.some(value=>/^\s*[-+−]?\d/u.test(String(value))));
     if(sourceFirstHeader)notes.push("Table "+number+
       ": Source-native first row was frozen for Excel navigation, without an "+
       "automatic filter. Header semantics are NOT independently verified.");
