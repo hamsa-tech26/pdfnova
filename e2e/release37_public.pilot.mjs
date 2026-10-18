@@ -341,6 +341,58 @@ for(const source of release77PmcCases){
           lineGeometry,diagnosticRegions,acceptedDocumentCredit:0,
         }));
       }
+
+      if(source.id==="PMC2147049"){
+        // No raw publisher PDF/text leaves the temporary CI runner. Report
+        // source layout and caption coordinates only.
+        const pg=inspector.document.pages[source.pageNumber-1];
+        const mid=(pg.width??612)/2;
+        const paragraph=pg.blocks.find(b=>b.type==="paragraph"&&b.lines?.length>40);
+        const sourceLines=paragraph?.lines??[];
+        const side=(line,which)=>line.words.filter(w=>
+          which==="left" ? w.bounds.x+Math.min(w.bounds.width,18)/2<mid
+            : w.bounds.x+Math.min(w.bounds.width,18)/2>=mid);
+        const sideProfiles=["left","right"].map(which=>{
+          const lines=sourceLines.map((line,i)=>({
+            sourceIndex:i,y:Math.round(line.bounds.y),
+            words:side(line,which).sort((a,b)=>a.bounds.x-b.bounds.x),
+          })).filter(l=>l.words.length>0);
+          const captionHits=lines.flatMap((l,i)=>{
+            const text=l.words.map(w=>w.text).join(" ");
+            return /\\btable\\s*\\d{1,2}[.\\s:]?/i.test(text)
+              ? [{index:i,y:l.y,words:l.words.length}]:[];
+          }).slice(0,8);
+          const firstXs=lines.map(l=>Math.round(l.words[0].bounds.x));
+          const yBandCounts=new Map();
+          for(const line of lines){
+            const k=Math.round(line.y/8)*8;
+            yBandCounts.set(k,(yBandCounts.get(k)||0)+1);
+          }
+          return {which,lines:lines.length,captionHits,
+            lineWordCountHistogram:lines.reduce((obj,l)=>{
+              const k=Math.min(l.words.length,12);
+              obj[k]=(obj[k]??0)+1;return obj;
+            },{}),
+            firstXPeaks:[...firstXs.reduce((m,x)=>{
+              const k=Math.round(x/8)*8;m.set(k,(m.get(k)||0)+1);return m;
+            },new Map()).entries()].sort((a,b)=>b[1]-a[1]).slice(0,12),
+            head:lines.slice(0,10).map(l=>({i:l.sourceIndex,y:l.y,
+              starts:l.words.slice(0,6).map(w=>Math.round(w.bounds.x))})),
+            tail:lines.slice(-10).map(l=>({i:l.sourceIndex,y:l.y,
+              starts:l.words.slice(0,6).map(w=>Math.round(w.bounds.x))})),
+            doubleRows:[...yBandCounts.values()].filter(v=>v>1).length,
+          };
+        });
+        console.log("R80_COLUMN_BOUNDARY_DIAGNOSTIC "+JSON.stringify({
+          source:source.id,sourceVerified:true,pageWidth:pg.width,
+          physicalSourceLines:sourceLines.length,splitAt:mid,
+          profiles:sideProfiles,
+          originalWords:sourceLines.reduce((n,l)=>n+l.words.length,0),
+          retainedWords:sourceLines.reduce((n,l)=>
+            n+side(l,"left").length+side(l,"right").length,0),
+          independentCertificationCredit:0,
+        }));
+      }
       if(source.id==="PMC5995222"){
         console.log("R79_ORIGINAL_NATIVE_ROUTING "+JSON.stringify({
           source:source.id,
