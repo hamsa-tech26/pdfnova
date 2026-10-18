@@ -1544,6 +1544,29 @@ function detectPairedNativePhysicalRows(
   return {rows,confidence:0.94};
 }
 
+function detectInterleavedThreePhysicalRows(
+  block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+  if(block.type!=="paragraph"||
+    !block.id.startsWith("interleaved-native-three-grid-")||
+    columns.length!==3||block.lines.length<24||block.lines.length>34)return null;
+  if(block.lines.some(line=>line.words.some(word=>
+    word.extractionProvenance?.source==="ocr-tesseract")))return null;
+  const gaps=block.lines.slice(1).map((l,i)=>block.lines[i].bounds.y-l.bounds.y);
+  if(gaps.some(gap=>gap<8||gap>20))return null;
+  const anchors=columns.map(c=>c.x);
+  const complete=block.lines.filter(line=>anchors.every(x=>line.words.some(w=>
+    Math.abs(w.bounds.x-x)<=11))).length;
+  if(complete<Math.ceil(block.lines.length*0.65))return null;
+  const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+    score:94,confidence:0.94,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"interleaved-native-three-physical-row",
+  }));
+  return {rows,confidence:0.94};
+}
+
 function detectNativeElevenPhysicalRows(
  block:PdfVisualBlock,columns:ColumnCandidate[],
 ):AdaptiveRowDetectionResult|null{
@@ -1588,6 +1611,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const interleaved=detectInterleavedThreePhysicalRows(block,columns);
+  if(interleaved)return interleaved;
 
   const nativeEleven=detectNativeElevenPhysicalRows(block,columns);
   if(nativeEleven)return nativeEleven;
