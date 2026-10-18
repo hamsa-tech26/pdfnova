@@ -4,6 +4,7 @@ import {splitParallelScientificTables,detectParallelNativeColumns} from "../para
 import {detectStableColumnsV4} from "../stableColumnDetector";
 import {detectTableRegionsForPage} from "../tableRegionDetector";
 import {detectAdaptiveRowsV4} from "../adaptiveRowDetector";
+import {buildSmartTableV4} from "../smartCellBuilder";
 
 function line(id:number,y:number,parts:[number,string][]):PdfLine{
  const words:PdfWord[]=parts.map(([x,text],j)=>({
@@ -22,7 +23,13 @@ function makeMixed(){
  ];
  for(let i=0;i<40;i++){
    const y=697-i*12.5;
-   const left:[number,string][]=[[i%3===0?78:71,"Class-"+i]];
+   const labels:Record<number,string>={
+      26:"Non-ECF family s factors",
+      27:"ECF family s/anti-s factor pairs",
+      33:"Within e-Proteobacterial taxa",
+      38:"Only in non e-Proteobacterial taxa",
+   };
+   const left:[number,string][]=[[i%3===0?78:71,labels[i]??("Class-"+i)]];
    const right:[number,string][]=[[321,"Taxon-"+i],[435,"12"],[461,"13"],[489,"14"]];
    if(i!==20)left.push([230,String(i)]);
    lines.push(line(id++,y,[...left,...right]));
@@ -57,6 +64,23 @@ describe("R80 source-aligned two-column PDF table recovery",()=>{
    const rows=detectAdaptiveRowsV4(table,columns.columns);
    expect(rows.rows).toHaveLength(40);
    expect(rows.rows.every(r=>r.reason==="parallel-native-scientific-physical-row")).toBe(true);
+   const structured=buildSmartTableV4(3,rows.rows,columns.columns).table;
+   expect(structured?.rows).toHaveLength(40);
+   const expected:Record<number,string>={
+     26:"Non-ECF family σ factors",
+     27:"ECF family σ/anti-σ factor pairs",
+     33:"Within ε-Proteobacterial taxa",
+     38:"Only in non ε-Proteobacterial taxa",
+   };
+   for(const [index,label] of Object.entries(expected)){
+     const row=structured?.rows[Number(index)];
+     expect(row?.cells.find(c=>c.columnIndex===0)?.text).toBe(label);
+     const before=row?.cells.find(c=>c.columnIndex===0)?.originalNativeText;
+     expect(before).toBeDefined();
+     expect(before).not.toBe(label);
+     expect(row?.cells.find(c=>c.columnIndex===0)?.nativeTextAdjustmentReasons?.length).toBe(1);
+   }
+   expect(structured?.rows[0].cells[0].originalNativeText).toBeUndefined();
    expect(detectTableRegionsForPage([source]).tableRegions.some(r=>
      r.block.id.startsWith("native-two-col-grid-"))).toBe(true);
  });
