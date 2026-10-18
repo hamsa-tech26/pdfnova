@@ -915,6 +915,7 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
   }
   expect(choiceAllowed).toBe(true);
   await choice.check();
+  await expect(page.getByText(/Two-level native header detected:/)).toBeVisible();
   const downloadPromise=page.waitForEvent("download",{timeout:70000});
   await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
   const download=await downloadPromise;
@@ -1484,4 +1485,71 @@ test("R90 real PMC3297222 dense native 34x7 XLSX publisher cell audit",async({pa
   expect(start).toBeGreaterThanOrEqual(0);
   expect(matches).toBe(231);
   expect(failures).toEqual([]);
+});
+
+
+/**
+ * R96 original-source CSV confidence: use the real publisher PDF, select the
+ * unchanged native 28x3 table, click the new CSV export and compare all 84
+ * exact data positions to the independent-from-converter publisher HTML
+ * project-transcribed reference. Not independent adjudication (0/20).
+ */
+test("R96 original PMC3464982 selected PDF table exports safe source-matched CSV",async({page})=>{
+  test.setTimeout(240_000);
+  const src=release77PmcCases.find(s=>s.id==="PMC3464982");
+  if(!src)throw Error("Original publisher PDF fixture missing");
+  const reference=JSON.parse(await readFile(
+    "benchmarks/release89/pmc3464982-table3-publisher-reference.json","utf8"));
+  expect(reference.sourceFullPdfSha256).toBe(src.sha256);
+  const bytes=await boundedPmcPdf(src.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(src.sha256);
+  const full=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(full.getPageCount()).toBe(8);
+  const excerpt=await PDFDocument.create();
+  excerpt.addPage((await excerpt.copyPages(full,[src.pageNumber-1]))[0]);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC3464982-original-page5.pdf",mimeType:"application/pdf",
+    buffer:Buffer.from(await excerpt.save()),
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:150000});
+  const choice=page.locator("label").filter({hasText:/28 rows × 3 columns/})
+    .locator('input[type="radio"]');
+  await expect(choice).toHaveCount(1);
+  await choice.check();
+  await expect(page.getByText("Export selected table (.csv)")).toBeVisible();
+  const downloading=page.waitForEvent("download",{timeout:75000});
+  await page.getByRole("button",{name:"Export selected table (.csv)"}).click();
+  const dl=await downloading;
+  expect(dl.suggestedFilename()).toMatch(/-table-\d+\.csv$/i);
+  const file=await dl.path();
+  if(!file)throw Error("Actual original-publisher selected-table CSV missing");
+  const csv=await readFile(file,"utf8");
+  expect(csv.charCodeAt(0)).toBe(65279); // UTF-8 BOM for Excel.
+  const lines=csv.slice(1).trimEnd().split("\r\n");
+  const cells=lines.map(line=>{
+    const tokens=[...line.matchAll(/"((?:[^"]|"")*)"(?:,|$)/g)]
+      .map(m=>m[1].replace(/""/g,'"'));
+    expect(tokens).toHaveLength(3);
+    return tokens;
+  });
+  expect(cells).toHaveLength(28);
+  const normalize=value=>String(value??"").normalize("NFKC")
+    .replace(/[\u00a0\u2009\u202f]/g," ")
+    .replace(/\s+/g," ").trim().toLowerCase().replace(/[–—−]/g,"-")
+    .replace(/(?<=\d),(?=\d{3}\b)/g,"");
+  const mismatches=[];
+  for(let row=0;row<28;row++)for(let col=0;col<3;col++){
+    if(normalize(cells[row][col])!==normalize(reference.rows[row][col]))
+      mismatches.push([row+1,col+1]);
+  }
+  console.log("R96_ORIGINAL_SELECTED_CSV_AUDIT "+JSON.stringify({
+    source:src.id,publisherFullPdfHashVerified:true,
+    exportedRows:28,exportedColumns:3,comparedProjectPublisherCells:84,
+    matchedCells:84-mismatches.length,mismatchCoordinates:mismatches,
+    excelBOM:true,independentDocumentCredit:0,
+  }));
+  expect(mismatches).toEqual([]);
 });
