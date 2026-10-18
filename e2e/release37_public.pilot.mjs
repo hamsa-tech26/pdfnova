@@ -1267,6 +1267,26 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
     return values;
   });
   expect(parsed).toHaveLength(13);
+  // R106 source geometry acceptance: recovered header line breaks must be
+  // literal inside the original XLSX inline strings; no guessed extra row
+  // or edited body cells. UI helper alone cannot satisfy this gate.
+  const nativeWideXmlHeaderCells=[...sheet.matchAll(
+    /<c r="([A-K])1"[^>]*>([\s\S]*?)<\/c>/g)];
+  const multilineCount=nativeWideXmlHeaderCells.filter(c=>
+    /<t(?:\s[^>]*)?>([\s\S]*?\n[\s\S]*?)<\/t>/.test(c[2])).length;
+  const wideStyles=await zip.file("xl/styles.xml")?.async("string")??"";
+  const headerWrapped=sheet.includes('<row r="1" ht="68" customHeight="1">') &&
+    sheet.includes('ySplit="1" topLeftCell="A2"') &&
+    wideStyles.includes('wrapText="1"');
+  console.log("R106_ORIGINAL_WIDE_HEADER_LINE_PRESERVATION "+JSON.stringify({
+    source:source.id,fullPdfHashVerified:true,originalHeaderRows:1,
+    bodyRows:12,columns:11,multilineHeaderCells:multilineCount,
+    nativeStylesApplied:headerWrapped,
+    sourceHeaderValuesNotLogged:true,formalReviewerCredit:0,
+  }));
+  expect(multilineCount).toBeGreaterThan(0);
+  expect(headerWrapped).toBe(true);
+  expect(reviews).toContain("physical line breaks");
   expect(exactCellLabel).toBe(parsed[12][9]||"(blank cell)");
   // Browser cell inspection must NEVER edit the subsequent downloaded XLSX.
 
