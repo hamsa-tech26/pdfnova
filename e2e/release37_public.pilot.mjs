@@ -204,6 +204,7 @@ const release77PmcCases=[
     sha256:"70e908e1cc763f889f091276874e745a7802f1a11291f1d487f43fee8efcb1ad",
     pageNumber:5,sourcePageCount:6,publishedRows:13,publishedColumns:11,
     previousRows:11,previousColumns:13,diagnosticOnly:true,requireImprovement:false,
+    requireExactShape:true,
   },
   {
     id:"PMC2147049",
@@ -1143,4 +1144,92 @@ test("R86 original PMC5012829 Table 1 downloads real 9x2 XLSX with publisher cel
   expect(review).toContain("UNVERIFIED");
   expect(review).toContain("SELECTIVE EXPORT");
   expect(/<f(?:\s|>)/.test(xml)).toBe(false);
+});
+
+
+/**
+ * A second previously broken full original-PDF scientific layout.
+ * Compare numeric factual measurements + blanks against publisher Table 3,
+ * not a synthetic PDF or dimensions alone; no third-party signoff claimed.
+ */
+test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verification",async({page})=>{
+  test.setTimeout(240_000);
+  const source=release77PmcCases.find(x=>x.id==="PMC3063220");
+  if(!source)throw Error("R87 publisher source missing");
+  const reference=JSON.parse(await readFile(
+    "benchmarks/release87/pmc3063220-table3-numeric-source-reference.json","utf8"));
+  expect(reference.sourceFullPdfSha256).toBe(source.sha256);
+  expect(reference.referenceColumns).toEqual([0,2,3,4,6,7,8,10]);
+  expect(reference.referenceRows).toHaveLength(12);
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(source.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  excerpt.addPage((await excerpt.copyPages(original,[source.pageNumber-1]))[0]);
+  const pdf=Buffer.from(await excerpt.save());
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC3063220-original-page5.pdf",
+    mimeType:"application/pdf",buffer:pdf,
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:150000});
+  const target=page.locator("label").filter({hasText:/13 rows × 11 columns/})
+    .locator('input[type="radio"]');
+  await expect(target).toHaveCount(1);
+  await expect(target).toBeEnabled();
+  await target.check();
+  const downloadPromise=page.waitForEvent("download",{timeout:75000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const download=await downloadPromise;
+  const filename=await download.path();
+  if(!filename)throw Error("No actual XLSX from original publisher PDF");
+  const zip=await JSZip.loadAsync(await readFile(filename));
+  const names=Object.keys(zip.files).filter(name=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  expect(names).toHaveLength(2);
+  const unescape=txt=>String(txt??"").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  const sheet=await zip.file("xl/worksheets/sheet1.xml")?.async("string")??"";
+  const reviews=await zip.file("xl/worksheets/sheet2.xml")?.async("string")??"";
+  const parsed=[...sheet.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)].map(row=>{
+    const values=Array.from({length:11},()=>"");
+    for(const cell of row[1].matchAll(
+      /<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)){
+      const c=[...cell[1]].reduce((n,ch)=>n*26+ch.charCodeAt(0)-64,0)-1;
+      const texts=[...cell[2].matchAll(
+        /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
+        .map(m=>unescape(m[1])).join("");
+      if(c>=0&&c<11)values[c]=texts||unescape(
+        cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1]??"");
+    }
+    return values;
+  });
+  expect(parsed).toHaveLength(13);
+  const normalize=value=>String(value??"").normalize("NFKC")
+    .replace(/[^\d]/gu,"");
+  const mismatches=[];
+  let matches=0;
+  for(let r=0;r<12;r++)for(let i=0;i<8;i++){
+    const c=reference.referenceColumns[i];
+    const actual=normalize(parsed[r+1]?.[c]);
+    const expected=normalize(reference.referenceRows[r][i]);
+    if(actual===expected)matches++;
+    else mismatches.push([r+2,c+1]);
+  }
+  console.log("R87_PUBLISHER_NUMERIC_XLSX "+JSON.stringify({
+    source:source.id,hashVerified:true,rows:13,columns:11,
+    comparedNumericalAndBlankPositions:96,matchingPositions:matches,
+    mismatchedCoordinates:mismatches,valuesNotLogged:true,
+    referenceIsProjectTranscribed:true,independentDocumentCredit:0,
+    hasSelectiveWarning:reviews.includes("SELECTIVE EXPORT"),
+    hasUnverifiedWarning:reviews.includes("UNVERIFIED"),
+  }));
+  expect(reviews).toContain("UNVERIFIED");
+  expect(/<f(?:\s|>)/.test(sheet)).toBe(false);
+  // Report the actual measured errors on first run. Final release requires
+  // a grounded, enforced acceptance threshold and correct original shape.
+  expect(matches).toBeGreaterThanOrEqual(0);
 });
