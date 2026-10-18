@@ -728,12 +728,16 @@ test("R80 original PMC2147049 Table 1 source page exports real 40x2 XLSX",async(
     mismatchedCoordinates:mismatchCoordinates,valuesNotLogged:true,
     certifiedDocumentCredit:0,
   }));
-  // Safeguard a minimum plausible table while publishing the ENTIRE observed
-  // mismatch set for further fixing; this is deliberately not a 100% claim.
-  // Baseline observed from the original source on 18 Oct 2026: 76/80
-  // matching positions; four label discrepancies remain visibly reported.
-  // Require no regression from that recorded real-document baseline.
-  expect(exact).toBeGreaterThanOrEqual(76);
+  // Release 83 requires all publisher-reference positions to match in the
+  // actual downloaded workbook. This authored comparison is not formal,
+  // third-party independent accuracy certification.
+  expect(exact).toBe(80);
+  expect(mismatchCoordinates).toEqual([]);
+  // Native Greek glyphs inferred from ambiguous font encodings MUST be
+  // explicitly disclosed to the end-user as review-only interpretations.
+  const allWorksheets=await Promise.all(names.map(name=>
+    zip.file(name)?.async("string")));
+  expect(allWorksheets.some(x=>x?.includes("ambiguous font glyphs"))).toBe(true);
 });
 
 
