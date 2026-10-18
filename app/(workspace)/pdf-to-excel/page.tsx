@@ -12,7 +12,9 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
-import {buildPdfTablePreview,type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
+import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
+  pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
+  type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
 import { recoverEightColumnNativePdf } from "@/lib/converters/pdfToXlsxNativeBoundaries";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { saveAs } from "file-saver";
@@ -33,6 +35,9 @@ export default function PdfToExcelPage() {
   const [choices, setChoices] = useState<PdfXlsxTableChoice[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [preview, setPreview] = useState<PdfTablePreview | null>(null);
+  const [cellAddressInput,setCellAddressInput]=useState("");
+  const [cellDetail,setCellDetail]=useState<ReturnType<typeof inspectPdfTableCell>|null>(null);
+  const [cellStatus,setCellStatus]=useState("");
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -44,7 +49,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setChoices([]);
     setSelectedIndex(null);
-    setPreview(null);
+    setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
   }
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>) {
@@ -56,7 +61,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setChoices([]);
     setSelectedIndex(null);
-    setPreview(null);
+    setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     if (!selected || !selected.name.toLowerCase().endsWith(".pdf") ||
         selected.size > MAX_FILE_BYTES || selected.size === 0) {
       setFile(null);
@@ -75,7 +80,7 @@ export default function PdfToExcelPage() {
     try{
       const analyzed=inspected??await analyzePdfV4(file,{enableControlledOcr:false});
       const available=inspectPdfV4XlsxChoices(analyzed);
-      setInspected(analyzed);setChoices(available);setSelectedIndex(null);setPreview(null);
+      setInspected(analyzed);setChoices(available);setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
     }finally{setBusy(false);}
@@ -97,9 +102,53 @@ export default function PdfToExcelPage() {
     try{
       const proposed=buildPdfTablePreview(inspected,index);
       setSelectedIndex(index);setPreview(proposed);setError("");
+      setCellDetail(null);setCellStatus("");setCellAddressInput("");
     }catch(cause){
       setSelectedIndex(null);setPreview(null);
       setError(cause instanceof Error?cause.message:"Table preview was withheld.");
+    }
+  }
+
+  /** Releases 98–100: navigate only within a revalidated source table. */
+  function showPreview(rowStart:number,columnStart:number){
+    if(!inspected||selectedIndex===null)return;
+    try{
+      const next=buildPdfTablePreview(inspected,selectedIndex,{rowStart,columnStart});
+      setPreview(next);setCellDetail(null);setCellStatus("");setError("");
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:"Preview was withheld.");
+    }
+  }
+  function showExactCell(rowIndex:number,columnIndex:number){
+    if(!inspected||selectedIndex===null)return;
+    try{
+      const detail=inspectPdfTableCell(inspected,selectedIndex,rowIndex,columnIndex);
+      setCellDetail(detail);setCellAddressInput(detail.address);
+      setCellStatus("");setError("");
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:"This source cell cannot be inspected.");
+    }
+  }
+  function jumpToCell(){
+    if(!preview||!inspected||selectedIndex===null)return;
+    const cell=parsePdfTableCellAddress(
+      cellAddressInput,preview.totalRows,preview.totalColumns);
+    if(!cell){
+      setCellStatus("Enter a source Excel cell inside the selected table, such as J13.");
+      return;
+    }
+    showPreview(
+      Math.floor(cell.rowIndex/PREVIEW_MAX_ROWS)*PREVIEW_MAX_ROWS,
+      Math.floor(cell.columnIndex/PREVIEW_MAX_COLUMNS)*PREVIEW_MAX_COLUMNS);
+    showExactCell(cell.rowIndex,cell.columnIndex);
+  }
+  async function copyExactCell(){
+    if(!cellDetail)return;
+    try{
+      await navigator.clipboard.writeText(cellDetail.value);
+      setCellStatus("Exact extracted cell text copied. Verify it against the PDF.");
+    }catch{
+      setCellStatus("Clipboard unavailable. Select the exact text shown below to copy manually.");
     }
   }
 
@@ -186,7 +235,7 @@ export default function PdfToExcelPage() {
       description="Convert all eligible native-text PDF tables, or choose a table and inspect its actual exported cell values before downloading. Other tables are excluded explicitly. Processing stays on your device; source verification is still required."
       tips={[
         { title: "Text-selectable PDF only", description: "Scanned or mixed image-only PDFs cannot be converted with this version." },
-        { title: "Preview before exporting", description: "Inspect up to 12 rows and 8 columns of the selected table as they will appear in Excel; this is not accuracy certification." },
+        { title: "Review every source cell", description: "Browse the selected table in 12-row and 8-column windows, jump to any Excel cell, and inspect its complete extracted text before downloading. This is not accuracy certification." },
         { title: "Verify the spreadsheet", description: "Rows, columns, values, and headings must be checked against the source document before professional use." },
         { title: "Safe cell types", description: "Identifiers, leading zeros and formula-like inputs remain text. Only verified household and FHTC count columns in supported layouts become Excel numbers; no PDF content is executed as formulas." },
       ]}
@@ -261,9 +310,12 @@ export default function PdfToExcelPage() {
                 </h4>
                 <p className="text-sm text-slate-600 dark:text-slate-300">
                   Source PDF page(s): {preview.sourcePages.join(", ")}.
-                  Showing {preview.visibleRows} of {preview.totalRows} rows and
-                  {" "}{preview.visibleColumns} of {preview.totalColumns} columns.
-                  This is how the XLSX values will appear, not a visual rendering of the original PDF.
+                  Showing rows {preview.rowStart+1}–{preview.rowEnd} of {preview.totalRows},
+                  columns {pdfTableCellAddress(0,preview.columnStart).replace(/\d+$/,"")}–
+                  {pdfTableCellAddress(0,preview.columnEnd-1).replace(/\d+$/,"")}
+                  of {preview.totalColumns} source columns.
+                  This is the actual selected-table export cell matrix, not a visual
+                  rendering of the original PDF.
                   Check against the source before using the spreadsheet.
                 </p>
                 {preview.pairedHeaderLayout && (
@@ -282,7 +334,7 @@ export default function PdfToExcelPage() {
                       <tr><th scope="col" className="border-b px-3 py-2">Row</th>
                         {Array.from({length:preview.visibleColumns},(_,c)=>(
                           <th key={c} scope="col" className="border-b px-3 py-2">
-                            {String.fromCharCode(65+c)}
+                            {pdfTableCellAddress(0,preview.columnStart+c).replace(/\d+$/,"")}
                           </th>
                         ))}
                       </tr>
@@ -290,14 +342,24 @@ export default function PdfToExcelPage() {
                     <tbody>
                       {preview.rows.map((cells,row)=>(
                         <tr key={row} className="border-t border-slate-200 dark:border-slate-700">
-                          <th scope="row" className="bg-slate-50 px-3 py-2 font-semibold dark:bg-slate-900">{row+1}</th>
+                          <th scope="row" className="bg-slate-50 px-3 py-2 font-semibold dark:bg-slate-900">
+                            {preview.rowStart+row+1}
+                            <span className="block text-xs font-normal text-slate-500 dark:text-slate-400">
+                              PDF p. {preview.visibleRowPages[row]}
+                            </span>
+                          </th>
                           {cells.map((value,col)=>(
-                            preview.pairedHeaderLayout && row===0 && [2,4,6].includes(col)
+                            preview.pairedHeaderLayout && preview.rowStart+row===0 && [2,4,6].includes(preview.columnStart+col)
                               ? null :
                             <td key={col}
-                              colSpan={preview.pairedHeaderLayout && row===0 && [1,3,5].includes(col)?2:1}
+                              colSpan={preview.pairedHeaderLayout && preview.rowStart+row===0 && [1,3,5].includes(preview.columnStart+col)?2:1}
                               className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
-                              {value || <span className="text-slate-400">(blank)</span>}
+                              <button type="button"
+                                onClick={()=>showExactCell(preview.rowStart+row,preview.columnStart+col)}
+                                aria-label={"Inspect exact cell "+pdfTableCellAddress(preview.rowStart+row,preview.columnStart+col)}
+                                className="w-full whitespace-pre-wrap break-words text-left underline-offset-2 hover:underline focus-visible:underline">
+                                {value || <span className="text-slate-400">(blank)</span>}
+                              </button>
                             </td>
                           ))}
                         </tr>
@@ -305,12 +367,55 @@ export default function PdfToExcelPage() {
                     </tbody>
                   </table>
                 </div>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Table preview navigation">
+                  <button type="button" onClick={()=>showPreview(Math.max(0,preview.rowStart-PREVIEW_MAX_ROWS),preview.columnStart)}
+                    disabled={busy||preview.rowStart===0}
+                    className="rounded-lg border p-2 text-sm disabled:opacity-40">Previous 12 rows</button>
+                  <button type="button" onClick={()=>showPreview(preview.rowEnd,preview.columnStart)}
+                    disabled={busy||preview.rowEnd>=preview.totalRows}
+                    className="rounded-lg border p-2 text-sm disabled:opacity-40">Next 12 rows</button>
+                  <button type="button" onClick={()=>showPreview(preview.rowStart,Math.max(0,preview.columnStart-PREVIEW_MAX_COLUMNS))}
+                    disabled={busy||preview.columnStart===0}
+                    className="rounded-lg border p-2 text-sm disabled:opacity-40">Previous 8 columns</button>
+                  <button type="button" onClick={()=>showPreview(preview.rowStart,preview.columnEnd)}
+                    disabled={busy||preview.columnEnd>=preview.totalColumns}
+                    className="rounded-lg border p-2 text-sm disabled:opacity-40">Next 8 columns</button>
+                </div>
+                <div className="flex flex-wrap items-end gap-2">
+                  <label className="text-sm font-medium">
+                    Go to cell (e.g. J13)
+                    <input type="text" value={cellAddressInput}
+                      onChange={event=>setCellAddressInput(event.target.value)}
+                      placeholder="J13" aria-label="Excel cell address"
+                      maxLength={12} className="mt-1 block w-32 rounded-lg border bg-transparent p-2 uppercase"/>
+                  </label>
+                  <button type="button" onClick={jumpToCell} disabled={busy}
+                    className="rounded-lg border border-blue-600 px-4 py-2 text-sm font-medium text-blue-700 dark:text-blue-300">
+                    Go to cell
+                  </button>
+                </div>
+                {cellDetail && (
+                  <section aria-label="Exact extracted cell details"
+                    className="space-y-2 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                    <p className="font-semibold">Exact cell {cellDetail.address} · Source PDF page {cellDetail.sourcePage}</p>
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      This is unverified extracted text, not a certified transcription.
+                      The XLSX/CSV value is unchanged by reviewing or copying.
+                    </p>
+                    <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-100 p-2 dark:bg-slate-900"
+                      aria-label="Exact extracted cell text">{cellDetail.value || "(blank cell)"}</pre>
+                    <button type="button" onClick={copyExactCell}
+                      className="rounded-lg border border-blue-500 p-2 text-sm">Copy exact cell text</button>
+                  </section>
+                )}
+                {cellStatus && <p role="status" className="text-sm text-amber-800 dark:text-amber-200">{cellStatus}</p>}
                 {(preview.totalRows>preview.visibleRows||
                   preview.totalColumns>preview.visibleColumns||
                   preview.trimmedCells>0) && (
                   <p className="text-xs text-amber-800 dark:text-amber-200">
-                    Preview shortened for display; the exported XLSX retains complete
-                    selected-table rows, columns and cell text.
+                    Only the current preview window and shortened long values are shown.
+                    Browse to other rows and columns or inspect exact cells; the downloaded
+                    XLSX and CSV retain the complete selected table text.
                   </p>
                 )}
               </div>

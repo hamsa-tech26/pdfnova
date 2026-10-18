@@ -1,6 +1,7 @@
 import {describe,it,expect} from "vitest";
 import type {LogicalTable} from "../../pdf-engine-v4/model/logicalTable";
-import {buildPdfTablePreview,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,PREVIEW_MAX_CHARACTERS}
+import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
+  pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,PREVIEW_MAX_CHARACTERS}
   from "../pdfToXlsxPreview";
 import {prepareSelectedPdfV4XlsxExport} from "../pdfToXlsxSelection";
 
@@ -58,6 +59,75 @@ describe("Release 82 bounded exact-XLSX source table preview",()=>{
     expect(preview.rows).toEqual(exported.tables[0].rows);
     expect(preview.rows[1][2]).toBe("");
     expect(JSON.stringify(table)).toBe(old);
+  });
+  it("R97 pages through all 23 rows without changing actual XLSX or CSV values",()=>{
+    const t=makeTable(23,11),doc=source(t),old=JSON.stringify(t);
+    const page2=buildPdfTablePreview(doc,0,{rowStart:12});
+    expect(page2).toMatchObject({rowStart:12,rowEnd:23,columnStart:0,
+      columnEnd:8,visibleRows:11,visibleColumns:8});
+    expect(page2.rows[0][0]).toBe("R12C0");
+    expect(page2.rows[10][7]).toBe("R22C7");
+    expect(page2.visibleRowPages).toEqual(Array(11).fill(3));
+    expect(JSON.stringify(t)).toBe(old);
+    expect(prepareSelectedPdfV4XlsxExport(doc,0).tables[0].rows[22][10]).toBe("R22C10");
+  });
+  it("R98 slides across late columns with stable absolute cell addresses",()=>{
+    const doc=source(makeTable(23,11));
+    const slice=buildPdfTablePreview(doc,0,{rowStart:12,columnStart:8});
+    expect(slice).toMatchObject({rowStart:12,rowEnd:23,columnStart:8,
+      columnEnd:11,visibleRows:11,visibleColumns:3,pairedHeaderLayout:false});
+    expect(slice.rows[0]).toEqual(["R12C8","R12C9","R12C10"]);
+    expect(pdfTableCellAddress(12,9)).toBe("J13");
+    expect(pdfTableCellAddress(1999,127)).toBe("DX2000");
+    expect(()=>pdfTableCellAddress(2000,0)).toThrow(/Invalid/);
+  });
+  it("R99 rejects fake, out-of-bounds and malformed Excel cell addresses",()=>{
+    expect(parsePdfTableCellAddress("j13",23,11)).toEqual({rowIndex:12,columnIndex:9});
+    expect(parsePdfTableCellAddress("K23",23,11)).toEqual({rowIndex:22,columnIndex:10});
+    for(const input of ["J0","K24","L13","Z1","A01","A-1","A1:B2",
+      "=HYPERLINK(1)","A 1","A1 ","AAA9999"]){
+      // Trailing whitespace is benign, not a range or injected coordinate.
+      if(input==="A1 ")expect(parsePdfTableCellAddress(input,23,11))
+        .toEqual({rowIndex:0,columnIndex:0});
+      else expect(parsePdfTableCellAddress(input,23,11)).toBeNull();
+    }
+    expect(parsePdfTableCellAddress("A1",2001,1)).toBeNull();
+  });
+  it("R100 exact-cell inspection preserves long text, formulas and source page attribution",()=>{
+    const t=makeTable(23,11);
+    t.rows.slice(12).forEach(r=>{
+      if(r.provenance)r.provenance.pageNumber=4;
+    });
+    const doc=source(t);
+    const initial=buildPdfTablePreview(doc,0);
+    expect(initial.sourcePages).toEqual([3,4]);
+    expect(initial.rows[0][0]).toHaveLength(PREVIEW_MAX_CHARACTERS+1);
+    const exact=inspectPdfTableCell(doc,0,0,0);
+    expect(exact).toEqual({address:"A1",value:"X".repeat(PREVIEW_MAX_CHARACTERS+20),
+      sourcePage:3});
+    expect(inspectPdfTableCell(doc,0,1,1)).toEqual({
+      address:"B2",value:"=HYPERLINK(1)",sourcePage:3,
+    });
+    expect(inspectPdfTableCell(doc,0,12,9)).toEqual({
+      address:"J13",value:"R12C9",sourcePage:4,
+    });
+    expect(buildPdfTablePreview(doc,0,{rowStart:12,columnStart:8})
+      .visibleRowPages).toEqual(Array(11).fill(4));
+    expect(()=>inspectPdfTableCell(doc,0,23,0)).toThrow(/outside/);
+    expect(()=>inspectPdfTableCell(doc,0,0,11)).toThrow(/outside/);
+  });
+  it("R101 navigational requests retain all fail-closed source checks",()=>{
+    const doc=source(makeTable(23,11));
+    for(const window of [{rowStart:-1},{rowStart:23},{columnStart:11},
+      {columnStart:-1},{rowStart:1.5},{columnStart:Infinity},
+      {columnStart:NaN}]){
+      expect(()=>buildPdfTablePreview(doc,0,window)).toThrow(/offset/);
+    }
+    const weak=makeTable(23,11);
+    weak.confidence=0.2;
+    expect(()=>buildPdfTablePreview(source(weak),0,{rowStart:12,columnStart:8}))
+      .toThrow(/uncertain/);
+    expect(()=>inspectPdfTableCell(source(weak),0,12,9)).toThrow(/uncertain/);
   });
   it("never previews rejected duplicate or OCR-source candidates",()=>{
     const weak=makeTable(3,3);
