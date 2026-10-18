@@ -192,6 +192,20 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",asyn
  */
 const release77PmcCases=[
   {
+    id:"PMC3464982",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC3464982.1/PMC3464982.1.pdf",
+    sha256:"40f3441af492430c32156c53ae23595377bfa67b3ec2591a38a4b3fc1e5b0f54",
+    pageNumber:5,sourcePageCount:8,publishedRows:28,publishedColumns:3,
+    previousRows:2,previousColumns:4,diagnosticOnly:true,requireImprovement:false,
+  },
+  {
+    id:"PMC3063220",
+    sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC3063220.1/PMC3063220.1.pdf",
+    sha256:"70e908e1cc763f889f091276874e745a7802f1a11291f1d487f43fee8efcb1ad",
+    pageNumber:5,sourcePageCount:6,publishedRows:13,publishedColumns:11,
+    previousRows:11,previousColumns:13,diagnosticOnly:true,requireImprovement:false,
+  },
+  {
     id:"PMC2147049",
     sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC2147049.1/PMC2147049.1.pdf",
     sha256:"465b9e4c260dcc2c2d7b3532efe7ef2ef7d88d9ef88502ca4dc689cdd77d726e",
@@ -299,7 +313,7 @@ for(const source of release77PmcCases){
       }));
       // Metadata-only page diagnostics for both original PMC table failures.
       // No word text, source PDF, or Inspector JSON is written to CI artifacts.
-      if(["PMC3297222","PMC2147049","PMC4595315","PMC5995222"].includes(source.id)){
+      if(["PMC3297222","PMC2147049","PMC4595315","PMC5995222","PMC3464982","PMC3063220"].includes(source.id)){
         const pdfPage=inspector.document.pages[source.pageNumber-1];
         const blocks=(pdfPage?.blocks??[]).slice(0,40).map((block,index)=>{
           const lines=Array.isArray(block.lines)?block.lines:[];
@@ -475,12 +489,42 @@ for(const source of release77PmcCases){
       // This is diagnostic-only until a separately reviewed reference exists.
       // Do not assert that a known bug must remain broken: an eventual real
       // repair must be allowed to satisfy the exact-shape acceptance check.
+      if(source.diagnosticOnly){
+        const pg=inspector.document.pages[source.pageNumber-1];
+        const allLines=(pg?.blocks??[]).flatMap((block,blockIndex)=>
+          (block.lines??[]).map((line,idx)=>({
+            blockIndex,idx,y:Math.round(line.bounds?.y??0),
+            x:Math.round(line.bounds?.x??0),width:Math.round(line.bounds?.width??0),
+            wordCount:line.words?.length??0,
+            starts:(line.words??[]).slice(0,11).map(w=>Math.round(w.bounds.x)),
+            numeric:(line.words??[]).filter(w=>/^[+-]?\\d/.test(w.text?.trim()??"")).length,
+          })));
+        const allRegionProfiles=(inspector.tableAnalyses??[]).filter(a=>a.pageNumber===source.pageNumber)
+          .slice(0,12).map(a=>({
+            id:a.blockId?.slice(0,35),rows:a.rowDetection?.rows?.length??0,
+            rowLineCounts:(a.rowDetection?.rows??[]).map(r=>r.lines?.length??0).slice(0,40),
+            columns:(a.columnDetection?.columns??[]).map(c=>({
+              x:Math.round(c.x),support:c.distinctLineCount
+            })),
+          }));
+        console.log("R87_ORIGINAL_WIDE_TABLE_GEOMETRY "+JSON.stringify({
+          id:source.id,originalHashVerified:true,
+          page:source.pageNumber,pageWidth:pg.width,pageHeight:pg.height,
+          allSourceLines:allLines.length,lines:allLines.slice(0,140),
+          candidateProfiles:pageTables.map(t=>({
+            rows:t.rows?.length??0,columns:t.columnCount,
+            rowCellOccupancies:(t.rows??[]).map(r=>
+              r.cells?.filter(c=>String(c.text??"").trim()).length??0).slice(0,32),
+          })),
+          analyses:allRegionProfiles,formalQualificationCredit:0
+        }));
+      }
       if(source.id==="PMC2147049" && !matchesPublishedShape){
         console.warn("R78_KNOWN_FAILURE: PMC2147049 still lacks the published 40x2 shape");
       }
       // Fail closed on absent/unchanged shapes. Even an improvement here is
       // provisional and must not be described as full per-cell accuracy.
-      expect(observedError).not.toBeNull();
+      if(!source.diagnosticOnly)expect(observedError).not.toBeNull();
       if(source.requireImprovement!==false) {
         expect(observedError).toBeLessThan(baselineError);
       }
