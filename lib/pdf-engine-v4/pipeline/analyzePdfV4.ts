@@ -28,6 +28,7 @@ import {
   type StableColumnDetectionResult,
 } from "../analysis/stableColumnDetector";
 import {detectParallelNativeColumns} from "../analysis/parallelScientificTableRecovery";
+import {detectNativeElevenColumns} from "../analysis/nativeElevenColumnGrid";
 import {recoverSparseLeftNativeCaptionColumn} from "../analysis/scopedDenseCaptionGridRecovery";
 import {
   detectAdaptiveRowsV4,
@@ -1355,6 +1356,8 @@ for (const region of regionsToAnalyze) {
   detectStableColumnsV4(
     region.block,
   );
+const elevenColumns=detectNativeElevenColumns(region.block,columnDetection);
+if(elevenColumns)columnDetection=elevenColumns;
 const parallelColumns=detectParallelNativeColumns(region.block,columnDetection);
 if(parallelColumns)columnDetection=parallelColumns;
 

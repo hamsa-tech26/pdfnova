@@ -1,0 +1,143 @@
+{
+  "id": "PMC3063220:Table3-numeric-only",
+  "referenceArticle": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3063220/",
+  "referenceTable": "Table 3. Characteristics of the 12 RRP cases",
+  "sourceFullPdfSha256": "70e908e1cc763f889f091276874e745a7802f1a11291f1d487f43fee8efcb1ad",
+  "sourcePageNumber": 5,
+  "sourcePdfPageCount": 6,
+  "referenceStatus": "project-transcribed-published-numeric-data-not-independent-blind-approval",
+  "licenseStatus": "Not independently rights-adjudicated; only numeric factual measurements are transcribed",
+  "referenceColumns": [
+    0,
+    2,
+    3,
+    4,
+    6,
+    7,
+    8,
+    10
+  ],
+  "referenceRows": [
+    [
+      "1",
+      "71",
+      "42",
+      "29",
+      "2",
+      "2",
+      "2",
+      ""
+    ],
+    [
+      "2",
+      "82",
+      "31",
+      "51",
+      "3",
+      "0",
+      "3",
+      ""
+    ],
+    [
+      "3",
+      "81",
+      "59",
+      "22",
+      "0",
+      "0",
+      "2",
+      "14"
+    ],
+    [
+      "4",
+      "94",
+      "15",
+      "79",
+      "2",
+      "0",
+      "2",
+      "89"
+    ],
+    [
+      "5",
+      "102",
+      "60",
+      "42",
+      "0",
+      "2",
+      "2",
+      ""
+    ],
+    [
+      "6",
+      "86",
+      "46",
+      "40",
+      "2",
+      "2",
+      "2",
+      "85"
+    ],
+    [
+      "7",
+      "94",
+      "56",
+      "38",
+      "0",
+      "0",
+      "2",
+      "20"
+    ],
+    [
+      "8",
+      "95",
+      "59",
+      "36",
+      "2",
+      "0",
+      "2",
+      "20"
+    ],
+    [
+      "9",
+      "105",
+      "34",
+      "71",
+      "2",
+      "2",
+      "2",
+      "73"
+    ],
+    [
+      "10",
+      "118",
+      "41",
+      "77",
+      "1",
+      "2",
+      "2",
+      ""
+    ],
+    [
+      "11",
+      "171",
+      "7",
+      "164",
+      "2",
+      "0",
+      "2",
+      "4"
+    ],
+    [
+      "12",
+      "202",
+      "31",
+      "169",
+      "2",
+      "0",
+      "2",
+      ""
+    ]
+  ],
+  "disclaimer": "Numerical measurement/reference cells only, publication-transcribed in source row order. No independent annotation, full-text license signoff, other textual field certification, or all-document export assertion."
+}

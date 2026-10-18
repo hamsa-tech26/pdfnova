@@ -312,6 +312,13 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
         "from ambiguous font glyphs. Original extracted strings were retained " +
         "for audit; compare every inferred symbol with the visual PDF before use.");
     }
+    if(table.columnCount===11 && table.rows.length>=11 &&
+      table.rows[0]?.provenance?.blockId?.startsWith("dense-native-eleven-grid-")){
+      notes.push("Table "+number+": A complex native eleven-column scientific "+
+        "table header was reconstructed from multiple physical PDF lines. "+
+        "The original header wording, column grouping and wrapped cell values "+
+        "are NOT independently verified; compare them visually with the PDF.");
+    }
     const extractedRows = tableToCsvRows(table);
     const medianRows = projectCaptionMedianUnits(table, extractedRows);
     if (medianRows !== extractedRows) {
