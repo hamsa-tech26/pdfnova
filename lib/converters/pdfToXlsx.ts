@@ -125,8 +125,9 @@ function sheetXml(table: PdfXlsxTable): string {
         xmlSafe(value) + "</t></is></c>";
     }).join("");
     return '<row r="' + (rowIndex + 1) + '"' +
-      ((table.nativePairedHeader && rowIndex < 2) || ((table.freezeSourceHeader || table.nativeWideMultilineHeader) && rowIndex===0) ? ' ht="30" customHeight="1"' : 
-        (table.nativeWideMultilineHeader && rowIndex===0 ? ' ht="68" customHeight="1"' : '')) +
+      (table.nativeWideMultilineHeader && rowIndex===0 ? ' ht="68" customHeight="1"' :
+       ((table.nativePairedHeader && rowIndex < 2) || (table.freezeSourceHeader && rowIndex===0) ?
+        ' ht="30" customHeight="1"' : '')) +
       '>' + cells + "</row>";
   }).join("");
   const range = "A1:" + cellColumn(width - 1) + rows.length;
