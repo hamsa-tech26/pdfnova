@@ -991,6 +991,12 @@ test("R86 source-verified PMC5012829 native table geometry (diagnostic)",async({
       ys.set(y,(ys.get(y)??0)+1);
     }
     return {kind:block.type,lines:lines.length,words:wordCounts.reduce((a,b)=>a+b,0),
+      rows:lines.map((line,i)=>({
+        index:i,y:Math.round(line.bounds?.y??0),
+        count:line.words?.length??0,
+        xs:(line.words??[]).slice(0,15).map(w=>Math.round(w.bounds.x)),
+        kinds:(line.words??[]).slice(0,15).map(w=>/^[0-9,.()%+-]+$/.test(w.text)?1:0),
+      })),
       bounds:block.bounds&&{x:Math.round(block.bounds.x),y:Math.round(block.bounds.y),
         w:Math.round(block.bounds.width),h:Math.round(block.bounds.height)},
       wordCounts:wordCounts.slice(0,28),
