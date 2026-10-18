@@ -311,8 +311,8 @@ export default function PdfToExcelPage() {
                 <p className="text-sm text-slate-600 dark:text-slate-300">
                   Source PDF page(s): {preview.sourcePages.join(", ")}.
                   Showing rows {preview.rowStart+1}–{preview.rowEnd} of {preview.totalRows},
-                  columns {pdfTableCellAddress(0,preview.columnStart).replace(/\\d+$/,"")}–
-                  {pdfTableCellAddress(0,preview.columnEnd-1).replace(/\\d+$/,"")}
+                  columns {pdfTableCellAddress(0,preview.columnStart).replace(/\d+$/,"")}–
+                  {pdfTableCellAddress(0,preview.columnEnd-1).replace(/\d+$/,"")}
                   of {preview.totalColumns} source columns.
                   This is the actual selected-table export cell matrix, not a visual
                   rendering of the original PDF.
