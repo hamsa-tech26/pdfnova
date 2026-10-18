@@ -1,5 +1,6 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
+import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
@@ -330,6 +331,28 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
         " Verify the source multi-level structure against the PDF.");
     }
     const headerGuide=describeNativePairedGroupHeaders(grouped.rows);
+    // R94: freeze ordinary single-level source headings only with complete,
+    // native-provenanced first-row labels plus evidence that later rows
+    // contain numbers. Never infer missing labels or apply Excel auto-filters.
+    const sourceFirst=table.rows[0];
+    const headerWords=sourceFirst?.cells ?? [];
+    const headerTexts=grouped.rows[0] ?? [];
+    const sourceFirstHeader=pages.length===1 && !headerGuide &&
+      medianRows===extractedRows && grouped.rows===extractedRows &&
+      table.rows.length>=3 &&
+      headerTexts.length===table.columnCount &&
+      headerWords.length===table.columnCount &&
+      headerWords.every(cell=>cell.text.trim() &&
+        cell.words.length>0 && cell.words.every(word=>
+          word.extractionProvenance?.source==="native-pdf")) &&
+      new Set(headerTexts.map(value=>String(value).trim().toLowerCase())).size===
+        table.columnCount &&
+      headerTexts.filter(value=>/[a-zA-Z]{2,}/.test(String(value))).length>=2 &&
+      grouped.rows.slice(1).some(row=>
+        row.some(value=>/^\s*[-+−]?\d/u.test(String(value))));
+    if(sourceFirstHeader)notes.push("Table "+number+
+      ": Source-native first row was frozen for Excel navigation, without an "+
+      "automatic filter. Header semantics are NOT independently verified.");
     // Only original native words in both intact source header rows can
     // authorize Excel visual merges. Never move data or assume spans for OCR,
     // multi-page or projected/reworded headings.
@@ -352,7 +375,9 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
       );
     }
     return { name: "Table " + number, rows: grouped.rows,
-      ...(nativePairedHeader ? {nativePairedHeader:true} : {}) };
+      columnWidths:estimatePdfTableColumnWidths(grouped.rows),
+      ...(nativePairedHeader ? {nativePairedHeader:true} : {}),
+      ...(sourceFirstHeader ? {freezeSourceHeader:true} : {}) };
   });
   const omitted = Array.from({ length: pageCount }, (_, i) => i + 1)
     .filter(p => !covered.has(p));

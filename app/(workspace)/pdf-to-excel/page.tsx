@@ -11,6 +11,7 @@ import { preparePdfV4XlsxExport } from "@/lib/converters/pdfToXlsxQuality";
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {buildPdfTablePreview,type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
 import { recoverEightColumnNativePdf } from "@/lib/converters/pdfToXlsxNativeBoundaries";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -117,6 +118,31 @@ export default function PdfToExcelPage() {
     }finally{setBusy(false);}
   }
 
+  // Release 95: reviewed selective CSV is a distinct, explicit format.
+  // Re-run the same source/provenance/overlap quality gate at download time.
+  // CSV has no review worksheet or grouping styles; formula-like cells are
+  // escaped by the shared safe serializer, not executed by spreadsheet apps.
+  async function exportSelectedCsv(){
+    if(!file||busy||!inspected||selectedIndex===null)return;
+    setBusy(true);setError("");setOutput(null);setWarnings([]);
+    try{
+      const choice=choices.find(c=>c.index===selectedIndex);
+      if(!choice?.eligible)throw new Error("The selected table failed export safety checks.");
+      const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
+      if(plan.tables.length!==1)throw new Error("Expected exactly one selected table.");
+      const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+
+        "-table-"+(selectedIndex+1)+".csv";
+      const blob=csvDownloadBlob(plan.tables[0].rows);
+      saveAs(blob,name);
+      setOutput(blob);setOutputName(name);
+      setWarnings([...(plan.reviewNotes??[]),
+        "CSV FORMAT: No Excel review worksheet, source geometry, cell merges or formatting is included. Formula-like values are text-escaped. Inspect the PDF before using this file."]);
+      addRecentFile({fileName:name,toolName:"PDF to Excel"});
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:"Selected-table CSV was withheld.");
+    }finally{setBusy(false);}
+  }
+
   async function convert() {
     if (!file || busy) return;
     setBusy(true);
@@ -185,7 +211,7 @@ export default function PdfToExcelPage() {
         description={error} reasons={[]} onReset={reset}/></div>}
       {file && <div className="mt-8 space-y-6">
         <FileCard file={file} onRemove={busy ? undefined : reset}
-          statusText={busy ? "Analyzing tables locally" : output ? "XLSX workbook ready" : "Ready to inspect tables"}/>
+          statusText={busy ? "Analyzing tables locally" : output ? "Download ready" : "Ready to inspect tables"}/>
         {!output && !error && <ActionButton isLoading={busy} loadingText="Converting tables..."
           buttonText="Convert to Excel (.xlsx)"
           subtitle="No upload. Unsupported or uncertain tables will not be exported."
@@ -240,6 +266,12 @@ export default function PdfToExcelPage() {
                   This is how the XLSX values will appear, not a visual rendering of the original PDF.
                   Check against the source before using the spreadsheet.
                 </p>
+                {preview.pairedHeaderLayout && (
+                  <p role="status" className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Two-level native header detected: paired parent headings are grouped
+                    in the preview and Excel. Verify the group labels and boundaries against the PDF.
+                  </p>
+                )}
                 <div className="max-h-80 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700"
                   role="region" aria-label="Scrollable extracted spreadsheet preview" tabIndex={0}>
                   <table className="w-full min-w-max border-collapse text-left text-sm">
@@ -260,7 +292,11 @@ export default function PdfToExcelPage() {
                         <tr key={row} className="border-t border-slate-200 dark:border-slate-700">
                           <th scope="row" className="bg-slate-50 px-3 py-2 font-semibold dark:bg-slate-900">{row+1}</th>
                           {cells.map((value,col)=>(
-                            <td key={col} className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
+                            preview.pairedHeaderLayout && row===0 && [2,4,6].includes(col)
+                              ? null :
+                            <td key={col}
+                              colSpan={preview.pairedHeaderLayout && row===0 && [1,3,5].includes(col)?2:1}
+                              className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
                               {value || <span className="text-slate-400">(blank)</span>}
                             </td>
                           ))}
@@ -284,13 +320,24 @@ export default function PdfToExcelPage() {
               className="w-full rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
               {busy?"Preparing selected table…":"Export selected table (.xlsx)"}
             </button>
+            <button type="button" onClick={exportSelectedCsv}
+              disabled={busy||selectedIndex===null}
+              className="w-full rounded-xl border border-blue-300 bg-white px-5 py-3 font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-200">
+              {busy?"Preparing selected table…":"Export selected table (.csv)"}
+            </button>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              CSV retains table cells but not merged headings or a review-notes sheet.
+              Formula-like values are text-escaped; verify against the original PDF.
+            </p>
           </section>
         )}
         {!busy && output && <>
-          <SuccessCard title="Excel workbook created"
-            description="Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."
+          <SuccessCard title={outputName.endsWith(".csv")?"CSV table created":"Excel workbook created"}
+            description={outputName.endsWith(".csv")?
+              "This CSV includes only selected table cell text. It has no review worksheet or header merges; formula-like cells are escaped. Check against the original PDF.":
+              "Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."}
             fileName={outputName} onDownloadAgain={() => saveAs(output, outputName)}
-            onStartAgain={reset} downloadLabel="Download XLSX Again"
+            onStartAgain={reset} downloadLabel={outputName.endsWith(".csv")?"Download CSV Again":"Download XLSX Again"}
             resetLabel="Convert Another PDF"/>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800 dark:border-amber-900/70 dark:bg-slate-950 dark:text-slate-200">
             <p className="font-semibold text-amber-950 dark:text-amber-200">Extraction review — not certified</p>
