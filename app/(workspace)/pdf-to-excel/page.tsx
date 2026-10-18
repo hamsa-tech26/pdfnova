@@ -11,6 +11,7 @@ import { preparePdfV4XlsxExport } from "@/lib/converters/pdfToXlsxQuality";
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {buildPdfTablePreview,type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
 import { recoverEightColumnNativePdf } from "@/lib/converters/pdfToXlsxNativeBoundaries";
 import { addRecentFile } from "@/lib/storage/recentFiles";
@@ -117,6 +118,31 @@ export default function PdfToExcelPage() {
     }finally{setBusy(false);}
   }
 
+  // Release 95: reviewed selective CSV is a distinct, explicit format.
+  // Re-run the same source/provenance/overlap quality gate at download time.
+  // CSV has no review worksheet or grouping styles; formula-like cells are
+  // escaped by the shared safe serializer, not executed by spreadsheet apps.
+  async function exportSelectedCsv(){
+    if(!file||busy||!inspected||selectedIndex===null)return;
+    setBusy(true);setError("");setOutput(null);setWarnings([]);
+    try{
+      const choice=choices.find(c=>c.index===selectedIndex);
+      if(!choice?.eligible)throw new Error("The selected table failed export safety checks.");
+      const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
+      if(plan.tables.length!==1)throw new Error("Expected exactly one selected table.");
+      const name=(file.name.replace(/\\.pdf$/i,"")||"kukureku")+
+        "-table-"+(selectedIndex+1)+".csv";
+      const blob=csvDownloadBlob(plan.tables[0].rows);
+      saveAs(blob,name);
+      setOutput(blob);setOutputName(name);
+      setWarnings([...(plan.reviewNotes??[]),
+        "CSV FORMAT: No Excel review worksheet, source geometry, cell merges or formatting is included. Formula-like values are text-escaped. Inspect the PDF before using this file."]);
+      addRecentFile({fileName:name,toolName:"PDF to Excel"});
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:"Selected-table CSV was withheld.");
+    }finally{setBusy(false);}
+  }
+
   async function convert() {
     if (!file || busy) return;
     setBusy(true);
@@ -185,7 +211,7 @@ export default function PdfToExcelPage() {
         description={error} reasons={[]} onReset={reset}/></div>}
       {file && <div className="mt-8 space-y-6">
         <FileCard file={file} onRemove={busy ? undefined : reset}
-          statusText={busy ? "Analyzing tables locally" : output ? "XLSX workbook ready" : "Ready to inspect tables"}/>
+          statusText={busy ? "Analyzing tables locally" : output ? "Download ready" : "Ready to inspect tables"}/>
         {!output && !error && <ActionButton isLoading={busy} loadingText="Converting tables..."
           buttonText="Convert to Excel (.xlsx)"
           subtitle="No upload. Unsupported or uncertain tables will not be exported."
@@ -294,10 +320,19 @@ export default function PdfToExcelPage() {
               className="w-full rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
               {busy?"Preparing selected table…":"Export selected table (.xlsx)"}
             </button>
+            <button type="button" onClick={exportSelectedCsv}
+              disabled={busy||selectedIndex===null}
+              className="w-full rounded-xl border border-blue-300 bg-white px-5 py-3 font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-200">
+              {busy?"Preparing selected table…":"Export selected table (.csv)"}
+            </button>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              CSV retains table cells but not merged headings or a review-notes sheet.
+              Formula-like values are text-escaped; verify against the original PDF.
+            </p>
           </section>
         )}
         {!busy && output && <>
-          <SuccessCard title="Excel workbook created"
+          <SuccessCard title={outputName.endsWith(".csv")?"CSV table created":"Excel workbook created"}
             description="Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."
             fileName={outputName} onDownloadAgain={() => saveAs(output, outputName)}
             onStartAgain={reset} downloadLabel="Download XLSX Again"
