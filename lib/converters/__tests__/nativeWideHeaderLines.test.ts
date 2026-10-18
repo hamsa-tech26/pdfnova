@@ -3,6 +3,7 @@ import JSZip from "jszip";
 import type {LogicalTable} from "../../pdf-engine-v4/model/logicalTable";
 import {preserveNativeWideHeaderLines} from "../nativeWideHeaderLines";
 import {createPdfXlsxWorkbook} from "../pdfToXlsx";
+import {preparePdfV4XlsxExport} from "../pdfToXlsxQuality";
 
 const native=(text:string,y:number,kind:"native-pdf"|"ocr-tesseract"="native-pdf")=>({
   id:"source-"+text+"-"+y,text,pageNumber:1,
@@ -91,6 +92,24 @@ describe("Release 103–105 native multi-baseline wide scientific header repair"
     expect(styles).toContain('wrapText="1"');
     expect(review).toContain("UNVERIFIED");
     expect(sheet).toContain('<c r="C2" t="inlineStr"><is><t xml:space="preserve">102');
+  });
+  it("R105 full export cannot activate competing first-row and wide multiline header flags",async()=>{
+    const {table}=source();
+    const plan=preparePdfV4XlsxExport({
+      document:{pages:[{}]},
+      nativePageTextExtraction:[{pageNumber:1,
+        textExtraction:{status:"sufficient"}}],
+      tables:[table],
+    });
+    expect(plan.tables).toHaveLength(1);
+    expect(plan.tables[0].nativeWideMultilineHeader).toBe(true);
+    expect(plan.tables[0].freezeSourceHeader).toBeUndefined();
+    expect(plan.tables[0].rows[0][2]).toContain("\n");
+    const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
+    const xml=await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(xml).toContain('ht="68" customHeight="1"');
+    expect(xml).not.toMatch(/<f(?:\s|>)/);
+    expect(plan.reviewNotes?.join(" ")).toContain("physical line breaks");
   });
   it("R105 refuses forcing wide native styles on tables without source multiline evidence",async()=>{
     for(const rows of [
