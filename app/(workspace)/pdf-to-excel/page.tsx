@@ -130,7 +130,7 @@ export default function PdfToExcelPage() {
       if(!choice?.eligible)throw new Error("The selected table failed export safety checks.");
       const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
       if(plan.tables.length!==1)throw new Error("Expected exactly one selected table.");
-      const name=(file.name.replace(/\\.pdf$/i,"")||"kukureku")+
+      const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+
         "-table-"+(selectedIndex+1)+".csv";
       const blob=csvDownloadBlob(plan.tables[0].rows);
       saveAs(blob,name);
@@ -333,9 +333,11 @@ export default function PdfToExcelPage() {
         )}
         {!busy && output && <>
           <SuccessCard title={outputName.endsWith(".csv")?"CSV table created":"Excel workbook created"}
-            description="Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."
+            description={outputName.endsWith(".csv")?
+              "This CSV includes only selected table cell text. It has no review worksheet or header merges; formula-like cells are escaped. Check against the original PDF.":
+              "Verified household and FHTC counts may be numeric in supported tables; identifiers, leading zeros and formula-like values remain text. Compare the workbook with the original PDF."}
             fileName={outputName} onDownloadAgain={() => saveAs(output, outputName)}
-            onStartAgain={reset} downloadLabel="Download XLSX Again"
+            onStartAgain={reset} downloadLabel={outputName.endsWith(".csv")?"Download CSV Again":"Download XLSX Again"}
             resetLabel="Convert Another PDF"/>
           <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-slate-800 dark:border-amber-900/70 dark:bg-slate-950 dark:text-slate-200">
             <p className="font-semibold text-amber-950 dark:text-amber-200">Extraction review — not certified</p>
