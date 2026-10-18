@@ -21,7 +21,10 @@
     "golden:quality-gate": "node scripts/privateGoldenReport.mjs --require-complete",
     "qualify:v4:stable": "node scripts/checkRelease37Gate.mjs",
     "benchmark:v4:corpus": "node scripts/collectRelease37Corpus.mjs",
-    "v4:blind-reference": "node scripts/prepareRelease37BlindReference.mjs"
+    "v4:blind-reference": "node scripts/prepareRelease37BlindReference.mjs",
+    "v4:blind-pair": "node scripts/prepareRelease85BlindPair.mjs",
+    "v4:compare-blind": "node scripts/compareRelease85BlindAnnotations.mjs",
+    "test:v4:blind-pair": "node --test scripts/__tests__/release85BlindAgreement.test.mjs"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1",

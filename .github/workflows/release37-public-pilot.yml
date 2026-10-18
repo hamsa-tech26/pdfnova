@@ -10,6 +10,11 @@ on:
       - "benchmarks/release37/**"
       - "scripts/createRelease37ReviewQueue.mjs"
       - "scripts/checkRelease37PublicTableInventory.mjs"
+      - "scripts/release85BlindAgreement.mjs"
+      - "scripts/compareRelease85BlindAnnotations.mjs"
+      - "scripts/prepareRelease85BlindPair.mjs"
+      - "scripts/__tests__/release85BlindAgreement.test.mjs"
+      - "scripts/collectRelease37Corpus.mjs"
       - ".github/workflows/release37-public-pilot.yml"
   workflow_dispatch:
 
@@ -31,6 +36,9 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci --no-audit --no-fund
+
+      - name: Release 85 double-blind comparison safety tests (synthetic fixtures only)
+        run: npm run test:v4:blind-pair
       - run: npm install --no-save @playwright/test@1.56.1
       - run: npx playwright install --with-deps chromium
 
