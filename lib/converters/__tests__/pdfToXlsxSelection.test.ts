@@ -1,0 +1,101 @@
+import {describe,it,expect} from "vitest";
+import JSZip from "jszip";
+import type {LogicalTable} from "../../pdf-engine-v4/model/logicalTable";
+import {preparePdfV4XlsxExport} from "../pdfToXlsxQuality";
+import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport} from "../pdfToXlsxSelection";
+import {createPdfXlsxWorkbook} from "../pdfToXlsx";
+
+function table(page:number,id:string):LogicalTable{
+  const values=[["Item","ID","Amount"],["A","00071","19"],["B","00072","21"]];
+  return {id,pageNumber:page,columnCount:3,confidence:0.95,
+    bounds:{x:20,y:20,width:440,height:70},
+    extractionProvenance:{source:"native-pdf",pageNumbers:[page],
+      nativeWordCount:9,ocrWordCount:0,unknownWordCount:0,wordCount:9},
+    rows:values.map((cells,index)=>({
+      id:id+"-row-"+index,rowIndex:index,confidence:0.9,
+      provenance:{pageNumber:page,blockId:id,originalRowIndex:index},
+      cells:cells.map((text,columnIndex)=>({
+        id:id+"-cell-"+index+"-"+columnIndex,rowIndex:index,columnIndex,
+        words:[],text,confidence:0.9,
+        bounds:{x:50+columnIndex*145,y:70-index*15,width:30,height:11},
+        extractionProvenance:{source:"native-pdf",wordCount:1,nativeWordCount:1,
+          ocrWordCount:0,unknownWordCount:0,pageNumbers:[page]},
+      })),
+    })),
+  };
+}
+function source(tables:LogicalTable[],pages=7){
+  return {document:{pages:Array.from({length:pages},()=>({}))},
+    nativePageTextExtraction:Array.from({length:pages},(_,i)=>({
+      pageNumber:i+1,textExtraction:{status:"sufficient"},
+    })),tables};
+}
+
+describe("Release 81 selective native PDF table export",()=>{
+  it("exports a good table while a one-row neighbor stays disabled and the all-table path refuses",async()=>{
+    const good=table(4,"good");const invalid=table(5,"bad");
+    invalid.rows=invalid.rows.slice(0,1);
+    const document=source([invalid,good]);
+    expect(()=>preparePdfV4XlsxExport(document)).toThrow("uncertain");
+    const choices=inspectPdfV4XlsxChoices(document);
+    expect(choices).toHaveLength(2);
+    expect(choices[0]).toMatchObject({index:0,pageLabel:"Page 5",rows:1,eligible:false});
+    expect(choices[1]).toMatchObject({index:1,pageLabel:"Page 4",rows:3,columns:3,eligible:true});
+    const plan=prepareSelectedPdfV4XlsxExport(document,1);
+    expect(plan.tables).toHaveLength(1);
+    expect(plan.tables[0].rows).toEqual([["Item","ID","Amount"],["A","00071","19"],["B","00072","21"]]);
+    expect(plan.reviewNotes?.join(" ")).toContain("SELECTIVE EXPORT");
+    expect(plan.reviewNotes?.join(" ")).toContain("1 other candidate(s)");
+    expect(plan.reviewNotes?.join(" ")).toContain("Page 4");
+    expect(plan.tables[0].numericColumns).toBeUndefined();
+    const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
+    expect(Object.keys(zip.files).filter(p=>/^xl\/worksheets\/sheet\d+\.xml$/.test(p))).toHaveLength(2);
+    const sheet=await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(sheet).toContain('<dimension ref="A1:C3"/>');
+    expect(sheet).toContain("00071");
+    expect(sheet).not.toContain("<f>");
+    const review=await zip.file("xl/worksheets/sheet2.xml")!.async("string");
+    expect(review).toContain("SELECTIVE EXPORT");
+    expect(review).toContain("UNVERIFIED");
+  });
+  it("never marks a weak or duplicated-cell candidate eligible",()=>{
+    const weak=table(1,"weak");weak.confidence=0.2;
+    const duplicate=table(2,"dup");
+    duplicate.rows[1].cells.push({...duplicate.rows[1].cells[1],id:"duplicate"});
+    const doc=source([weak,duplicate]);
+    expect(inspectPdfV4XlsxChoices(doc).map(c=>c.eligible)).toEqual([false,false]);
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow("uncertain");
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,1)).toThrow("duplicated");
+  });
+  it("still blocks scanned source pages and OCR-backed cells",()=>{
+    const doc=source([table(3,"native")]);
+    doc.nativePageTextExtraction[0].textExtraction.status="low";
+    expect(inspectPdfV4XlsxChoices(doc)[0].eligible).toBe(false);
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow("image-only");
+    const t=table(3,"ocr");
+    t.rows[1].cells[0].extractionProvenance={
+      source:"ocr-tesseract",wordCount:1,nativeWordCount:0,
+      ocrWordCount:1,unknownWordCount:0,pageNumbers:[3],
+    };
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([t]),0)).toThrow("OCR or mixed-source");
+  });
+  it("refuses invalid indices, missing provenance and nonconsecutive page continuation",()=>{
+    const src=source([table(1,"ok")]);
+    for(const i of [-1,1,1.2,NaN,Infinity]){
+      expect(()=>prepareSelectedPdfV4XlsxExport(src,i)).toThrow("Select a detected table");
+    }
+    const bad=table(1,"bad");
+    bad.rows[0].provenance={pageNumber:1,blockId:"a",originalRowIndex:0};
+    bad.rows[1].provenance={pageNumber:3,blockId:"b",originalRowIndex:1};
+    bad.rows[2].provenance={pageNumber:3,blockId:"b",originalRowIndex:2};
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([bad]),0)).toThrow("nonconsecutive");
+  });
+  it("supports selection beyond 12 candidates without weakening the all-table cap",()=>{
+    const thirteen=source(Array.from({length:13},(_,i)=>table(1,"t"+i)));
+    expect(()=>preparePdfV4XlsxExport(thirteen)).toThrow("maximum of 12");
+    expect(inspectPdfV4XlsxChoices(thirteen)).toHaveLength(13);
+    expect(prepareSelectedPdfV4XlsxExport(thirteen,12).tables).toHaveLength(1);
+    expect(()=>inspectPdfV4XlsxChoices(source(Array.from({length:101},(_,i)=>table(1,"t"+i)))))
+      .toThrow("limit: 100");
+  });
+});
