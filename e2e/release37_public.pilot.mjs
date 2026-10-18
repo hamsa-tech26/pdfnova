@@ -1299,6 +1299,62 @@ test("R88 PMC3464982 actual 28x3 native source table to XLSX",async({page})=>{
   expect(/<f(?:\s|>)/.test(sheet)).toBe(false);
   expect(review).toContain("SELECTIVE EXPORT");
   expect(review).toContain("UNVERIFIED");
+
+  // R89: compare the *actual downloaded workbook* to the separately
+  // transcribed publisher Table 3, including category blanks and headings.
+  // The reference comes from publisher HTML, not from V4's PDF output.
+  const ref=JSON.parse(await readFile(
+    "benchmarks/release89/pmc3464982-table3-publisher-reference.json","utf8"));
+  expect(ref.sourceFullPdfSha256).toBe(source.sha256);
+  expect(ref.expectedShape).toEqual([28,3]);
+  expect(ref.rows).toHaveLength(28);
+  expect(ref.rows.every(r=>Array.isArray(r)&&r.length===3)).toBe(true);
+  expect(ref.reviewedIndependently).toBe(false);
+  expect(ref.acceptedDocumentCredit).toBe(0);
+  const decode=value=>String(value??"").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&quot;/g,'"')
+    .replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  const actual=Array.from({length:28},()=>Array.from({length:3},()=>""));
+  const seen=new Set();
+  for(const match of sheet.matchAll(
+    /<c r="([A-Z]+)(\d+)"[^>]*>([\s\S]*?)<\/c>/g)){
+    const column=[...match[1]].reduce((sum,ch)=>
+      sum*26+ch.charCodeAt(0)-64,0)-1;
+    const row=Number(match[2])-1;
+    expect(row).toBeGreaterThanOrEqual(0);
+    expect(row).toBeLessThan(28);
+    expect(column).toBeGreaterThanOrEqual(0);
+    expect(column).toBeLessThan(3);
+    const address=match[1]+match[2];
+    expect(seen.has(address)).toBe(false);
+    seen.add(address);
+    const textValues=[...match[3].matchAll(
+      /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map(m=>decode(m[1])).join("");
+    actual[row][column]=textValues||decode(
+      match[3].match(/<v>([\s\S]*?)<\/v>/)?.[1]??"");
+  }
+  const normalize=value=>String(value??"").normalize("NFKC")
+    .replace(/[\u00a0\u2009\u202f]/g," ").replace(/\s+/g," ")
+    .trim().toLowerCase().replace(/[–—−]/g,"-")
+    .replace(/(?<=\d),(?=\d{3}\b)/g,"");
+  const discrepancies=[];
+  let matches=0;
+  for(let row=0;row<28;row++)for(let col=0;col<3;col++){
+    const observed=normalize(actual[row][col]);
+    const publisher=normalize(ref.rows[row][col]);
+    if(observed===publisher)matches++;
+    else discrepancies.push([row+1,col+1]);
+  }
+  console.log("R89_PUBLISHER_SOURCE_CELL_AUDIT "+JSON.stringify({
+    id:source.id,hashVerified:true,rows:28,columns:3,
+    comparedCells:84,exactNormalizedCellMatches:matches,
+    mismatchCoordinates:discrepancies,sourceValuesNotLogged:true,
+    referenceIsProjectTranscribed:true,independentlyAdjudicated:false,
+    acceptedDocumentCredit:0,
+  }));
+  // Zero mismatch gate must never be relaxed to make CI green.
+  expect(matches).toBe(84);
+  expect(discrepancies).toEqual([]);
   console.log("R88_ORIGINAL_XLSX "+JSON.stringify({
     source:source.id,sourceHashVerified:true,publisherPdfPages:8,
     exportedRows:28,exportedColumns:3,workbookCells:cellCount,
