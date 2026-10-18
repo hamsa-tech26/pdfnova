@@ -24,6 +24,8 @@ export type PdfXlsxTable = {
   nativePairedHeader?: boolean;
   /** Native first-row labels are source-supported; cosmetic freeze, NO auto-filter. */
   freezeSourceHeader?: boolean;
+  /** R104: source-native wide PDF header lines, visually wrapped, never semantically merged. */
+  nativeWideMultilineHeader?: boolean;
 };
 export type PdfXlsxInput = {
   tables: readonly PdfXlsxTable[];
@@ -84,6 +86,12 @@ function sheetXml(table: PdfXlsxTable): string {
         !rows[0]?.length || rows[0].some(value=>!String(value??"").trim()))) {
     throw new Error("Source first-row header freeze requires a complete, unambiguous heading.");
   }
+  if(table.nativeWideMultilineHeader &&
+      (width!==11||rows.length<11||table.nativePairedHeader||
+        table.freezeSourceHeader||table.freezeHeader||
+        !rows[0].some(cell=>String(cell??"").includes("\n")))){
+    throw new Error("Source-native wide header wrapping lacks 11-column multiline evidence.");
+  }
   const typed = new Set(table.numericColumns ?? []);
   if (typed.size !== (table.numericColumns?.length ?? 0) ||
       [...typed].some(index => !Number.isInteger(index) || index < 0 || index >= width)) {
@@ -107,23 +115,25 @@ function sheetXml(table: PdfXlsxTable): string {
           /^(?:0|[1-9][0-9]{0,14})$/.test(literal) &&
           Number.isSafeInteger(Number(literal))) {
         return '<c r="' + label + '" t="n"' +
-          ((table.nativePairedHeader && rowIndex < 2) || (table.freezeSourceHeader && rowIndex===0) ? ' s="1"' : '') +
+          ((table.nativePairedHeader && rowIndex < 2) || ((table.freezeSourceHeader || table.nativeWideMultilineHeader) && rowIndex===0) ? ' s="1"' : '') +
           '><v>' + literal + '</v></c>';
       }
       // Inline string cells cannot execute spreadsheet formulas.
       return '<c r="' + label + '" t="inlineStr"' +
-        ((table.nativePairedHeader && rowIndex < 2) || (table.freezeSourceHeader && rowIndex===0) ? ' s="1"' : '') +
+        ((table.nativePairedHeader && rowIndex < 2) || ((table.freezeSourceHeader || table.nativeWideMultilineHeader) && rowIndex===0) ? ' s="1"' : '') +
         '><is><t xml:space="preserve">' +
         xmlSafe(value) + "</t></is></c>";
     }).join("");
     return '<row r="' + (rowIndex + 1) + '"' +
-      ((table.nativePairedHeader && rowIndex < 2) || (table.freezeSourceHeader && rowIndex===0) ? ' ht="30" customHeight="1"' : '') +
+      (table.nativeWideMultilineHeader && rowIndex===0 ? ' ht="68" customHeight="1"' :
+       ((table.nativePairedHeader && rowIndex < 2) || (table.freezeSourceHeader && rowIndex===0) ?
+        ' ht="30" customHeight="1"' : '')) +
       '>' + cells + "</row>";
   }).join("");
   const range = "A1:" + cellColumn(width - 1) + rows.length;
   const view = table.nativePairedHeader ?
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="2" topLeftCell="A3" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' :
-    (table.freezeHeader || table.freezeSourceHeader) && rows.length > 1 ?
+    (table.freezeHeader || table.freezeSourceHeader || table.nativeWideMultilineHeader) && rows.length > 1 ?
     '<sheetViews><sheetView workbookViewId="0"><pane ySplit="1" topLeftCell="A2" activePane="bottomLeft" state="frozen"/></sheetView></sheetViews>' : "";
   const cols = table.columnWidths?.length ?
     '<cols>' + table.columnWidths.map((n, i) =>
@@ -184,7 +194,7 @@ export async function createPdfXlsxWorkbook(input: PdfXlsxInput): Promise<Uint8A
     }
     return text;
   });
-  const hasNativeHeaderStyles = input.tables.some(table => table.nativePairedHeader || table.freezeSourceHeader);
+  const hasNativeHeaderStyles = input.tables.some(table => table.nativePairedHeader || table.freezeSourceHeader || table.nativeWideMultilineHeader);
   const sheets: PdfXlsxTable[] = [
     ...input.tables,
     ...(notes.length ? [{ name: "Review Notes", rows: [

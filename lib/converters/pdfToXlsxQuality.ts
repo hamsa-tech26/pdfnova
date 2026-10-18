@@ -1,6 +1,7 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
 import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
+import {preserveNativeWideHeaderLines} from "./nativeWideHeaderLines";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
@@ -330,6 +331,12 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
       notes.push("Table " + number + ": " + grouped.note +
         " Verify the source multi-level structure against the PDF.");
     }
+    const wideHeader=preserveNativeWideHeaderLines(table,grouped.rows);
+    if(wideHeader.headerWrapped)notes.push("Table "+number+
+      ": "+wideHeader.wrappedCells+" source-native wide-table header cell(s) "+
+      "retain original PDF physical line breaks in Excel; no header words, "+
+      "semantic grouping, formulas or data positions were inferred. "+
+      "Compare the original publisher header visually.");
     const headerGuide=describeNativePairedGroupHeaders(grouped.rows);
     // R94: freeze ordinary single-level source headings only with complete,
     // native-provenanced first-row labels plus evidence that later rows
@@ -338,6 +345,7 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
     const headerWords=sourceFirst?.cells ?? [];
     const headerTexts=grouped.rows[0] ?? [];
     const sourceFirstHeader=pages.length===1 && !headerGuide &&
+      !wideHeader.headerWrapped &&
       medianRows===extractedRows && grouped.rows===extractedRows &&
       table.rows.length>=3 &&
       headerTexts.length===table.columnCount &&
@@ -374,8 +382,9 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
         "Table "+number+": "+message,
       );
     }
-    return { name: "Table " + number, rows: grouped.rows,
-      columnWidths:estimatePdfTableColumnWidths(grouped.rows),
+    return { name: "Table " + number, rows: wideHeader.rows,
+      columnWidths:estimatePdfTableColumnWidths(wideHeader.rows),
+      ...(wideHeader.headerWrapped ? {nativeWideMultilineHeader:true} : {}),
       ...(nativePairedHeader ? {nativePairedHeader:true} : {}),
       ...(sourceFirstHeader ? {freezeSourceHeader:true} : {}) };
   });

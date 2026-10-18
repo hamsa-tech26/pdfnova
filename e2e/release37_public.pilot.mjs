@@ -1267,6 +1267,26 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
     return values;
   });
   expect(parsed).toHaveLength(13);
+  // R106 source geometry acceptance: recovered header line breaks must be
+  // literal inside the original XLSX inline strings; no guessed extra row
+  // or edited body cells. UI helper alone cannot satisfy this gate.
+  const nativeWideXmlHeaderCells=[...sheet.matchAll(
+    /<c r="([A-K])1"[^>]*>([\s\S]*?)<\/c>/g)];
+  const multilineCount=nativeWideXmlHeaderCells.filter(c=>
+    /<t(?:\s[^>]*)?>([\s\S]*?\n[\s\S]*?)<\/t>/.test(c[2])).length;
+  const wideStyles=await zip.file("xl/styles.xml")?.async("string")??"";
+  const headerWrapped=sheet.includes('<row r="1" ht="68" customHeight="1">') &&
+    sheet.includes('ySplit="1" topLeftCell="A2"') &&
+    wideStyles.includes('wrapText="1"');
+  console.log("R106_ORIGINAL_WIDE_HEADER_LINE_PRESERVATION "+JSON.stringify({
+    source:source.id,fullPdfHashVerified:true,originalHeaderRows:1,
+    bodyRows:12,columns:11,multilineHeaderCells:multilineCount,
+    nativeStylesApplied:headerWrapped,
+    sourceHeaderValuesNotLogged:true,formalReviewerCredit:0,
+  }));
+  expect(multilineCount).toBeGreaterThan(0);
+  expect(headerWrapped).toBe(true);
+  expect(reviews).toContain("physical line breaks");
   expect(exactCellLabel).toBe(parsed[12][9]||"(blank cell)");
   // Browser cell inspection must NEVER edit the subsequent downloaded XLSX.
 
@@ -1295,6 +1315,42 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
   // Enforce the observed 96/96 original-PDF measurement, not an empty baseline.
   expect(matches).toBe(96);
   expect(mismatches).toEqual([]);
+  // R102–106 full publisher source audit: enforce ALL twelve real data rows
+  // and all eleven publisher columns, including medication, fever, rescue
+  // treatment labels and blank cells omitted from the R87 numeric reference.
+  // Do not skip source rows, log clinical values or claim independent review.
+  const fullReference=JSON.parse(await readFile(
+    "benchmarks/release102/pmc3063220-table3-complete-publisher-reference.json","utf8"));
+  expect(fullReference.fullPdfSha256).toBe(source.sha256);
+  expect(fullReference.expectedRows).toBe(13);
+  expect(fullReference.expectedColumns).toBe(11);
+  expect(fullReference.body).toHaveLength(12);
+  expect(fullReference.body.every(row=>row.length===11)).toBe(true);
+  expect(fullReference.formalStableDocumentCredit).toBe(0);
+  const clean=value=>String(value??"").normalize("NFKC")
+    .trim().toLowerCase().replace(/[\s\u00a0\u2009\u202f]+/gu,"")
+    .replace(/[−–—]/gu,"-");
+  const sourceDiscrepancies=[];
+  const discrepancyColumns=Array(11).fill(0);
+  let fullMatches=0;
+  for(let r=0;r<12;r++)for(let c=0;c<11;c++){
+    if(clean(parsed[r+1]?.[c])===clean(fullReference.body[r][c]))fullMatches++;
+    else{
+      sourceDiscrepancies.push([r+2,c+1]);
+      discrepancyColumns[c]++;
+    }
+  }
+  console.log("R102_FULL_SCIENTIFIC_PUBLISHER_AUDIT "+JSON.stringify({
+    originalPublisher:"PMC3063220",hashVerified:true,
+    comparedDataCells:132,sourceNormalizedMatches:fullMatches,
+    mismatchCoordinates:sourceDiscrepancies,
+    differencesByColumn:discrepancyColumns,
+    clinicalValuesLogged:false,headerSemanticsIndependent:false,
+    formalIndependentCredit:0
+  }));
+  expect(sourceDiscrepancies).toEqual([]);
+  expect(fullMatches).toBe(132);
+
 });
 
 
