@@ -835,7 +835,7 @@ test("R81 full original PMC5995222 selectively exports source page 4 table to XL
   await expect(page.getByRole("heading",{name:/extracted values preview \(unverified\)/i})).toBeVisible();
   await expect(preview.getByRole("row")).toHaveCount(7);
   await expect(preview.getByRole("columnheader")).toHaveCount(9);
-  await expect(page.getByText(/Showing 6 of 6 rows and/)).toBeVisible();
+  await expect(page.getByText(/Showing rows 1–6 of 6/)).toBeVisible();
   const downloadPromise=page.waitForEvent("download",{timeout:70000});
   await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
   const download=await downloadPromise;
