@@ -2,7 +2,7 @@ import {describe,expect,it} from "vitest";
 import JSZip from "jszip";
 import type {LogicalTable} from "../../pdf-engine-v4/model/logicalTable";
 import {preparePdfV4XlsxExport} from "../pdfToXlsxQuality";
-import {createPdfXlsxWorkbook} from "../pdfToXlsx";
+import {buildPdfTablePreview} from "../pdfToXlsxPreview";import {createPdfXlsxWorkbook} from "../pdfToXlsx";
 
 const labels=[
   ["Chromosome","Jonathan","","Golden Delicious","","Consensus",""],
@@ -46,6 +46,9 @@ describe("Release 91 real Excel two-tier native grouped header presentation",()=
     const src=source();
     const plan=preparePdfV4XlsxExport(src);
     expect(plan.tables[0].nativePairedHeader).toBe(true);
+    const preview=buildPdfTablePreview(src,0);
+    expect(preview.pairedHeaderLayout).toBe(true);
+    expect(preview.rows).toEqual(labels);
     expect(plan.tables[0].rows).toEqual(labels);
     expect(plan.reviewNotes?.join(" ")).toContain("visually merged B1:C1");
     const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
@@ -70,6 +73,7 @@ describe("Release 91 real Excel two-tier native grouped header presentation",()=
     for(const opts of [{unknownNative:true},{noHeaderProvenance:true}]){
       const plan=preparePdfV4XlsxExport(source(opts));
       expect(plan.tables[0].nativePairedHeader).toBeUndefined();
+      expect(buildPdfTablePreview(source(opts),0).pairedHeaderLayout).toBe(false);
       const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
       const xml=await zip.file("xl/worksheets/sheet1.xml")!.async("string");
       expect(xml).not.toContain("mergeCells");
