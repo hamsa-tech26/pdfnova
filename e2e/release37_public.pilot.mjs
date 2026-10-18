@@ -947,3 +947,156 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
   expect(review).toContain("no Excel cell merges recreated");
   expect(/<f(?:\s|>)/.test(xmls[tableIndex])).toBe(false);
 });
+
+
+/**
+ * Release86 initial original-source diagnostic: PubTables-1M OTSL published
+ * 9x2 table, current older V4 baseline was 8x4. Source publisher's article
+ * exposes the same 9x2 (including header), unlike synthetic tests.
+ * Never log PDF/source text or raw Inspector outputs.
+ */
+test("R86 source-verified PMC5012829 native table geometry (diagnostic)",async({page})=>{
+  test.setTimeout(200000);
+  const originalUrl="https://pmc-oa-opendata.s3.amazonaws.com/PMC5012829.1/PMC5012829.1.pdf";
+  const sha="4c66dcdecf3b65ea2e75834c741cda73e8bb548794c635ce4601215ef780722b";
+  const bytes=await boundedPmcPdf(originalUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(sha);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(6);
+  await page.goto("/engine-inspector");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC5012829.1.pdf",mimeType:"application/pdf",buffer:bytes,
+  });
+  const button=page.getByRole("button",{name:"Download complete result JSON"});
+  await expect(button).toBeVisible({timeout:130000});
+  const getting=page.waitForEvent("download");
+  await button.click();
+  const downloaded=await getting,filename=await downloaded.path();
+  if(!filename)throw Error("No Inspector original PDF result");
+  const result=JSON.parse(await readFile(filename,"utf8"));
+  const tables=result.tables.filter(t=>t.pageNumber===5);
+  const pageObj=result.document.pages[4];
+  const blocks=(pageObj?.blocks??[]).map(block=>{
+    const lines=block.lines??[];
+    const wordCounts=lines.map(l=>l.words?.length??0);
+    const xclusters=new Map();
+    const ys=new Map();
+    for(const line of lines){
+      const words=line.words??[];
+      for(const word of words){
+        const x=Math.round(word.bounds.x/10)*10;
+        xclusters.set(x,(xclusters.get(x)??0)+1);
+      }
+      const y=Math.round((line.bounds?.y??0)/10)*10;
+      ys.set(y,(ys.get(y)??0)+1);
+    }
+    return {kind:block.type,lines:lines.length,words:wordCounts.reduce((a,b)=>a+b,0),
+      rows:lines.map((line,i)=>({
+        index:i,y:Math.round(line.bounds?.y??0),
+        count:line.words?.length??0,
+        xs:(line.words??[]).slice(0,15).map(w=>Math.round(w.bounds.x)),
+        kinds:(line.words??[]).slice(0,15).map(w=>/^[0-9,.()%+-]+$/.test(w.text)?1:0),
+      })),
+      bounds:block.bounds&&{x:Math.round(block.bounds.x),y:Math.round(block.bounds.y),
+        w:Math.round(block.bounds.width),h:Math.round(block.bounds.height)},
+      wordCounts:wordCounts.slice(0,28),
+      xPeaks:[...xclusters.entries()].sort((a,b)=>b[1]-a[1]).slice(0,12),
+      sameYBands:[...ys.values()].filter(v=>v>1).length};
+  });
+  const selected=tables.map(t=>({
+    rows:t.rows.length,cols:t.columnCount,
+    rowCells:t.rows.slice(0,12).map(r=>r.cells?.filter(c=>c.text?.trim()).length??0),
+    bounds:t.bounds&&{x:Math.round(t.bounds.x),y:Math.round(t.bounds.y),
+      w:Math.round(t.bounds.width),h:Math.round(t.bounds.height)}
+  }));
+  console.log("R86_ORIGINAL_PMC5012829_DIAGNOSTIC "+JSON.stringify({
+    hashVerified:true,pageCount:6,page:5,publishedShape:[9,2],
+    candidates:selected,blocks:blocks.slice(0,20),noTextLogged:true,
+    independentCredit:0,
+  }));
+  expect(pageObj).toBeTruthy();
+});
+
+
+/**
+ * Release 86 publisher-controlled value check:
+ * actual original page 5, not an assistant-generated table or fake PDF.
+ * Uses the existing, unchanged fail-closed single-table XLSX exporter.
+ */
+test("R86 original PMC5012829 Table 1 downloads real 9x2 XLSX with publisher cells",async({page})=>{
+  test.setTimeout(200000);
+  const reference=JSON.parse(await readFile(
+    "benchmarks/release86/pmc5012829-table1-publisher-reference.json","utf8"));
+  expect(reference.rows).toHaveLength(9);
+  const bytes=await boundedPmcPdf(reference.originalSourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(reference.originalPdfSha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(reference.sourcePageCount);
+  const subset=await PDFDocument.create();
+  const pages=await subset.copyPages(original,[reference.sourcePageNumber-1]);
+  subset.addPage(pages[0]);
+  const pageBuffer=Buffer.from(await subset.save());
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC5012829-source-page-5.pdf",
+    mimeType:"application/pdf",buffer:pageBuffer,
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:100000});
+  const option=page.locator("label").filter({hasText:/9 rows × 2 columns/})
+    .locator('input[type="radio"]');
+  await expect(option).toHaveCount(1);
+  await expect(option).toBeEnabled();
+  await option.check();
+  const preview=page.getByRole("region",{name:"Scrollable extracted spreadsheet preview"});
+  await expect(preview).toBeVisible();
+  await expect(preview.getByRole("row")).toHaveCount(10);
+  await expect(preview.getByRole("columnheader")).toHaveCount(3);
+  const downloaded=page.waitForEvent("download",{timeout:65000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const result=await downloaded;
+  expect(result.suggestedFilename()).toMatch(/\.xlsx$/i);
+  const p=await result.path();
+  if(!p)throw Error("No real source-page XLSX file downloaded");
+  const zip=await JSZip.loadAsync(await readFile(p));
+  const names=Object.keys(zip.files).filter(n=>/^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  expect(names).toHaveLength(2);
+  const xml=await zip.file("xl/worksheets/sheet1.xml")?.async("string")??"";
+  const review=await zip.file("xl/worksheets/sheet2.xml")?.async("string")??"";
+  const deent=text=>String(text??"").replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&quot;/g,'"').replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  const matrix=[...xml.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)]
+    .map(row=>{
+      const result=["",""];
+      for(const cell of row[1].matchAll(
+        /<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)){
+        const col=cell[1]==="A"?0:cell[1]==="B"?1:-1;
+        if(col<0)continue;
+        const txt=[...cell[2].matchAll(
+          /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map(x=>deent(x[1])).join("");
+        const numeric=cell[2].match(/<v>([\s\S]*?)<\/v>/)?.[1]??"";
+        result[col]=txt||deent(numeric);
+      }
+      return result;
+    });
+  const norm=value=>String(value??"").normalize("NFKC").toLowerCase()
+    .replace(/[^\p{L}\p{N}]/gu,"");
+  const mismatches=[];
+  for(let row=0;row<9;row++)for(let col=0;col<2;col++){
+    if(norm(matrix[row]?.[col])!==norm(reference.rows[row][col]))
+      mismatches.push([row+1,col+1]);
+  }
+  console.log("R86_PMC5012829_ORIGINAL_XLSX "+JSON.stringify({
+    hashVerified:true,sourcePages:6,publisherPage:5,
+    expectedRows:9,expectedColumns:2,actualRows:matrix.length,
+    comparedCells:18,matchingPositions:18-mismatches.length,
+    mismatchCoordinates:mismatches,referenceIsProjectTranscribed:true,
+    privateSourceTextNotLogged:true,independentApprovalCredit:0,
+  }));
+  expect(matrix).toHaveLength(9);
+  expect(mismatches).toEqual([]);
+  expect(review).toContain("UNVERIFIED");
+  expect(review).toContain("SELECTIVE EXPORT");
+  expect(/<f(?:\s|>)/.test(xml)).toBe(false);
+});

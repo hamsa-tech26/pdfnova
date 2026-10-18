@@ -1527,6 +1527,23 @@ function detectParallelNativePhysicalRows(
  }));
  return {rows,confidence:0.92};
 }
+
+function detectPairedNativePhysicalRows(
+  block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+  if(block.type!=="paragraph"||!block.id.startsWith("paired-caption-grid-")||
+     columns.length!==2||block.lines.length<7||block.lines.length>24)return null;
+  if(block.lines.some(line=>line.words.length!==2||line.words.some(word=>
+    word.extractionProvenance?.source==="ocr-tesseract")))return null;
+  const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+    score:94,confidence:0.94,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"paired-native-caption-physical-row",
+  }));
+  return {rows,confidence:0.94};
+}
+
 export function detectAdaptiveRowsV4(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
@@ -1555,6 +1572,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const pairedNative=detectPairedNativePhysicalRows(block,columns);
+  if(pairedNative)return pairedNative;
 
   const denseCaptionGrid = detectDenseCaptionPhysicalRows(block, columns);
   if (denseCaptionGrid) return denseCaptionGrid;

@@ -1,0 +1,53 @@
+{
+  "id": "PMC5012829:Table1",
+  "sourceArticle": "https://pmc.ncbi.nlm.nih.gov/articles/PMC5012829/",
+  "referenceTable": "Table 1. Age group distribution of all AOT cases",
+  "originalSourceUrl": "https://pmc-oa-opendata.s3.amazonaws.com/PMC5012829.1/PMC5012829.1.pdf",
+  "originalPdfSha256": "4c66dcdecf3b65ea2e75834c741cda73e8bb548794c635ce4601215ef780722b",
+  "sourcePageNumber": 5,
+  "sourcePageCount": 6,
+  "copyright": "Copyright © Adisa and coauthors, Pan African Medical Journal 2016; CC BY attribution license according to article",
+  "referenceStatus": "publisher-html-transcribed-by-project-not-independently-adjudicated",
+  "caveats": [
+    "Published HTML displays an anomalous numeric spacing for age 30–39; compare normalized digits without altering the exported PDF cell string.",
+    "The project has not received third-party independent geometry/cell adjudication; acceptance gate remains 0/20."
+  ],
+  "rows": [
+    [
+      "Age group",
+      "Frequencies (%)"
+    ],
+    [
+      "0-9",
+      "4.0 (6.6)"
+    ],
+    [
+      "10-19",
+      "36.0 (59.0)"
+    ],
+    [
+      "20-29",
+      "9.0 (14.8)"
+    ],
+    [
+      "30-39",
+      "6.09 (.8)"
+    ],
+    [
+      "40-49",
+      "5.0 (8.2)"
+    ],
+    [
+      "Total",
+      "60.0 (98.4)"
+    ],
+    [
+      "Missing",
+      "1.0 (1.6)"
+    ],
+    [
+      "Overall total",
+      "61(100.0)"
+    ]
+  ]
+}
