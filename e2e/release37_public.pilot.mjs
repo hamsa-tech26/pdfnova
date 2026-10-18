@@ -947,3 +947,66 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
   expect(review).toContain("no Excel cell merges recreated");
   expect(/<f(?:\s|>)/.test(xmls[tableIndex])).toBe(false);
 });
+
+
+/**
+ * Release86 initial original-source diagnostic: PubTables-1M OTSL published
+ * 9x2 table, current older V4 baseline was 8x4. Source publisher's article
+ * exposes the same 9x2 (including header), unlike synthetic tests.
+ * Never log PDF/source text or raw Inspector outputs.
+ */
+test("R86 source-verified PMC5012829 native table geometry (diagnostic)",async({page})=>{
+  test.setTimeout(200000);
+  const originalUrl="https://pmc-oa-opendata.s3.amazonaws.com/PMC5012829.1/PMC5012829.1.pdf";
+  const sha="4c66dcdecf3b65ea2e75834c741cda73e8bb548794c635ce4601215ef780722b";
+  const bytes=await boundedPmcPdf(originalUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(sha);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(6);
+  await page.goto("/engine-inspector");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC5012829.1.pdf",mimeType:"application/pdf",buffer:bytes,
+  });
+  const button=page.getByRole("button",{name:"Download complete result JSON"});
+  await expect(button).toBeVisible({timeout:130000});
+  const getting=page.waitForEvent("download");
+  await button.click();
+  const downloaded=await getting,filename=await downloaded.path();
+  if(!filename)throw Error("No Inspector original PDF result");
+  const result=JSON.parse(await readFile(filename,"utf8"));
+  const tables=result.tables.filter(t=>t.pageNumber===5);
+  const pageObj=result.document.pages[4];
+  const blocks=(pageObj?.blocks??[]).map(block=>{
+    const lines=block.lines??[];
+    const wordCounts=lines.map(l=>l.words?.length??0);
+    const xclusters=new Map();
+    const ys=new Map();
+    for(const line of lines){
+      const words=line.words??[];
+      for(const word of words){
+        const x=Math.round(word.bounds.x/10)*10;
+        xclusters.set(x,(xclusters.get(x)??0)+1);
+      }
+      const y=Math.round((line.bounds?.y??0)/10)*10;
+      ys.set(y,(ys.get(y)??0)+1);
+    }
+    return {kind:block.type,lines:lines.length,words:wordCounts.reduce((a,b)=>a+b,0),
+      bounds:block.bounds&&{x:Math.round(block.bounds.x),y:Math.round(block.bounds.y),
+        w:Math.round(block.bounds.width),h:Math.round(block.bounds.height)},
+      wordCounts:wordCounts.slice(0,28),
+      xPeaks:[...xclusters.entries()].sort((a,b)=>b[1]-a[1]).slice(0,12),
+      sameYBands:[...ys.values()].filter(v=>v>1).length};
+  });
+  const selected=tables.map(t=>({
+    rows:t.rows.length,cols:t.columnCount,
+    rowCells:t.rows.slice(0,12).map(r=>r.cells?.filter(c=>c.text?.trim()).length??0),
+    bounds:t.bounds&&{x:Math.round(t.bounds.x),y:Math.round(t.bounds.y),
+      w:Math.round(t.bounds.width),h:Math.round(t.bounds.height)}
+  }));
+  console.log("R86_ORIGINAL_PMC5012829_DIAGNOSTIC "+JSON.stringify({
+    hashVerified:true,pageCount:6,page:5,publishedShape:[9,2],
+    candidates:selected,blocks:blocks.slice(0,20),noTextLogged:true,
+    independentCredit:0,
+  }));
+  expect(pageObj).toBeTruthy();
+});
