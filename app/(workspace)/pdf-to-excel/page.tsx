@@ -11,6 +11,7 @@ import { preparePdfV4XlsxExport } from "@/lib/converters/pdfToXlsxQuality";
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import {buildPdfTablePreview,type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
 import { recoverEightColumnNativePdf } from "@/lib/converters/pdfToXlsxNativeBoundaries";
 import { addRecentFile } from "@/lib/storage/recentFiles";
 import { saveAs } from "file-saver";
@@ -30,6 +31,7 @@ export default function PdfToExcelPage() {
   const [inspected, setInspected] = useState<Awaited<ReturnType<typeof analyzePdfV4>> | null>(null);
   const [choices, setChoices] = useState<PdfXlsxTableChoice[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [preview, setPreview] = useState<PdfTablePreview | null>(null);
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -41,6 +43,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setChoices([]);
     setSelectedIndex(null);
+    setPreview(null);
   }
 
   function chooseFile(event: ChangeEvent<HTMLInputElement>) {
@@ -52,6 +55,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setChoices([]);
     setSelectedIndex(null);
+    setPreview(null);
     if (!selected || !selected.name.toLowerCase().endsWith(".pdf") ||
         selected.size > MAX_FILE_BYTES || selected.size === 0) {
       setFile(null);
@@ -70,7 +74,7 @@ export default function PdfToExcelPage() {
     try{
       const analyzed=inspected??await analyzePdfV4(file,{enableControlledOcr:false});
       const available=inspectPdfV4XlsxChoices(analyzed);
-      setInspected(analyzed);setChoices(available);setSelectedIndex(null);
+      setInspected(analyzed);setChoices(available);setSelectedIndex(null);setPreview(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
     }finally{setBusy(false);}
@@ -85,6 +89,17 @@ export default function PdfToExcelPage() {
     saveAs(blob,name);
     setOutput(blob);setOutputName(name);setWarnings([...(plan.reviewNotes??[])]);
     addRecentFile({fileName:name,toolName:"PDF to Excel"});
+  }
+
+  function chooseTable(index:number){
+    if(!inspected||!choices.some(c=>c.index===index&&c.eligible))return;
+    try{
+      const proposed=buildPdfTablePreview(inspected,index);
+      setSelectedIndex(index);setPreview(proposed);setError("");
+    }catch(cause){
+      setSelectedIndex(null);setPreview(null);
+      setError(cause instanceof Error?cause.message:"Table preview was withheld.");
+    }
   }
 
   async function exportSelected(){
@@ -142,16 +157,16 @@ export default function PdfToExcelPage() {
     <ToolLayout
       label="PDF to Excel"
       title="PDF tables to genuine Excel XLSX — privately"
-      description="Convert all eligible native-text PDF tables or inspect and choose just one detected table. Other tables remain excluded, not silently exported. Processing is browser-local; all results need source verification. OCR-to-Excel is not supported."
+      description="Convert all eligible native-text PDF tables, or choose a table and inspect its actual exported cell values before downloading. Other tables are excluded explicitly. Processing stays on your device; source verification is still required."
       tips={[
         { title: "Text-selectable PDF only", description: "Scanned or mixed image-only PDFs cannot be converted with this version." },
-        { title: "Choose a single table", description: "Inspect the table candidates and select one eligible for export, even when unrelated tables are withheld." },
+        { title: "Preview before exporting", description: "Inspect up to 12 rows and 8 columns of the selected table as they will appear in Excel; this is not accuracy certification." },
         { title: "Verify the spreadsheet", description: "Rows, columns, values, and headings must be checked against the source document before professional use." },
         { title: "Safe cell types", description: "Identifiers, leading zeros and formula-like inputs remain text. Only verified household and FHTC count columns in supported layouts become Excel numbers; no PDF content is executed as formulas." },
       ]}
       faqs={[
         { question: "Will my PDF be uploaded?", answer: "No. Extraction and XLSX generation happen in the browser." },
-        { question: "Can I choose one table if another fails?", answer: "Yes. Inspect the detected candidates and explicitly choose an eligible table. Other tables stay excluded. The selected table must still pass the existing structural, provenance and native-text safety checks." },
+        { question: "Can I choose one table if another fails?", answer: "Yes. Inspect candidates, choose an eligible table, and review its extracted cell preview before exporting. Other tables stay excluded. All original safety checks still apply." },
         { question: "Does it convert scans or every table?", answer: "No. It accepts only confidently structured selectable-text tables and refuses uncertain extraction rather than silently inventing rows or cells." },
       ]}
       howToTitle="How to convert a PDF table to Excel"
@@ -200,7 +215,7 @@ export default function PdfToExcelPage() {
                     (choice.eligible?"border-slate-300":"border-slate-200 opacity-75")}>
                   <input type="radio" name="pdf-table-selection" value={choice.index}
                     checked={selectedIndex===choice.index} disabled={!choice.eligible||busy}
-                    onChange={()=>setSelectedIndex(choice.index)} className="mt-1 h-4 w-4"/>
+                    onChange={()=>chooseTable(choice.index)} className="mt-1 h-4 w-4"/>
                   <span className="min-w-0">
                     <span className="block font-semibold text-slate-950 dark:text-white">
                       Table {choice.index+1} — {choice.pageLabel} — {choice.rows} rows × {choice.columns} columns
@@ -212,6 +227,58 @@ export default function PdfToExcelPage() {
                 </label>
               ))}
             </fieldset>
+
+            {preview && selectedIndex!==null && (
+              <div className="space-y-3" aria-label="Selected table preview">
+                <h4 className="text-base font-semibold text-slate-950 dark:text-white">
+                  Table {selectedIndex+1} — extracted values preview (unverified)
+                </h4>
+                <p className="text-sm text-slate-600 dark:text-slate-300">
+                  Source PDF page(s): {preview.sourcePages.join(", ")}.
+                  Showing {preview.visibleRows} of {preview.totalRows} rows and
+                  {" "}{preview.visibleColumns} of {preview.totalColumns} columns.
+                  This is how the XLSX values will appear, not a visual rendering of the original PDF.
+                  Check against the source before using the spreadsheet.
+                </p>
+                <div className="max-h-80 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700"
+                  role="region" aria-label="Scrollable extracted spreadsheet preview" tabIndex={0}>
+                  <table className="w-full min-w-max border-collapse text-left text-sm">
+                    <caption className="sr-only">
+                      Bounded preview of extracted Excel cell values, not accuracy-certified
+                    </caption>
+                    <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800">
+                      <tr><th scope="col" className="border-b px-3 py-2">Row</th>
+                        {Array.from({length:preview.visibleColumns},(_,c)=>(
+                          <th key={c} scope="col" className="border-b px-3 py-2">
+                            {String.fromCharCode(65+c)}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {preview.rows.map((cells,row)=>(
+                        <tr key={row} className="border-t border-slate-200 dark:border-slate-700">
+                          <th scope="row" className="bg-slate-50 px-3 py-2 font-semibold dark:bg-slate-900">{row+1}</th>
+                          {cells.map((value,col)=>(
+                            <td key={col} className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
+                              {value || <span className="text-slate-400">(blank)</span>}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {(preview.totalRows>preview.visibleRows||
+                  preview.totalColumns>preview.visibleColumns||
+                  preview.trimmedCells>0) && (
+                  <p className="text-xs text-amber-800 dark:text-amber-200">
+                    Preview shortened for display; the exported XLSX retains complete
+                    selected-table rows, columns and cell text.
+                  </p>
+                )}
+              </div>
+            )}
             <button type="button" onClick={exportSelected}
               disabled={busy||selectedIndex===null}
               className="w-full rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
@@ -232,7 +299,7 @@ export default function PdfToExcelPage() {
         </>}
         {!busy && output && inspected && (
           <button type="button" onClick={()=>{
-            setOutput(null);setOutputName("");setWarnings([]);setSelectedIndex(null);
+            setOutput(null);setOutputName("");setWarnings([]);setSelectedIndex(null);setPreview(null);
           }} className="w-full rounded-xl border border-blue-300 px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">
             Choose another table from this PDF
           </button>
