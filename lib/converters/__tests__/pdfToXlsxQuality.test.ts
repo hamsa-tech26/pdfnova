@@ -58,6 +58,39 @@ describe("Release 60 XLSX quality and coverage gates", () => {
     expect(xml).not.toContain("<f>");
   });
 
+  it("R94 freezes only complete native one-tier source heading with typed source words",async()=>{
+    const t=table([1]);
+    for(const cell of t.rows[0].cells){
+      cell.words=[{
+        id:"native-head-"+cell.columnIndex,
+        text:cell.text,pageNumber:1,bounds:{...cell.bounds},
+        font:{size:10},rotation:0,
+        extractionProvenance:{source:"native-pdf",wordCount:1,
+          nativeWordCount:1,ocrWordCount:0,unknownWordCount:0,pageNumbers:[1]},
+      } as (typeof cell.words)[number]];
+    }
+    const plan=preparePdfV4XlsxExport(source([t]));
+    expect(plan.tables[0].freezeSourceHeader).toBe(true);
+    expect(plan.tables[0].columnWidths).toEqual([10,10,10]);
+    expect(plan.tables[0].rows[1]).toEqual(["1","00071","125.00"]);
+    const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
+    const xml=await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(xml).toContain('ySplit="1" topLeftCell="A2"');
+    expect(xml).toContain('<c r="A1" t="inlineStr" s="1">');
+    expect(xml).toContain('<col min="1" max="1" width="10" customWidth="1"/>');
+    expect(xml).not.toContain("<autoFilter");
+    expect(xml).not.toContain("<mergeCells");
+    expect(xml).not.toMatch(/<f(?:\\s|>)/);
+    expect(plan.reviewNotes?.join(" ")).toContain("NOT independently verified");
+
+    const missingEvidence=table([1]);
+    const unmerged=preparePdfV4XlsxExport(source([missingEvidence]));
+    expect(unmerged.tables[0].freezeSourceHeader).toBeUndefined();
+    const noFreeze=await JSZip.loadAsync(await createPdfXlsxWorkbook(unmerged));
+    expect(await noFreeze.file("xl/worksheets/sheet1.xml")!.async("string"))
+      .not.toContain('ySplit="1"');
+  });
+
   it("keeps confirmed multi-page continuation as one worksheet with page provenance", () => {
     const t=table([1,2]);
     const plan=preparePdfV4XlsxExport(source([t],2));
