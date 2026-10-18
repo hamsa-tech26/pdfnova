@@ -1,4 +1,5 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
+import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
@@ -320,6 +321,12 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
     if (grouped.note) {
       notes.push("Table " + number + ": " + grouped.note +
         " Verify the source multi-level structure against the PDF.");
+    }
+    const headerGuide=describeNativePairedGroupHeaders(grouped.rows);
+    if(headerGuide){
+      for(const message of headerGuide.notes)notes.push(
+        "Table "+number+": "+message,
+      );
     }
     return { name: "Table " + number, rows: grouped.rows };
   });
