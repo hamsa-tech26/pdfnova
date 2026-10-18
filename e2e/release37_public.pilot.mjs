@@ -1207,6 +1207,39 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
   await expect(target).toHaveCount(1);
   await expect(target).toBeEnabled();
   await target.check();
+  // R101: exercise late-page/late-column navigation on the REAL original
+  // 13x11 clinical publisher table before exporting. No synthetic shortcuts.
+  const range=page.getByText(/Showing rows 1–12 of 13/);
+  await expect(range).toBeVisible();
+  await expect(page.getByRole("button",{name:"Next 12 rows"})).toBeEnabled();
+  await page.getByRole("button",{name:"Next 12 rows"}).click();
+  await expect(page.getByText(/Showing rows 13–13 of 13/)).toBeVisible();
+  await expect(page.getByRole("button",{name:"Next 12 rows"})).toBeDisabled();
+  await page.getByRole("button",{name:"Previous 12 rows"}).click();
+  await expect(range).toBeVisible();
+  await page.getByRole("button",{name:"Next 8 columns"}).click();
+  await expect(page.getByText(/columns I–K/)).toBeVisible();
+  await expect(page.getByRole("button",{name:"Next 8 columns"})).toBeDisabled();
+  await page.getByRole("button",{name:"Previous 8 columns"}).click();
+  await expect(range).toBeVisible();
+
+  await page.getByRole("textbox",{name:"Excel cell address"}).fill("Z14");
+  await page.getByRole("button",{name:"Go to cell",exact:true}).click();
+  await expect(page.getByText(/Enter a source Excel cell inside/)).toBeVisible();
+  await page.getByRole("textbox",{name:"Excel cell address"}).fill("J13");
+  await page.getByRole("button",{name:"Go to cell",exact:true}).click();
+  await expect(page.getByText(/Showing rows 13–13 of 13/)).toBeVisible();
+  await expect(page.getByText(/columns I–K/)).toBeVisible();
+  await expect(page.getByText(/Exact cell J13 · Source PDF page 1/)).toBeVisible();
+  await page.getByRole("button",{name:"Inspect exact cell J13"}).click();
+  const exactCellLabel=await page.getByLabel("Exact extracted cell text").textContent();
+  expect(exactCellLabel).not.toBeNull();
+  console.log("R101_ORIGINAL_TABLE_NAVIGATION "+JSON.stringify({
+    originalSource:source.id,fullSourceHashVerified:true,
+    originalRows:13,originalColumns:11,visitedLastRow:13,
+    inspectedAddress:"J13",inspectedColumn:10,inspectedSourcePage:1,
+    exactCellTextNotLogged:true,certifiedPublisherCells:0,
+  }));
   const downloadPromise=page.waitForEvent("download",{timeout:75000});
   await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
   const download=await downloadPromise;
@@ -1234,6 +1267,9 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
     return values;
   });
   expect(parsed).toHaveLength(13);
+  expect(exactCellLabel).toBe(parsed[12][9]||"(blank cell)");
+  // Browser cell inspection must NEVER edit the subsequent downloaded XLSX.
+
   const normalize=value=>String(value??"").normalize("NFKC")
     .replace(/[^\d]/gu,"");
   const mismatches=[];
