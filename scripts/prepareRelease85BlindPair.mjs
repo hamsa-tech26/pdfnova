@@ -1,7 +1,7 @@
 /**
  * Creates two EMPTY source-first worksheets under gitignored private storage.
  * This is a local convenience tool, not an annotator or independent reviewer.
- * The first and second annotators must fill them separately WITHOUT seeing
+ * The first and second annotators must each first prepare their own independently observed layout-a/layout-b JSON and fill the generated drafts separately WITHOUT seeing
  * each other's work or Kukureku output. It never populates expected cells.
  *
  * Usage: node scripts/prepareRelease85BlindPair.mjs <id>
@@ -33,20 +33,32 @@ export async function prepareRelease85BlindPair(id){
   const pdf=await sourceFile(id,".pdf",30*1024*1024);
   if(pdf.length<500||pdf.subarray(0,5).toString("ascii")!=="%PDF-")
     throw Error("Expected a real original PDF.");
-  const layout=JSON.parse((await sourceFile(id,"-layout.json",50_000)).toString("utf8"));
+  // Independent SOURCE-OBSERVED layouts from the two annotators are essential:
+  // sharing one layout pre-populates the geometry and destroys geometry
+  // blindness, even when the cell text was annotated separately.
+  const [layoutA,layoutB]=await Promise.all([
+    sourceFile(id,"-layout-a.json",50_000),
+    sourceFile(id,"-layout-b.json",50_000),
+  ]);
   const source=await PDFDocument.load(pdf,{updateMetadata:false});
-  const empty=makeRelease37BlindReferenceDraft({
+  const input={
     id,originalPdfSha256:createHash("sha256").update(pdf).digest("hex"),
-    sourcePageCount:source.getPageCount(),tables:layout.tables
+    sourcePageCount:source.getPageCount(),
+  };
+  const emptyA=makeRelease37BlindReferenceDraft({
+    ...input,tables:JSON.parse(layoutA.toString("utf8")).tables,
+  });
+  const emptyB=makeRelease37BlindReferenceDraft({
+    ...input,tables:JSON.parse(layoutB.toString("utf8")).tables,
   });
   const a=path.join(ROOT,id+"-annotator-a.json");
   const b=path.join(ROOT,id+"-annotator-b.json");
   // Deliberately never replace a reviewer's work. On failure to create B,
   // undo only the fresh A created during this call.
-  await writeFile(a,JSON.stringify(empty,null,2)+"\n",
+  await writeFile(a,JSON.stringify(emptyA,null,2)+"\n",
     {encoding:"utf8",flag:"wx",mode:0o600});
   try {
-    await writeFile(b,JSON.stringify(empty,null,2)+"\n",
+    await writeFile(b,JSON.stringify(emptyB,null,2)+"\n",
       {encoding:"utf8",flag:"wx",mode:0o600});
   } catch (error){
     await unlink(a);
@@ -55,9 +67,11 @@ export async function prepareRelease85BlindPair(id){
   return {
     status:"TWO_EMPTY_PRIVATE_DRAFTS_CREATED_NO_REVIEW_CREDIT",
     originalDocumentId:id,
-    sourcePages:empty.sourcePageCount,
-    tables:empty.tables.length,
-    blankCellSlots:empty.tables.reduce((n,t)=>n+t.rowCount*t.columnCount,0),
+    sourcePages:emptyA.sourcePageCount,
+    layoutATables:emptyA.tables.length,
+    layoutBTables:emptyB.tables.length,
+    blankSourceCellSlotsA:emptyA.tables.reduce((n,t)=>n+t.rowCount*t.columnCount,0),
+    blankSourceCellSlotsB:emptyB.tables.reduce((n,t)=>n+t.rowCount*t.columnCount,0),
     acceptedDocumentCredit:0,
     warning:"Two distinct reviewers must separately transcribe original PDF cells. This script produces EMPTY copies, not independent review."
   };
