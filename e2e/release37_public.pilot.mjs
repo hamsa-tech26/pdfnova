@@ -1239,3 +1239,71 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
   expect(matches).toBe(96);
   expect(mismatches).toEqual([]);
 });
+
+
+/**
+ * R88 full original publisher PDF page → real XLSX. Unlike the source-shape
+ * diagnostic, this verifies the downloadable workbook, selective/unverified
+ * disclosure, row/column dimensions, and formula safety. It is NOT a blind
+ * publisher-reference cell-value certification.
+ */
+test("R88 PMC3464982 actual 28x3 native source table to XLSX",async({page})=>{
+  test.setTimeout(240_000);
+  const source=release77PmcCases.find(s=>s.id==="PMC3464982");
+  if(!source)throw Error("R88 original publisher fixture missing");
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(8);
+  const excerpt=await PDFDocument.create();
+  excerpt.addPage((await excerpt.copyPages(original,[source.pageNumber-1]))[0]);
+  const selected=Buffer.from(await excerpt.save());
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC3464982-original-page5.pdf",mimeType:"application/pdf",buffer:selected,
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:150000});
+  const target=page.locator("label").filter({hasText:/28 rows × 3 columns/})
+    .locator('input[type="radio"]');
+  await expect(target).toHaveCount(1);
+  await expect(target).toBeEnabled();
+  await target.check();
+  const pending=page.waitForEvent("download",{timeout:75000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const download=await pending;
+  const file=await download.path();
+  if(!file)throw Error("R88 browser download missing");
+  const zip=await JSZip.loadAsync(await readFile(file));
+  const sheetNames=Object.keys(zip.files).filter(n=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(n));
+  expect(sheetNames).toHaveLength(2);
+  const sheet=await zip.file("xl/worksheets/sheet1.xml")?.async("string")??"";
+  const review=await zip.file("xl/worksheets/sheet2.xml")?.async("string")??"";
+  const xmlRows=[...sheet.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)];
+  expect(xmlRows).toHaveLength(28);
+  const validCellAddress=/^([A-C])(\d{1,2})$/;
+  let cellCount=0;
+  for(const row of xmlRows){
+    const cells=[...row[1].matchAll(/<c r="([A-Z]+\d+)"[^>]*>[\s\S]*?<\/c>/g)];
+    for(const cell of cells){
+      const match=validCellAddress.exec(cell[1]);
+      expect(match).not.toBeNull();
+      expect(Number(match?.[2])).toBeGreaterThanOrEqual(1);
+      expect(Number(match?.[2])).toBeLessThanOrEqual(28);
+      cellCount++;
+    }
+  }
+  expect(cellCount).toBeGreaterThanOrEqual(55);
+  expect(/<f(?:\s|>)/.test(sheet)).toBe(false);
+  expect(review).toContain("SELECTIVE EXPORT");
+  expect(review).toContain("UNVERIFIED");
+  console.log("R88_ORIGINAL_XLSX "+JSON.stringify({
+    source:source.id,sourceHashVerified:true,publisherPdfPages:8,
+    exportedRows:28,exportedColumns:3,workbookCells:cellCount,
+    formulaCount:0,hasUnverifiedReview:true,
+    comparisonToIndependentSourceCells:false,
+    acceptedCertificationCredit:0,
+  }));
+});
