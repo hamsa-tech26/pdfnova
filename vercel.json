@@ -9,7 +9,8 @@
       "fix/kukureku-r77-long-caption-tables": false,
       "fix/kukureku-r78-real-table-diagnostics": false,
       "fix/kukureku-r79-pmc5995222-layout": false,
-      "fix/kukureku-r80-pmc2147049-two-column": false
+      "fix/kukureku-r80-pmc2147049-two-column": false,
+      "feature/kukureku-r81-selective-pdf-xlsx": false
     }
   }
 }
