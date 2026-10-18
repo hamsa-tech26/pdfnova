@@ -683,6 +683,57 @@ test("R80 original PMC2147049 Table 1 source page exports real 40x2 XLSX",async(
   }));
   expect(match).toBeTruthy();
   expect(profiles.some(x=>x.reviewWarning)).toBe(true);
+
+  // Release 82: compare ALL 80 actual XLSX cell positions to the publisher's
+  // manually transcribed HTML Table 1 (not V4 output or synthetic golden).
+  // Coordinate-only mismatch logs prevent leaking source data into CI output.
+  const ref=JSON.parse(await readFile(
+    "benchmarks/release82/pmc2147049-table1-publisher-reference.json","utf8"));
+  expect(ref.originalPdfSHA256).toBe(src.sha256);
+  expect(ref.referenceStatus).toBe(
+    "publisher-html-transcribed-by-project-not-independently-adjudicated");
+  expect(ref.rows).toHaveLength(40);
+  const dataSheetIndex=profiles.findIndex(x=>x.rows===40&&x.cols===2&&x.filled>=55);
+  expect(dataSheetIndex).toBeGreaterThanOrEqual(0);
+  const xml=await zip.file(names[dataSheetIndex])?.async("string")??"";
+  const decode=txt=>txt.replace(/&lt;/g,"<").replace(/&gt;/g,">")
+    .replace(/&amp;/g,"&").replace(/&quot;/g,'"').replace(/&apos;/g,"'");
+  const excelRows=[...xml.matchAll(/<row r="\d+"[^>]*>([\s\S]*?)<\/row>/g)].map(row=>{
+    const values=["",""];
+    for(const cell of row[1].matchAll(/<c r="([A-Z]+)\d+"[^>]*>([\s\S]*?)<\/c>/g)){
+      if(cell[1]!=="A"&&cell[1]!=="B")continue;
+      const texts=[...cell[2].matchAll(/<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)]
+        .map(m=>decode(m[1])).join("");
+      values[cell[1]==="A"?0:1]=texts;
+    }
+    return values;
+  });
+  expect(excelRows).toHaveLength(40);
+  // Normalize layout-specific punctuation/superscripts but do NOT reorder
+  // rows or columns, invent blank cells, or accept approximate substrings.
+  const normalize=text=>String(text??"").normalize("NFKC").toLowerCase()
+    .replace(/\b(?:a|b)\b(?=$)/g,"")
+    .replace(/[^\p{L}\p{N}]+/gu,"");
+  const matches=[],mismatchCoordinates=[];
+  for(let row=0;row<40;row++)for(let col=0;col<2;col++){
+    const ok=normalize(excelRows[row][col])===normalize(ref.rows[row][col]);
+    matches.push(ok);
+    if(!ok)mismatchCoordinates.push([row+1,col+1]);
+  }
+  const exact=matches.filter(Boolean).length;
+  console.log("R82_PUBLISHER_CELL_REFERENCE "+JSON.stringify({
+    source:src.id,verifiedOriginalPdfHash:true,source:"publisher-html",
+    referenceReview:"project-transcribed-not-independent",
+    rows:40,columns:2,totalCells:80,matchingCells:exact,
+    mismatchedCoordinates:mismatchCoordinates,valuesNotLogged:true,
+    certifiedDocumentCredit:0,
+  }));
+  // Safeguard a minimum plausible table while publishing the ENTIRE observed
+  // mismatch set for further fixing; this is deliberately not a 100% claim.
+  // Baseline observed from the original source on 18 Oct 2026: 76/80
+  // matching positions; four label discrepancies remain visibly reported.
+  // Require no regression from that recorded real-document baseline.
+  expect(exact).toBeGreaterThanOrEqual(76);
 });
 
 
@@ -725,6 +776,12 @@ test("R81 full original PMC5995222 selectively exports source page 4 table to XL
   await page.getByRole("button",{name:"Return to table choices"}).click();
 
   await selected.check();
+  const preview=page.getByRole("region",{name:"Scrollable extracted spreadsheet preview"});
+  await expect(preview).toBeVisible();
+  await expect(page.getByRole("heading",{name:/extracted values preview \(unverified\)/i})).toBeVisible();
+  await expect(preview.getByRole("row")).toHaveCount(7);
+  await expect(preview.getByRole("columnheader")).toHaveCount(9);
+  await expect(page.getByText(/Showing 6 of 6 rows and/)).toBeVisible();
   const downloadPromise=page.waitForEvent("download",{timeout:70000});
   await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
   const download=await downloadPromise;
