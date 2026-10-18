@@ -359,7 +359,7 @@ for(const source of release77PmcCases){
           })).filter(l=>l.words.length>0);
           const captionHits=lines.flatMap((l,i)=>{
             const text=l.words.map(w=>w.text).join(" ");
-            return /\\btable\\s*\\d{1,2}[.\\s:]?/i.test(text)
+            return /\btable\s*\d{1,2}[.\s:]?/i.test(text)
               ? [{index:i,y:l.y,words:l.words.length}]:[];
           }).slice(0,8);
           const firstXs=lines.map(l=>Math.round(l.words[0].bounds.x));
@@ -381,6 +381,11 @@ for(const source of release77PmcCases){
             tail:lines.slice(-10).map(l=>({i:l.sourceIndex,y:l.y,
               starts:l.words.slice(0,6).map(w=>Math.round(w.bounds.x))})),
             doubleRows:[...yBandCounts.values()].filter(v=>v>1).length,
+            linesForRowReview:which==="left"?lines.map(l=>({
+              i:l.sourceIndex,y:l.y,w:l.words.length,
+              xs:l.words.slice(0,10).map(w=>Math.round(w.bounds.x)),
+              hasRightValue:l.words.some(w=>w.bounds.x>190&&w.bounds.x<295),
+            })):[],
           };
         });
         console.log("R80_COLUMN_BOUNDARY_DIAGNOSTIC "+JSON.stringify({
