@@ -1363,3 +1363,105 @@ test("R88 PMC3464982 actual 28x3 native source table to XLSX",async({page})=>{
     acceptedCertificationCredit:0,
   }));
 });
+
+
+/**
+ * R90: source-first dense 34 × 7 atomic-displacement table, not another
+ * fabricated PDF. Read the ORIGINAL 13-page publisher PDF and export its
+ * actual page-9 workbook in Chromium, checking selected published atomic
+ * labels + numerical measurements independently of PDF parser output.
+ */
+test("R90 real PMC3297222 dense native 34x7 XLSX publisher cell audit",async({page})=>{
+  test.setTimeout(240_000);
+  const source=release77PmcCases.find(entry=>entry.id==="PMC3297222");
+  if(!source)throw Error("Original R90 publisher source missing");
+  const reference=JSON.parse(await readFile(
+    "benchmarks/release90/pmc3297222-atomic-displacement-publisher-reference.json","utf8"));
+  expect(reference.sourceFullPdfSha256).toBe(source.sha256);
+  expect(reference.sourcePdfPages).toBe(13);
+  expect(reference.expectedTableRows).toBe(34);
+  expect(reference.expectedTableColumns).toBe(7);
+  expect(reference.selectedRows).toHaveLength(33);
+  expect(reference.selectedRows.every(r=>r.length===7)).toBe(true);
+  expect(reference.acceptedFormalV4DocumentCredit).toBe(0);
+
+  const bytes=await boundedPmcPdf(source.sourceUrl);
+  expect(createHash("sha256").update(bytes).digest("hex")).toBe(source.sha256);
+  const original=await PDFDocument.load(bytes,{ignoreEncryption:false});
+  expect(original.getPageCount()).toBe(source.sourcePageCount);
+  const excerpt=await PDFDocument.create();
+  excerpt.addPage((await excerpt.copyPages(original,[source.pageNumber-1]))[0]);
+  await page.goto("/pdf-to-excel");
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"PMC3297222-original-page9.pdf",mimeType:"application/pdf",
+    buffer:Buffer.from(await excerpt.save()),
+  });
+  await page.getByRole("button",{name:"Inspect & choose a table"}).click();
+  await expect(page.getByRole("heading",{name:"Select one detected table"}))
+    .toBeVisible({timeout:150000});
+  const selected=page.locator("label").filter({hasText:/34 rows × 7 columns/})
+    .locator('input[type="radio"]');
+  await expect(selected).toHaveCount(1);
+  await expect(selected).toBeEnabled();
+  await selected.check();
+  const downloading=page.waitForEvent("download",{timeout:75000});
+  await page.getByRole("button",{name:"Export selected table (.xlsx)"}).click();
+  const file=await (await downloading).path();
+  if(!file)throw Error("Original 34x7 Excel browser download missing");
+  const zip=await JSZip.loadAsync(await readFile(file));
+  const sheets=Object.keys(zip.files).filter(name=>
+    /^xl\/worksheets\/sheet\d+\.xml$/.test(name));
+  expect(sheets).toHaveLength(2);
+  const xml=await zip.file("xl/worksheets/sheet1.xml")?.async("string")??"";
+  const review=await zip.file("xl/worksheets/sheet2.xml")?.async("string")??"";
+  const decode=value=>String(value??"").replace(/&lt;/g,"<")
+    .replace(/&gt;/g,">").replace(/&quot;/g,'"')
+    .replace(/&apos;/g,"'").replace(/&amp;/g,"&");
+  const actual=Array.from({length:34},()=>Array.from({length:7},()=>""));
+  const seen=new Set();
+  for(const m of xml.matchAll(/<c r="([A-Z]+)(\d+)"[^>]*>([\s\S]*?)<\/c>/g)){
+    const col=[...m[1]].reduce((v,ch)=>v*26+ch.charCodeAt(0)-64,0)-1;
+    const row=Number(m[2])-1;
+    expect(row).toBeGreaterThanOrEqual(0);
+    expect(row).toBeLessThan(34);
+    expect(col).toBeGreaterThanOrEqual(0);
+    expect(col).toBeLessThan(7);
+    const key=m[1]+m[2];
+    expect(seen.has(key)).toBe(false);
+    seen.add(key);
+    const texts=[...m[3].matchAll(
+      /<t(?:\s[^>]*)?>([\s\S]*?)<\/t>/g)].map(q=>decode(q[1])).join("");
+    actual[row][col]=texts||decode(m[3].match(/<v>([\s\S]*?)<\/v>/)?.[1]??"");
+  }
+  expect([...xml.matchAll(/<row r="\d+"/g)]).toHaveLength(34);
+  expect(/<f(?:\s|>)/.test(xml)).toBe(false);
+  expect(review).toContain("UNVERIFIED");
+  expect(review).toContain("SELECTIVE EXPORT");
+
+  // The first column must identify publisher atom labels in their
+  // actual table order; do not cherry-pick or skip missing source rows.
+  const clean=value=>String(value??"").normalize("NFKC")
+    .trim().replace(/[\s\u00a0\u2009\u202f]+/g,"")
+    .replace(/[−–—]/g,"-").replace(/[′’]/g,"'").toLowerCase();
+  const expected=reference.selectedRows;
+  const start=actual.findIndex(row=>clean(row[0])===clean(expected[0][0]));
+  const failures=[];let matches=0;
+  for(let row=0;row<expected.length;row++)for(let col=0;col<7;col++){
+    const observed=clean(actual[start+row]?.[col]);
+    const target=clean(expected[row][col]);
+    if(start>=0&&observed===target)matches++;
+    else failures.push([start+row+1,col+1]);
+  }
+  console.log("R90_REAL_PUBLISHER_ATOMIC_CELL_AUDIT "+JSON.stringify({
+    originalSource:source.id,originalHashVerified:true,
+    verifiedWorkbookDimensions:[34,7],firstMatchedSourceRow:start+1,
+    selectedPublisherSourceCells:231,matchingCells:matches,
+    mismatchCoordinates:failures,formulaCount:0,
+    publisherHtmlReferenceProjectTranscribed:true,independentCredit:0,
+  }));
+  // Do not silently lower this gate: source values must be independently
+  // adjudicated before counting any formal V4 Stable document.
+  expect(start).toBeGreaterThanOrEqual(0);
+  expect(matches).toBe(231);
+  expect(failures).toEqual([]);
+});
