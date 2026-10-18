@@ -3,7 +3,7 @@ import JSZip from "jszip";
 import type {LogicalTable} from "../../pdf-engine-v4/model/logicalTable";
 import {preparePdfV4XlsxExport} from "../pdfToXlsxQuality";
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport} from "../pdfToXlsxSelection";
-import {createPdfXlsxWorkbook} from "../pdfToXlsx";
+import {serializeTableCsv} from "../tableExport";import {createPdfXlsxWorkbook} from "../pdfToXlsx";
 
 function table(page:number,id:string):LogicalTable{
   const values=[["Item","ID","Amount"],["A","00071","19"],["B","00072","21"]];
@@ -58,6 +58,19 @@ describe("Release 81 selective native PDF table export",()=>{
     expect(review).toContain("SELECTIVE EXPORT");
     expect(review).toContain("UNVERIFIED");
   });
+  it("R95 selective CSV preserves columns and escapes formula-like values with the XLSX quality gate",()=>{
+    const t=table(1,"csv");
+    t.rows[1].cells[2].text="=HYPERLINK(1)";
+    const plan=prepareSelectedPdfV4XlsxExport(source([t]),0);
+    const output=serializeTableCsv(plan.tables[0].rows);
+    expect(output).toContain('"00071"');
+    expect(output).toContain('"\'=HYPERLINK(1)"');
+    expect(output.split("\\r\\n").filter(Boolean)).toHaveLength(3);
+    expect(output).not.toContain('<f>');
+    expect(plan.reviewNotes?.join(" ")).toContain("SELECTIVE EXPORT");
+    expect(plan.tables[0].rows[1][2]).toBe("=HYPERLINK(1)");
+  });
+
   it("never marks a weak or duplicated-cell candidate eligible",()=>{
     const weak=table(1,"weak");weak.confidence=0.2;
     const duplicate=table(2,"dup");
