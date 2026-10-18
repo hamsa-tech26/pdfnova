@@ -1,6 +1,7 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
+import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
 import type {
   PdfLine,
   PdfVisualBlock,
@@ -1494,6 +1495,10 @@ export function detectTableRegionsForPage(
   // Never discard a source paragraph merely because it contains a caption.
   // Split only if the recovered grid passes the same scoped evidence gate as
   // PR #71. A rejected candidate leaves its original paragraph untouched.
+  const interleavedGrids=findInterleavedNativeThreeColumnGrids(splitNativeBlocks)
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
+  const interleavedSources=new Set(interleavedGrids.map(c=>c.sourceBlock));
+  const interleavedBySource=new Map(interleavedGrids.map(c=>[c.sourceBlock,c] as const));
   const elevenGrids=findNativeElevenColumnGrids(splitNativeBlocks)
     .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   const pairedGrids = findPairedNativeCaptionGrids(splitNativeBlocks)
@@ -1519,7 +1524,9 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.spacing.score >= 12 &&
       candidate.analysis.totalScore >= resolvedOptions.tableThreshold,
     );
-  const allAdmitted = [...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates];
+  const allAdmitted = [...interleavedGrids,...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates]
+    .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
+      candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource = new Map<PdfVisualBlock, typeof allAdmitted>();
   const captionAnalyses = new Map<PdfVisualBlock, TableRegionAnalysis>();
   for (const candidate of allAdmitted) {
@@ -1535,6 +1542,14 @@ export function detectTableRegionsForPage(
 
   const proseFragments = new Set<PdfVisualBlock>();
   const splitBlocks = splitNativeBlocks.flatMap(block => {
+    if(block.type==="paragraph"){
+      const special=interleavedBySource.get(block);
+      if(special){
+        const prose=remainingInterleavedNativeProse(special);
+        if(prose){proseFragments.add(prose);return [special.block,prose];}
+        return [special.block];
+      }
+    }
     const captions = bySource.get(block);
     if (block.type !== "paragraph" || !captions?.length) return [block];
     let cursor = 0;
