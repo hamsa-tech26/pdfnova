@@ -196,7 +196,7 @@ const release77PmcCases=[
     sourceUrl:"https://pmc-oa-opendata.s3.amazonaws.com/PMC3464982.1/PMC3464982.1.pdf",
     sha256:"40f3441af492430c32156c53ae23595377bfa67b3ec2591a38a4b3fc1e5b0f54",
     pageNumber:5,sourcePageCount:8,publishedRows:28,publishedColumns:3,
-    previousRows:2,previousColumns:4,diagnosticOnly:true,requireImprovement:false,
+    previousRows:2,previousColumns:4,diagnosticOnly:false,requireImprovement:true,
   },
   {
     id:"PMC3063220",
@@ -297,6 +297,11 @@ for(const source of release77PmcCases){
       }));
       const closest=shapes.sort((a,b)=>
         dimensionError(a.rows,a.columns)-dimensionError(b.rows,b.columns))[0]??null;
+      if(source.id==="PMC3464982"){
+        // R88 production candidate: FAIL unless the original hash-verified
+        // full publisher PDF really yields the published 28 x 3 table.
+        expect(closest).toEqual({rows:28,columns:3});
+      }
       const baselineError=dimensionError(source.previousRows,source.previousColumns);
       const observedError=closest?dimensionError(closest.rows,closest.columns):null;
       console.log("R77_REPRO "+JSON.stringify({
