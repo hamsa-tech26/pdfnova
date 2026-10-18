@@ -1295,6 +1295,42 @@ test("R87 original PMC3063220 real XLSX numeric cell and 13x11 table verificatio
   // Enforce the observed 96/96 original-PDF measurement, not an empty baseline.
   expect(matches).toBe(96);
   expect(mismatches).toEqual([]);
+  // R102–106 full publisher source audit: enforce ALL twelve real data rows
+  // and all eleven publisher columns, including medication, fever, rescue
+  // treatment labels and blank cells omitted from the R87 numeric reference.
+  // Do not skip source rows, log clinical values or claim independent review.
+  const fullReference=JSON.parse(await readFile(
+    "benchmarks/release102/pmc3063220-table3-complete-publisher-reference.json","utf8"));
+  expect(fullReference.fullPdfSha256).toBe(source.sha256);
+  expect(fullReference.expectedRows).toBe(13);
+  expect(fullReference.expectedColumns).toBe(11);
+  expect(fullReference.body).toHaveLength(12);
+  expect(fullReference.body.every(row=>row.length===11)).toBe(true);
+  expect(fullReference.formalStableDocumentCredit).toBe(0);
+  const clean=value=>String(value??"").normalize("NFKC")
+    .trim().toLowerCase().replace(/[\s\u00a0\u2009\u202f]+/gu,"")
+    .replace(/[−–—]/gu,"-");
+  const sourceDiscrepancies=[];
+  const discrepancyColumns=Array(11).fill(0);
+  let fullMatches=0;
+  for(let r=0;r<12;r++)for(let c=0;c<11;c++){
+    if(clean(parsed[r+1]?.[c])===clean(fullReference.body[r][c]))fullMatches++;
+    else{
+      sourceDiscrepancies.push([r+2,c+1]);
+      discrepancyColumns[c]++;
+    }
+  }
+  console.log("R102_FULL_SCIENTIFIC_PUBLISHER_AUDIT "+JSON.stringify({
+    originalPublisher:"PMC3063220",hashVerified:true,
+    comparedDataCells:132,sourceNormalizedMatches:fullMatches,
+    mismatchCoordinates:sourceDiscrepancies,
+    differencesByColumn:discrepancyColumns,
+    clinicalValuesLogged:false,headerSemanticsIndependent:false,
+    formalIndependentCredit:0
+  }));
+  expect(sourceDiscrepancies).toEqual([]);
+  expect(fullMatches).toBe(132);
+
 });
 
 
