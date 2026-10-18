@@ -31,8 +31,8 @@ function source(){
   a[0]={...a[0],text:"Table 3. Native source header"};
   for(let i=0;i<12;i++){
     const starts= i<2?xs.slice(0,10): i%4===0?xs.slice(0,10):xs;
-    a.push(line(6+i,635-i*12,starts,"row"));
-    if(i===5)a.push(line(38,563,[326],"continuation"));
+    a.push(line(6+i,i<=5?635-i*12:555-(i-6)*12,starts,"row"));
+    if(i===5)a.push(line(38,566,[326],"continuation"));
   }
   a.push(line(39,430,[57,305],"prose"));
   const all=a.flatMap(l=>l.words);
