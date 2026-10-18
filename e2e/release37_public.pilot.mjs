@@ -931,10 +931,19 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
     mismatchCoordinates:discrepancies,sourceValuesNotLogged:true,
     independentAcceptanceCredit:0,
   }));
-  // The initial test records the measured result. Subsequent Release84
-  // commits must set an evidence-based nonregression threshold, never
-  // fabricate a passing 133/133 if extracted cells disagree.
-  expect(matches).toBeGreaterThanOrEqual(0);
+  // Full original-publisher reference observed as 133/133 on Release 83.
+  // A change that loses a real data cell or moves it to a different source
+  // column must fail this regression.
+  expect(matches).toBe(133);
+  expect(discrepancies).toEqual([]);
+  expect(headerMismatches).toEqual([]);
   expect(xmls.some(xml=>xml.includes("UNVERIFIED"))).toBe(true);
+  const review=xmls.find((xml,i)=>i!==tableIndex&&
+    xml.includes("Grouped native column heading guide"));
+  expect(review).toBeDefined();
+  expect(review).toContain("Jonathan / No. of makers");
+  expect(review).toContain("Golden Delicious / Length(cM)");
+  expect(review).toContain("Consensus / Length(cM)");
+  expect(review).toContain("no Excel cell merges recreated");
   expect(/<f(?:\s|>)/.test(xmls[tableIndex])).toBe(false);
 });
