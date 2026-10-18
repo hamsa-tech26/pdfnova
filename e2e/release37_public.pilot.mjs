@@ -946,6 +946,26 @@ test("R84 original PMC4595315 publisher Table 3 against 133 referenced Excel cel
   }));
   const tableIndex=matrices.findIndex(rows=>rows.length===21);
   expect(tableIndex).toBeGreaterThanOrEqual(0);
+  // R91 original-publisher XLSX header presentation: three actual paired
+  // native source group parents, not a guessed merge over data cells.
+  const nativeSheet=xmls[tableIndex];
+  const mergeRefs=[...nativeSheet.matchAll(/<mergeCell ref="([^"]+)"\/>/g)]
+    .map(m=>m[1]);
+  const styleSheet=await zip.file("xl/styles.xml")?.async("string")??"";
+  const r91Ok=mergeRefs.join(",")==="B1:C1,D1:E1,F1:G1" &&
+    nativeSheet.includes('ySplit="2" topLeftCell="A3"') &&
+    styleSheet.includes('wrapText="1"');
+  console.log("R91_ORIGINAL_GROUPED_HEADER_PRESENTATION "+JSON.stringify({
+    originalPublisher:source.id,originalHashVerified:true,
+    expectedNativeTwoTierHeaderRows:2,
+    expectedSafeGroupMerges:3,observedGroupMerges:mergeRefs,
+    twoHeaderRowsFrozen:nativeSheet.includes('ySplit="2" topLeftCell="A3"'),
+    wordWrappedHeaderStyle:styleSheet.includes('wrapText="1"'),
+    passed:r91Ok,formalIndependentCredit:0,
+  }));
+  expect(mergeRefs).toEqual(["B1:C1","D1:E1","F1:G1"]);
+  expect(nativeSheet).toContain('ySplit="2" topLeftCell="A3"');
+  expect(styleSheet).toContain('wrapText="1"');
   const tableRows=matrices[tableIndex].slice(2);
   expect(tableRows).toHaveLength(19);
   const headerRows=matrices[tableIndex].slice(0,2);
