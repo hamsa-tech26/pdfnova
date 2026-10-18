@@ -1,3 +1,4 @@
+import {inferNativeScientificSymbols} from "./nativeScientificSymbolRecovery";
 import type {
   PdfBoundingBox,
   PdfWord,
@@ -554,14 +555,26 @@ function finalizeCell(
   cell: LogicalCell,
   column: ColumnCandidate,
   minimumCellConfidence: number,
+  rowReason: string,
 ): LogicalCell {
   const rawText =
     joinWords(cell.words);
 
+  const nativeLabel =
+    rowReason === "parallel-native-scientific-physical-row" &&
+    cell.columnIndex === 0 &&
+    cell.words.length > 0 &&
+    cell.words.every(word =>
+      !word.extractionProvenance ||
+      word.extractionProvenance.source === "native-pdf",
+    )
+      ? inferNativeScientificSymbols(rawText)
+      : {text: rawText, reasons: [] as string[]};
+
   const text =
     normalizeFinalSerialCellText(
       cell,
-      rawText,
+      nativeLabel.text,
     );
 
   const bounds =
@@ -583,6 +596,12 @@ function finalizeCell(
   return {
     ...cell,
     text,
+    ...(nativeLabel.reasons.length > 0
+      ? {
+          originalNativeText: rawText,
+          nativeTextAdjustmentReasons: nativeLabel.reasons,
+        }
+      : {}),
     bounds,
     confidence:
       confidence >=
@@ -613,6 +632,7 @@ function buildLogicalRow(
           cell,
           columns[index],
           minimumCellConfidence,
+          row.reason,
         ),
     );
 

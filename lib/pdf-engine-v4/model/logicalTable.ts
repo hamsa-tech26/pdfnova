@@ -24,6 +24,10 @@ export type LogicalCell = {
   rowIndex: number;
   columnIndex: number;
   text: string;
+  /** Exact native source text before any contextual glyph interpretation. */
+  originalNativeText?: string;
+  /** Every native Unicode inference must be disclosed in XLSX review notes. */
+  nativeTextAdjustmentReasons?: string[];
   originalOcrText?: string;
   ocrAdjustmentReasons?: string[];
   words: PdfWord[];
