@@ -192,5 +192,25 @@
     "Grouped hierarchical publisher headers may not be reproduced in current flat V4 XLSX export; assess separately.",
     "Original publisher spelling uses 'maker' in 'Density (cM / maker)'. Do not silently fix source."
   ],
-  "verifiedDocumentCountCredit": 0
+  "verifiedDocumentCountCredit": 0,
+  "publisherHeaderRows": [
+    [
+      "Chromosome",
+      "Jonathan",
+      "",
+      "Golden Delicious",
+      "",
+      "Consensus",
+      ""
+    ],
+    [
+      "/linkage group",
+      "No. of makers",
+      "Length(cM)",
+      "No. of makers",
+      "Length(cM)",
+      "No. of makers",
+      "Length(cM)"
+    ]
+  ]
 }
