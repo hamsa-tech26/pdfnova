@@ -1,0 +1,162 @@
+{
+  "id": "PMC3464982-publisher-Table3",
+  "source": "Pereira G, Blair E, Lawrence D. Validation of a model for optimal birth weight: a prospective study using serial ultrasounds. BMC Pediatrics 2012;12:73.",
+  "publisherArticleUrl": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3464982/",
+  "publisherDOI": "https://doi.org/10.1186/1471-2431-12-73",
+  "articleLicense": "CC BY 2.0 (publisher statement); attribution required",
+  "sourceFullPdfUrl": "https://pmc-oa-opendata.s3.amazonaws.com/PMC3464982.1/PMC3464982.1.pdf",
+  "sourceFullPdfSha256": "40f3441af492430c32156c53ae23595377bfa67b3ec2591a38a4b3fc1e5b0f54",
+  "sourcePdfPage": 5,
+  "sourcePdfPageCount": 8,
+  "publisherCaption": "Table 3. Study characteristics",
+  "referenceStatus": "publisher-HTML-project-transcribed-not-independent-adjudication",
+  "rightsStatus": "Publisher article CC BY 2.0; distribution and attribution obligations still require review",
+  "reviewedIndependently": false,
+  "acceptedDocumentCredit": 0,
+  "expectedShape": [
+    28,
+    3
+  ],
+  "rows": [
+    [
+      "Characteristic",
+      "N",
+      "%"
+    ],
+    [
+      "All births",
+      "691",
+      "100"
+    ],
+    [
+      "All scans",
+      "2,848",
+      "100"
+    ],
+    [
+      "Infant sex",
+      "",
+      ""
+    ],
+    [
+      "Male",
+      "354",
+      "51"
+    ],
+    [
+      "Female",
+      "337",
+      "49"
+    ],
+    [
+      "Maternal age (years)",
+      "",
+      ""
+    ],
+    [
+      "Less than 20",
+      "58",
+      "8"
+    ],
+    [
+      "20–24",
+      "132",
+      "19"
+    ],
+    [
+      "25–29",
+      "210",
+      "30"
+    ],
+    [
+      "30–34",
+      "201",
+      "29"
+    ],
+    [
+      "35 or over",
+      "90",
+      "13"
+    ],
+    [
+      "Birth order",
+      "",
+      ""
+    ],
+    [
+      "First birth",
+      "308",
+      "45"
+    ],
+    [
+      "Second birth",
+      "215",
+      "31"
+    ],
+    [
+      "Third birth",
+      "108",
+      "16"
+    ],
+    [
+      "Fourth birth or more",
+      "60",
+      "9"
+    ],
+    [
+      "Scans per gestation period",
+      "",
+      ""
+    ],
+    [
+      "14–17 weeks",
+      "147",
+      "5"
+    ],
+    [
+      "18–22 weeks",
+      "578",
+      "20"
+    ],
+    [
+      "23–27 weeks",
+      "561",
+      "20"
+    ],
+    [
+      "28–32 weeks",
+      "550",
+      "19"
+    ],
+    [
+      "33–39 weeks",
+      "991",
+      "34"
+    ],
+    [
+      "40–42 weeks",
+      "21",
+      "1"
+    ],
+    [
+      "Scans per individual",
+      "",
+      ""
+    ],
+    [
+      "2–3 scans",
+      "190",
+      "28"
+    ],
+    [
+      "4–5 scans",
+      "459",
+      "66"
+    ],
+    [
+      "6–8 scans",
+      "42",
+      "6"
+    ]
+  ]
+}
