@@ -303,6 +303,14 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
       notes.push("Table " + number + ": multi-page continuation was determined by the PDF table engine; review the boundary and possible duplicated/missing header rows.");
     }
     for (const warning of diagnostics.warnings) notes.push("Table " + number + ": " + warning);
+    const inferredSymbols = table.rows.flatMap(row => row.cells)
+      .filter(cell => (cell.nativeTextAdjustmentReasons?.length ?? 0) > 0);
+    if (inferredSymbols.length) {
+      notes.push("Table " + number + ": " + inferredSymbols.length +
+        " native scientific label cell(s) contain Greek symbols inferred " +
+        "from ambiguous font glyphs. Original extracted strings were retained " +
+        "for audit; compare every inferred symbol with the visual PDF before use.");
+    }
     const extractedRows = tableToCsvRows(table);
     const medianRows = projectCaptionMedianUnits(table, extractedRows);
     if (medianRows !== extractedRows) {
