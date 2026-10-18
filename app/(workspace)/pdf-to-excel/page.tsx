@@ -240,6 +240,12 @@ export default function PdfToExcelPage() {
                   This is how the XLSX values will appear, not a visual rendering of the original PDF.
                   Check against the source before using the spreadsheet.
                 </p>
+                {preview.pairedHeaderLayout && (
+                  <p role="status" className="text-sm font-medium text-amber-800 dark:text-amber-200">
+                    Two-level native header detected: paired parent headings are grouped
+                    in the preview and Excel. Verify the group labels and boundaries against the PDF.
+                  </p>
+                )}
                 <div className="max-h-80 overflow-auto rounded-xl border border-slate-200 dark:border-slate-700"
                   role="region" aria-label="Scrollable extracted spreadsheet preview" tabIndex={0}>
                   <table className="w-full min-w-max border-collapse text-left text-sm">
@@ -260,7 +266,11 @@ export default function PdfToExcelPage() {
                         <tr key={row} className="border-t border-slate-200 dark:border-slate-700">
                           <th scope="row" className="bg-slate-50 px-3 py-2 font-semibold dark:bg-slate-900">{row+1}</th>
                           {cells.map((value,col)=>(
-                            <td key={col} className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
+                            preview.pairedHeaderLayout && row===0 && [2,4,6].includes(col)
+                              ? null :
+                            <td key={col}
+                              colSpan={preview.pairedHeaderLayout && row===0 && [1,3,5].includes(col)?2:1}
+                              className="max-w-72 whitespace-pre-wrap break-words px-3 py-2 align-top">
                               {value || <span className="text-slate-400">(blank)</span>}
                             </td>
                           ))}
