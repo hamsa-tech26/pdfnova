@@ -1,0 +1,118 @@
+{
+  "id": "PMC3297222-atomic-displacement-7col",
+  "publisherArticleUrl": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3297222/",
+  "citation": "Takjoo R, Najafi A, Ng SW, Tiekink ERT. (Butan-2-ol-κO)... Acta Crystallographica Section E 2012, 68 m255–m256.",
+  "doi": "10.1107/S160053681200431X",
+  "sourcePdfUrl": "https://pmc-oa-opendata.s3.amazonaws.com/PMC3297222.1/PMC3297222.1.pdf",
+  "sourceFullPdfSha256": "9313ad1420a750c43f6ed53b8a81cf2b2009e86a28d37721bd8e3e66db973d58",
+  "sourcePdfPage": 9,
+  "sourcePdfPages": 13,
+  "publisherTableTitle": "Atomic displacement parameters (Å²)",
+  "referenceStatus": "project-transcribed-from-publisher-html-not-blind-independent",
+  "rights": "CC BY, attribution required, publisher article",
+  "expectedTableRows": 34,
+  "expectedTableColumns": 7,
+  "independentReviewers": 0,
+  "acceptedFormalV4DocumentCredit": 0,
+  "selectedRows": [
+    [
+      "U",
+      "0.01237 (10)",
+      "0.01495 (11)",
+      "0.02069 (11)",
+      "0.00117 (9)",
+      "−0.00049 (8)",
+      "0.00006 (10)"
+    ],
+    [
+      "S1",
+      "0.0231 (11)",
+      "0.0219 (12)",
+      "0.0267 (13)",
+      "0.0079 (9)",
+      "−0.0014 (10)",
+      "0.0046 (10)"
+    ],
+    [
+      "O1",
+      "0.0144 (19)",
+      "0.033 (2)",
+      "0.024 (2)",
+      "0.0056 (18)",
+      "−0.0006 (17)",
+      "0.0000 (19)"
+    ],
+    [
+      "O2",
+      "0.026 (2)",
+      "0.020 (2)",
+      "0.022 (2)",
+      "−0.0008 (17)",
+      "0.0038 (18)",
+      "−0.0006 (17)"
+    ],
+    [
+      "O3",
+      "0.0125 (18)",
+      "0.018 (2)",
+      "0.028 (2)",
+      "0.0010 (16)",
+      "0.0060 (17)",
+      "0.0025 (17)"
+    ],
+    [
+      "O4",
+      "0.0133 (19)",
+      "0.018 (2)",
+      "0.028 (2)",
+      "0.0001 (16)",
+      "0.0037 (17)",
+      "−0.0015 (17)"
+    ],
+    [
+      "O5",
+      "0.018 (2)",
+      "0.016 (2)",
+      "0.037 (3)",
+      "0.0032 (17)",
+      "0.004 (2)",
+      "−0.0016 (19)"
+    ],
+    [
+      "N1",
+      "0.016 (2)",
+      "0.019 (2)",
+      "0.019 (3)",
+      "0.002 (2)",
+      "−0.005 (2)",
+      "0.001 (2)"
+    ],
+    [
+      "N2",
+      "0.018 (3)",
+      "0.016 (3)",
+      "0.023 (3)",
+      "0.006 (2)",
+      "0.001 (2)",
+      "−0.003 (2)"
+    ],
+    [
+      "C8'",
+      "0.018 (3)",
+      "0.016 (3)",
+      "0.023 (3)",
+      "0.006 (2)",
+      "0.001 (2)",
+      "−0.003 (2)"
+    ],
+    [
+      "N3",
+      "0.015 (2)",
+      "0.022 (3)",
+      "0.021 (3)",
+      "0.002 (2)",
+      "0.000 (2)",
+      "−0.002 (2)"
+    ]
+  ]
+}
