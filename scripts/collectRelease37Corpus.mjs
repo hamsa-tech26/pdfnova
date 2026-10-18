@@ -5,6 +5,7 @@ import path from "node:path";
 import {pathToFileURL} from "node:url";
 import {scoreRelease37Case,aggregateRelease37Scores} from "./scoreRelease37Cases.mjs";
 import {validateRelease37ReviewedReference} from "./release37BlindReference.mjs";
+import {compareRelease85BlindAnnotations,release85CanonicalSourceGridDigest} from "./release85BlindAgreement.mjs";
 
 const sha = bytes => createHash("sha256").update(bytes).digest("hex");
 const allowedCategories=new Set(["native","scanned","hybrid","complex","multipage","rotated","hindi","bengali"]);
@@ -29,7 +30,7 @@ export function validateRelease37Entry(entry) {
      entry.reviewedBy.trim().length<3||! /^\d{4}-\d\d-\d\d$/.test(entry?.reviewedAt??"")) {
     errors.push("independently reviewed reference labels missing");
   }
-  for(const key of ["localPdf","referenceJson","inspectorJson"]) {
+  for(const key of ["localPdf","referenceJson","inspectorJson","blindAnnotatorAJson","blindAnnotatorBJson"]) {
     if(typeof entry?.[key]!=="string"||!entry[key].trim())errors.push(key+" path missing");
   }
   return errors;
@@ -102,8 +103,12 @@ export async function collectRelease37Corpus(manifest){
     if(uniquePdfHashes.has(pdfSha))throw new Error(entry.id+": duplicate PDF bytes; each benchmark document must be independent");
     uniquePdfHashes.add(pdfSha);
     const goldBytes=await readPrivateFile(entry.referenceJson,".json");
+    const annotationABytes=await readPrivateFile(entry.blindAnnotatorAJson,".json");
+    const annotationBBytes=await readPrivateFile(entry.blindAnnotatorBJson,".json");
     const resultBytes=await readPrivateFile(entry.inspectorJson,".json");
     const gold=JSON.parse(goldBytes.toString("utf8"));
+    const annotationA=JSON.parse(annotationABytes.toString("utf8"));
+    const annotationB=JSON.parse(annotationBBytes.toString("utf8"));
     const result=JSON.parse(resultBytes.toString("utf8"));
     let originalPageCount;
     try {
@@ -115,6 +120,22 @@ export async function collectRelease37Corpus(manifest){
     const reviewGate=validateRelease37ReviewedReference(gold,pdfSha,entry,originalPageCount);
     if(reviewGate.status!=="REVIEW_METADATA_VALID")
       throw new Error(entry.id+": independent original-source reference review BLOCKED: "+reviewGate.errors.join("; "));
+    // Release 85: two genuine, source-first independently completed
+    // annotations are a mandatory prerequisite for formal corpus scoring.
+    // Neither the comparison nor matching text is a human rights/independence
+    // attestation. The final approved source grid must match BOTH drafts.
+    const agreement=compareRelease85BlindAnnotations(annotationA,annotationB,{
+      sha256:pdfSha,pageCount:originalPageCount,
+    });
+    if(agreement.status!=="MATCHED_PENDING_INDEPENDENT_APPROVAL")
+      throw new Error(entry.id+": two original-PDF blind annotations missing, "+
+        "unsafe, or disagree; human independent adjudication is required.");
+    const approvedGrid=release85CanonicalSourceGridDigest(gold);
+    if(approvedGrid!==release85CanonicalSourceGridDigest(annotationA)||
+       approvedGrid!==release85CanonicalSourceGridDigest(annotationB))
+      throw new Error(entry.id+": final human-reviewed source cells differ "+
+        "from the separately transcribed blind originals.");
+
     // Requiring a full Inspector result discourages fabricated CSV-only metrics.
     if(!Array.isArray(result.document?.pages)||!Array.isArray(result.tables)||
        !result.processingTimes || !result.ocrDecision)throw new Error(entry.id+": incomplete V4 Inspector output");
@@ -123,6 +144,7 @@ export async function collectRelease37Corpus(manifest){
       id:entry.id,usageRights:entry.usageRights,rightsUrl:entry.rightsUrl,sourceUrl:entry.sourceUrl,
       categories:[...new Set(entry.categories)],independentReferenceReview:true,
       pdfSha,goldSha:sha(goldBytes),outputSha:sha(resultBytes),score,
+      reviewerPairEvidenceDigest:sha(annotationABytes)+"-"+sha(annotationBBytes),
     });
   }
   return buildRelease37CorpusReport(records);
