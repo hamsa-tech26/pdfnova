@@ -1,0 +1,171 @@
+{
+  "id": "PMC2147049:Table1",
+  "referenceSource": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2147049/",
+  "referenceTable": "Table 1. Features of the Arcobacter butzleri RM4018 genome",
+  "license": "Public-domain declaration in source article",
+  "referenceStatus": "publisher-html-transcribed-by-project-not-independently-adjudicated",
+  "pageNumber": 3,
+  "originalPdfSHA256": "465b9e4c260dcc2c2d7b3532efe7ef2ef7d88d9ef88502ca4dc689cdd77d726e",
+  "rows": [
+    [
+      "General features",
+      "Number or % of total"
+    ],
+    [
+      "Chromosome size (bp)",
+      "2,341,251"
+    ],
+    [
+      "G+C content",
+      "27.05%"
+    ],
+    [
+      "CDS numbers",
+      "2259"
+    ],
+    [
+      "Assigned function",
+      "1011 (45%)"
+    ],
+    [
+      "Pseudogenes",
+      "5"
+    ],
+    [
+      "General function",
+      "505 (22%)"
+    ],
+    [
+      "Conserved hypothetical/hypothetical",
+      "743 (33%)"
+    ],
+    [
+      "Prophage",
+      "1"
+    ],
+    [
+      "Genetic islands",
+      "3"
+    ],
+    [
+      "Ribosomal RNA operons",
+      "5"
+    ],
+    [
+      "Plasmids",
+      "0"
+    ],
+    [
+      "IS elements",
+      "0"
+    ],
+    [
+      "Poly GC tracts",
+      "0"
+    ],
+    [
+      "Gene classes",
+      ""
+    ],
+    [
+      "Chemotaxis proteins",
+      "46"
+    ],
+    [
+      "Che/Mot proteins",
+      "11"
+    ],
+    [
+      "Methyl-accepting chemotaxis proteins",
+      "29"
+    ],
+    [
+      "Redox-sensing PAS domain proteins",
+      "3"
+    ],
+    [
+      "Cyclic diguanylic acid proteins",
+      "25"
+    ],
+    [
+      "Restriction/modification systems",
+      ""
+    ],
+    [
+      "Type I",
+      "0"
+    ],
+    [
+      "Type II/IIS",
+      "0"
+    ],
+    [
+      "Type III",
+      "0"
+    ],
+    [
+      "Transcriptional regulators",
+      ""
+    ],
+    [
+      "Regulatory proteins",
+      "36"
+    ],
+    [
+      "Non-ECF family σ factors",
+      "1"
+    ],
+    [
+      "ECF family σ/anti-σ factor pairs",
+      "7"
+    ],
+    [
+      "Two-component systems",
+      ""
+    ],
+    [
+      "Response regulator",
+      "42"
+    ],
+    [
+      "Sensor histidine kinase",
+      "37"
+    ],
+    [
+      "Taxon-specific genes",
+      ""
+    ],
+    [
+      "A. butzleri proteins found:",
+      ""
+    ],
+    [
+      "Within ε-Proteobacterial taxa",
+      "1754 (77.6%)"
+    ],
+    [
+      "Campylobacter only",
+      "98 (4.3%)"
+    ],
+    [
+      "Helicobacter only",
+      "10 (0.4%)"
+    ],
+    [
+      "S. denitrificans or W. succinogenes only",
+      "133 (5.9%)"
+    ],
+    [
+      "Sulfurovum or Nitratiruptor only",
+      "56 (24.8%)"
+    ],
+    [
+      "Only in non ε-Proteobacterial taxa",
+      "190 (8.4%)"
+    ],
+    [
+      "Unique A. butzleri proteins",
+      "315 (13.9%)"
+    ]
+  ]
+}
