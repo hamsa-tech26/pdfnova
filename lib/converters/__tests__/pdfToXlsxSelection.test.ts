@@ -65,7 +65,7 @@ describe("Release 81 selective native PDF table export",()=>{
     const output=serializeTableCsv(plan.tables[0].rows);
     expect(output).toContain('"00071"');
     expect(output).toContain('"\'=HYPERLINK(1)"');
-    expect(output.split("\\r\\n").filter(Boolean)).toHaveLength(3);
+    expect(output.split("\r\n").filter(Boolean)).toHaveLength(3);
     expect(output).not.toContain('<f>');
     expect(plan.reviewNotes?.join(" ")).toContain("SELECTIVE EXPORT");
     expect(plan.tables[0].rows[1][2]).toBe("=HYPERLINK(1)");
