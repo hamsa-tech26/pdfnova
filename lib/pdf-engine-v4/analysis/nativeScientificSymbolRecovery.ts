@@ -21,11 +21,11 @@ export function inferNativeScientificSymbols(rawText:string):NativeSymbolRecover
   const proteo=/\be(?=-Proteobacterial\s+taxa\b)/gi;
   text=text.replace(signalOne,(_match,space1:string,space2:string)=>{
     reasons.push("Ambiguous scientific σ glyph inferred from native PDF font context.");
-    return "family"+space1+"σ"+space2+"factors";
+    return "family"+space1+"σ"+space2;
   });
   text=text.replace(signalPair,(_match,space1:string,space2:string)=>{
     reasons.push("Ambiguous σ/anti-σ pair inferred from native PDF font context.");
-    return "family"+space1+"σ/anti-σ"+space2+"factor pairs";
+    return "family"+space1+"σ/anti-σ"+space2;
   });
   text=text.replace(proteo,()=>{
     reasons.push("Ambiguous scientific ε glyph inferred from native PDF font context.");
