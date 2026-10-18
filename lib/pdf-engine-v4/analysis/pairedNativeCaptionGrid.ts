@@ -41,7 +41,7 @@ export function findPairedNativeCaptionGrids(blocks:PdfVisualBlock[]):PairedNati
       const anchors=first.words.map(w=>w.bounds.x);
       if(anchors[1]-anchors[0]<55||anchors[1]-anchors[0]>280)continue;
       const rows:PdfLine[]=[];
-      let pitches:number[]=[];
+      const pitches:number[]=[];
       for(let i=cap+1;i<Math.min(all.length,cap+27);i++){
         const line=all[i];
         if(line.words.length!==2||!isNative(line))break;
