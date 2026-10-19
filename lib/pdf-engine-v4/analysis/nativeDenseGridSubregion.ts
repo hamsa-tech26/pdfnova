@@ -50,7 +50,7 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
     const lines=source.lines;
     // Dense numeric row runs may have a single continuation-line interruption.
     const eligible=lines.map(rowEvidence);
-    let best:{start:number;end:number;count:number}|null=null;
+    const potential:{start:number;end:number;count:number}[]=[];
     for(let start=0;start<lines.length;start++){
       if(!eligible[start])continue;
       let count=1,end=start;
@@ -70,21 +70,29 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       const matches=rows.filter(row=>
         anchors.filter(anchor=>row.words.some(w=>Math.abs(w.bounds.x-anchor)<=9)).length>=2);
       if(matches.length<7)continue;
-      if(!best||count>best.count)best={start,end,count};
+      potential.push({start,end,count});
     }
-    if(!best)continue;
-    // Include up to four immediately preceding header/subheader lines only
-    // when part of the same nearby visual group; no article prose swallowing.
-    let from=best.start;
-    for(let i=best.start-1;i>=Math.max(0,best.start-4);i--){
-      const gap=Math.abs(centerY(lines[i])-centerY(lines[i+1]));
-      if(gap>24||lines[i].words.some(w=>w.text.length>65))break;
-      from=i;
+    // R113: a single visual block can hold multiple separated numeric
+    // tables. Prefer the longest supported runs and never duplicate lines.
+    const accepted:{from:number;end:number;count:number}[]=[];
+    for(const candidate of potential.sort((a,b)=>b.count-a.count||a.start-b.start)){
+      let from=candidate.start;
+      for(let i=candidate.start-1;i>=Math.max(0,candidate.start-4);i--){
+        const gap=Math.abs(centerY(lines[i])-centerY(lines[i+1]));
+        if(gap>24||lines[i].words.some(w=>w.text.length>65))break;
+        from=i;
+      }
+      if(candidate.end-from+1>20)continue;
+      if(accepted.some(previous=>from<=previous.end+1&&candidate.end>=previous.from-1))continue;
+      accepted.push({from,end:candidate.end,count:candidate.count});
+      if(accepted.length===3)break; // bound complexity per source block
     }
-    const chosen=lines.slice(from,best.end+1);
-    if(chosen.length>20||chosen.length<5)continue;
-    result.push({sourceBlock:source,firstLineIndex:from,lastLineIndex:best.end,
-      block:boundedParagraph(source,chosen,from)});
+    for(const section of accepted.sort((a,b)=>a.from-b.from)){
+      const chosen=lines.slice(section.from,section.end+1);
+      if(chosen.length<5)continue;
+      result.push({sourceBlock:source,firstLineIndex:section.from,
+        lastLineIndex:section.end,block:boundedParagraph(source,chosen,section.from)});
+    }
   }
   return result;
 }
