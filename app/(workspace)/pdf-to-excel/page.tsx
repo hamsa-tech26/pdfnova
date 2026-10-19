@@ -154,7 +154,7 @@ export default function PdfToExcelPage() {
       // Validate the exact currently edited grid again, not an old preview.
       if(JSON.stringify(plan.tables[0].rows)!==JSON.stringify(reviewedRows))
         throw Error("The reviewed cells changed. Preview and confirm the current values again.");
-      const name=(file.name.replace(/\\.pdf$/i,"")||"kukureku")+"-user-reviewed-image.xlsx";
+      const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+"-user-reviewed-image.xlsx";
       await finishWorkbook(plan,name);
     }catch(cause){
       setImageStatus(cause instanceof Error?cause.message:"Reviewed image table export was withheld.");
