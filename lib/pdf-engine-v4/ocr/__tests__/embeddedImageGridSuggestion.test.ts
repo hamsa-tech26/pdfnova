@@ -25,8 +25,8 @@ describe("Kukureku R124–128 image OCR table proposal boundary",()=>{
   it("merges adjacent OCR glyph words into a cell without changing column alignment",()=>{
     const w=[
       word("Service",40,25),word("Site",107,25),word("Count",310,25),
-      word("Station",40,75),word("One",122,75),word("0123",310,75),
-      word("Station",41,125),word("Two",123,125),word("0110",312,125),
+      word("Station",40,75),word("One",109,75),word("0123",310,75),
+      word("Station",41,125),word("Two",110,125),word("0110",312,125),
     ];
     const plan=suggestEmbeddedImageGrid(w,650,320);
     expect(plan.status).toBe("PROPOSED_FOR_MANUAL_REVIEW");
