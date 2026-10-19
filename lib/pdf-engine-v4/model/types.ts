@@ -144,6 +144,8 @@ export type PdfPageModel = {
   words: PdfWord[];
   lines: PdfLine[];
   blocks: PdfVisualBlock[];
+  /** Optional bounded PDF.js image-paint inspection (not OCR evidence). */
+  imagePaintCount?: number;
   textExtraction: PdfPageTextExtractionMetrics;
 };
 
