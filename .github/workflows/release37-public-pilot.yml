@@ -15,6 +15,12 @@ on:
       - "scripts/prepareRelease85BlindPair.mjs"
       - "scripts/__tests__/release85BlindAgreement.nodecheck.mjs"
       - "scripts/collectRelease37Corpus.mjs"
+      # Any OCR/table detection/export change must rerun actual publisher PDFs.
+      - "lib/pdf-engine-v4/ocr/**"
+      - "lib/pdf-engine-v4/analysis/**"
+      - "lib/pdf-engine-v4/pipeline/**"
+      - "lib/converters/**"
+      - "benchmarks/release107/**"
       - ".github/workflows/release37-public-pilot.yml"
   workflow_dispatch:
 
