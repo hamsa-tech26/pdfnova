@@ -12,6 +12,8 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
+import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
+import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx} from "@/lib/converters/reviewedImageTableWorkbook";
 import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
   pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
   type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
@@ -38,6 +40,13 @@ export default function PdfToExcelPage() {
   const [cellAddressInput,setCellAddressInput]=useState("");
   const [cellDetail,setCellDetail]=useState<ReturnType<typeof inspectPdfTableCell>|null>(null);
   const [cellStatus,setCellStatus]=useState("");
+  const [imageReview,setImageReview]=useState<EmbeddedImageOcrReviewResult|null>(null);
+  const [imagePage,setImagePage]=useState<number|null>(null);
+  const [imageBusy,setImageBusy]=useState(false);
+  const [reviewedTsv,setReviewedTsv]=useState("");
+  const [reviewedRows,setReviewedRows]=useState<string[][]|null>(null);
+  const [reviewConfirmed,setReviewConfirmed]=useState(false);
+  const [imageStatus,setImageStatus]=useState("");
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -47,6 +56,8 @@ export default function PdfToExcelPage() {
     setWarnings([]);
     setError("");
     setInspected(null);
+    setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
+    setReviewConfirmed(false);setImageStatus("");
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -59,6 +70,8 @@ export default function PdfToExcelPage() {
     setOutputName("");
     setWarnings([]);
     setInspected(null);
+    setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
+    setReviewConfirmed(false);setImageStatus("");
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -78,9 +91,12 @@ export default function PdfToExcelPage() {
     if(!file||busy)return;
     setBusy(true);setError("");setOutput(null);setWarnings([]);
     try{
-      const analyzed=inspected??await analyzePdfV4(file,{enableControlledOcr:false});
-      const available=inspectPdfV4XlsxChoices(analyzed);
-      setInspected(analyzed);setChoices(available);setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
+      const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
+      const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
+      setInspected(analyzed);setChoices(available);
+      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
+      setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+      setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
     }finally{setBusy(false);}
