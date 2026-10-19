@@ -334,3 +334,72 @@ test("native numbered 8-column guide reconstructs 87 fictional rows over three p
   expect(execFileSync("python",["-c",script,saved],{encoding:"utf8"}))
     .toContain("NATIVE_87_ROWS_8_COLUMNS_OK");
 });
+
+
+test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe XLSX",async({page})=>{
+  test.setTimeout(300000);
+  await page.goto("/pdf-to-excel");
+  // Independent browser-rendered source bitmap: real embedded raster table
+  // inside a page also containing enough selectable native explanatory text.
+  const pngBase64=await page.evaluate(()=>{
+    const canvas=document.createElement("canvas");
+    canvas.width=1200;canvas.height=430;
+    const ctx=canvas.getContext("2d");
+    if(!ctx)throw Error("Canvas unavailable");
+    ctx.fillStyle="#fff";ctx.fillRect(0,0,1200,430);
+    ctx.fillStyle="#000";ctx.font="bold 64px monospace";
+    ctx.fillText("ITEM      COST",60,85);
+    ctx.font="56px monospace";
+    ctx.fillText("StationA  1200",60,180);
+    ctx.fillText("StationB  00071",60,275);
+    ctx.fillText("StationC  01300",60,370);
+    return canvas.toDataURL("image/png").split(",")[1];
+  });
+  const doc=await PDFDocument.create();
+  const pdfFont=await doc.embedFont(StandardFonts.Helvetica);
+  const sheet=doc.addPage([760,800]);
+  for(let i=0;i<24;i++)
+    sheet.drawText("Published report narrative sentence "+(i+1)+
+      " discussing survey sampling, written in selectable text.",{
+      x:35,y:775-i*15,size:10,font:pdfFont,
+    });
+  const raster=await doc.embedPng(Buffer.from(pngBase64,"base64"));
+  sheet.drawImage(raster,{x:80,y:100,width:600,height:255});
+  const pdfBytes=Buffer.from(await doc.save());
+  await page.locator('input[type="file"]').setInputFiles({
+    name:"R123_hybrid_image_table.pdf",mimeType:"application/pdf",buffer:pdfBytes,
+  });
+  const buttons=page.getByRole("button");
+  await expect(buttons.getByText("Inspect embedded images for optional OCR")).toBeVisible();
+  await page.getByRole("button",{name:"Inspect embedded images for optional OCR"}).click();
+  await expect(page.getByRole("heading",{name:"Optional embedded-image to Excel review"})).toBeVisible({timeout:90000});
+  await page.getByRole("button",{name:"Run image OCR on selected page"}).click();
+  await expect(page.getByLabel(/Your corrected table/)).toBeVisible({timeout:180000});
+  // OCR alone NEVER enables download; require manual cell entry and confirmation.
+  await expect(page.getByRole("button",{name:"Download confirmed image table (.xlsx)"})).toHaveCount(0);
+  await page.getByLabel(/Your corrected table/).fill(
+    "Code\tValue\n00071\t=SUM(A1:A9)\nA2\t00123"
+  );
+  await page.getByRole("button",{name:"Preview my corrected cells"}).click();
+  await expect(page.getByRole("region",{name:"Reviewed image table cell preview"})).toContainText("00071");
+  const downloadButton=page.getByRole("button",{name:"Download confirmed image table (.xlsx)"});
+  await expect(downloadButton).toBeDisabled();
+  await page.getByRole("checkbox",{name:/I compared this edited grid/}).check();
+  const [download]=await Promise.all([
+    page.waitForEvent("download",{timeout:120000}),downloadButton.click()
+  ]);
+  expect(download.suggestedFilename()).toBe("R123_hybrid_image_table-user-reviewed-image.xlsx");
+  const path=await download.path();
+  const fs=await import("node:fs/promises");
+  const workbook=await JSZip.loadAsync(await fs.readFile(path));
+  const manifest=await workbook.file("xl/workbook.xml")?.async("string");
+  expect(manifest).toContain("User-Reviewed Image Table");
+  expect(manifest).toContain("Review Notes");
+  const grid=await workbook.file("xl/worksheets/sheet1.xml")?.async("string");
+  expect(grid).toContain("00071");
+  expect(grid).toContain("=SUM(A1:A9)");
+  expect(grid).not.toContain("<f>");
+  const notes=await workbook.file("xl/worksheets/sheet2.xml")?.async("string");
+  expect(notes).toContain("SOURCE: PDF page 1 of 1");
+  expect(notes).toContain("No OCR words were inserted into source-native logical tables");
+});
