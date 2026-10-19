@@ -98,4 +98,10 @@ test.afterAll(async()=>{
   await writeFile(join(root,"reports/aggregate.json"),
     JSON.stringify(summary,null,2)+"\n");
   console.log(JSON.stringify(summary));
+  // R112 scoped acceptance: demonstrable independent spatial improvement
+  // over the observed 0/6 baseline, without more unmatched regions (3).
+  // This DOES NOT certify remaining missing image/irregular tables.
+  expect(summary.publishedBoxCount).toBe(6);
+  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(1);
+  expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
 });
