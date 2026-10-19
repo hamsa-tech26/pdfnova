@@ -146,6 +146,8 @@ export type PdfPageModel = {
   blocks: PdfVisualBlock[];
   /** Optional bounded PDF.js image-paint inspection (not OCR evidence). */
   imagePaintCount?: number;
+  /** Visible image paint rectangles, not detected tables or OCR text. */
+  imagePaintRegions?: import("../reader/imagePaintGeometry").PdfImagePaintRegion[];
   textExtraction: PdfPageTextExtractionMetrics;
 };
 

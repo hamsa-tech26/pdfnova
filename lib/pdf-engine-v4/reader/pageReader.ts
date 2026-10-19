@@ -13,6 +13,7 @@ import {
   loadPdfJs,
   type PdfJsModule,
 } from "./pdfJsLoader";
+import {inspectPdfImagePaints} from "./imagePaintGeometry";
 
 type PdfJsTextItem = {
   str: string;
@@ -451,14 +452,12 @@ export async function readPdfDocumentV4(
 
       // R115: optional image-paint metadata for Inspector only. Other PDF
       // tool paths do not incur an additional PDF graphics operator pass.
-      const imagePaintCount=options?.inspectImagePaints
-        ? (await page.getOperatorList()).fnArray.filter(op=>
-            op===pdfjsLib.OPS.paintImageXObject||
-            op===pdfjsLib.OPS.paintInlineImageXObject||
-            op===pdfjsLib.OPS.paintImageMaskXObject||
-            op===pdfjsLib.OPS.paintSolidColorImageMask
-          ).length
+      const imagePaintInspection=options?.inspectImagePaints
+        ? inspectPdfImagePaints(await page.getOperatorList(),pdfjsLib.OPS,
+            viewport.width,viewport.height)
         : undefined;
+      const imagePaintCount=imagePaintInspection?.imagePaintCount;
+      const imagePaintRegions=imagePaintInspection?.imagePaintRegions;
 
       pages.push({
   pageNumber,
@@ -468,6 +467,7 @@ export async function readPdfDocumentV4(
   lines,
   blocks: [],
   imagePaintCount,
+  imagePaintRegions,
   textExtraction: {
   wordCount: words.length,
   lineCount: lines.length,

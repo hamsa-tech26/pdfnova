@@ -16,6 +16,7 @@ import {
 import type {
   PdfV4ControlledOcrResult,
 } from "@/lib/pdf-engine-v4/ocr/controlledOcrFallback";
+import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 
 import {
   adaptPdfV4OcrWordToPdfWord,
@@ -153,6 +154,10 @@ export default function EngineInspectorPage() {
     useState<PdfV4ControlledOcrResult | null>(
     null,
   );
+
+  const [embeddedReview,setEmbeddedReview]=useState<EmbeddedImageOcrReviewResult|null>(null);
+  const [reviewingImages,setReviewingImages]=useState(false);
+  const [embeddedImagePage,setEmbeddedImagePage]=useState<number|null>(null);
 
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] =
     useState(0);
@@ -433,6 +438,8 @@ seenCells.set(
   function resetInspector() {
     setResult(null);
     setOcrResult(null);
+    setEmbeddedReview(null);
+    setEmbeddedImagePage(null);
     setSelectedAnalysisIndex(0);
     setDiagnosticPageNumber(1);
     setSelectedSource(null);
@@ -440,6 +447,24 @@ seenCells.set(
     setProgress(0);
     setCurrentStep(1);
     setErrorMessage("");
+  }
+
+  async function runEmbeddedImageReview(){
+    if(!file||!result||reviewingImages)return;
+    setReviewingImages(true);
+    setEmbeddedReview(null);
+    try{
+      const pages=result.document.pages.filter(p=>p.pageNumber===embeddedImagePage);
+      const review=await reviewEmbeddedImageRegions(file,pages);
+      setEmbeddedReview(review);
+      if(!review.attempted){
+        toast.message("No conservative embedded-image OCR regions qualified.");
+      }
+    }catch(error){
+      toast.error(error instanceof Error?error.message:"Image review OCR could not run.");
+    }finally{
+      setReviewingImages(false);
+    }
   }
 
   async function handleFileSelection(
@@ -506,6 +531,7 @@ seenCells.set(
       );
 
       setResult(analysisResult);
+      setEmbeddedImagePage(analysisResult.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
       setOcrResult(
   analysisResult.controlledOcrResult ?? null,
 );
@@ -721,6 +747,50 @@ seenCells.set(
       {" "}contain painted PDF images. Whole-page OCR routing may omit text
       inside those images. No table or cell extraction from these images
       has been verified; review their visual content separately.
+    </div>
+  )}
+  {result.imageContentReview.some(page=>page.imageReviewRecommended)&&(
+    <div className="mt-3 rounded-xl border border-gray-200 p-3 text-sm dark:border-slate-700">
+      <label htmlFor="embedded-image-review-page" className="mr-3 font-medium">Embedded image page</label>
+      <select id="embedded-image-review-page"
+        className="mb-3 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:bg-slate-900 dark:text-white"
+        value={embeddedImagePage??""}
+        onChange={event=>{setEmbeddedImagePage(Number(event.target.value));setEmbeddedReview(null);}}
+        disabled={reviewingImages}>
+        {result.imageContentReview.filter(page=>page.imageReviewRecommended).map(page=>(
+          <option key={page.pageNumber} value={page.pageNumber}>Page {page.pageNumber}</option>
+        ))}
+      </select>
+      <div>
+      <button type="button" onClick={()=>void runEmbeddedImageReview()}
+        disabled={reviewingImages||isAnalyzing}
+        className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900">
+        {reviewingImages?"Reviewing selected images locally...":"Run optional embedded-image OCR review"}
+      </button>
+      </div>
+      <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
+        Explicit opt-in. Tesseract checks at most two conservatively selected
+        image regions from the selected page in your browser; it never replaces selectable PDF text,
+        modifies tables, or populates Excel cells.
+      </p>
+      {embeddedReview&&(
+        <div role="status" className="mt-3 space-y-2">
+          <p className="font-semibold">
+            {embeddedReview.attempted
+              ? embeddedReview.sourceRegionCount+" image regions reviewed"
+              : "No image regions met conservative review criteria"}
+          </p>
+          <p className="text-xs text-amber-800 dark:text-amber-200">{embeddedReview.warning}</p>
+          {embeddedReview.reviews.map((item,index)=>(
+            <div key={item.pageNumber+"-"+index}
+              className="rounded-lg border border-gray-200 p-3 dark:border-slate-700">
+              <p className="font-semibold">Page {item.pageNumber} · {item.status.replaceAll("_"," ")}</p>
+              <p className="text-xs">OCR confidence: {Math.round(item.confidence)}% · Recognized words: {item.wordCount}</p>
+              {item.text&&<pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-xs">{item.text}</pre>}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )}
   {result.ocrDecision.reviewPageNumbers.length >

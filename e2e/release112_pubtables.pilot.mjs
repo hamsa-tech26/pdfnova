@@ -1,7 +1,7 @@
 import {test,expect} from "@playwright/test";
 import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
-import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage}
+import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
 
 const root=resolve("benchmarks/release112");
@@ -70,14 +70,49 @@ for(const source of manifest.documents){
       const detected=allTables.filter(table=>table.pageNumber===ref.page)
         .map(table=>table.bounds);
       const metrics=scoreDetectionPage(expected,detected,0.5);
+      // R122 numeric-only image-paint geometry diagnostic: never call raw
+      // image-paint bounds a logical table, OCR hit, or verified table box.
+      const nativeImageRects=(viewport.imagePaintRegions??[]).map(x=>x.bounds);
+      const publishedImageBestIoU=expected.map(box=>
+        Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
       pageResults.push({originalPage:ref.page,...metrics,
         imagePaintCount:imageReview.imagePaintCount,
+        imageRegionsDetected:nativeImageRects.length,
+        publishedImageBestIoU,
         imageReviewRecommended:imageReview.imageReviewRecommended,
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
+    }
+    if(source.id==="PMC1064098"){
+      // R122 physical browser test of the new opt-in OCR path on an actual
+      // full publisher PDF. Only numeric status is asserted/logged.
+      test.setTimeout(420000);
+      await page.getByLabel("Embedded image page").selectOption("6");
+      const runReview=page.getByRole("button",{
+        name:"Run optional embedded-image OCR review",
+      });
+      await expect(runReview).toBeVisible();
+      await runReview.click();
+      await expect(page.getByText(/image regions reviewed/)).toBeVisible({
+        timeout:240000,
+      });
+      await expect(page.getByText(/OCR is unverified text for human review only/))
+        .toBeVisible();
+      // The source V4 table result must stay byte-for-byte identical after
+      // an optional review. Never replace native words or inferred XLSX.
+      const secondDownload=page.waitForEvent("download");
+      await button.click();
+      const secondPath=await (await secondDownload).path();
+      if(!secondPath)throw Error("Inspector second export not available");
+      const unchanged=JSON.parse(await readFile(secondPath,"utf8"));
+      expect(unchanged.tables).toEqual(result.tables);
+      console.log(JSON.stringify({type:"R122_EMBEDDED_IMAGE_OPT_IN_BROWSER_REVIEW",
+        publisherId:source.id,selectedOriginalPage:6,
+        localReviewCompleted:true,sourceTablesUnchanged:true,
+        formalV4Credit:0}));
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
@@ -91,7 +126,9 @@ for(const source of manifest.documents){
       page:p.originalPage,reference:p.referenceCount,detected:p.predictionCount,
       matchedIoU50:p.matchedCount,unmatched:p.unmatchedPredictionCount,
       bestIoU:p.referenceBestIoU,imagePaintCount:p.imagePaintCount,
-      imageReviewRecommended:p.imageReviewRecommended,referenceBoxes:p.actualReferenceRects,
+      imageReviewRecommended:p.imageReviewRecommended,
+      imageRegionsDetected:p.imageRegionsDetected,publishedImageBestIoU:p.publishedImageBestIoU,
+      referenceBoxes:p.actualReferenceRects,
       detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
