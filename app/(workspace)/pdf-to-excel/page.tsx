@@ -309,7 +309,7 @@ export default function PdfToExcelPage() {
       title="PDF tables to genuine Excel XLSX — privately"
       description="Convert all eligible native-text PDF tables, or choose a table and inspect its actual exported cell values before downloading. Other tables are excluded explicitly. Processing stays on your device; source verification is still required."
       tips={[
-        { title: "Text-selectable PDF only", description: "Scanned or mixed image-only PDFs cannot be converted with this version." },
+        { title: "Native tables or reviewed hybrid image", description: "Automatic conversion accepts selectable-text tables. On hybrid PDF pages, embedded-image OCR is separately available after explicit review and confirmation; fully scanned PDFs remain unsupported." },
         { title: "Review every source cell", description: "Browse the selected table in 12-row and 8-column windows, jump to any Excel cell, and inspect its complete extracted text before downloading. This is not accuracy certification." },
         { title: "Verify the spreadsheet", description: "Rows, columns, values, and headings must be checked against the source document before professional use." },
         { title: "Safe cell types", description: "Identifiers, leading zeros and formula-like inputs remain text. Only verified household and FHTC count columns in supported layouts become Excel numbers; no PDF content is executed as formulas." },
@@ -317,7 +317,7 @@ export default function PdfToExcelPage() {
       faqs={[
         { question: "Will my PDF be uploaded?", answer: "No. Extraction and XLSX generation happen in the browser." },
         { question: "Can I choose one table if another fails?", answer: "Yes. Inspect candidates, choose an eligible table, and review its extracted cell preview before exporting. Other tables stay excluded. All original safety checks still apply." },
-        { question: "Does it convert scans or every table?", answer: "No. It accepts only confidently structured selectable-text tables and refuses uncertain extraction rather than silently inventing rows or cells." },
+        { question: "Does it convert scans or every table?", answer: "Automatic export accepts only structured selectable-text tables. An optional image-OCR review can create a separately labeled XLSX only after you manually correct, preview and confirm its cells. Fully scanned documents remain unsupported." },
       ]}
       howToTitle="How to convert a PDF table to Excel"
       howToSteps={[
@@ -329,7 +329,7 @@ export default function PdfToExcelPage() {
     >
       <FileUploader fileInputRef={inputRef} onFileSelection={chooseFile}
         accept=".pdf,application/pdf" multiple={false} title="Choose a selectable-text PDF"
-        description="Tables only — no OCR or cloud upload." buttonText="Choose PDF"
+        description="Automatic native tables, or optional browser-local image OCR with manual review. No cloud upload." buttonText="Choose PDF"
         helperText="PDF · Up to 25 MB, 25 pages" disabled={busy} />
       {!file && error && <div className="mt-6"><ErrorCard title="Could not select PDF"
         description={error} reasons={[]} onReset={reset}/></div>}
