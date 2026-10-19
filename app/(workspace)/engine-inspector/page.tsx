@@ -494,6 +494,7 @@ seenCells.set(
     {
       includePossibleTableRegions: true,
       enableControlledOcr: true,
+      inspectImagePaints: true,
     },
   );
 
@@ -712,6 +713,16 @@ seenCells.set(
     </span>
   )}
 
+  {result.imageContentReview.some(page=>page.imageReviewRecommended)&&(
+    <div role="status" className="mt-3 rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200">
+      <strong>Embedded-image review recommended:</strong>{" "}
+      native-text pages{" "}
+      {result.imageContentReview.filter(page=>page.imageReviewRecommended).map(page=>page.pageNumber).join(", ")}
+      {" "}contain painted PDF images. Whole-page OCR routing may omit text
+      inside those images. No table or cell extraction from these images
+      has been verified; review their visual content separately.
+    </div>
+  )}
   {result.ocrDecision.reviewPageNumbers.length >
     0 && (
     <span className="ml-2 text-gray-500 dark:text-slate-400">
