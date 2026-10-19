@@ -28,7 +28,11 @@ function summarizeReferenceGeometry(viewport,box){
     nativeLineSignatures:lines.slice(0,40).map(line=>({
       y:Number(line.bounds.y.toFixed(1)),
       xPositions:line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
-        word.bounds.y+word.bounds.height/2)).map(w=>Math.round(w.bounds.x))
+        word.bounds.y+word.bounds.height/2)).map(w=>Math.round(w.bounds.x)),
+      charLengths:line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
+        word.bounds.y+word.bounds.height/2)).map(w=>w.text.length),
+      hasNumerals:line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
+        word.bounds.y+word.bounds.height/2)).map(w=>/\d/.test(w.text))
     }))};
 }
 for(const source of manifest.documents){
