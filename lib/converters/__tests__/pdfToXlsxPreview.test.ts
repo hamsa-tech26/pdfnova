@@ -140,4 +140,35 @@ describe("Release 82 bounded exact-XLSX source table preview",()=>{
     };
     expect(()=>buildPdfTablePreview(source(ocr),0)).toThrow("OCR or mixed-source");
   });
+  it("R110 clips preview on whole Unicode characters without corrupting exact XLSX",()=>{
+    const t=makeTable(3,3),doc=source(t);
+    const full="X".repeat(PREVIEW_MAX_CHARACTERS-1)+"😀"+"TAIL";
+    t.rows[0].cells[0].text=full;
+    const preview=buildPdfTablePreview(doc,0);
+    expect(preview.trimmedCells).toBe(1);
+    expect(preview.rows[0][0]).toBe("X".repeat(PREVIEW_MAX_CHARACTERS-1)+"😀…");
+    expect(preview.rows[0][0]).not.toContain("\uFFFD");
+    expect(inspectPdfTableCell(doc,0,0,0).value).toBe(full);
+    expect(prepareSelectedPdfV4XlsxExport(doc,0).tables[0].rows[0][0]).toBe(full);
+  });
+
+  it("R111 refuses scanned and mixed-page XLSX preview, cell inspection and download consistently",()=>{
+    const scanned=source(makeTable(3,3));
+    scanned.nativePageTextExtraction[2].textExtraction.status="none";
+    expect(()=>buildPdfTablePreview(scanned,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>inspectPdfTableCell(scanned,0,0,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(scanned,0)).toThrow(/Scanned and mixed PDFs/);
+    const low=source(makeTable(3,3));
+    low.nativePageTextExtraction[2].textExtraction.status="low";
+    expect(()=>buildPdfTablePreview(low,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(low,0)).toThrow(/Scanned and mixed PDFs/);
+    const mixedCell=source(makeTable(3,3));
+    mixedCell.tables[0].rows[1].cells[1].extractionProvenance={
+      source:"ocr-tesseract",pageNumbers:[3],wordCount:1,
+      nativeWordCount:0,ocrWordCount:1,unknownWordCount:0,
+    };
+    expect(()=>buildPdfTablePreview(mixedCell,0)).toThrow(/OCR or mixed-source/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(mixedCell,0)).toThrow(/OCR or mixed-source/);
+  });
+
 });

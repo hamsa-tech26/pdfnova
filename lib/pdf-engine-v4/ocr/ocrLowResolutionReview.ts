@@ -83,13 +83,18 @@ export function acceptIdentifierLineReview(
 ): string | null {
   if (!Number.isFinite(confidence) || confidence < 55) return null;
   const candidate = candidateLine.trim().replace(/\s+/g, " ");
-  const match = candidate.match(/\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/i);
-  if (!match || candidate.length > 150) return null;
-  const raw = rawOcrText.match(/\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/i);
-  if (!raw || raw[1].toLowerCase() !== match[1].toLowerCase() ||
-      raw[2].toLowerCase() === match[2].toLowerCase()) return null;
-  // The new candidate is extra evidence, not an authoritative replacement.
-  return match[0];
+  if (candidate.length > 150) return null;
+  // A targeted reread must identify exactly one labelled value; otherwise
+  // even a plausible disagreement could be about a different source field.
+  const pattern = /\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/gi;
+  const reads = [...candidate.matchAll(pattern)];
+  if (reads.length !== 1) return null;
+  const sourceMatches = [...rawOcrText.matchAll(pattern)]
+    .filter((match) => match[1].toLowerCase() === reads[0][1].toLowerCase());
+  if (sourceMatches.length !== 1 ||
+      sourceMatches[0][2].toLowerCase() === reads[0][2].toLowerCase()) return null;
+  // This is an UNVERIFIED alternative; never overwrite the original OCR.
+  return reads[0][0];
 }
 
 function percentile(hist: Uint32Array, total: number, fraction: number): number {
