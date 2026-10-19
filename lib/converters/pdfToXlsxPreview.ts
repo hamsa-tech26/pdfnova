@@ -34,9 +34,16 @@ export type PdfTablePreview={
 
 function printable(value:unknown):{text:string;trimmed:boolean}{
   const text=String(value??"");
-  return text.length>PREVIEW_MAX_CHARACTERS
-    ?{text:text.slice(0,PREVIEW_MAX_CHARACTERS)+"…",trimmed:true}
-    :{text,trimmed:false};
+  if(text.length<=PREVIEW_MAX_CHARACTERS)return {text,trimmed:false};
+  // Limit code points, not UTF-16 units: never split a surrogate pair into
+  // a broken preview glyph. Do not change the exact XLSX/CSV source value.
+  let prefix="",points=0;
+  for(const character of text){
+    if(points===PREVIEW_MAX_CHARACTERS)return {text:prefix+"…",trimmed:true};
+    prefix+=character;
+    points++;
+  }
+  return {text,trimmed:false};
 }
 
 /** Validate the same fail-closed source-export gate for EVERY window. */
