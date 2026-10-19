@@ -78,7 +78,8 @@ for(const source of manifest.documents){
     console.log(JSON.stringify({id:source.id,pages:pageResults.map(p=>({
       page:p.originalPage,reference:p.referenceCount,detected:p.predictionCount,
       matchedIoU50:p.matchedCount,unmatched:p.unmatchedPredictionCount,
-      bestIoU:p.referenceBestIoU,geometry:p.publishedBoxGeometry
+      bestIoU:p.referenceBestIoU,referenceBoxes:p.actualReferenceRects,
+      detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
 }
