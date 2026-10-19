@@ -24,7 +24,12 @@ function summarizeReferenceGeometry(viewport,box){
     medianWordsPerLine:wordCounts.length?
       [...wordCounts].sort((a,b)=>a-b)[Math.floor(wordCounts.length/2)]:0,
     linesAtLeast3Words:wordCounts.filter(n=>n>=3).length,
-    distinct10ptWordX:uniqueX.size};
+    distinct10ptWordX:uniqueX.size,
+    nativeLineSignatures:lines.slice(0,40).map(line=>({
+      y:Number(line.bounds.y.toFixed(1)),
+      xPositions:line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
+        word.bounds.y+word.bounds.height/2)).map(w=>Math.round(w.bounds.x))
+    }))};
 }
 for(const source of manifest.documents){
   test("R112 original-publisher detection-box audit: "+source.id,async({page})=>{
