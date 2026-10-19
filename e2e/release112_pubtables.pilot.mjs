@@ -63,6 +63,8 @@ for(const source of manifest.documents){
         .map(table=>table.bounds);
       const metrics=scoreDetectionPage(expected,detected,0.5);
       pageResults.push({originalPage:ref.page,...metrics,
+        actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
+        predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
