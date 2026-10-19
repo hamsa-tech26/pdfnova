@@ -1,0 +1,60 @@
+name: Release 112 External Table-Box Diagnostic
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "benchmarks/release112/**"
+      - "scripts/downloadRelease112TablePilot.mjs"
+      - "scripts/__tests__/release112Detection.nodecheck.mjs"
+      - "e2e/release112_pubtables.pilot.mjs"
+      - "playwright.release112.config.mjs"
+      - "lib/pdf-engine-v4/analysis/**"
+      - "lib/pdf-engine-v4/pipeline/**"
+      - ".github/workflows/release112-pubtables.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: release112-pubtables-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  external-source-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Validate annotation-box scorer
+        run: node --test scripts/__tests__/release112Detection.nodecheck.mjs
+      - name: Verify V4 Stable remains BLOCKED
+        run: |
+          node --input-type=module -e '
+          import {readFileSync} from "node:fs";
+          import {checkRelease37Gate} from "./scripts/checkRelease37Gate.mjs";
+          const report=JSON.parse(readFileSync("benchmarks/release37/report.json","utf8"));
+          const result=checkRelease37Gate(report);
+          if(result.status!=="BLOCKED"||result.documentCount!==0)process.exit(1);
+          console.log(JSON.stringify({formalV4Stable:result.status,acceptedDocuments:0}));
+          '
+      - name: Download SHA-pinned original PDFs and annotation archive ephemerally
+        run: node scripts/downloadRelease112TablePilot.mjs
+      - name: Prepare Chromium
+        run: |
+          npm install --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Score actual logical table boxes against published detection boxes
+        run: npx playwright test --config=playwright.release112.config.mjs
+      - name: Upload numeric metadata reports only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: release112-external-table-detection-metadata
+          path: benchmarks/release112/reports/*.json
+          retention-days: 7
+          if-no-files-found: warn
