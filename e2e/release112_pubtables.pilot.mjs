@@ -1,7 +1,7 @@
 import {test,expect} from "@playwright/test";
 import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
-import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage}
+import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
 
 const root=resolve("benchmarks/release112");
@@ -70,10 +70,17 @@ for(const source of manifest.documents){
       const detected=allTables.filter(table=>table.pageNumber===ref.page)
         .map(table=>table.bounds);
       const metrics=scoreDetectionPage(expected,detected,0.5);
+      // R122 numeric-only image-paint geometry diagnostic: never call raw
+      // image-paint bounds a logical table, OCR hit, or verified table box.
+      const nativeImageRects=(viewport.imagePaintRegions??[]).map(x=>x.bounds);
+      const publishedImageBestIoU=expected.map(box=>
+        Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
       pageResults.push({originalPage:ref.page,...metrics,
         imagePaintCount:imageReview.imagePaintCount,
+        imageRegionsDetected:nativeImageRects.length,
+        publishedImageBestIoU,
         imageReviewRecommended:imageReview.imageReviewRecommended,
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
@@ -91,7 +98,9 @@ for(const source of manifest.documents){
       page:p.originalPage,reference:p.referenceCount,detected:p.predictionCount,
       matchedIoU50:p.matchedCount,unmatched:p.unmatchedPredictionCount,
       bestIoU:p.referenceBestIoU,imagePaintCount:p.imagePaintCount,
-      imageReviewRecommended:p.imageReviewRecommended,referenceBoxes:p.actualReferenceRects,
+      imageReviewRecommended:p.imageReviewRecommended,
+      imageRegionsDetected:p.imageRegionsDetected,publishedImageBestIoU:p.publishedImageBestIoU,
+      referenceBoxes:p.actualReferenceRects,
       detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
