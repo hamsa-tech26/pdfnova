@@ -7,6 +7,25 @@ import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage}
 const root=resolve("benchmarks/release112");
 const manifest=JSON.parse(await readFile(join(root,"sources.json"),"utf8"));
 const runs=[];
+function summarizeReferenceGeometry(viewport,box){
+  const inside=(pointX,pointY)=>pointX>=box.x&&pointX<=box.x+box.width&&
+    pointY>=box.y&&pointY<=box.y+box.height;
+  const lines=(viewport.lines??[]).filter(line=>line.words?.some(word=>
+    inside(word.bounds.x+word.bounds.width/2,
+      word.bounds.y+word.bounds.height/2)));
+  const wordCounts=lines.map(line=>line.words.filter(word=>
+    inside(word.bounds.x+word.bounds.width/2,
+      word.bounds.y+word.bounds.height/2)).length);
+  const uniqueX=new Set(lines.flatMap(line=>line.words.filter(word=>
+    inside(word.bounds.x+word.bounds.width/2,
+      word.bounds.y+word.bounds.height/2))
+    .map(word=>Math.round(word.bounds.x/10)*10)));
+  return {lineCount:lines.length,wordCount:wordCounts.reduce((a,b)=>a+b,0),
+    medianWordsPerLine:wordCounts.length?
+      [...wordCounts].sort((a,b)=>a-b)[Math.floor(wordCounts.length/2)]:0,
+    linesAtLeast3Words:wordCounts.filter(n=>n>=3).length,
+    distinct10ptWordX:uniqueX.size};
+}
 for(const source of manifest.documents){
   test("R112 original-publisher detection-box audit: "+source.id,async({page})=>{
     test.setTimeout(300000);
@@ -34,7 +53,8 @@ for(const source of manifest.documents){
       const detected=allTables.filter(table=>table.pageNumber===ref.page)
         .map(table=>table.bounds);
       const metrics=scoreDetectionPage(expected,detected,0.5);
-      pageResults.push({originalPage:ref.page,...metrics});
+      pageResults.push({originalPage:ref.page,...metrics,
+        publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
@@ -47,7 +67,7 @@ for(const source of manifest.documents){
     console.log(JSON.stringify({id:source.id,pages:pageResults.map(p=>({
       page:p.originalPage,reference:p.referenceCount,detected:p.predictionCount,
       matchedIoU50:p.matchedCount,unmatched:p.unmatchedPredictionCount,
-      bestIoU:p.referenceBestIoU
+      bestIoU:p.referenceBestIoU,geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
 }
