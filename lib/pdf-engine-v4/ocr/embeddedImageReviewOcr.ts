@@ -2,6 +2,7 @@ import type {PdfPageModel,PdfBoundingBox} from "../model/types";
 import {preparePdfV4OcrPages} from "./ocrPageRenderer";
 import {recognizePdfV4OcrRegions} from "./ocrRecognizer";
 import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions} from "./embeddedImageRegionPlanner";
+import {suggestEmbeddedImageGrid,type ImageGridProposal} from "./embeddedImageGridSuggestion";
 
 /**
  * R120: human-requested inline-image OCR on hybrid/native PDF pages.
@@ -14,6 +15,8 @@ export type EmbeddedImageOcrReview={
   wordCount:number;
   confidence:number;
   status:"TEXT_REVIEW_ONLY"|"NO_RELIABLE_TEXT";
+  /** Unverified geometry proposal, never an approved spreadsheet or source table. */
+  gridProposal?:ImageGridProposal;
 };
 export type EmbeddedImageOcrReviewResult={
   attempted:boolean;
@@ -50,6 +53,8 @@ export async function reviewEmbeddedImageRegions(
       sourceBounds:source.sourceBounds,
       text:accepted?r.text:"",
       wordCount,confidence:r.confidence,
+      gridProposal:accepted?suggestEmbeddedImageGrid(r.words,r.renderedWidth,r.renderedHeight):
+        suggestEmbeddedImageGrid([],r.renderedWidth,r.renderedHeight),
       status:(accepted?"TEXT_REVIEW_ONLY":"NO_RELIABLE_TEXT") as EmbeddedImageOcrReview["status"]};
   });
   return {attempted:true,sourceRegionCount:selected.length,reviews,warning};

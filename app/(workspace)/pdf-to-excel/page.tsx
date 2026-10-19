@@ -134,6 +134,15 @@ export default function PdfToExcelPage() {
       setImageStatus(cause instanceof Error?cause.message:"Embedded-image OCR review failed.");
     }finally{setImageBusy(false);}
   }
+  /** R127: suggestion ONLY fills editable input; it never previews, approves or exports. */
+  function useTentativeOcrGrid(){
+    const proposed=reviewRegionIndex===null?null:
+      imageReview?.reviews[reviewRegionIndex]?.gridProposal;
+    if(proposed?.status!=="PROPOSED_FOR_MANUAL_REVIEW"||!proposed.tsv)return;
+    setReviewedTsv(proposed.tsv);
+    setReviewedRows(null);setReviewConfirmed(false);
+    setImageStatus("Tentative OCR grid copied to the editable form. Compare each heading and value against the source image, fix errors, then preview and approve.");
+  }
   function previewUserGrid(){
     try{
       const rows=parseUserReviewedImageGrid(reviewedTsv);
@@ -359,7 +368,7 @@ export default function PdfToExcelPage() {
               Optional embedded-image to Excel review
             </h3>
             <p className="text-sm text-slate-700 dark:text-slate-300">
-              This is separate from automatic PDF-to-Excel. An image is not
+              This is separate from automatic PDF-to-Excel. OCR row and column suggestions may be offered, but they are never accepted automatically. An image is not
               automatically a table. Check your original PDF image, correct the
               OCR text into columns and rows, and confirm each cell before
               creating a separate user-reviewed XLSX. Your existing native
@@ -400,6 +409,24 @@ export default function PdfToExcelPage() {
                     <option key={i} value={i}>Image {i+1} (PDF page {r.pageNumber})</option>
                   ))}
                 </select>
+                {reviewRegionIndex!==null && imageReview.reviews[reviewRegionIndex]?.gridProposal &&
+                  <div className="rounded-lg border border-amber-300 p-3 text-sm dark:border-amber-800">
+                    <p className="font-medium">
+                      {imageReview.reviews[reviewRegionIndex].gridProposal.status==="PROPOSED_FOR_MANUAL_REVIEW"
+                        ? "Tentative OCR table grid available (not verified)"
+                        : "Automatic row/column suggestion withheld"}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-600 dark:text-gray-300">
+                      {imageReview.reviews[reviewRegionIndex].gridProposal.reason}
+                    </p>
+                    {imageReview.reviews[reviewRegionIndex].gridProposal.status==="PROPOSED_FOR_MANUAL_REVIEW"&&(
+                      <button type="button" onClick={useTentativeOcrGrid}
+                        className="mt-2 rounded-lg border border-amber-600 px-3 py-2 font-semibold">
+                        Copy tentative grid for manual correction
+                      </button>
+                    )}
+                  </div>
+                }
                 <label htmlFor="reviewed-image-grid" className="block font-semibold text-sm">
                   Your corrected table — tabs separate columns, new lines separate rows
                 </label>

@@ -21,7 +21,8 @@
       "feature/kukureku-r112-pubtables-detection-audit": false,
       "feature/kukureku-r113-r117-real-pdf-table-recovery": false,
       "feature/kukureku-r118-r122-embedded-image-review": false,
-      "feature/kukureku-r123-public-reviewed-image-table": false
+      "feature/kukureku-r123-public-reviewed-image-table": false,
+      "feature/kukureku-r124-r128-image-grid-proposals": false
     }
   }
 }
