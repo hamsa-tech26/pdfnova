@@ -11,7 +11,7 @@ function page(marks:PdfV4OcrWord[]):PdfV4OcrPageResult{
     renderedWidth:1000,renderedHeight:1200,language:"eng",
     detectedSkewRadians:null,source:"ocr-tesseract",
     words:[word("Pass",600,80),word("Fail",700,80),word("N/A",800,80),
-      word("Floor",50,140),word("dry",100,140),...marks],
+      word("Floor",50,140),word("dry",100,140),word("Notes",50,240),...marks],
   };
 }
 describe("Release 109 scanned checklist ambiguous-mark protection",()=>{
