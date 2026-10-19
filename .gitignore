@@ -56,3 +56,7 @@ next-env.d.ts
 /benchmarks/release37/private/
 /benchmarks/release37/reports/
 /test-fixtures/release37/
+
+# R112: original publisher PDFs, PubTables XML and per-run numeric CI reports
+/benchmarks/release112/private/
+/benchmarks/release112/reports/

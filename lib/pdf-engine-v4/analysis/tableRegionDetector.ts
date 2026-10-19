@@ -1,4 +1,5 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
+import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
@@ -1524,7 +1525,15 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.spacing.score >= 12 &&
       candidate.analysis.totalScore >= resolvedOptions.tableThreshold,
     );
-  const allAdmitted = [...interleavedGrids,...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates]
+  // Scope a genuinely repeated numeric native grid out of an otherwise
+  // oversized article paragraph. Existing high-specificity recoveries win.
+  const alreadyReconstructed=new Set([
+    ...interleavedGrids,...elevenGrids,...pairedGrids,...admitted,...alignedCandidates,
+  ].map(candidate=>candidate.sourceBlock));
+  const denseNativeGrids=findNativeDenseGridSubregions(splitNativeBlocks)
+    .filter(candidate=>!alreadyReconstructed.has(candidate.sourceBlock))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
+  const allAdmitted = [...interleavedGrids,...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates,...denseNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource = new Map<PdfVisualBlock, typeof allAdmitted>();
