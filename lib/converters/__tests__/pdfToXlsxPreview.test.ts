@@ -152,4 +152,23 @@ describe("Release 82 bounded exact-XLSX source table preview",()=>{
     expect(prepareSelectedPdfV4XlsxExport(doc,0).tables[0].rows[0][0]).toBe(full);
   });
 
+  it("R111 refuses scanned and mixed-page XLSX preview, cell inspection and download consistently",()=>{
+    const scanned=source(makeTable(3,3));
+    scanned.nativePageTextExtraction[2].textExtraction.status="none";
+    expect(()=>buildPdfTablePreview(scanned,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>inspectPdfTableCell(scanned,0,0,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(scanned,0)).toThrow(/Scanned and mixed PDFs/);
+    const low=source(makeTable(3,3));
+    low.nativePageTextExtraction[2].textExtraction.status="low";
+    expect(()=>buildPdfTablePreview(low,0)).toThrow(/Scanned and mixed PDFs/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(low,0)).toThrow(/Scanned and mixed PDFs/);
+    const mixedCell=source(makeTable(3,3));
+    mixedCell.tables[0].rows[1].cells[1].extractionProvenance={
+      source:"ocr-tesseract",pageNumbers:[3],wordCount:1,
+      nativeWordCount:0,ocrWordCount:1,unknownWordCount:0,
+    };
+    expect(()=>buildPdfTablePreview(mixedCell,0)).toThrow(/OCR or mixed-source/);
+    expect(()=>prepareSelectedPdfV4XlsxExport(mixedCell,0)).toThrow(/OCR or mixed-source/);
+  });
+
 });
