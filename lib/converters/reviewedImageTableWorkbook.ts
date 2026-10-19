@@ -45,11 +45,11 @@ export function updateUserReviewedImageCell(
   if(!Number.isSafeInteger(rowIndex)||rowIndex<0||rowIndex>=rows.length||
     !Number.isSafeInteger(columnIndex)||columnIndex<0||columnIndex>=rows[0].length)
     throw Error("Choose a cell inside the reviewed image table.");
-  if(typeof newValue!=="string"||newValue.length>1000||/[\\t\\r\\n]/.test(newValue))
+  if(typeof newValue!=="string"||newValue.length>1000||/[\t\r\n]/.test(newValue))
     throw Error("A cell must contain at most 1,000 characters without tabs or line breaks.");
   const updated=rows.map(row=>[...row]);
   updated[rowIndex][columnIndex]=newValue.trim();
-  const revisedTsv=updated.map(row=>row.join("\\t")).join("\\n");
+  const revisedTsv=updated.map(row=>row.join("\t")).join("\n");
   // This rejects erased column headings, empty data rows, or malformed grids.
   parseUserReviewedImageGrid(revisedTsv);
   return revisedTsv;
