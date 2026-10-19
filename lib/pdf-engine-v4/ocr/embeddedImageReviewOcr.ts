@@ -32,18 +32,18 @@ export async function reviewEmbeddedImageRegions(
   };
   const selectedPages=[...new Set(planned.map(x=>x.pageNumber))];
   const rendered=await preparePdfV4OcrPages(file,selectedPages);
-  const requests=planned.flatMap(candidate=>{
+  const selected=planned.flatMap(candidate=>{
     const page=pages.find(p=>p.pageNumber===candidate.pageNumber);
     const image=rendered.find(p=>p.pageNumber===candidate.pageNumber);
     if(!page||!image)return [];
     const rectangle=imageRegionToOcrRectangle(candidate.sourceBounds,
       page.width,page.height,image.width,image.height);
-    return rectangle?[{page:image,rectangle}]:[];
+    return rectangle?[{request:{page:image,rectangle},candidate}]:[];
   });
-  if(!requests.length)return{attempted:false,sourceRegionCount:0,reviews:[],warning};
-  const raw=await recognizePdfV4OcrRegions(requests);
+  if(!selected.length)return{attempted:false,sourceRegionCount:0,reviews:[],warning};
+  const raw=await recognizePdfV4OcrRegions(selected.map(entry=>entry.request));
   const reviews=raw.map((r,i)=>{
-    const source=planned[i];
+    const source=selected[i].candidate;
     const wordCount=r.words.filter(w=>w.text.trim().length>0&&w.confidence>=35).length;
     const accepted=r.confidence>=45&&wordCount>=2;
     return {pageNumber:r.pageNumber,
@@ -52,5 +52,5 @@ export async function reviewEmbeddedImageRegions(
       wordCount,confidence:r.confidence,
       status:(accepted?"TEXT_REVIEW_ONLY":"NO_RELIABLE_TEXT") as EmbeddedImageOcrReview["status"]};
   });
-  return {attempted:true,sourceRegionCount:requests.length,reviews,warning};
+  return {attempted:true,sourceRegionCount:selected.length,reviews,warning};
 }
