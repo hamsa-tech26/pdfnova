@@ -12,6 +12,7 @@ import {
   type TableReliabilityV2Result,
 } from "../analysis/tableReliabilityAnalyzerV2";;
 import type { LogicalTable } from "../model/logicalTable";
+import {collectImageContentReview,type PdfV4ImageContentReview} from "../analysis/embeddedImageReview";
 import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
@@ -245,6 +246,7 @@ export type PdfEngineV4Result = {
     PdfV4NativePageTextExtraction[];
   ocrDecision: PdfV4OcrDecision;
   controlledOcrResult?: PdfV4ControlledOcrResult;
+  imageContentReview: PdfV4ImageContentReview[];
   confidence: number;
 };
 function getRowSerialNumber(
@@ -835,6 +837,7 @@ function mergeContinuedTablesV4(
 export type AnalyzePdfV4Options = {
   includePossibleTableRegions?: boolean;
   enableControlledOcr?: boolean;
+  inspectImagePaints?: boolean;
 };
 
 function now() {
@@ -1180,7 +1183,7 @@ export async function analyzePdfV4(
   const readingStart = now();
 
   const rawDocument =
-  await readPdfDocumentV4(file);
+  await readPdfDocumentV4(file,{inspectImagePaints:options?.inspectImagePaints});
 
 const nativeOcrDecision =
   createPdfV4OcrDecision(
@@ -1886,6 +1889,7 @@ textExtractionProfile,
 nativePageTextExtraction,
 ocrDecision,
 controlledOcrResult,
+imageContentReview:collectImageContentReview(rawDocument.pages),
 confidence,
   };
 }
