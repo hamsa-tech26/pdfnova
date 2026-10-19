@@ -38,33 +38,33 @@ describe("Release 123 explicit image-table export safety",()=>{
 
 describe("Release 129: explicit cell editing for user-reviewed image grids",()=>{
   it("corrects exactly one cell and preserves identifiers and literal formula-like text",()=>{
-    const source="ID\\tAmount\\tNotes\\n00071\\t=2+2\\told\\n00090\\t00456\\tgood";
+    const source="ID\tAmount\tNotes\n00071\t=2+2\told\n00090\t00456\tgood";
     const edited=updateUserReviewedImageCell(source,1,2,"Checked against image");
     expect(parseUserReviewedImageGrid(edited)).toEqual([
       ["ID","Amount","Notes"],["00071","=2+2","Checked against image"],
       ["00090","00456","good"],
     ]);
     expect(updateUserReviewedImageCell(source,2,1,"=SUM(A1:A9)"))
-      .toContain("00090\\t=SUM(A1:A9)\\tgood");
+      .toContain("00090\t=SUM(A1:A9)\tgood");
   });
   it("preserves empty cells at the first or last column without losing table geometry",()=>{
-    expect(parseUserReviewedImageGrid("First\\tLast\\n\\t0012\\n3\\t")).toEqual([
+    expect(parseUserReviewedImageGrid("First\tLast\n\t0012\n3\t")).toEqual([
       ["First","Last"],["","0012"],["3",""],
     ]);
     expect(parseUserReviewedImageGrid(updateUserReviewedImageCell(
-      "First\\tLast\\n7\\t2",1,1,"",
+      "First\tLast\n7\t2",1,1,"",
     ))).toEqual([["First","Last"],["7",""]]);
   });
   it("rejects out-of-range, invalid, or inconsistent edits",()=>{
-    const source="Name\\tAmount\\nA\\t1";
+    const source="Name\tAmount\nA\t1";
     expect(()=>updateUserReviewedImageCell(source,-1,0,"x")).toThrow();
     expect(()=>updateUserReviewedImageCell(source,2,1,"x")).toThrow();
     expect(()=>updateUserReviewedImageCell(source,0,2,"x")).toThrow();
     expect(()=>updateUserReviewedImageCell(source,0,0,"")).toThrow(/heading/i);
     expect(()=>updateUserReviewedImageCell(source,1,0,"")).not.toThrow();
-    expect(()=>updateUserReviewedImageCell("Name\\tAmount\\nA\\t",1,0,"")).toThrow(/Empty reviewed data row/);
-    expect(()=>updateUserReviewedImageCell(source,1,1,"new\\tcolumn")).toThrow(/tabs or line breaks/);
-    expect(()=>updateUserReviewedImageCell(source,1,1,"new\\nrow")).toThrow(/tabs or line breaks/);
+    expect(()=>updateUserReviewedImageCell("Name\tAmount\nA\t",1,0,"")).toThrow(/Empty reviewed data row/);
+    expect(()=>updateUserReviewedImageCell(source,1,1,"new\tcolumn")).toThrow(/tabs or line breaks/);
+    expect(()=>updateUserReviewedImageCell(source,1,1,"new\nrow")).toThrow(/tabs or line breaks/);
     expect(()=>updateUserReviewedImageCell(source,1,1,"x".repeat(1001))).toThrow(/1,000/);
   });
 });
