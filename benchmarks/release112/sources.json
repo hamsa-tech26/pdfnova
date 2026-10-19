@@ -1,0 +1,34 @@
+{
+  "scope": "EXTERNAL_TABLE_DETECTION_DIAGNOSTIC_ONLY",
+  "acceptedFormalV4DocumentCredit": 0,
+  "referenceStatus": "PUBLISHED_DETECTION_BOXES_NOT_INDEPENDENT_CELL_REFERENCE",
+  "rightsStatus": "REVIEW_REQUIRED",
+  "annotationArchive": {
+    "url": "https://huggingface.co/datasets/bsmock/pubtables-1m/resolve/main/PubTables-1M-Detection_Annotations_Test.tar.gz",
+    "sha256": "6787eb4da4b6e975ec5df46d1d836d072cce3fb645e150039ac88fd02d056b48",
+    "maximumBytes": 5000000
+  },
+  "documents": [
+    {
+      "id": "PMC1064082",
+      "source": "https://pmc-oa-opendata.s3.amazonaws.com/PMC1064082.1/PMC1064082.1.pdf",
+      "sha256": "97510a4389ac7a3453835e896ed5b4c18ff7c257dea25fbf0179bbf30ef6f14b",
+      "sourcePages": 7,
+      "referencePages": [
+        {"page": 1, "annotation": "PMC1064082_1.xml", "boxes": 1},
+        {"page": 4, "annotation": "PMC1064082_4.xml", "boxes": 1}
+      ]
+    },
+    {
+      "id": "PMC1064098",
+      "source": "https://pmc-oa-opendata.s3.amazonaws.com/PMC1064098.1/PMC1064098.1.pdf",
+      "sha256": "a36e01c63d45ece27a4b85a255d189ed573d2331281d0fb4770ae06dda9d4722",
+      "sourcePages": 14,
+      "referencePages": [
+        {"page": 6, "annotation": "PMC1064098_6.xml", "boxes": 1},
+        {"page": 7, "annotation": "PMC1064098_7.xml", "boxes": 1},
+        {"page": 8, "annotation": "PMC1064098_8.xml", "boxes": 2}
+      ]
+    }
+  ]
+}
