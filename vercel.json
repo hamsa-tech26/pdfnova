@@ -17,7 +17,8 @@
       "feature/kukureku-r85-double-blind-source-review": false,
       "fix/kukureku-r86-pmc5012829-native-table": false,
       "fix/kukureku-r87-original-pmc-wide-tables": false,
-      "feature/kukureku-r107-r111-reliability-batch": false
+      "feature/kukureku-r107-r111-reliability-batch": false,
+      "feature/kukureku-r112-pubtables-detection-audit": false
     }
   }
 }
