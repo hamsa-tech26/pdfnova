@@ -157,6 +157,7 @@ export default function EngineInspectorPage() {
 
   const [embeddedReview,setEmbeddedReview]=useState<EmbeddedImageOcrReviewResult|null>(null);
   const [reviewingImages,setReviewingImages]=useState(false);
+  const [embeddedImagePage,setEmbeddedImagePage]=useState<number|null>(null);
 
   const [selectedAnalysisIndex, setSelectedAnalysisIndex] =
     useState(0);
@@ -438,6 +439,7 @@ seenCells.set(
     setResult(null);
     setOcrResult(null);
     setEmbeddedReview(null);
+    setEmbeddedImagePage(null);
     setSelectedAnalysisIndex(0);
     setDiagnosticPageNumber(1);
     setSelectedSource(null);
@@ -452,7 +454,8 @@ seenCells.set(
     setReviewingImages(true);
     setEmbeddedReview(null);
     try{
-      const review=await reviewEmbeddedImageRegions(file,result.document.pages);
+      const pages=result.document.pages.filter(p=>p.pageNumber===embeddedImagePage);
+      const review=await reviewEmbeddedImageRegions(file,pages);
       setEmbeddedReview(review);
       if(!review.attempted){
         toast.message("No conservative embedded-image OCR regions qualified.");
@@ -528,6 +531,7 @@ seenCells.set(
       );
 
       setResult(analysisResult);
+      setEmbeddedImagePage(analysisResult.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
       setOcrResult(
   analysisResult.controlledOcrResult ?? null,
 );
@@ -747,14 +751,26 @@ seenCells.set(
   )}
   {result.imageContentReview.some(page=>page.imageReviewRecommended)&&(
     <div className="mt-3 rounded-xl border border-gray-200 p-3 text-sm dark:border-slate-700">
+      <label htmlFor="embedded-image-review-page" className="mr-3 font-medium">Embedded image page</label>
+      <select id="embedded-image-review-page"
+        className="mb-3 rounded-lg border border-gray-300 bg-white px-3 py-2 text-gray-900 dark:bg-slate-900 dark:text-white"
+        value={embeddedImagePage??""}
+        onChange={event=>{setEmbeddedImagePage(Number(event.target.value));setEmbeddedReview(null);}}
+        disabled={reviewingImages}>
+        {result.imageContentReview.filter(page=>page.imageReviewRecommended).map(page=>(
+          <option key={page.pageNumber} value={page.pageNumber}>Page {page.pageNumber}</option>
+        ))}
+      </select>
+      <div>
       <button type="button" onClick={()=>void runEmbeddedImageReview()}
         disabled={reviewingImages||isAnalyzing}
         className="rounded-lg bg-slate-900 px-4 py-2 font-semibold text-white disabled:opacity-50 dark:bg-slate-100 dark:text-slate-900">
         {reviewingImages?"Reviewing selected images locally...":"Run optional embedded-image OCR review"}
       </button>
+      </div>
       <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
-        Explicit opt-in. Tesseract checks at most four conservatively selected
-        image regions in your browser; it never replaces selectable PDF text,
+        Explicit opt-in. Tesseract checks at most two conservatively selected
+        image regions from the selected page in your browser; it never replaces selectable PDF text,
         modifies tables, or populates Excel cells.
       </p>
       {embeddedReview&&(
