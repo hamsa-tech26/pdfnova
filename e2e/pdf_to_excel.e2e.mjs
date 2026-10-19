@@ -375,6 +375,21 @@ test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe
   await expect(page.getByRole("heading",{name:"Optional embedded-image to Excel review"})).toBeVisible({timeout:90000});
   await page.getByRole("button",{name:"Run image OCR on selected page"}).click();
   await expect(page.getByLabel(/Your corrected table/)).toBeVisible({timeout:180000});
+  // R127: OCR table proposal is strictly optional. If the renderer/recognizer
+  // produces stable row/column geometry, prefilling must NEVER preview,
+  // confirm or download by itself. On irregular images show refusal instead.
+  const useProposal=page.getByRole("button",{name:"Copy tentative grid for manual correction"});
+  if(await useProposal.isVisible().catch(()=>false)){
+    await useProposal.click();
+    await expect(page.getByLabel(/Your corrected table/)).not.toHaveValue("");
+    await expect(page.getByRole("checkbox",{name:/I compared this edited grid/})).toHaveCount(0);
+    await expect(page.getByRole("button",{name:"Download confirmed image table (.xlsx)"})).toHaveCount(0);
+    console.log("R128: tentative image-table cells remain editable, unpreviewed and unapproved");
+  }else{
+    await expect(page.getByText(/Automatic row\/column suggestion withheld/)).toBeVisible();
+    console.log("R128: incomplete image-table evidence is visibly withheld");
+  }
+
   // OCR alone NEVER enables download; require manual cell entry and confirmation.
   await expect(page.getByRole("button",{name:"Download confirmed image table (.xlsx)"})).toHaveCount(0);
   await page.getByLabel(/Your corrected table/).fill(
