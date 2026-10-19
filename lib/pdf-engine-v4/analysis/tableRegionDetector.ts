@@ -1542,6 +1542,9 @@ export function detectTableRegionsForPage(
     regular.sourceBlock===dense.sourceBlock&&
     regular.firstLineIndex<=dense.firstLineIndex&&
     regular.lastLineIndex>=dense.lastLineIndex&&
+    // Do not shorten an already recovered long scientific table: its many
+    // legitimate rows are NOT an overbroad paragraph false positive.
+    regular.lastLineIndex-regular.firstLineIndex+1<=24&&
     regular.block.bounds.height>dense.block.bounds.height*1.65&&
     regular.block.bounds.width>=dense.block.bounds.width*0.75;
   const denseNativeGrids=findNativeDenseGridSubregions(splitNativeBlocks)
