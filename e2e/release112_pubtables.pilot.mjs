@@ -50,6 +50,14 @@ for(const source of manifest.documents){
     const result=JSON.parse(await readFile(file,"utf8"));
     expect(result.document?.pages?.length).toBe(source.sourcePages);
     expect(Array.isArray(result.tables)).toBe(true);
+    // R117: Inspector must expose evidence-only image review for ALL pages.
+    // It is NOT a source-table detector or permission to run extra OCR.
+    expect(Array.isArray(result.imageContentReview)).toBe(true);
+    expect(result.imageContentReview).toHaveLength(source.sourcePages);
+    expect(result.imageContentReview.every(item=>
+      item.imageReviewRecommended===(
+        item.nativeTextStatus==="sufficient"&&item.imagePaintCount>0
+      ))).toBe(true);
     const allTables=result.tables;
     const pageResults=[];
     for(const ref of source.referencePages){
@@ -62,7 +70,11 @@ for(const source of manifest.documents){
       const detected=allTables.filter(table=>table.pageNumber===ref.page)
         .map(table=>table.bounds);
       const metrics=scoreDetectionPage(expected,detected,0.5);
+      const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
+      expect(imageReview).toBeTruthy();
       pageResults.push({originalPage:ref.page,...metrics,
+        imagePaintCount:imageReview.imagePaintCount,
+        imageReviewRecommended:imageReview.imageReviewRecommended,
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -78,7 +90,8 @@ for(const source of manifest.documents){
     console.log(JSON.stringify({id:source.id,pages:pageResults.map(p=>({
       page:p.originalPage,reference:p.referenceCount,detected:p.predictionCount,
       matchedIoU50:p.matchedCount,unmatched:p.unmatchedPredictionCount,
-      bestIoU:p.referenceBestIoU,referenceBoxes:p.actualReferenceRects,
+      bestIoU:p.referenceBestIoU,imagePaintCount:p.imagePaintCount,
+      imageReviewRecommended:p.imageReviewRecommended,referenceBoxes:p.actualReferenceRects,
       detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
@@ -104,4 +117,10 @@ test.afterAll(async()=>{
   expect(summary.publishedBoxCount).toBe(6);
   expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(1);
   expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
+  // R117 per-document regression: preserve the independently annotated
+  // high-quality match that Release 112 obtained on original PMC page 7.
+  const scientific=runs.find(run=>run.id==="PMC1064098");
+  const region=scientific?.annotatedPages.find(record=>record.originalPage===7);
+  expect(region?.matchedCount).toBe(1);
+  expect(region?.referenceBestIoU[0]).toBeGreaterThanOrEqual(0.95);
 });
