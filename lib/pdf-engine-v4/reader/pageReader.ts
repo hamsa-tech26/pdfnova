@@ -358,6 +358,7 @@ export function calculatePageTextExtractionQualityScore(
 
 export async function readPdfDocumentV4(
   file: File,
+  options?: {inspectImagePaints?: boolean},
 ): Promise<PdfDocumentModel> {
   if (typeof window === "undefined") {
     throw new Error(
@@ -448,6 +449,17 @@ export async function readPdfDocumentV4(
           pageNumber,
         );
 
+      // R115: optional image-paint metadata for Inspector only. Other PDF
+      // tool paths do not incur an additional PDF graphics operator pass.
+      const imagePaintCount=options?.inspectImagePaints
+        ? (await page.getOperatorList()).fnArray.filter(op=>
+            op===pdfjsLib.OPS.paintImageXObject||
+            op===pdfjsLib.OPS.paintInlineImageXObject||
+            op===pdfjsLib.OPS.paintImageMaskXObject||
+            op===pdfjsLib.OPS.paintSolidColorImageMask
+          ).length
+        : undefined;
+
       pages.push({
   pageNumber,
   width: viewport.width,
@@ -455,6 +467,7 @@ export async function readPdfDocumentV4(
   words,
   lines,
   blocks: [],
+  imagePaintCount,
   textExtraction: {
   wordCount: words.length,
   lineCount: lines.length,

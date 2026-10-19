@@ -61,3 +61,37 @@ describe("R112 conservative native scientific grid segmentation",()=>{
     expect(findNativeDenseGridSubregions([block(ocr)])).toEqual([]);
   });
 });
+
+describe("Releases 113-114: multiple native scientific grids",()=>{
+  it("recovers two disjoint native numeric regions from one oversized paragraph",()=>{
+    const before=Array.from({length:8},(_,i)=>line(i,760-i*12,[["Explanatory prose surrounding independent scientific results",55]]));
+    const first=Array.from({length:8},(_,i)=>line(i+8,620-i*14,[
+      ["Case-"+i,61],["12"+i,120],["2."+i,179],["6."+i,347]
+    ]));
+    const between=Array.from({length:4},(_,i)=>line(i+16,470-i*13,[["Narrative notes after the first matrix",55]]));
+    const second=Array.from({length:8},(_,i)=>line(i+20,365-i*14,[
+      ["Sample-"+i,61],["31"+i,120],["4."+i,179],["9."+i,347]
+    ]));
+    const after=Array.from({length:5},(_,i)=>line(i+28,205-i*14,[["Concluding narrative notes after table",55]]));
+    const source=block([...before,...first,...between,...second,...after]);
+    const originalIds=source.lines.flatMap(l=>l.words).map(w=>w.id);
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(2);
+    expect(found[0].lastLineIndex).toBeLessThan(found[1].firstLineIndex-1);
+    expect(found[0].block.id).not.toBe(found[1].block.id);
+    expect(found.flatMap(x=>x.block.lines).some(l=>l.id==="line-0")).toBe(false);
+    expect(found.flatMap(x=>x.block.lines).some(l=>l.id==="line-32")).toBe(false);
+    expect(source.lines.flatMap(l=>l.words).map(w=>w.id)).toEqual(originalIds);
+    const detected=detectTableRegionsForPage([source]);
+    expect(detected.regions.filter(x=>x.block.id.startsWith("native-dense-grid-"))).toHaveLength(2);
+  });
+  it("does not duplicate neighboring runs when multiple start positions qualify",()=>{
+    const numeric=Array.from({length:12},(_,i)=>line(i,740-i*14,[
+      ["Specimen-"+i,61],["40"+i,120],["3."+i,179],["5."+i,347]
+    ]));
+    const prose=Array.from({length:12},(_,i)=>line(i+12,530-i*14,[
+      ["Published article contextual description",55]
+    ]));
+    expect(findNativeDenseGridSubregions([block([...numeric,...prose])])).toHaveLength(1);
+  });
+});
