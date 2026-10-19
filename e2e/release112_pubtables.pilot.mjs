@@ -86,6 +86,34 @@ for(const source of manifest.documents){
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
     }
+    if(source.id==="PMC1064098"){
+      // R122 physical browser test of the new opt-in OCR path on an actual
+      // full publisher PDF. Only numeric status is asserted/logged.
+      test.setTimeout(420000);
+      await page.getByLabel("Embedded image page").selectOption("6");
+      const runReview=page.getByRole("button",{
+        name:"Run optional embedded-image OCR review",
+      });
+      await expect(runReview).toBeVisible();
+      await runReview.click();
+      await expect(page.getByText(/image regions reviewed/)).toBeVisible({
+        timeout:240000,
+      });
+      await expect(page.getByText(/OCR is unverified text for human review only/))
+        .toBeVisible();
+      // The source V4 table result must stay byte-for-byte identical after
+      // an optional review. Never replace native words or inferred XLSX.
+      const secondDownload=page.waitForEvent("download");
+      await button.click();
+      const secondPath=await (await secondDownload).path();
+      if(!secondPath)throw Error("Inspector second export not available");
+      const unchanged=JSON.parse(await readFile(secondPath,"utf8"));
+      expect(unchanged.tables).toEqual(result.tables);
+      console.log(JSON.stringify({type:"R122_EMBEDDED_IMAGE_OPT_IN_BROWSER_REVIEW",
+        publisherId:source.id,selectedOriginalPage:6,
+        localReviewCompleted:true,sourceTablesUnchanged:true,
+        formalV4Credit:0}));
+    }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
     // Only aggregate counts and IoUs are persisted; no article text/PDF bytes.
