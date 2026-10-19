@@ -99,17 +99,19 @@ export function inspectPdfV4OcrCheckboxCandidates(
   );
   if (gap < 24) return [];
   const maxHorizontalOffset = gap * 0.38;
-  const marks = words.filter((w) =>
+  // Weak OCR marks must still block a conflicting confident X on the same row.
+  // They cannot themselves become candidate selections.
+  const allMarks = words.filter((w) =>
     /^[Xx]$/.test(w.text.trim()) &&
-    w.confidence >= 65 &&
     w.bounds.y0 > headerY + 2,
   );
+  const marks = allMarks.filter((w) => w.confidence >= 65);
   const observations: PdfV4OcrCheckboxCandidate[] = [];
   for (const mark of marks) {
     const y = centerY(mark);
     const lineTolerance = Math.max(7, height(mark) * 0.65);
     // More than one X on one OCR line is ambiguous, not a status assertion.
-    if (marks.some((other) =>
+    if (allMarks.some((other) =>
       other !== mark && Math.abs(centerY(other) - y) < lineTolerance,
     )) continue;
 
