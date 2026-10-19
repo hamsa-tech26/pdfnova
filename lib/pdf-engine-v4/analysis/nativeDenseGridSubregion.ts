@@ -61,7 +61,7 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
         if(eligible[i])count++;
         end=i;
       }
-      if(count<4||end-start+1>17)continue;
+      if(count<5||end-start+1>17)continue;
       const rows=lines.slice(start,end+1).filter(rowEvidence);
       const anchors=columnsInRun(rows);
       // Two recurrent, distant source x positions and real numeric content
@@ -69,7 +69,7 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       if(!anchors.some(x=>anchors.some(y=>y-x>=85)))continue;
       const matches=rows.filter(row=>
         anchors.filter(anchor=>row.words.some(w=>Math.abs(w.bounds.x-anchor)<=9)).length>=2);
-      if(matches.length<4)continue;
+      if(matches.length<5)continue;
       if(!best||count>best.count)best={start,end,count};
     }
     if(!best)continue;
