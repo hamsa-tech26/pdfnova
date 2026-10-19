@@ -47,6 +47,7 @@ export default function PdfToExcelPage() {
   const [reviewedRows,setReviewedRows]=useState<string[][]|null>(null);
   const [reviewConfirmed,setReviewConfirmed]=useState(false);
   const [imageStatus,setImageStatus]=useState("");
+  const [reviewRegionIndex,setReviewRegionIndex]=useState<number|null>(null);
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -57,7 +58,7 @@ export default function PdfToExcelPage() {
     setError("");
     setInspected(null);
     setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
-    setReviewConfirmed(false);setImageStatus("");
+    setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -71,7 +72,7 @@ export default function PdfToExcelPage() {
     setWarnings([]);
     setInspected(null);
     setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
-    setReviewConfirmed(false);setImageStatus("");
+    setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -99,6 +100,64 @@ export default function PdfToExcelPage() {
       setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
+    }finally{setBusy(false);}
+  }
+
+  /** The public all-native export is unchanged; OCR requires an explicit click. */
+  async function inspectImageContent(){
+    if(!file||busy)return;
+    setBusy(true);setError("");setImageStatus("");setImageReview(null);
+    setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    try{
+      const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
+      setInspected(analyzed);
+      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
+      setChoices(analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[]);
+      setSelectedIndex(null);setPreview(null);
+    }catch(cause){
+      setError(cause instanceof Error?cause.message:"Unable to inspect image content.");
+    }finally{setBusy(false);}
+  }
+  async function runImageOcrReview(){
+    if(!file||!inspected||busy||imageBusy||imagePage===null)return;
+    setImageBusy(true);setImageStatus("");setImageReview(null);
+    setReviewRegionIndex(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    try{
+      const reviewed=await reviewEmbeddedImageRegions(file,
+        inspected.document.pages.filter(p=>p.pageNumber===imagePage));
+      setImageReview(reviewed);
+      const usable=reviewed.reviews.findIndex(x=>x.status==="TEXT_REVIEW_ONLY");
+      setReviewRegionIndex(usable>=0?usable:null);
+      if(usable<0)
+        setImageStatus("No sufficiently readable image region was found. No cells can be exported.");
+    }catch(cause){
+      setImageStatus(cause instanceof Error?cause.message:"Embedded-image OCR review failed.");
+    }finally{setImageBusy(false);}
+  }
+  function previewUserGrid(){
+    try{
+      const rows=parseUserReviewedImageGrid(reviewedTsv);
+      setReviewedRows(rows);setReviewConfirmed(false);setImageStatus("");
+    }catch(cause){
+      setReviewedRows(null);setReviewConfirmed(false);
+      setImageStatus(cause instanceof Error?cause.message:"Invalid tab-separated table.");
+    }
+  }
+  async function exportUserReviewedImage(){
+    if(!file||!inspected||busy||imageBusy||!reviewedRows||!reviewConfirmed)return;
+    setBusy(true);setError("");setImageStatus("");
+    try{
+      const reviewed=reviewRegionIndex===null?null:imageReview?.reviews[reviewRegionIndex];
+      if(!reviewed)throw Error("Select a usable embedded image OCR review before exporting.");
+      const plan=prepareUserReviewedImageXlsx({review:reviewed,tsv:reviewedTsv,
+        confirmed:reviewConfirmed,documentPageCount:inspected.document.pages.length});
+      // Validate the exact currently edited grid again, not an old preview.
+      if(JSON.stringify(plan.tables[0].rows)!==JSON.stringify(reviewedRows))
+        throw Error("The reviewed cells changed. Preview and confirm the current values again.");
+      const name=(file.name.replace(/\\.pdf$/i,"")||"kukureku")+"-user-reviewed-image.xlsx";
+      await finishWorkbook(plan,name);
+    }catch(cause){
+      setImageStatus(cause instanceof Error?cause.message:"Reviewed image table export was withheld.");
     }finally{setBusy(false);}
   }
 
