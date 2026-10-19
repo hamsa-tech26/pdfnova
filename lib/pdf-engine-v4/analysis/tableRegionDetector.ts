@@ -1525,27 +1525,53 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.spacing.score >= 12 &&
       candidate.analysis.totalScore >= resolvedOptions.tableThreshold,
     );
-  // Scope a genuinely repeated numeric native grid out of an otherwise
-  // oversized article paragraph. Existing high-specificity recoveries win.
-  const alreadyReconstructed=new Set([
-    ...interleavedGrids,...elevenGrids,...pairedGrids,...admitted,...alignedCandidates,
+  // R114: prior caption/aligned rescues sometimes swallow an entire native
+  // page. Allow a strongly supported dense row subregion to supersede ONLY
+  // an overly broad candidate that fully contains it; protected scientific
+  // special cases and genuine disjoint tables keep their original routing.
+  const protectedSources=new Set([
+    ...interleavedGrids,...elevenGrids,...pairedGrids,
   ].map(candidate=>candidate.sourceBlock));
+  const regularCandidates=[...admitted,...alignedCandidates];
+  const candidateOverlap=(first:{firstLineIndex:number;lastLineIndex:number},
+    second:{firstLineIndex:number;lastLineIndex:number})=>
+    first.firstLineIndex<=second.lastLineIndex&&
+    second.firstLineIndex<=first.lastLineIndex;
+  const canReplaceBroad=(regular:typeof regularCandidates[number],
+    dense:ReturnType<typeof findNativeDenseGridSubregions>[number])=>
+    regular.sourceBlock===dense.sourceBlock&&
+    regular.firstLineIndex<=dense.firstLineIndex&&
+    regular.lastLineIndex>=dense.lastLineIndex&&
+    regular.block.bounds.height>dense.block.bounds.height*1.65&&
+    regular.block.bounds.width>=dense.block.bounds.width*0.75;
   const denseNativeGrids=findNativeDenseGridSubregions(splitNativeBlocks)
-    .filter(candidate=>!alreadyReconstructed.has(candidate.sourceBlock))
+    .filter(candidate=>!protectedSources.has(candidate.sourceBlock))
+    .filter(dense=>{
+      const overlaps=regularCandidates.filter(regular=>
+        regular.sourceBlock===dense.sourceBlock&&candidateOverlap(regular,dense));
+      return overlaps.every(regular=>canReplaceBroad(regular,dense));
+    })
     .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
-  const allAdmitted = [...interleavedGrids,...elevenGrids,...pairedGrids, ...admitted, ...alignedCandidates,...denseNativeGrids]
+  const retainedRegular=regularCandidates.filter(regular=>
+    !denseNativeGrids.some(dense=>canReplaceBroad(regular,dense)));
+  const allAdmitted=[...interleavedGrids,...elevenGrids,...pairedGrids,
+    ...retainedRegular,...denseNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
-  const bySource = new Map<PdfVisualBlock, typeof allAdmitted>();
-  const captionAnalyses = new Map<PdfVisualBlock, TableRegionAnalysis>();
-  for (const candidate of allAdmitted) {
-    const previous = bySource.get(candidate.sourceBlock) ?? [];
+  const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();
+  const captionAnalyses=new Map<PdfVisualBlock,TableRegionAnalysis>();
+  for(const candidate of allAdmitted){
+    const previous=bySource.get(candidate.sourceBlock)??[];
+    // Multiple R113 numeric subregions must remain disjoint, never count
+    // overlapping rows twice even when visually close.
+    if(candidate.block.id.startsWith("native-dense-grid-")&&
+      previous.some(old=>candidateOverlap(old,candidate)))continue;
     previous.push(candidate);
-    bySource.set(candidate.sourceBlock, previous);
-    captionAnalyses.set(candidate.block, {
-      ...candidate.analysis,
-      isTable: true,
-      totalScore: Math.max(candidate.analysis.totalScore, resolvedOptions.tableThreshold),
+    previous.sort((a,b)=>a.firstLineIndex-b.firstLineIndex);
+    bySource.set(candidate.sourceBlock,previous);
+    captionAnalyses.set(candidate.block,{
+      ...candidate.analysis,isTable:true,
+      totalScore:Math.max(candidate.analysis.totalScore,resolvedOptions.tableThreshold),
     });
   }
 
