@@ -16,7 +16,7 @@ export type EmbeddedImageOcrReview={
   confidence:number;
   status:"TEXT_REVIEW_ONLY"|"NO_RELIABLE_TEXT";
   /** Unverified geometry proposal, never an approved spreadsheet or source table. */
-  gridProposal:ImageGridProposal;
+  gridProposal?:ImageGridProposal;
 };
 export type EmbeddedImageOcrReviewResult={
   attempted:boolean;
