@@ -786,6 +786,19 @@ seenCells.set(
               className="rounded-lg border border-gray-200 p-3 dark:border-slate-700">
               <p className="font-semibold">Page {item.pageNumber} · {item.status.replaceAll("_"," ")}</p>
               <p className="text-xs">OCR confidence: {Math.round(item.confidence)}% · Recognized words: {item.wordCount}</p>
+              {item.sourcePreviewDataUrl&&(
+                <figure className="mt-2 rounded-xl border border-amber-300 p-2 dark:border-amber-800">
+                  <figcaption className="mb-2 text-xs font-semibold">
+                    Original image crop (browser-local, unverified)
+                  </figcaption>
+                  {/* Client-generated data URL; no hosted document image. */}
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={item.sourcePreviewDataUrl}
+                    alt={"Original source image crop for PDF page "+item.pageNumber}
+                    referrerPolicy="no-referrer" decoding="async" loading="lazy"
+                    className="max-h-80 max-w-full rounded object-contain"/>
+                </figure>
+              )}
               {item.text&&<pre className="mt-2 max-h-44 overflow-auto whitespace-pre-wrap text-xs">{item.text}</pre>}
             </div>
           ))}
