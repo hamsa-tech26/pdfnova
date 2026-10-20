@@ -37,7 +37,6 @@ function fixture():PdfParagraphBlock{
     line(15,[[61,"Notes about the underlying data"]]),
     line(16,[[57,"8"],[315,"8"]]),
   ];
-  const words=lines.flatMap(l=>l.words);
   return {id:"native-source",type:"paragraph",pageNumber:8,lines,
     bounds:{x:57,y:488,width:500,height:222},
     text:lines.map(l=>l.text).join(" "),confidence:.9};
@@ -74,7 +73,7 @@ describe("R145 bounded native scientific caption-and-header segmentation",()=>{
     mixed.lines[8].words[0].extractionProvenance={source:"ocr-tesseract"};
     expect(findNativeCaptionHeaderScientificGrids([mixed])).toHaveLength(0);
     const drifting=fixture();
-    for(let i=8;i<=14;i++)for(let w of drifting.lines[i].words)
+    for(let i=8;i<=14;i++)for(const w of drifting.lines[i].words)
       w.bounds.x+=i*11;
     expect(findNativeCaptionHeaderScientificGrids([drifting])).toHaveLength(0);
   });
