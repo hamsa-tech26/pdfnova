@@ -105,6 +105,20 @@ for(const source of manifest.documents){
         publishedImageBestIoU,
         imagePaintRects:nativeImageRects.slice(0,20).map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         imageReviewRecommended:imageReview.imageReviewRecommended,
+        overlappingSourceBlocks:expected.map(box=>(viewport.blocks??[])
+          .filter(b=>b.type==="paragraph"||b.type==="heading")
+          .map(b=>{
+            const bounded=rectangleIoU(b.bounds,box);
+            const lines=b.lines??[];
+            const cy=(b.bounds.y+b.bounds.height/2);
+            const within=cy>=box.y-75&&cy<=box.y+box.height+75;
+            const captionLines=lines.filter(line=>
+              /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())).length;
+            return {type:b.type,within,intersectionOverUnion:Number(bounded.toFixed(4)),
+              lineCount:lines.length,captionLines,
+              bounds:Object.fromEntries(Object.entries(b.bounds).map(([k,v])=>[k,Number(v.toFixed(1))]))};
+          }).filter(b=>b.intersectionOverUnion>0.02||
+            b.within&&b.captionLines>0).slice(0,12)),
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -153,6 +167,7 @@ for(const source of manifest.documents){
       imageRegionsDetected:p.imageRegionsDetected,publishedImageBestIoU:p.publishedImageBestIoU,
       referenceBoxes:p.actualReferenceRects,
       detectedBoxes:p.predictedRects,imagePaintRects:p.imagePaintRects,
+      overlappingSourceBlocks:p.overlappingSourceBlocks,
       geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
