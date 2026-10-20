@@ -15,7 +15,8 @@ export type ReviewedImageTableInput={
 export function parseUserReviewedImageGrid(tsv:string):string[][]{
   if(typeof tsv!=="string"||tsv.length>30000)
     throw Error("Reviewed table exceeds the 30,000-character limit.");
-  const lines=tsv.replace(/\r\n?/g,"\n").trim().split("\n");
+  // Preserve edge empty cells: .trim() would erase a leading or trailing tab.
+  const lines=tsv.replace(/\r\n?/g,"\n").replace(/^[ \n]+|[ \n]+$/g,"").split("\n");
   if(lines.length<2||lines.length>100)
     throw Error("Enter 2–100 tab-separated rows, including headings.");
   if(lines.some(line=>line.length===0))
@@ -31,6 +32,27 @@ export function parseUserReviewedImageGrid(tsv:string):string[][]{
   if(rows.slice(1).some(row=>row.every(cell=>!cell)))
     throw Error("Empty reviewed data rows are not allowed.");
   return rows;
+}
+/**
+ * R129: user-initiated correction of one explicitly reviewed OCR cell.
+ * Rebuild and revalidate the entire table, never alter native PDF tables.
+ * The caller MUST invalidate any previous preview and confirmation.
+ */
+export function updateUserReviewedImageCell(
+  tsv:string,rowIndex:number,columnIndex:number,newValue:string,
+):string{
+  const rows=parseUserReviewedImageGrid(tsv);
+  if(!Number.isSafeInteger(rowIndex)||rowIndex<0||rowIndex>=rows.length||
+    !Number.isSafeInteger(columnIndex)||columnIndex<0||columnIndex>=rows[0].length)
+    throw Error("Choose a cell inside the reviewed image table.");
+  if(typeof newValue!=="string"||newValue.length>1000||/[\t\r\n]/.test(newValue))
+    throw Error("A cell must contain at most 1,000 characters without tabs or line breaks.");
+  const updated=rows.map(row=>[...row]);
+  updated[rowIndex][columnIndex]=newValue.trim();
+  const revisedTsv=updated.map(row=>row.join("\t")).join("\n");
+  // This rejects erased column headings, empty data rows, or malformed grids.
+  parseUserReviewedImageGrid(revisedTsv);
+  return revisedTsv;
 }
 export function prepareUserReviewedImageXlsx(input:ReviewedImageTableInput):PdfXlsxInput{
   if(!input.confirmed)

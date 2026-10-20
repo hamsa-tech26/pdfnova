@@ -13,7 +13,7 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
-import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx} from "@/lib/converters/reviewedImageTableWorkbook";
+import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
 import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
   pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
   type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
@@ -45,6 +45,8 @@ export default function PdfToExcelPage() {
   const [imageBusy,setImageBusy]=useState(false);
   const [reviewedTsv,setReviewedTsv]=useState("");
   const [reviewedRows,setReviewedRows]=useState<string[][]|null>(null);
+  const [imageEditCell,setImageEditCell]=useState<{row:number;column:number}|null>(null);
+  const [imageEditValue,setImageEditValue]=useState("");
   const [reviewConfirmed,setReviewConfirmed]=useState(false);
   const [imageStatus,setImageStatus]=useState("");
   const [reviewRegionIndex,setReviewRegionIndex]=useState<number|null>(null);
@@ -144,12 +146,37 @@ export default function PdfToExcelPage() {
     setImageStatus("Tentative OCR grid copied to the editable form. Compare each heading and value against the source image, fix errors, then preview and approve.");
   }
   function previewUserGrid(){
+    setImageEditCell(null);
     try{
       const rows=parseUserReviewedImageGrid(reviewedTsv);
       setReviewedRows(rows);setReviewConfirmed(false);setImageStatus("");
     }catch(cause){
       setReviewedRows(null);setReviewConfirmed(false);
       setImageStatus(cause instanceof Error?cause.message:"Invalid tab-separated table.");
+    }
+  }
+  /** R129: edits are manual-only and always invalidate preview and consent. */
+  function beginImageCellCorrection(row:number,column:number){
+    if(!reviewedRows||!reviewedRows[row]||column>=reviewedRows[row].length)return;
+    setImageEditCell({row,column});
+    setImageEditValue(reviewedRows[row][column]);
+    setReviewConfirmed(false);
+    setImageStatus("");
+  }
+  function applyImageCellCorrection(){
+    if(!imageEditCell||!reviewedRows)return;
+    try{
+      const next=updateUserReviewedImageCell(
+        reviewedTsv,imageEditCell.row,imageEditCell.column,imageEditValue,
+      );
+      setReviewedTsv(next);
+      setReviewedRows(null);
+      setReviewConfirmed(false);
+      setImageEditCell(null);
+      setImageEditValue("");
+      setImageStatus("Correction saved locally. Preview all corrected cells and explicitly approve again before exporting.");
+    }catch(cause){
+      setImageStatus(cause instanceof Error?cause.message:"The correction was not applied.");
     }
   }
   async function exportUserReviewedImage(){
@@ -447,10 +474,41 @@ export default function PdfToExcelPage() {
                       className="max-h-72 overflow-auto rounded-xl border">
                       <table className="w-full border-collapse text-sm"><tbody>
                         {reviewedRows.map((row,ri)=><tr key={ri}>
-                          {row.map((value,ci)=><td key={ci} className="border p-2 whitespace-pre-wrap">{value}</td>)}
+                          {row.map((value,ci)=><td key={ci} className="border p-1 whitespace-pre-wrap">
+                            <button type="button" disabled={busy||imageBusy}
+                              aria-label={"Edit reviewed cell "+pdfTableCellAddress(ri,ci)}
+                              title={"Edit "+pdfTableCellAddress(ri,ci)+" — manual source correction"}
+                              onClick={()=>beginImageCellCorrection(ri,ci)}
+                              className="w-full min-w-12 rounded p-1 text-left hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-600 dark:hover:bg-slate-700">
+                              {value||<span className="italic text-slate-400">(blank)</span>}
+                            </button>
+                          </td>)}
                         </tr>)}
                       </tbody></table>
                     </div>
+                    {imageEditCell&&(
+                      <div className="space-y-2 rounded-lg border border-blue-300 p-3 dark:border-blue-800">
+                        <label htmlFor="reviewed-image-cell-edit" className="block text-sm font-semibold">
+                          Correct cell {pdfTableCellAddress(imageEditCell.row,imageEditCell.column)} against the original image
+                        </label>
+                        <input id="reviewed-image-cell-edit" type="text" maxLength={1000}
+                          value={imageEditValue} onChange={e=>setImageEditValue(e.target.value)}
+                          className="w-full rounded-lg border p-2 font-mono text-sm text-slate-950 dark:bg-slate-900 dark:text-white"/>
+                        <p className="text-xs text-slate-600 dark:text-slate-300">
+                          No OCR value is automatically accepted. Applying a correction clears the current preview and approval.
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          <button type="button" onClick={applyImageCellCorrection}
+                            className="rounded-lg bg-blue-800 px-3 py-2 text-sm font-semibold text-white">
+                            Apply correction — preview again
+                          </button>
+                          <button type="button" onClick={()=>setImageEditCell(null)}
+                            className="rounded-lg border px-3 py-2 text-sm font-semibold">
+                            Cancel edit
+                          </button>
+                        </div>
+                      </div>
+                    )}
                     <label className="flex items-start gap-2 text-sm">
                       <input type="checkbox" checked={reviewConfirmed}
                         onChange={e=>setReviewConfirmed(e.target.checked)}/>
