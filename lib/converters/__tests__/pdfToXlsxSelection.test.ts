@@ -118,7 +118,7 @@ describe("R134 compact scientific native-grid export isolation",()=>{
     const t=table(2,"compact");
     for(const row of t.rows)row.provenance!.blockId="native-compact-grid-2-source-2";
     const doc=source([t]);
-    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/explicit selection/);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
     const choices=inspectPdfV4XlsxChoices(doc);
     expect(choices).toHaveLength(1);
     expect(choices[0].eligible).toBe(true);
@@ -146,7 +146,7 @@ describe("captioned text tables must not silently export a truncated two-row rec
     const doc=source([t]);
     expect(inspectPdfV4XlsxChoices(doc)[0].eligible).toBe(false);
     expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow(/too few reconstructed physical lines/);
-    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/explicit selection/);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
   });
   it("documents physical-line limitations for a source-complete selected table",()=>{
     const t=table(4,"caption-complete");
@@ -163,5 +163,28 @@ describe("captioned text tables must not silently export a truncated two-row rec
     expect(plan.reviewNotes?.join(" ")).toContain("physical text line");
     expect(plan.reviewNotes?.join(" ")).toContain("no row continuation");
     expect(plan.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+  });
+});
+
+describe("R134 no regression of established all-table native XLSX exports",()=>{
+  it("exports proven existing tables and clearly omits unverified new candidate",()=>{
+    const existing=table(2,"established");
+    const newGrid=table(4,"review");
+    for(const row of newGrid.rows)
+      row.provenance!.blockId="native-compact-grid-4-source-8";
+    const doc=source([existing,newGrid]);
+    const workbook=preparePdfV4XlsxExport(doc);
+    expect(workbook.tables).toHaveLength(1);
+    expect(workbook.tables[0].rows[1][1]).toBe("00071");
+    expect(workbook.reviewNotes?.join(" ")).toContain("newly recovered, unverified");
+    expect(workbook.reviewNotes?.join(" ")).toContain("omitted");
+    expect(prepareSelectedPdfV4XlsxExport(doc,1).tables).toHaveLength(1);
+  });
+  it("refuses unattended export when every detected table needs review",()=>{
+    const newGrid=table(2,"unverified");
+    for(const row of newGrid.rows)
+      row.provenance!.blockId="native-compact-grid-2-source-8";
+    expect(()=>preparePdfV4XlsxExport(source([newGrid])))
+      .toThrow(/choose an individual table/);
   });
 });
