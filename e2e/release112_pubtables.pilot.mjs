@@ -116,7 +116,7 @@ for(const source of manifest.documents){
               /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())).length;
             return {type:b.type,within,intersectionOverUnion:Number(bounded.toFixed(4)),
               lineCount:lines.length,captionLines,
-              nativeTwoColumnSignatures:lines.length<=40?lines.map((line,index)=>{
+              nativeTwoColumnSignatures:lines.length<=(source.id==="PMC1064082"&&ref.page===1?65:40)?lines.map((line,index)=>{
                 const words=[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x);
                 const gaps=words.slice(1).map((w,i)=>w.bounds.x-words[i].bounds.x);
                 const biggest=gaps.length?Math.max(...gaps):0;
@@ -124,7 +124,10 @@ for(const source of manifest.documents){
                 return {index,y:Number(line.bounds.y.toFixed(1)),count:words.length,
                   left:words[0]?Number(words[0].bounds.x.toFixed(1)):null,
                   right:biggest>=120?Number(words[pivot].bounds.x.toFixed(1)):null,
-                  gap:Number(biggest.toFixed(1)),ocr:words.some(w=>
+                  gap:Number(biggest.toFixed(1)),height:Number(line.bounds.height.toFixed(1)),
+                  wordLengths:words.map(w=>w.text.length),
+                  anchors:words.map(w=>Number(w.bounds.x.toFixed(1))),
+                  ocr:words.some(w=>
                     w.extractionProvenance?.source==="ocr-tesseract"),
                   caption:/\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())};
               }):[],
