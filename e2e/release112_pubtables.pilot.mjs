@@ -24,7 +24,7 @@ function summarizeReferenceGeometry(viewport,box){
     return center>=box.y-55&&center<=box.y+box.height+55;
   };
   const nearbyCaptions=(viewport.lines??[]).filter(line=>near(line)&&
-    /\\b(?:table|tab\\.?)\\s*(?:s?\\d{1,3})\\b/i.test(line.text.trim()));
+    /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim()));
   const captionClosestGap=nearbyCaptions.length?Math.min(...nearbyCaptions.map(line=>{
     const cy=line.bounds.y+line.bounds.height/2;
     return Number(Math.max(0,box.y-cy,cy-(box.y+box.height)).toFixed(1));
