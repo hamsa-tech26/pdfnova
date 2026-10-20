@@ -20,7 +20,7 @@ async function nativeTablePdf(){
 test("live Kukureku accepts a synthetic PDF and exports a real XLSX with source values",async({page})=>{
   test.setTimeout(180000);
   await page.goto("/pdf-to-excel",{waitUntil:"domcontentloaded"});
-  await expect(page.getByRole("heading",{name:/PDF to Excel/i}).first()).toBeVisible();
+  await expect(page.getByRole("button",{name:/Convert to Excel/i})).toBeVisible();
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_RELEASE142_TABLE.pdf",mimeType:"application/pdf",
     buffer:await nativeTablePdf(),
