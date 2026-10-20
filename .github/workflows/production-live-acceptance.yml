@@ -3,7 +3,7 @@ on:
   pull_request:
     branches: [main]
     paths:
-      - "e2e/production-live-acceptance.spec.mjs"
+      - "e2e/production-live-acceptance.live.mjs"
       - "playwright.live-production.config.mjs"
       - ".github/workflows/production-live-acceptance.yml"
   workflow_dispatch:
