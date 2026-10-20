@@ -16,11 +16,33 @@ function summarizeReferenceGeometry(viewport,box){
   const wordCounts=lines.map(line=>line.words.filter(word=>
     inside(word.bounds.x+word.bounds.width/2,
       word.bounds.y+word.bounds.height/2)).length);
+  // R135 investigation-only: numeric and boolean source signals, never text.
+  // Caption evidence must be measured before trying an ambiguous two-column
+  // prose-vs-table detector, not imagined from a publisher box.
+  const near=(line)=>{
+    const center=line.bounds.y+line.bounds.height/2;
+    return center>=box.y-55&&center<=box.y+box.height+55;
+  };
+  const nearbyCaptions=(viewport.lines??[]).filter(line=>near(line)&&
+    /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim()));
+  const captionClosestGap=nearbyCaptions.length?Math.min(...nearbyCaptions.map(line=>{
+    const cy=line.bounds.y+line.bounds.height/2;
+    return Number(Math.max(0,box.y-cy,cy-(box.y+box.height)).toFixed(1));
+  })):null;
+  const exactlyTwoNativeColumns=lines.filter(line=>{
+    const insideWords=line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
+      word.bounds.y+word.bounds.height/2));
+    return insideWords.length===2 &&
+      insideWords.every(w=>w.extractionProvenance?.source!=="ocr-tesseract")&&
+      insideWords[1].bounds.x-insideWords[0].bounds.x>=120;
+  }).length;
   const uniqueX=new Set(lines.flatMap(line=>line.words.filter(word=>
     inside(word.bounds.x+word.bounds.width/2,
       word.bounds.y+word.bounds.height/2))
     .map(word=>Math.round(word.bounds.x/10)*10)));
   return {lineCount:lines.length,wordCount:wordCounts.reduce((a,b)=>a+b,0),
+    nearbyTableCaptionCount:nearbyCaptions.length,captionClosestGap,
+    exactlyTwoNativeColumns,
     medianWordsPerLine:wordCounts.length?
       [...wordCounts].sort((a,b)=>a-b)[Math.floor(wordCounts.length/2)]:0,
     linesAtLeast3Words:wordCounts.filter(n=>n>=3).length,
@@ -81,7 +103,42 @@ for(const source of manifest.documents){
         imagePaintCount:imageReview.imagePaintCount,
         imageRegionsDetected:nativeImageRects.length,
         publishedImageBestIoU,
+        imagePaintRects:nativeImageRects.slice(0,20).map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         imageReviewRecommended:imageReview.imageReviewRecommended,
+        overlappingSourceBlocks:expected.map(box=>(viewport.blocks??[])
+          .filter(b=>b.type==="paragraph"||b.type==="heading")
+          .map(b=>{
+            const bounded=rectangleIoU(b.bounds,box);
+            const lines=b.lines??[];
+            const cy=(b.bounds.y+b.bounds.height/2);
+            const within=cy>=box.y-75&&cy<=box.y+box.height+75;
+            const captionLines=lines.filter(line=>
+              /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())).length;
+            return {type:b.type,within,intersectionOverUnion:Number(bounded.toFixed(4)),
+              lineCount:lines.length,captionLines,
+              nativeTwoColumnSignatures:lines.length<=40?lines.map((line,index)=>{
+                const words=[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x);
+                const gaps=words.slice(1).map((w,i)=>w.bounds.x-words[i].bounds.x);
+                const biggest=gaps.length?Math.max(...gaps):0;
+                const pivot=gaps.indexOf(biggest)+1;
+                return {index,y:Number(line.bounds.y.toFixed(1)),count:words.length,
+                  left:words[0]?Number(words[0].bounds.x.toFixed(1)):null,
+                  right:biggest>=120?Number(words[pivot].bounds.x.toFixed(1)):null,
+                  gap:Number(biggest.toFixed(1)),ocr:words.some(w=>
+                    w.extractionProvenance?.source==="ocr-tesseract"),
+                  caption:/\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())};
+              }):[],
+              bounds:Object.fromEntries(Object.entries(b.bounds).map(([k,v])=>[k,Number(v.toFixed(1))]))};
+          }).filter(b=>b.intersectionOverUnion>0.02||
+            b.within&&b.captionLines>0).slice(0,12)),
+        newTextGridRegionDiagnostics:(result.candidateRegionDiagnostics??[])
+          .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
+          .map(d=>({blockId:d.blockId,outcome:d.outcome,acceptedColumnCount:d.acceptedColumnCount,
+            score:Number(d.analysis.totalScore.toFixed(2))})),
+        newTextGridTableAnalyses:(result.tableAnalyses??[])
+          .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
+          .map(d=>({blockId:d.blockId,hasTable:!!d.table,columns:d.columnDetection?.columns?.length??0,
+            rows:d.rowDetection?.rows?.length??0})),
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -129,7 +186,11 @@ for(const source of manifest.documents){
       imageReviewRecommended:p.imageReviewRecommended,
       imageRegionsDetected:p.imageRegionsDetected,publishedImageBestIoU:p.publishedImageBestIoU,
       referenceBoxes:p.actualReferenceRects,
-      detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
+      detectedBoxes:p.predictedRects,imagePaintRects:p.imagePaintRects,
+      overlappingSourceBlocks:p.overlappingSourceBlocks,
+      newTextGridRegionDiagnostics:p.newTextGridRegionDiagnostics,
+      newTextGridTableAnalyses:p.newTextGridTableAnalyses,
+      geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
 }
@@ -148,11 +209,11 @@ test.afterAll(async()=>{
   await writeFile(join(root,"reports/aggregate.json"),
     JSON.stringify(summary,null,2)+"\n");
   console.log(JSON.stringify(summary));
-  // R112 scoped acceptance: demonstrable independent spatial improvement
-  // over the observed 0/6 baseline, without more unmatched regions (3).
-  // This DOES NOT certify remaining missing image/irregular tables.
+  // R130–134 scoped acceptance: improvement over the R112 1/6 source-box
+  // baseline without increasing its two unmatched predictions.
+  // These are spatial source-box checks, NOT cell/row certification.
   expect(summary.publishedBoxCount).toBe(6);
-  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(1);
+  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(2);
   expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
   // R117 per-document regression: preserve the independently annotated
   // high-quality match that Release 112 obtained on original PMC page 7.
@@ -160,4 +221,9 @@ test.afterAll(async()=>{
   const region=scientific?.annotatedPages.find(record=>record.originalPage===7);
   expect(region?.matchedCount).toBe(1);
   expect(region?.referenceBestIoU[0]).toBeGreaterThanOrEqual(0.95);
+  const page8=scientific?.annotatedPages.find(record=>record.originalPage===8);
+  const reviewedText=page8?.newTextGridTableAnalyses?.filter(entry=>entry.hasTable)??[];
+  expect(reviewedText.length).toBeGreaterThanOrEqual(1);
+  expect(reviewedText.every(entry=>entry.columns===2&&entry.rows>=8))
+    .toBe(true);
 });

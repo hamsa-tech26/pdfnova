@@ -112,3 +112,79 @@ describe("Release 81 selective native PDF table export",()=>{
       .toThrow("limit: 100");
   });
 });
+
+describe("R134 compact scientific native-grid export isolation",()=>{
+  it("refuses silent all-table export but permits explicitly selected table with warnings",async()=>{
+    const t=table(2,"compact");
+    for(const row of t.rows)row.provenance!.blockId="native-compact-grid-2-source-2";
+    const doc=source([t]);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
+    const choices=inspectPdfV4XlsxChoices(doc);
+    expect(choices).toHaveLength(1);
+    expect(choices[0].eligible).toBe(true);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    expect(plan.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+    expect(plan.reviewNotes?.join(" ")).toContain("EVERY cell");
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+    const workbook=await createPdfXlsxWorkbook(plan);
+    const zip=await JSZip.loadAsync(workbook);
+    expect(await zip.file("xl/worksheets/sheet1.xml")!.async("string")).toContain("00071");
+  });
+  it("preserves original provenance and OCR/confidence safeguards for compact grids",()=>{
+    const t=table(2,"compact");
+    for(const row of t.rows)row.provenance!.blockId="native-compact-grid-2-source-2";
+    t.confidence=0.4;
+    expect(inspectPdfV4XlsxChoices(source([t]))[0].eligible).toBe(false);
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([t]),0)).toThrow(/uncertain/);
+  });
+});
+
+describe("captioned text tables must not silently export a truncated two-row reconstruction",()=>{
+  it("rejects an under-recovered captioned region even after manual selection",()=>{
+    const t=table(4,"caption");
+    for(const row of t.rows)row.provenance!.blockId="native-captioned-text-grid-4-source-3";
+    const doc=source([t]);
+    expect(inspectPdfV4XlsxChoices(doc)[0].eligible).toBe(false);
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow(/too few reconstructed physical lines/);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
+  });
+  it("documents physical-line limitations for a source-complete selected table",()=>{
+    const t=table(4,"caption-complete");
+    const base=t.rows.map(r=>({...r,cells:r.cells.map(c=>({...c}))}));
+    t.rows=Array.from({length:9},(_,i)=>({
+      ...base[i%base.length],id:"row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,blockId:"native-captioned-text-grid-4-source-3",originalRowIndex:i},
+      cells:base[i%base.length].cells.map(c=>({...c,
+        id:"cell-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:190-i*13}})),
+    }));
+    const plan=prepareSelectedPdfV4XlsxExport(source([t]),0);
+    expect(plan.tables[0].rows).toHaveLength(9);
+    expect(plan.reviewNotes?.join(" ")).toContain("physical text line");
+    expect(plan.reviewNotes?.join(" ")).toContain("no row continuation");
+    expect(plan.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+  });
+});
+
+describe("R134 no regression of established all-table native XLSX exports",()=>{
+  it("exports proven existing tables and clearly omits unverified new candidate",()=>{
+    const existing=table(2,"established");
+    const newGrid=table(4,"review");
+    for(const row of newGrid.rows)
+      row.provenance!.blockId="native-compact-grid-4-source-8";
+    const doc=source([existing,newGrid]);
+    const workbook=preparePdfV4XlsxExport(doc);
+    expect(workbook.tables).toHaveLength(1);
+    expect(workbook.tables[0].rows[1][1]).toBe("00071");
+    expect(workbook.reviewNotes?.join(" ")).toContain("newly recovered, unverified");
+    expect(workbook.reviewNotes?.join(" ")).toContain("omitted");
+    expect(prepareSelectedPdfV4XlsxExport(doc,1).tables).toHaveLength(1);
+  });
+  it("refuses unattended export when every detected table needs review",()=>{
+    const newGrid=table(2,"unverified");
+    for(const row of newGrid.rows)
+      row.provenance!.blockId="native-compact-grid-2-source-8";
+    expect(()=>preparePdfV4XlsxExport(source([newGrid])))
+      .toThrow(/choose an individual table/);
+  });
+});

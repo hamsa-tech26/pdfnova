@@ -493,7 +493,8 @@ function assignWordsToCells(
 
   for (const word of analysisWords) {
     const nearestColumn =
-      row.reason==="parallel-native-scientific-physical-row"&&columns.length===2
+      (row.reason==="parallel-native-scientific-physical-row"||
+        row.reason==="captioned-native-text-physical-line")&&columns.length===2
         ? (word.bounds.x>=columns[1].x-10?columns[1]:columns[0])
         : findCellAssignmentColumn(word,columns);
 

@@ -23,7 +23,8 @@
       "feature/kukureku-r118-r122-embedded-image-review": false,
       "feature/kukureku-r123-public-reviewed-image-table": false,
       "feature/kukureku-r124-r128-image-grid-proposals": false,
-      "feature/kukureku-r129-image-cell-correction": false
+      "feature/kukureku-r129-image-cell-correction": false,
+      "feature/kukureku-r130-r134-native-scientific-grid-reliability": false
     }
   }
 }

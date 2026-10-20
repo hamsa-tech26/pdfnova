@@ -27,7 +27,7 @@ export function prepareSelectedPdfV4XlsxExport(
     document:source.document,
     nativePageTextExtraction:source.nativePageTextExtraction,
     tables:[source.tables[index]],
-  });
+  },{allowSelectedCompactGrid:true});
   return {
     ...plan,
     tables:plan.tables.map(t=>({...t,name:"Selected Table "+(index+1)})),

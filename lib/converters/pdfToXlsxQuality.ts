@@ -227,7 +227,12 @@ function projectNativeGroupedHeaders(
     note: "Length and girth measurement groups were preserved from native page header words." };
 }
 
-export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxInput {
+/** R134: Compact scientific rescues require a deliberate table selection;
+ * the all-tables path must never silently certify their positional recovery. */
+export function preparePdfV4XlsxExport(
+  source: PdfV4XlsxExportSource,
+  options?: { allowSelectedCompactGrid?: boolean },
+): PdfXlsxInput {
   const pageCount = source.document.pages.length;
   if (pageCount < 1 || pageCount > 25) {
     throw new Error("This converter supports 1–25 PDF pages.");
@@ -245,6 +250,22 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   }
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
+  }
+  const needsExplicitReview=(id:string|undefined)=>!!id&&(
+    id.startsWith("native-compact-grid-")||
+    id.startsWith("native-captioned-text-grid-"));
+  const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
+    needsExplicitReview(row.provenance?.blockId)));
+  const excludedReviewCount=!options?.allowSelectedCompactGrid?
+    reviewOnlyTables.length:0;
+  if(excludedReviewCount){
+    const standard=source.tables.filter(table=>!reviewOnlyTables.includes(table));
+    // Never turn an entirely unverified new discovery into an unattended
+    // workbook. But preserve all previously eligible native tables, without
+    // silently counting unreviewed candidates as trusted source cells.
+    if(standard.length===0)
+      throw new Error("Only unverified new grid candidates were detected; choose an individual table and review its source before exporting.");
+    source={...source,tables:standard};
   }
 
 
@@ -274,9 +295,30 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   const notes = [
     "UNVERIFIED: XLSX cells were reconstructed from PDF text positions; verify all rows, headings, blank cells, numbers and column order against the original PDF.",
     "For standard V4 exports, extracted cells remain literal text. Only the separate, verified eight-column native-table path may encode safe household/FHTC integers as Excel numbers; identifiers and formula-like source text remain literal. Merged-cell formatting and PDF layout are not recreated.",
+    ...(excludedReviewCount ? ["REVIEW REQUIRED: "+excludedReviewCount+
+      " newly recovered, unverified grid candidate(s) were explicitly omitted "+
+      "from automatic Excel export. Existing eligible native tables alone "+
+      "were exported. Select and inspect each omitted candidate separately "+
+      "before considering its contents."] : []),
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
+    const captionedText=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-captioned-text-grid-"));
+    if(captionedText&&table.rows.length<8)
+      throw new Error("Captioned native text grid has too few reconstructed physical lines; Excel export was withheld.");
+    if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
+      notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
+        "scientific or captioned two-column text grid using repeated source "+
+        "word positions only. Source table semantics, row and column labels, "+
+        "blank cells and values have NOT been independently verified. "+
+        "Compare EVERY cell against the original PDF before using the export.");
+    }
+    if(captionedText)notes.push("Table "+number+
+      ": Every source PDF physical text line is a separate Excel row. "+
+      "Wrapped physical lines may belong to one semantic record; no "+
+      "row continuation, field identity or grouping has been verified. "+
+      "Do not treat these rows as finalized spreadsheet records.");
     if (!Number.isFinite(table.confidence) || table.confidence < 0.65 ||
         !Number.isInteger(table.columnCount) || table.columnCount < 2 ||
         table.columnCount > 128 || table.rows.length < 2 ||
