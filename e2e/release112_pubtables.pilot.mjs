@@ -158,6 +158,12 @@ for(const source of manifest.documents){
           .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
           .map(d=>({blockId:d.blockId,hasTable:!!d.table,columns:d.columnDetection?.columns?.length??0,
             rows:d.rowDetection?.rows?.length??0})),
+        candidateTableAnalyses:(result.tableAnalyses??[])
+          .filter(a=>a.pageNumber===ref.page&&a.table)
+          .map(a=>({id:a.blockId,rows:a.table?.rows.length??0,
+            cols:a.columnDetection?.columns?.length??0,
+            bounds:Object.fromEntries(Object.entries(a.table.bounds).map(
+              ([k,v])=>[k,Number(v.toFixed(1))]))})),
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -247,6 +253,7 @@ for(const source of manifest.documents){
       overlappingSourceBlocks:p.overlappingSourceBlocks,
       newTextGridRegionDiagnostics:p.newTextGridRegionDiagnostics,
       newTextGridTableAnalyses:p.newTextGridTableAnalyses,
+      candidateTableAnalyses:p.candidateTableAnalyses,
       geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
