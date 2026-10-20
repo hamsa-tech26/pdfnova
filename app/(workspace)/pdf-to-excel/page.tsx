@@ -452,6 +452,7 @@ export default function PdfToExcelPage() {
               disabled={busy||imageBusy}
               onChange={e=>{setImagePage(Number(e.target.value));setImageReview(null);
                 setSelectedImagePaint("");setReviewRegionIndex(null);setReviewedRows(null);setReviewedTsv("");
+                clearReviewedEditHistory();
                 setReviewConfirmed(false);setImageStatus("");}}
               className="rounded-lg border bg-white px-3 py-2 text-slate-900">
               {inspected.imageContentReview.filter(p=>p.imageReviewRecommended).map(p=>(
@@ -465,7 +466,7 @@ export default function PdfToExcelPage() {
               disabled={busy||imageBusy}
               onChange={event=>{setSelectedImagePaint(event.target.value);
                 setImageReview(null);setReviewRegionIndex(null);
-                setReviewedTsv("");setReviewedRows(null);setImageEditCell(null);
+                setReviewedTsv("");setReviewedRows(null);clearReviewedEditHistory();
                 setReviewConfirmed(false);setImageStatus("");}}
               className="w-full rounded-lg border bg-white px-3 py-2 text-slate-950 dark:bg-slate-900 dark:text-white">
               <option value="">Conservative automatic selection (up to 2 images)</option>
@@ -508,7 +509,8 @@ export default function PdfToExcelPage() {
                 <label htmlFor="public-image-region" className="block text-sm font-semibold">Select OCR image region</label>
                 <select id="public-image-region" value={reviewRegionIndex??""}
                   onChange={e=>{setReviewRegionIndex(Number(e.target.value));
-                    setReviewedRows(null);setReviewedTsv("");setReviewConfirmed(false);}}
+                    setReviewedRows(null);setReviewedTsv("");setReviewConfirmed(false);
+                    clearReviewedEditHistory();}}
                   className="rounded-lg border bg-white px-3 py-2 text-slate-900">
                   {imageReview.reviews.map((r,i)=>r.status==="TEXT_REVIEW_ONLY"&&(
                     <option key={i} value={i}>Image {i+1} (PDF page {r.pageNumber})</option>
@@ -650,7 +652,7 @@ export default function PdfToExcelPage() {
                             className="w-full rounded-lg border p-2 bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
                             {reviewedRows[0].map((heading,index)=>(
                               <option key={index} value={index}>
-                                {pdfTableCellAddress(0,index).replace(/\\d+$/,"")} — {heading}
+                                {pdfTableCellAddress(0,index).replace(/\d+$/,"")} — {heading}
                               </option>
                             ))}
                           </select>
