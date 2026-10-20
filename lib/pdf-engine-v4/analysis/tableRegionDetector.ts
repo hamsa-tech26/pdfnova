@@ -2,6 +2,7 @@ import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
 import {findNativeCompactScientificGrids} from "./nativeCompactScientificGrid";
 import {findCaptionedTwoColumnTextGrids} from "./captionedTwoColumnTextGrid";
+import {findNativeCaptionHeaderScientificGrids} from "./nativeScientificCaptionHeaderGrid";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
@@ -1582,7 +1583,15 @@ export function detectTableRegionsForPage(
     // column alignment instead of applying numeric-table score assumptions.
     .filter(candidate=>
       candidate.analysis.breakdown.alignment.score>=12);
-  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids]
+  const headerNativeGrids=findNativeCaptionHeaderScientificGrids(splitNativeBlocks)
+    .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
+      ...captionedTextGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
+    .filter(candidate=>candidate.analysis.breakdown.alignment.score>=12&&
+      candidate.analysis.totalScore>=25);
+  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids,
+    ...headerNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();
