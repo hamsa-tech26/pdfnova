@@ -13,6 +13,7 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
+import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
 import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
 import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
   pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
@@ -42,6 +43,7 @@ export default function PdfToExcelPage() {
   const [cellStatus,setCellStatus]=useState("");
   const [imageReview,setImageReview]=useState<EmbeddedImageOcrReviewResult|null>(null);
   const [imagePage,setImagePage]=useState<number|null>(null);
+  const [selectedImagePaint,setSelectedImagePaint]=useState("");
   const [imageBusy,setImageBusy]=useState(false);
   const [reviewedTsv,setReviewedTsv]=useState("");
   const [reviewedRows,setReviewedRows]=useState<string[][]|null>(null);
@@ -59,7 +61,7 @@ export default function PdfToExcelPage() {
     setWarnings([]);
     setError("");
     setInspected(null);
-    setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
+    setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     setChoices([]);
     setSelectedIndex(null);
@@ -73,7 +75,7 @@ export default function PdfToExcelPage() {
     setOutputName("");
     setWarnings([]);
     setInspected(null);
-    setImageReview(null);setImagePage(null);setReviewedTsv("");setReviewedRows(null);
+    setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     setChoices([]);
     setSelectedIndex(null);
@@ -98,7 +100,7 @@ export default function PdfToExcelPage() {
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
-      setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+      setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
       setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
@@ -114,6 +116,7 @@ export default function PdfToExcelPage() {
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
+      setSelectedImagePaint("");
       setChoices(analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[]);
       setSelectedIndex(null);setPreview(null);
     }catch(cause){
@@ -126,7 +129,8 @@ export default function PdfToExcelPage() {
     setReviewRegionIndex(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
     try{
       const reviewed=await reviewEmbeddedImageRegions(file,
-        inspected.document.pages.filter(p=>p.pageNumber===imagePage));
+        inspected.document.pages.filter(p=>p.pageNumber===imagePage),
+        selectedImagePaint===""?undefined:{imagePaintIndex:Number(selectedImagePaint)});
       setImageReview(reviewed);
       const usable=reviewed.reviews.findIndex(x=>x.status==="TEXT_REVIEW_ONLY");
       setReviewRegionIndex(usable>=0?usable:null);
@@ -405,13 +409,40 @@ export default function PdfToExcelPage() {
             <select id="public-image-page" value={imagePage}
               disabled={busy||imageBusy}
               onChange={e=>{setImagePage(Number(e.target.value));setImageReview(null);
-                setReviewRegionIndex(null);setReviewedRows(null);setReviewedTsv("");
+                setSelectedImagePaint("");setReviewRegionIndex(null);setReviewedRows(null);setReviewedTsv("");
                 setReviewConfirmed(false);setImageStatus("");}}
               className="rounded-lg border bg-white px-3 py-2 text-slate-900">
               {inspected.imageContentReview.filter(p=>p.imageReviewRecommended).map(p=>(
                 <option key={p.pageNumber} value={p.pageNumber}>Page {p.pageNumber}</option>
               ))}
             </select>
+            <label htmlFor="manual-image-paint" className="block text-sm font-semibold">
+              Image region to review
+            </label>
+            <select id="manual-image-paint" value={selectedImagePaint}
+              disabled={busy||imageBusy}
+              onChange={event=>{setSelectedImagePaint(event.target.value);
+                setImageReview(null);setReviewRegionIndex(null);
+                setReviewedTsv("");setReviewedRows(null);setImageEditCell(null);
+                setReviewConfirmed(false);setImageStatus("");}}
+              className="w-full rounded-lg border bg-white px-3 py-2 text-slate-950 dark:bg-slate-900 dark:text-white">
+              <option value="">Conservative automatic selection (up to 2 images)</option>
+              {inspected.document.pages.filter(p=>p.pageNumber===imagePage)
+                .flatMap(p=>listManuallyReviewableImageRegions(p)).map(candidate=>(
+                  <option key={candidate.imagePaintIndex}
+                    value={candidate.imagePaintIndex}>
+                    {"Image paint "+(candidate.imagePaintIndex+1)+" — "+
+                    Math.round(candidate.sourceBounds.width)+"×"+
+                    Math.round(candidate.sourceBounds.height)+" PDF points"+
+                    (candidate.nativeWordOverlap>2?" (native text overlaps)":"")}
+                  </option>
+                ))}
+            </select>
+            <p className="text-xs text-slate-600 dark:text-slate-300">
+              Select one eligible painted image to inspect it explicitly, including images
+              with native text overlays. An image is not necessarily a table. This does
+              not alter the source PDF or automatically approve any OCR cells.
+            </p>
             <div>
               <button type="button" disabled={busy||imageBusy} onClick={runImageOcrReview}
                 className="rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white disabled:opacity-60 dark:bg-slate-100 dark:text-slate-900">
