@@ -112,3 +112,29 @@ describe("Release 81 selective native PDF table export",()=>{
       .toThrow("limit: 100");
   });
 });
+
+describe("R134 compact scientific native-grid export isolation",()=>{
+  it("refuses silent all-table export but permits explicitly selected table with warnings",async()=>{
+    const t=table(2,"compact");
+    for(const row of t.rows)row.provenance!.blockId="native-compact-grid-2-source-2";
+    const doc=source([t]);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/explicit selection/);
+    const choices=inspectPdfV4XlsxChoices(doc);
+    expect(choices).toHaveLength(1);
+    expect(choices[0].eligible).toBe(true);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    expect(plan.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+    expect(plan.reviewNotes?.join(" ")).toContain("EVERY cell");
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+    const workbook=await createPdfXlsxWorkbook(plan);
+    const zip=await JSZip.loadAsync(workbook);
+    expect(await zip.file("xl/worksheets/sheet1.xml")!.async("string")).toContain("00071");
+  });
+  it("preserves original provenance and OCR/confidence safeguards for compact grids",()=>{
+    const t=table(2,"compact");
+    for(const row of t.rows)row.provenance!.blockId="native-compact-grid-2-source-2";
+    t.confidence=0.4;
+    expect(inspectPdfV4XlsxChoices(source([t]))[0].eligible).toBe(false);
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([t]),0)).toThrow(/uncertain/);
+  });
+});
