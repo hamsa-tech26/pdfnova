@@ -116,9 +116,29 @@ for(const source of manifest.documents){
               /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())).length;
             return {type:b.type,within,intersectionOverUnion:Number(bounded.toFixed(4)),
               lineCount:lines.length,captionLines,
+              nativeTwoColumnSignatures:lines.length<=40?lines.map((line,index)=>{
+                const words=[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x);
+                const gaps=words.slice(1).map((w,i)=>w.bounds.x-words[i].bounds.x);
+                const biggest=gaps.length?Math.max(...gaps):0;
+                const pivot=gaps.indexOf(biggest)+1;
+                return {index,y:Number(line.bounds.y.toFixed(1)),count:words.length,
+                  left:words[0]?Number(words[0].bounds.x.toFixed(1)):null,
+                  right:biggest>=120?Number(words[pivot].bounds.x.toFixed(1)):null,
+                  gap:Number(biggest.toFixed(1)),ocr:words.some(w=>
+                    w.extractionProvenance?.source==="ocr-tesseract"),
+                  caption:/\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())};
+              }):[],
               bounds:Object.fromEntries(Object.entries(b.bounds).map(([k,v])=>[k,Number(v.toFixed(1))]))};
           }).filter(b=>b.intersectionOverUnion>0.02||
             b.within&&b.captionLines>0).slice(0,12)),
+        newTextGridRegionDiagnostics:(result.candidateRegionDiagnostics??[])
+          .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
+          .map(d=>({blockId:d.blockId,outcome:d.outcome,acceptedColumnCount:d.acceptedColumnCount,
+            score:Number(d.analysis.totalScore.toFixed(2))})),
+        newTextGridTableAnalyses:(result.tableAnalyses??[])
+          .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
+          .map(d=>({blockId:d.blockId,hasTable:!!d.table,columns:d.columnDetection?.columns?.length??0,
+            rows:d.rowDetection?.rows?.length??0})),
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -168,6 +188,8 @@ for(const source of manifest.documents){
       referenceBoxes:p.actualReferenceRects,
       detectedBoxes:p.predictedRects,imagePaintRects:p.imagePaintRects,
       overlappingSourceBlocks:p.overlappingSourceBlocks,
+      newTextGridRegionDiagnostics:p.newTextGridRegionDiagnostics,
+      newTextGridTableAnalyses:p.newTextGridTableAnalyses,
       geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
