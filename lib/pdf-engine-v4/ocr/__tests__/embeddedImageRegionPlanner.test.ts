@@ -1,7 +1,7 @@
 import {describe,it,expect} from "vitest";
 import type {PdfPageModel,PdfWord} from "../../model/types";
 import {inspectPdfImagePaints,type ImageOperatorCodes} from "../../reader/imagePaintGeometry";
-import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions} from "../embeddedImageRegionPlanner";
+import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions,listManuallyReviewableImageRegions} from "../embeddedImageRegionPlanner";
 
 const ops:ImageOperatorCodes={
  save:1,restore:2,transform:3,paintImageXObject:4,
@@ -55,5 +55,37 @@ describe("R118-122 actual image-operator geometry and explicit review bounds",()
   const original=page([{bounds:sample,areaFraction:.1}]);
   expect(planEmbeddedImageOcrRegions([{...original,textExtraction:{...original.textExtraction,status:"none"}}])).toEqual([]);
   expect(planEmbeddedImageOcrRegions([{...original,imagePaintRegions:undefined}])).toEqual([]);
+ });
+});
+
+describe("R136 explicitly selected image-paint review inventory",()=>{
+ it("preserves conservative default but allows manual source review of text overlays",()=>{
+   const b={bounds:sample,areaFraction:300*130/(610*792)};
+   const native:PdfWord={id:"original",text:"Overlay",pageNumber:6,
+     bounds:{x:70,y:510,width:40,height:12},font:{size:10},rotation:0};
+   const src=page([b],[native,native,native,native]);
+   expect(planEmbeddedImageOcrRegions([src])).toHaveLength(0);
+   expect(listManuallyReviewableImageRegions(src)).toEqual([{
+     pageNumber:6,sourceBounds:sample,imagePaintIndex:0,nativeWordOverlap:4,
+   }]);
+ });
+ it("rejects icons, invalid bounds, equivalent paints and unbounded work",()=>{
+   const many=Array.from({length:20},(_,i)=>({
+     bounds:{x:60+i*12,y:380-i*5,width:140,height:120},
+     areaFraction:140*120/(610*792),
+   }));
+   const regions=[{bounds:{x:2,y:1,width:20,height:15},areaFraction:0.001},
+     {bounds:sample,areaFraction:0.081},
+     {bounds:{x:61,y:501,width:298,height:128},areaFraction:0.080},
+     {bounds:{x:1,y:10,width:1000,height:100},areaFraction:0.08},
+     ...many];
+   const chosen=listManuallyReviewableImageRegions(page(regions));
+   expect(chosen).toHaveLength(8);
+   expect(chosen.some(item=>item.imagePaintIndex===0)).toBe(false);
+   expect(chosen.some(item=>item.imagePaintIndex===3)).toBe(false);
+   const base=page([{bounds:sample,areaFraction:0.081}]);
+   expect(listManuallyReviewableImageRegions({...base,
+     textExtraction:{...base.textExtraction,status:"low"}})).toEqual([]);
+   expect(listManuallyReviewableImageRegions({...base,pageNumber:0})).toEqual([]);
  });
 });
