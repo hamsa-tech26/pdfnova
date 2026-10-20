@@ -25,7 +25,8 @@
       "feature/kukureku-r124-r128-image-grid-proposals": false,
       "feature/kukureku-r129-image-cell-correction": false,
       "feature/kukureku-r130-r134-native-scientific-grid-reliability": false,
-      "feature/kukureku-r135-image-source-preview": false
+      "feature/kukureku-r135-image-source-preview": false,
+      "feature/kukureku-r136-targeted-embedded-image-review": false
     }
   }
 }
