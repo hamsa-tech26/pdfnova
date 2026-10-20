@@ -251,8 +251,11 @@ export function preparePdfV4XlsxExport(
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
   }
+  const needsExplicitReview=(id:string|undefined)=>!!id&&(
+    id.startsWith("native-compact-grid-")||
+    id.startsWith("native-captioned-text-grid-"));
   const hasCompactGrid=source.tables.some(table=>table.rows.some(row=>
-    row.provenance?.blockId?.startsWith("native-compact-grid-")));
+    needsExplicitReview(row.provenance?.blockId)));
   if(hasCompactGrid&&!options?.allowSelectedCompactGrid)
     throw new Error("A compact scientific table requires explicit selection and source-cell review; automatic all-table Excel export was withheld.");
 
@@ -286,12 +289,12 @@ export function preparePdfV4XlsxExport(
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
-    if(table.rows.some(row=>row.provenance?.blockId?.startsWith("native-compact-grid-"))){
-      notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered compact "+
-        "native scientific grid using repeated source-word positions only. "+
-        "Row and column labels, blank cells and scientific values have NOT "+
-        "been independently verified. Compare EVERY cell against the "+
-        "original PDF before using the export.");
+    if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
+      notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
+        "scientific or captioned two-column text grid using repeated source "+
+        "word positions only. Source table semantics, row and column labels, "+
+        "blank cells and values have NOT been independently verified. "+
+        "Compare EVERY cell against the original PDF before using the export.");
     }
     if (!Number.isFinite(table.confidence) || table.confidence < 0.65 ||
         !Number.isInteger(table.columnCount) || table.columnCount < 2 ||
