@@ -67,3 +67,37 @@ validated USGS XLSX cell; do not weaken the 0.50 IoU scorer. The current
 formal V4 Stable gate remains 0/20 independently reviewed original PDFs.
 
 Related: GitHub issues #70, #75, #38 and #57.
+
+## R150 — Corrected source-footnote localization (October 20, 2026)
+
+The old R145 upper region IoU was **0.4712**. Its preceding broad
+paragraph proxy gave **0.4852** but contained unrelated prose. R150
+uses immediately trailing, explicitly marked **native PDF table footnote**
+lines as physical detection extent, while retaining exactly **12 physical
+header/body rows** and **four columns** in the user-reviewed logical table.
+The footnote source words remain *outside* the logical data cells; no OCR
+results, image pixels, publication annotation coordinates or invented
+semantic field values enter the grid.
+
+On the fixed original PMC1064098 source PDF page 8, the updated upper
+logical detection rectangle measured **IoU 0.5210**, above the unchanged
+0.50 gate. The lower source box remained **0.7631**, original page 7
+remained **0.9785**, and the original two-PDF aggregate improved to
+**3/6 published table boxes matched**, **three misses** and
+**one unmatched prediction**. This is **source box localization only**,
+not independently verified table-cell correctness or general extraction
+accuracy. No additional formal V4 Stable document qualification (0/20).
+
+The R150 source-footnote recognizer has negative controls for nearby
+unlabeled prose, OCR markers, malformed geometry and distant notes.
+Unverified scientific tables remain omitted from automatic all-tables
+XLSX; selecting a scientific table requires manual review and warns
+that table notes do not appear as data cells. Mixed image regions
+remain opt-in review-only, never automatically accepted or added to Excel.
+The source labels are never used as in-product detector inputs.
+
+The CI release gate now requires **at least 3/6** original published
+boxes, no more than two unmatched predictions and an upper-region
+overlap at or above 0.50 with original source footnote words not exported
+as data. Do not mark Issue #75 resolved while the other three published
+source boxes and independent semantic cell ground truth remain missing.
