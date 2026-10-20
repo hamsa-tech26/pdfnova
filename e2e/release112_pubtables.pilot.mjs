@@ -111,8 +111,11 @@ for(const source of manifest.documents){
           ...check,acceptedFormalV4Credit:0,
         }));
         expect(check.pairedInside).toBe(5);
+        // Actual original PDF proves continuity from the top; a bottom
+        // edge continuation is not independently established and must NOT
+        // be asserted from the publisher reference box alone.
         expect(check.topContinues).toBe(true);
-        expect(check.bottomContinues).toBe(true);
+        expect(check.status).toBe("CONTIGUOUS_NATIVE_ARTICLE_COLUMNS_POSSIBLE");
         expect(check.sourcePromotable).toBe(false);
       }
       pageResults.push({originalPage:ref.page,...metrics,
