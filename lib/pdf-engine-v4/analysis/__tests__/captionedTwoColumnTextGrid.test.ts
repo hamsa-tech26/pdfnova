@@ -1,6 +1,9 @@
 import {describe,expect,it} from "vitest";
 import {findCaptionedTwoColumnTextGrids} from "../captionedTwoColumnTextGrid";
 import {detectTableRegionsForPage} from "../tableRegionDetector";
+import {detectStableColumnsV4} from "../stableColumnDetector";
+import {detectAdaptiveRowsV4} from "../adaptiveRowDetector";
+import {buildSmartTableV4} from "../smartCellBuilder";
 import type {PdfLine,PdfParagraphBlock,PdfWord} from "../../model/types";
 
 function line(i:number,parts:readonly [number,string][]):PdfLine{
@@ -53,6 +56,22 @@ describe("caption-restricted two-column native text regions",()=>{
     const regions=detectTableRegionsForPage([src]);
     expect(regions.tableRegions.some(x=>x.block.id.startsWith("native-captioned-text-grid-")))
       .toBe(true);
+    const region=regions.tableRegions.find(x=>
+      x.block.id.startsWith("native-captioned-text-grid-"))!;
+    const columns=detectStableColumnsV4(region.block);
+    expect(columns.columns).toHaveLength(2);
+    const rows=detectAdaptiveRowsV4(region.block,columns.columns);
+    expect(rows.rows).toHaveLength(15);
+    expect(rows.rows.every(row=>row.reason==="captioned-native-text-physical-line"))
+      .toBe(true);
+    const logical=buildSmartTableV4(1,rows.rows,columns.columns).table;
+    expect(logical?.rows).toHaveLength(15);
+    // The exact input tokens remain in source order, not guessed cells.
+    const sourceIds=region.block.type==="paragraph"?
+      region.block.lines.flatMap(line=>line.words.map(word=>word.id)):[];
+    const emitted=logical?.rows.flatMap(row=>row.cells.flatMap(cell=>cell.words.map(word=>word.id)))??[];
+    expect(emitted).toHaveLength(sourceIds.length);
+    expect(new Set(emitted)).toEqual(new Set(sourceIds));
     const fragments=regions.regions.filter(x=>x.block.type==="paragraph");
     const emitted=fragments.flatMap(x=>x.block.type==="paragraph"?x.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
     expect(emitted).toHaveLength(src.lines.flatMap(l=>l.words).length);
