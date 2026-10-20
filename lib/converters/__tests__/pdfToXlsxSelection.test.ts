@@ -264,6 +264,14 @@ describe("R147 image paint proximity must not silently certify incomplete native
     expect(notes).toContain("no image data, OCR cells");
     expect(plan.tables[0].rows).toHaveLength(12);
     expect(plan.tables[0].rows[1][1]).toBe("00071");
+    // R149: the warning must survive workbook serialization, rather than
+    // only appearing in an ephemeral UI plan.
+    const workbook=await createPdfXlsxWorkbook(plan);
+    const zip=await JSZip.loadAsync(workbook);
+    const reviewSheet=await zip.file("xl/worksheets/sheet2.xml")!.async("string");
+    expect(reviewSheet).toContain("POSSIBLE RASTER CONTINUATION");
+    expect(reviewSheet).toContain("page(s) 4");
+    expect(reviewSheet).not.toContain("<f>");
     expect(inspectPdfV4XlsxChoices(source([table(2,"ordinary")]))[0].reason)
       .toContain("Passes automatic export checks.");
   });
