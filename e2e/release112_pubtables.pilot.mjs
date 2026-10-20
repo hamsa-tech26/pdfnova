@@ -135,8 +135,8 @@ for(const source of manifest.documents){
             characterCount:line.text.trim().length,
             nativeOnly:line.words.every(w=>
               w.extractionProvenance?.source!=="ocr-tesseract"),
-            footnoteCue:/^(?:\\*|†|‡|#|note(?:s)?\\b|abbrev(?:iation)?s?\\b|source\\s*:|p\\s*[<>=])/i.test(line.text.trim()),
-            startsAsNarrative:/^(?:in\\s+|the\\s+|these\\s+|figure\\s+|as\\s+|we\\s+|our\\s+|however\\b)/i.test(line.text.trim()),
+            footnoteCue:/^(?:\*|†|‡|#|note(?:s)?\b|abbrev(?:iation)?s?\b|source\s*:|p\s*[<>=])/i.test(line.text.trim()),
+            startsAsNarrative:/^(?:in\s+|the\s+|these\s+|figure\s+|as\s+|we\s+|our\s+|however\b)/i.test(line.text.trim()),
           })),
           publishedBoxUsedForSelection:false,exportCellsUnchanged:true}));
         console.log(JSON.stringify({type:"R147_NATIVE_RASTER_ADJACENCY_EVIDENCE",
