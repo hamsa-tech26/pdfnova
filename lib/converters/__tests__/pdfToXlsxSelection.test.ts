@@ -138,3 +138,30 @@ describe("R134 compact scientific native-grid export isolation",()=>{
     expect(()=>prepareSelectedPdfV4XlsxExport(source([t]),0)).toThrow(/uncertain/);
   });
 });
+
+describe("captioned text tables must not silently export a truncated two-row reconstruction",()=>{
+  it("rejects an under-recovered captioned region even after manual selection",()=>{
+    const t=table(4,"caption");
+    for(const row of t.rows)row.provenance!.blockId="native-captioned-text-grid-4-source-3";
+    const doc=source([t]);
+    expect(inspectPdfV4XlsxChoices(doc)[0].eligible).toBe(false);
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow(/too few reconstructed physical lines/);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/explicit selection/);
+  });
+  it("documents physical-line limitations for a source-complete selected table",()=>{
+    const t=table(4,"caption-complete");
+    const base=t.rows.map(r=>({...r,cells:r.cells.map(c=>({...c}))}));
+    t.rows=Array.from({length:9},(_,i)=>({
+      ...base[i%base.length],id:"row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,blockId:"native-captioned-text-grid-4-source-3",originalRowIndex:i},
+      cells:base[i%base.length].cells.map(c=>({...c,
+        id:"cell-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:190-i*13}})),
+    }));
+    const plan=prepareSelectedPdfV4XlsxExport(source([t]),0);
+    expect(plan.tables[0].rows).toHaveLength(9);
+    expect(plan.reviewNotes?.join(" ")).toContain("physical text line");
+    expect(plan.reviewNotes?.join(" ")).toContain("no row continuation");
+    expect(plan.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+  });
+});
