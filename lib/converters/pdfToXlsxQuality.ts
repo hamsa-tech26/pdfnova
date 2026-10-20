@@ -361,11 +361,14 @@ export function preparePdfV4XlsxExport(
         "Compare EVERY cell against the original PDF before using the export.");
     }
     if(captionedText||scientificHeader)notes.push("Table "+number+
-      ": Every source PDF physical text line is a separate Excel row. "+
+      ": Every retained source PDF header/body physical text line is a separate Excel row. "+
       "Wrapped physical lines, multi-tier scientific headings and sparse "+
       "continuation lines may belong to one semantic record; no row "+
       "continuation, field identity or grouping has been verified. "+
-      "Do not treat these rows as finalized spreadsheet records.");
+      "Do not treat these rows as finalized spreadsheet records. "+
+      "Explicit native table footnotes may be included in the detected "+
+      "visual table region but are NOT added as Excel data cells; compare "+
+      "all footnotes and source notes against the original PDF.");
     if(scientificHeader){
       const nearPaints=possibleRasterContinuationPages(
         source.document.pages,table,sourcePages(table,pageCount));
