@@ -1513,6 +1513,34 @@ function detectDenseCaptionPhysicalRows(
   return {rows,confidence:0.9};
 }
 
+/**
+ * Long-text table cells commonly lack serial numbers. The general record
+ * heuristic therefore collapses many physical rows into two large records.
+ * Only a previously caption-qualified 2-column native region may take this
+ * source-line-preserving route. Physical lines are explicitly NOT certified
+ * semantic rows; downstream XLSX requires review and user selection.
+ */
+function detectCaptionedTextPhysicalRows(
+  block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+  if(block.type!=="paragraph"||
+    !block.id.startsWith("native-captioned-text-grid-")||
+    columns.length!==2||block.lines.length<8||block.lines.length>25)return null;
+  if(block.lines.some(line=>line.words.some(word=>
+    word.extractionProvenance?.source==="ocr-tesseract")))return null;
+  const anchors=columns.map(c=>c.x);
+  const aligned=block.lines.filter(line=>anchors.every(anchor=>
+    line.words.some(word=>Math.abs(word.bounds.x-anchor)<=18))).length;
+  if(aligned<8||aligned<Math.ceil(block.lines.length*0.6))return null;
+  const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+    score:84,confidence:0.84,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"captioned-native-text-physical-line",
+  }));
+  return {rows,confidence:0.84};
+}
+
 function detectParallelNativePhysicalRows(
  block:PdfVisualBlock,columns:ColumnCandidate[],
 ):AdaptiveRowDetectionResult|null{
@@ -1623,6 +1651,9 @@ export function detectAdaptiveRowsV4(
 
   const denseCaptionGrid = detectDenseCaptionPhysicalRows(block, columns);
   if (denseCaptionGrid) return denseCaptionGrid;
+
+  const captionedText=detectCaptionedTextPhysicalRows(block,columns);
+  if(captionedText)return captionedText;
 
   const parallelRows=detectParallelNativePhysicalRows(block,columns);
   if(parallelRows)return parallelRows;
