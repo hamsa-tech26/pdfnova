@@ -289,6 +289,10 @@ export function preparePdfV4XlsxExport(
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
+    const captionedText=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-captioned-text-grid-"));
+    if(captionedText&&table.rows.length<8)
+      throw new Error("Captioned native text grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
       notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
         "scientific or captioned two-column text grid using repeated source "+
@@ -296,6 +300,11 @@ export function preparePdfV4XlsxExport(
         "blank cells and values have NOT been independently verified. "+
         "Compare EVERY cell against the original PDF before using the export.");
     }
+    if(captionedText)notes.push("Table "+number+
+      ": Every source PDF physical text line is a separate Excel row. "+
+      "Wrapped physical lines may belong to one semantic record; no "+
+      "row continuation, field identity or grouping has been verified. "+
+      "Do not treat these rows as finalized spreadsheet records.");
     if (!Number.isFinite(table.confidence) || table.confidence < 0.65 ||
         !Number.isInteger(table.columnCount) || table.columnCount < 2 ||
         table.columnCount > 128 || table.rows.length < 2 ||
