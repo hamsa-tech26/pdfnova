@@ -68,6 +68,11 @@ export function findNativeCaptionHeaderScientificGrids(
       const data=following.map((line,i)=>row(line)?i+start+1:-1)
         .filter(i=>i>=0);
       if(data.length<5)continue;
+      // Independent recurring source x positions, not only repeated numeric
+      // words, are required to avoid drifting or column-swapped prose.
+      const leftAnchors=data.map(i=>xSorted(lines[i])[0].bounds.x);
+      const recurring=leftAnchors.filter(x=>Math.abs(x-leftAnchors[0])<=9);
+      if(recurring.length<5)continue;
       const final=data[data.length-1];
       if(final-start<7||final-start>16)continue;
       if(data.some((index,i)=>i>0&&index-data[i-1]>3))continue;
