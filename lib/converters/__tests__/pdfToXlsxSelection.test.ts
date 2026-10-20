@@ -249,7 +249,7 @@ describe("R147 image paint proximity must not silently certify incomplete native
     doc.document.pages[3]={imagePaintRegions:paints};
     return doc;
   }
-  it("warns on a wide raster paint directly below the native grid, without OCR or inserted cells",()=>{
+  it("warns on a wide raster paint directly below the native grid, without OCR or inserted cells",async()=>{
     const doc=physicalSource([{bounds:{x:58,y:100,width:230,height:80}}]);
     expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
     const choices=inspectPdfV4XlsxChoices(doc);
