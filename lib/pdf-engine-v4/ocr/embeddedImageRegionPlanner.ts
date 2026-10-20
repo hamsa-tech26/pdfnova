@@ -43,6 +43,42 @@ export function planEmbeddedImageOcrRegions(pages:PdfPageModel[]):EmbeddedImageR
   }
   return selected;
 }
+/**
+ * R136: explicit human-selectable image-paint inventory. This deliberately
+ * includes bounded image regions with native text overlay that the existing
+ * automatic review planner rejects. Selection is an opt-in OCR *request*
+ * only, never evidence that an image is a table. Limited to eight per page.
+ */
+export function listManuallyReviewableImageRegions(
+  page:PdfPageModel,
+):EmbeddedImageRegionPlan[]{
+  if(page.textExtraction.status!=="sufficient"||
+    !Number.isSafeInteger(page.pageNumber)||page.pageNumber<1||
+    !Number.isFinite(page.width)||!Number.isFinite(page.height)||
+    page.width<=0||page.height<=0)return [];
+  const regions=page.imagePaintRegions??[];
+  const eligible=regions.flatMap((image,index)=>{
+    const b=image.bounds;
+    if(![b.x,b.y,b.width,b.height,image.areaFraction].every(Number.isFinite)||
+      b.x<0||b.y<0||b.width<75||b.height<40||
+      b.x+b.width>page.width+1||b.y+b.height>page.height+1||
+      image.areaFraction<0.02||image.areaFraction>0.78)return [];
+    const nativeWordOverlap=page.words.filter(w=>contains(b,
+      w.bounds.x+w.bounds.width/2,w.bounds.y+w.bounds.height/2)).length;
+    return [{pageNumber:page.pageNumber,sourceBounds:{...b},
+      imagePaintIndex:index,nativeWordOverlap,areaFraction:image.areaFraction}];
+  }).sort((a,b)=>b.areaFraction-a.areaFraction||
+    a.imagePaintIndex-b.imagePaintIndex);
+  const selected:EmbeddedImageRegionPlan[]=[];
+  for(const candidate of eligible){
+    if(selected.length>=8)break;
+    if(selected.some(existing=>
+      intersectRatio(existing.sourceBounds,candidate.sourceBounds)>0.65))continue;
+    const {areaFraction,...metadata}=candidate;
+    selected.push(metadata);
+  }
+  return selected;
+}
 function intersectRatio(a:PdfBoundingBox,b:PdfBoundingBox){
   const width=Math.max(0,Math.min(a.x+a.width,b.x+b.width)-Math.max(a.x,b.x));
   const height=Math.max(0,Math.min(a.y+a.height,b.y+b.height)-Math.max(a.y,b.y));

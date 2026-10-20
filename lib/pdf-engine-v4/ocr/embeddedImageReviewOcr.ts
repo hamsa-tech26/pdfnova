@@ -1,7 +1,7 @@
 import type {PdfPageModel,PdfBoundingBox} from "../model/types";
 import {preparePdfV4OcrPages} from "./ocrPageRenderer";
 import {recognizePdfV4OcrRegions} from "./ocrRecognizer";
-import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions} from "./embeddedImageRegionPlanner";
+import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions,listManuallyReviewableImageRegions} from "./embeddedImageRegionPlanner";
 import {suggestEmbeddedImageGrid,type ImageGridProposal} from "./embeddedImageGridSuggestion";
 import {createEmbeddedImageSourcePreview} from "./embeddedImageSourcePreview";
 
@@ -29,10 +29,24 @@ export type EmbeddedImageOcrReviewResult={
 };
 export async function reviewEmbeddedImageRegions(
   file:File,pages:PdfPageModel[],
+  options?:{imagePaintIndex?:number},
 ):Promise<EmbeddedImageOcrReviewResult>{
   if(typeof window==="undefined")throw Error("Embedded OCR review requires a browser.");
-  const planned=planEmbeddedImageOcrRegions(pages);
-  const warning="OCR is unverified text for human review only; no logical table or Excel cells were changed.";
+  const selectedIndex=options?.imagePaintIndex;
+  // Only an exact, user-selected candidate from the bounded paint inventory
+  // can override the conservative auto-selection rules.
+  if(selectedIndex!==undefined&&
+     (!Number.isSafeInteger(selectedIndex)||selectedIndex<0||
+      pages.length!==1))
+    throw Error("Choose one valid image region on one PDF page.");
+  const planned=selectedIndex===undefined?planEmbeddedImageOcrRegions(pages):
+    listManuallyReviewableImageRegions(pages[0]).filter(candidate=>
+      candidate.imagePaintIndex===selectedIndex);
+  if(selectedIndex!==undefined&&planned.length!==1)
+    throw Error("Selected PDF image region is unavailable or outside safe review bounds.");
+  const warning="OCR is unverified text for human review only; no logical table or Excel cells were changed."+
+    (selectedIndex!==undefined?
+      " You explicitly selected an image paint region; it may contain ordinary graphics or overlay native text.": "");
   if(planned.length===0)return {
     attempted:false,sourceRegionCount:0,reviews:[],warning,
   };
