@@ -122,14 +122,13 @@ for(const source of manifest.documents){
         // line have an explicit footnote/abbreviation marker? The next
         // paragraph may be normal narrative and must NOT be swallowed just
         // to increase a published benchmark IoU. Never log source text.
-        const sourceParagraph=(viewport.blocks??[]).find(b=>b.type==="paragraph"&&
-          (b.lines??[]).some(l=>/^table\\s+s?\\d{1,3}/i.test(l.text.trim()))&&
-          (b.lines??[]).some(l=>Math.abs(l.bounds.y-tableRect.y)<1.5));
-        const nearTail=(sourceParagraph?.lines??[]).filter(l=>
-          l.bounds.y<tableRect.y&&l.bounds.y>=tableRect.y-42)
+        const nearTail=(viewport.lines??[]).filter(l=>
+          l.bounds.y<tableRect.y&&l.bounds.y>=tableRect.y-42&&
+          l.bounds.x>=tableRect.x-12&&
+          l.bounds.x<tableRect.x+tableRect.width)
           .sort((a,b)=>b.bounds.y-a.bounds.y);
         console.log(JSON.stringify({type:"R150_NATIVE_SOURCE_TRAILING_BOUNDARY_DIAGNOSTIC",
-          foundSourceParagraph:!!sourceParagraph,
+          sourceLinesPresent:nearTail.length>0,
           followingLines:nearTail.map(line=>({
             gapPoints:Number((tableRect.y-line.bounds.y).toFixed(1)),
             words:line.words.length,
