@@ -254,10 +254,19 @@ export function preparePdfV4XlsxExport(
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
     id.startsWith("native-captioned-text-grid-"));
-  const hasCompactGrid=source.tables.some(table=>table.rows.some(row=>
+  const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
     needsExplicitReview(row.provenance?.blockId)));
-  if(hasCompactGrid&&!options?.allowSelectedCompactGrid)
-    throw new Error("A compact scientific table requires explicit selection and source-cell review; automatic all-table Excel export was withheld.");
+  const excludedReviewCount=!options?.allowSelectedCompactGrid?
+    reviewOnlyTables.length:0;
+  if(excludedReviewCount){
+    const standard=source.tables.filter(table=>!reviewOnlyTables.includes(table));
+    // Never turn an entirely unverified new discovery into an unattended
+    // workbook. But preserve all previously eligible native tables, without
+    // silently counting unreviewed candidates as trusted source cells.
+    if(standard.length===0)
+      throw new Error("Only unverified new grid candidates were detected; choose an individual table and review its source before exporting.");
+    source={...source,tables:standard};
+  }
 
 
   // Before trusting the engine's logical column count, verify whether a
@@ -286,6 +295,11 @@ export function preparePdfV4XlsxExport(
   const notes = [
     "UNVERIFIED: XLSX cells were reconstructed from PDF text positions; verify all rows, headings, blank cells, numbers and column order against the original PDF.",
     "For standard V4 exports, extracted cells remain literal text. Only the separate, verified eight-column native-table path may encode safe household/FHTC integers as Excel numbers; identifiers and formula-like source text remain literal. Merged-cell formatting and PDF layout are not recreated.",
+    ...(excludedReviewCount ? ["REVIEW REQUIRED: "+excludedReviewCount+
+      " newly recovered, unverified grid candidate(s) were explicitly omitted "+
+      "from automatic Excel export. Existing eligible native tables alone "+
+      "were exported. Select and inspect each omitted candidate separately "+
+      "before considering its contents."] : []),
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
