@@ -206,7 +206,7 @@ for(const source of manifest.documents){
         .toBeVisible();
       console.log(JSON.stringify({type:"R136_EXPLICIT_IMAGE_REGION_BROWSER_REVIEW",
         originalPublisherPage:6,selectedPaintIndex:Number(firstPaint),
-        reviewedRegionCount:1,originalPdfUploadedToServer:false,
+        reviewedRegionCount:1,sourceContentNotLogged:true,
         autoImageCellAcceptance:false,certifiedCells:0}));
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
