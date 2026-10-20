@@ -188,3 +188,111 @@ describe("R134 no regression of established all-table native XLSX exports",()=>{
       .toThrow(/choose an individual table/);
   });
 });
+
+describe("R145 scientific native caption/header source review isolation",()=>{
+  function fixture(){
+    const t=table(4,"native-scientific");
+    const base=t.rows.map(r=>({...r,cells:r.cells.map(c=>({...c}))}));
+    t.rows=Array.from({length:12},(_,i)=>({
+      ...base[i%base.length],id:"native-scientific-row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,
+        blockId:"native-caption-header-grid-4-original-paragraph-3",
+        originalRowIndex:i},
+      cells:base[i%base.length].cells.map(c=>({...c,
+        id:"native-scientific-cell-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:190-i*13}})),
+    }));
+    return t;
+  }
+  it("will never silently add new scientific source rows to unattended XLSX",()=>{
+    const newGrid=fixture();
+    expect(()=>preparePdfV4XlsxExport(source([newGrid])))
+      .toThrow(/choose an individual table/);
+    const old=table(2,"established");
+    const plan=preparePdfV4XlsxExport(source([old,newGrid]));
+    expect(plan.tables).toHaveLength(1);
+    expect(plan.reviewNotes?.join(" ")).toContain("omitted");
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+  });
+  it("allows only deliberate reviewed selection with physical-row warnings",()=>{
+    const t=fixture();
+    const plan=prepareSelectedPdfV4XlsxExport(source([t]),0);
+    expect(plan.tables[0].rows).toHaveLength(12);
+    const notes=plan.reviewNotes?.join(" ")??"";
+    expect(notes).toContain("HIGH REVIEW PRIORITY");
+    expect(notes).toContain("multi-tier scientific headings");
+    expect(notes).toContain("physical text line");
+    expect(notes).toContain("footnotes");
+    expect(notes).toContain("NOT added as Excel data cells");
+    const short=fixture();
+    short.rows=short.rows.slice(0,2);
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([short]),0))
+      .toThrow(/too few reconstructed physical lines/);
+  });
+});
+
+describe("R147 image paint proximity must not silently certify incomplete native scientific rows",()=>{
+  function physicalSource(paints:unknown[]){
+    const t=table(4,"raster-adjacent");
+    t.bounds={x:60,y:220,width:420,height:140};
+    const original=t.rows;
+    t.rows=Array.from({length:12},(_,i)=>({
+      ...original[i%original.length],id:"r147-row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,
+        blockId:"native-caption-header-grid-4-original-paragraph-3",
+        originalRowIndex:i},
+      cells:original[i%original.length].cells.map(c=>({
+        ...c,id:"r147-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:348-i*10},
+      })),
+    }));
+    const doc=source([t]);
+    // Source image-paint metadata is optional and never contains image bytes.
+    doc.document.pages[3]={imagePaintRegions:paints};
+    return doc;
+  }
+  it("warns on a wide raster paint directly below the native grid, without OCR or inserted cells",async()=>{
+    const doc=physicalSource([{bounds:{x:58,y:100,width:230,height:80}}]);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
+    const choices=inspectPdfV4XlsxChoices(doc);
+    expect(choices[0].eligible).toBe(true);
+    expect(choices[0].reason).toContain("REVIEW ONLY");
+    expect(choices[0].reason).toContain("adjacent PDF images");
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    const notes=plan.reviewNotes?.join(" ")??"";
+    expect(notes).toContain("POSSIBLE RASTER CONTINUATION");
+    expect(notes).toContain("page(s) 4");
+    expect(notes).toContain("may be unrelated");
+    expect(notes).toContain("no image data, OCR cells");
+    expect(plan.tables[0].rows).toHaveLength(12);
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+    // R149: the warning must survive workbook serialization, rather than
+    // only appearing in an ephemeral UI plan.
+    const workbook=await createPdfXlsxWorkbook(plan);
+    const zip=await JSZip.loadAsync(workbook);
+    const reviewSheet=await zip.file("xl/worksheets/sheet2.xml")!.async("string");
+    expect(reviewSheet).toContain("POSSIBLE RASTER CONTINUATION");
+    expect(reviewSheet).toContain("page(s) 4");
+    expect(reviewSheet).not.toContain("<f>");
+    expect(inspectPdfV4XlsxChoices(source([table(2,"ordinary")]))[0].reason)
+      .toContain("Passes automatic export checks.");
+  });
+  it("does not invent missing raster content from decorative, distant or invalid paints",()=>{
+    const examples=[
+      {bounds:{x:58,y:20,width:230,height:75}},
+      {bounds:{x:58,y:430,width:230,height:75}},
+      {bounds:{x:490,y:100,width:120,height:80}},
+      {bounds:{x:Number.NaN,y:100,width:230,height:80}},
+      {bounds:{x:58,y:100,width:4,height:5}},
+      null,
+    ];
+    const plan=prepareSelectedPdfV4XlsxExport(physicalSource(examples),0);
+    expect(plan.reviewNotes?.join(" ")).not.toContain("POSSIBLE RASTER CONTINUATION");
+    expect(plan.tables[0].rows).toHaveLength(12);
+  });
+  it("signals an image-painted region overlapping a native scientific table",()=>{
+    const doc=physicalSource([{bounds:{x:95,y:270,width:250,height:80}}]);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    expect(plan.reviewNotes?.join(" ")).toContain("POSSIBLE RASTER CONTINUATION");
+  });
+});

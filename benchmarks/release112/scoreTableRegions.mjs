@@ -56,15 +56,32 @@ export function scoreDetectionPage(reference,predicted,threshold=0.5){
   for(let i=0;i<reference.length;i++)
     for(let j=0;j<predicted.length;j++)
       pairs.push({ref:i,pred:j,iou:rectangleIoU(reference[i],predicted[j])});
-  pairs.sort((a,b)=>b.iou-a.iou||a.ref-b.ref||a.pred-b.pred);
-  const seenRef=new Set(),seenPred=new Set();
-  for(const p of pairs){
-    if(p.iou<threshold||seenRef.has(p.ref)||seenPred.has(p.pred))continue;
-    seenRef.add(p.ref);seenPred.add(p.pred);
+  // R146: a greedy highest-IoU pair can consume the ONLY prediction
+  // eligible for a second table, falsely reporting a source-box miss.
+  // Maximum-cardinality bipartite matching counts each valid prediction
+  // and independent published reference no more than once. Threshold and
+  // table coordinates are unchanged; reference boxes are evaluation only.
+  const edges=reference.map((_,ref)=>pairs.filter(p=>
+    p.ref===ref&&p.iou>=threshold).sort((a,b)=>b.iou-a.iou||a.pred-b.pred));
+  const predictionToRef=Array(predicted.length).fill(-1);
+  function augment(ref,seenPred){
+    for(const edge of edges[ref]){
+      if(seenPred.has(edge.pred))continue;
+      seenPred.add(edge.pred);
+      const previous=predictionToRef[edge.pred];
+      if(previous===-1||augment(previous,seenPred)){
+        predictionToRef[edge.pred]=ref;
+        return true;
+      }
+    }
+    return false;
   }
+  let matchedCount=0;
+  for(let ref=0;ref<reference.length;ref++)
+    if(augment(ref,new Set()))matchedCount++;
   const best=reference.map((_,i)=>Math.max(0,...pairs.filter(p=>p.ref===i).map(p=>p.iou)));
   return {referenceCount:reference.length,predictionCount:predicted.length,
-    matchedCount:seenRef.size,missedCount:reference.length-seenRef.size,
-    unmatchedPredictionCount:predicted.length-seenPred.size,
+    matchedCount,missedCount:reference.length-matchedCount,
+    unmatchedPredictionCount:predicted.length-matchedCount,
     referenceBestIoU:best.map(n=>Number(n.toFixed(4)))};
 }

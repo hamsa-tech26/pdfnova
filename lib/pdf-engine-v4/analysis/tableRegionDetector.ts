@@ -2,6 +2,7 @@ import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
 import {findNativeCompactScientificGrids} from "./nativeCompactScientificGrid";
 import {findCaptionedTwoColumnTextGrids} from "./captionedTwoColumnTextGrid";
+import {findNativeCaptionHeaderScientificGrids} from "./nativeScientificCaptionHeaderGrid";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
@@ -1562,8 +1563,18 @@ export function detectTableRegionsForPage(
   // R130–132: Only admit an unclaimed compact native numeric subregion.
   // Never duplicate the source rows of captioned, dense, scientific or OCR
   // recoveries. Preserve every intervening paragraph as its own fragment.
+  // A strictly source-anchored caption+header subregion may supersede
+  // an older generic broad paragraph recovery. Do not suppress protected
+  // interleaved, 11-column, 2-column or dense specialized sources.
+  const headerSourceGrids=findNativeCaptionHeaderScientificGrids(splitNativeBlocks)
+    .filter(candidate=>![...interleavedGrids,...elevenGrids,...pairedGrids,
+      ...denseNativeGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   const previouslyAdmitted=[...interleavedGrids,...elevenGrids,...pairedGrids,
-    ...retainedRegular,...denseNativeGrids];
+    ...retainedRegular.filter(regular=>!headerSourceGrids.some(grid=>
+      regular.sourceBlock===grid.sourceBlock&&candidateOverlap(regular,grid))),
+    ...denseNativeGrids];
   const compactNativeGrids=findNativeCompactScientificGrids(splitNativeBlocks)
     .filter(candidate=>!previouslyAdmitted.some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
@@ -1582,7 +1593,14 @@ export function detectTableRegionsForPage(
     // column alignment instead of applying numeric-table score assumptions.
     .filter(candidate=>
       candidate.analysis.breakdown.alignment.score>=12);
-  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids]
+  const headerNativeGrids=headerSourceGrids
+    .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
+      ...captionedTextGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)));
+  // Admission comes from source caption + repeated native numeric anchors,
+  // not generic prose scoring; downstream table building remains mandatory.
+  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids,
+    ...headerNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();

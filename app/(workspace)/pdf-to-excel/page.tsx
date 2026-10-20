@@ -14,6 +14,8 @@ import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
+import {findNativeScientificRasterReviewTargets,
+  type ScientificRasterReviewTarget} from "@/lib/pdf-engine-v4/analysis/nativeScientificRasterReview";
 import {listEmbeddedImageReviewPages} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewPages";
 import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
 import {insertReviewedImageRow,removeReviewedImageRow,
@@ -40,6 +42,8 @@ export default function PdfToExcelPage() {
   const [error, setError] = useState("");
   const [inspected, setInspected] = useState<Awaited<ReturnType<typeof analyzePdfV4>> | null>(null);
   const [choices, setChoices] = useState<PdfXlsxTableChoice[]>([]);
+  const [scientificImageTargets,setScientificImageTargets] =
+    useState<ScientificRasterReviewTarget[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
   const [preview, setPreview] = useState<PdfTablePreview | null>(null);
   const [cellAddressInput,setCellAddressInput]=useState("");
@@ -105,7 +109,7 @@ export default function PdfToExcelPage() {
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
-    setChoices([]);
+    setChoices([]);setScientificImageTargets([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
   }
@@ -120,7 +124,7 @@ export default function PdfToExcelPage() {
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
-    setChoices([]);
+    setChoices([]);setScientificImageTargets([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     if (!selected || !selected.name.toLowerCase().endsWith(".pdf") ||
@@ -142,6 +146,8 @@ export default function PdfToExcelPage() {
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
+      setScientificImageTargets(findNativeScientificRasterReviewTargets(
+        analyzed.document.pages,analyzed.tables));
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
         listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
@@ -165,6 +171,8 @@ export default function PdfToExcelPage() {
         listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");
       setChoices(analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[]);
+      setScientificImageTargets(findNativeScientificRasterReviewTargets(
+        analyzed.document.pages,analyzed.tables));
       setSelectedIndex(null);setPreview(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect image content.");
@@ -188,6 +196,29 @@ export default function PdfToExcelPage() {
       setImageStatus(cause instanceof Error?cause.message:"Embedded-image OCR review failed.");
     }finally{setImageBusy(false);}
   }
+  /**
+   * R150: a source-grounded review shortcut, NOT automatic image OCR.
+   * Recheck eligibility at click time and invalidate any old image approval.
+   */
+  function prepareScientificImageReview(target:ScientificRasterReviewTarget){
+    if(!inspected||busy||imageBusy)return;
+    const page=inspected.document.pages.find(p=>p.pageNumber===target.pageNumber);
+    if(!page||!listManuallyReviewableImageRegions(page).some(region=>
+      region.imagePaintIndex===target.imagePaintIndex)){
+      setError("This source image cannot be safely selected for review.");
+      return;
+    }
+    setImagePage(target.pageNumber);
+    setSelectedImagePaint(String(target.imagePaintIndex));
+    setImageReview(null);setReviewRegionIndex(null);
+    setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    clearReviewedEditHistory();
+    setImageStatus("Original image paint "+(target.imagePaintIndex+1)+
+      " on page "+target.pageNumber+" was selected for optional review. "+
+      "No OCR has run. Use the image review controls above, compare the "+
+      "source image and manually approve any corrected cells.");
+  }
+
   /** R127: suggestion ONLY fills editable input; it never previews, approves or exports. */
   function useTentativeOcrGrid(){
     const proposed=reviewRegionIndex===null?null:
@@ -774,6 +805,41 @@ export default function PdfToExcelPage() {
                 </label>
               ))}
             </fieldset>
+
+            {selectedIndex!==null&&scientificImageTargets.some(target=>
+              target.tableIndex===selectedIndex)&&(
+              <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-slate-900"
+                role="region" aria-label="Related native scientific table source images">
+                <p className="font-semibold text-amber-950 dark:text-amber-100">
+                  Possible incomplete scientific table — image review available
+                </p>
+                <p className="text-sm text-amber-950 dark:text-amber-100">
+                  The original PDF contains painted images beside or beneath
+                  this extracted native table. They may be unrelated or may
+                  contain additional source content. No image data has been
+                  incorporated into the selected table, and it is not certified.
+                  Selecting a region below does not start OCR or approve cells.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  {scientificImageTargets.filter(target=>
+                    target.tableIndex===selectedIndex).map(target=>(
+                    <button type="button"
+                      key={target.pageNumber+"-"+target.imagePaintIndex}
+                      disabled={busy||imageBusy}
+                      onClick={()=>prepareScientificImageReview(target)}
+                      className="rounded-lg border border-amber-500 px-3 py-2 text-sm font-semibold text-amber-950 disabled:opacity-50 dark:text-amber-100">
+                      Select original image {target.imagePaintIndex+1},
+                      PDF page {target.pageNumber} for optional review
+                    </button>
+                  ))}
+                </div>
+                <p className="text-xs text-amber-900 dark:text-amber-200">
+                  After selection, use the separate embedded-image review
+                  controls above. OCR is optional, local and never added
+                  automatically to this table&apos;s Excel file.
+                </p>
+              </div>
+            )}
 
             {preview && selectedIndex!==null && (
               <div className="space-y-3" aria-label="Selected table preview">

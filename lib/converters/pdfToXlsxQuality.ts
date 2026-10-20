@@ -18,6 +18,49 @@ export type PdfV4XlsxExportSource = {
   tables: readonly LogicalTable[];
 };
 
+/**
+ * R147: source-only safety signal. Native scientific rows may end beside
+ * independently painted PDF image regions containing unextracted content.
+ * Image paints are NOT necessarily tables; never infer text or expand bounds.
+ * Inspect only finite bounded rectangles and emit page numbers, not content.
+ */
+function possibleRasterContinuationPages(
+  pages: readonly unknown[], table: LogicalTable, tablePages: readonly number[],
+): number[] {
+  const valid=(r:unknown):r is {x:number;y:number;width:number;height:number}=>{
+    if(!r||typeof r!=="object")return false;
+    const box=r as Record<string,unknown>;
+    return ["x","y","width","height"].every(k=>
+      typeof box[k]==="number"&&Number.isFinite(box[k]))&&
+      (box.width as number)>0&&(box.height as number)>0;
+  };
+  if(!valid(table.bounds))return [];
+  const sourceBounds=table.bounds;
+  const flagged:number[]=[];
+  for(const page of tablePages){
+    const model=pages[page-1];
+    if(!model||typeof model!=="object")continue;
+    const raw=(model as {imagePaintRegions?:unknown}).imagePaintRegions;
+    if(!Array.isArray(raw))continue;
+    const near=raw.slice(0,40).some(paint=>{
+      const rect=(paint as {bounds?:unknown}|null)?.bounds;
+      if(!valid(rect)||rect.width<32||rect.height<32)return false;
+      const overlapX=Math.max(0,Math.min(sourceBounds.x+sourceBounds.width,
+        rect.x+rect.width)-Math.max(sourceBounds.x,rect.x));
+      if(overlapX/Math.min(sourceBounds.width,rect.width)<0.45)return false;
+      // Positive gap: raster immediately BELOW native text, in PDF
+      // bottom-origin coordinates. Overlap: image paint touches source rows.
+      const gap=sourceBounds.y-(rect.y+rect.height);
+      const overlapY=Math.max(0,Math.min(sourceBounds.y+sourceBounds.height,
+        rect.y+rect.height)-Math.max(sourceBounds.y,rect.y));
+      return gap>=0&&gap<=75||
+        overlapY/Math.min(sourceBounds.height,rect.height)>=0.15;
+    });
+    if(near)flagged.push(page);
+  }
+  return flagged;
+}
+
 function sourcePages(table: LogicalTable, pageCount: number): number[] {
   const numbers = table.rows.map(row => row.provenance?.pageNumber ?? table.pageNumber);
   if (numbers.some(n => !Number.isInteger(n) || n < 1 || n > pageCount)) {
@@ -253,7 +296,8 @@ export function preparePdfV4XlsxExport(
   }
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
-    id.startsWith("native-captioned-text-grid-"));
+    id.startsWith("native-captioned-text-grid-")||
+    id.startsWith("native-caption-header-grid-"));
   const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
     needsExplicitReview(row.provenance?.blockId)));
   const excludedReviewCount=!options?.allowSelectedCompactGrid?
@@ -305,8 +349,10 @@ export function preparePdfV4XlsxExport(
     const number = index + 1;
     const captionedText=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-captioned-text-grid-"));
-    if(captionedText&&table.rows.length<8)
-      throw new Error("Captioned native text grid has too few reconstructed physical lines; Excel export was withheld.");
+    const scientificHeader=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-caption-header-grid-"));
+    if((captionedText||scientificHeader)&&table.rows.length<8)
+      throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
       notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
         "scientific or captioned two-column text grid using repeated source "+
@@ -314,11 +360,27 @@ export function preparePdfV4XlsxExport(
         "blank cells and values have NOT been independently verified. "+
         "Compare EVERY cell against the original PDF before using the export.");
     }
-    if(captionedText)notes.push("Table "+number+
-      ": Every source PDF physical text line is a separate Excel row. "+
-      "Wrapped physical lines may belong to one semantic record; no "+
-      "row continuation, field identity or grouping has been verified. "+
+    if(captionedText||scientificHeader)notes.push("Table "+number+
+      ": Every retained source PDF header/body physical text line is a separate Excel row. "+
+      "Wrapped physical lines, multi-tier scientific headings and sparse "+
+      "continuation lines may belong to one semantic record; no row "+
+      "continuation, field identity or grouping has been verified. "+
       "Do not treat these rows as finalized spreadsheet records.");
+    if(scientificHeader)notes.push("Table "+number+
+      ": Explicit native table footnotes may be included in the detected "+
+      "visual table region but are NOT added as Excel data cells. Compare "+
+      "source notes and all footnotes against the original PDF.");
+    if(scientificHeader){
+      const nearPaints=possibleRasterContinuationPages(
+        source.document.pages,table,sourcePages(table,pageCount));
+      if(nearPaints.length)notes.push("Table "+number+
+        ": POSSIBLE RASTER CONTINUATION on source page(s) "+
+        nearPaints.join(", ")+": embedded PDF image paint is directly below "+
+        "or overlaps this native scientific table. The image may contain "+
+        "additional rows or may be unrelated; no image data, OCR cells "+
+        "or invented content were included. Examine the ORIGINAL PDF "+
+        "and use explicit image review before relying on this partial XLSX.");
+    }
     if (!Number.isFinite(table.confidence) || table.confidence < 0.65 ||
         !Number.isInteger(table.columnCount) || table.columnCount < 2 ||
         table.columnCount > 128 || table.rows.length < 2 ||

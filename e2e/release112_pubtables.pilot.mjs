@@ -3,6 +3,8 @@ import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
 import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
+import {assessUncaptionedPairedNativeStream}
+  from "../benchmarks/release112/assessUncaptionedNativePairs.mjs";
 
 const root=resolve("benchmarks/release112");
 const manifest=JSON.parse(await readFile(join(root,"sources.json"),"utf8"));
@@ -99,6 +101,83 @@ for(const source of manifest.documents){
         Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
+      if(source.id==="PMC1064098"&&ref.page===8){
+        // R147 original-source evidence: a native scientific header grid is
+        // followed by adjacent painted images. This is an OMITTED-CONTENT
+        // possibility only, not proof that painted images contain table rows.
+        const native=result.tableAnalyses?.find(a=>a.pageNumber===ref.page&&
+          a.blockId.startsWith("native-caption-header-grid-")&&a.table);
+        expect(native).toBeTruthy();
+        // R150 acceptance uses the independent publisher box only AFTER
+        // source-first processing; box data never enters native detection.
+        // A genuine source footnote can extend physical table geometry
+        // without becoming an Excel data row or synthetic recovered cell.
+        expect(metrics.referenceBestIoU[0]).toBeGreaterThanOrEqual(0.5);
+        expect(native.table.rows.length).toBe(12);
+        const tableRect=native.table.bounds;
+        const sourceFootnote=(viewport.lines??[]).find(line=>
+          Math.abs(line.bounds.y-tableRect.y)<=1.5);
+        expect(sourceFootnote).toBeTruthy();
+        expect(sourceFootnote.words.every(word=>
+          word.extractionProvenance?.source==="native-pdf")).toBe(true);
+        const exportedWordIds=new Set(native.table.rows.flatMap(row=>
+          row.cells.flatMap(cell=>cell.words.map(word=>word.id))));
+        expect(sourceFootnote.words.every(word=>
+          !exportedWordIds.has(word.id))).toBe(true);
+        const adjacent=nativeImageRects.filter(rect=>{
+          if(rect.width<32||rect.height<32)return false;
+          const horizontal=Math.max(0,Math.min(tableRect.x+tableRect.width,
+            rect.x+rect.width)-Math.max(tableRect.x,rect.x));
+          const gap=tableRect.y-(rect.y+rect.height);
+          return horizontal/Math.min(tableRect.width,rect.width)>=0.45&&
+            gap>=0&&gap<=75;
+        });
+        expect(adjacent.length).toBeGreaterThanOrEqual(1);
+        // Source-first diagnostic. Does an immediately trailing native text
+        // line have an explicit footnote/abbreviation marker? The next
+        // paragraph may be normal narrative and must NOT be swallowed just
+        // to increase a published benchmark IoU. Never log source text.
+        const nearTail=(viewport.lines??[]).filter(l=>
+          l.bounds.y<tableRect.y&&l.bounds.y>=tableRect.y-42&&
+          l.bounds.x>=tableRect.x-12&&
+          l.bounds.x<tableRect.x+tableRect.width)
+          .sort((a,b)=>b.bounds.y-a.bounds.y);
+        console.log(JSON.stringify({type:"R150_NATIVE_SOURCE_TRAILING_BOUNDARY_DIAGNOSTIC",
+          sourceLinesPresent:nearTail.length>0,
+          followingLines:nearTail.map(line=>({
+            gapPoints:Number((tableRect.y-line.bounds.y).toFixed(1)),
+            words:line.words.length,
+            characterCount:line.text.trim().length,
+            nativeOnly:line.words.every(w=>
+              w.extractionProvenance?.source!=="ocr-tesseract"),
+            footnoteCue:/^(?:\*|†|‡|#|note(?:s)?\b|abbrev(?:iation)?s?\b|source\s*:|p\s*[<>=])/i.test(line.text.trim()),
+            startsAsNarrative:/^(?:in\s+|the\s+|these\s+|figure\s+|as\s+|we\s+|our\s+|however\b)/i.test(line.text.trim()),
+          })),
+          publishedBoxUsedForSelection:false,exportCellsUnchanged:true}));
+        console.log(JSON.stringify({type:"R147_NATIVE_RASTER_ADJACENCY_EVIDENCE",
+          sourceId:source.id,originalPage:8,
+          reviewNativePhysicalRowCount:native.table.rows.length,
+          adjacentPaintCount:adjacent.length,contentNotInspected:true,
+          imageIsVerifiedTable:false,automaticImageCellRecovery:false,
+          acceptedFormalV4Credit:0}));
+      }
+      if(source.id==="PMC1064082"&&ref.page===1){
+        // Published reference rectangles are EVALUATION ONLY. The five
+        // paired word rows share both x anchors and source-line continuity
+        // with adjacent scientific article prose. Never auto-promote them.
+        const check=assessUncaptionedPairedNativeStream(viewport.blocks,expected[0]);
+        console.log("R144_UNCAPTIONED_NATIVE_SOURCE_CONTINUITY "+JSON.stringify({
+          sourceId:source.id,originalPage:ref.page,referenceOnlyEvaluation:true,
+          ...check,acceptedFormalV4Credit:0,
+        }));
+        expect(check.pairedInside).toBe(5);
+        // Actual original PDF proves continuity from the top; a bottom
+        // edge continuation is not independently established and must NOT
+        // be asserted from the publisher reference box alone.
+        expect(check.topContinues).toBe(true);
+        expect(check.status).toBe("CONTIGUOUS_NATIVE_ARTICLE_COLUMNS_POSSIBLE");
+        expect(check.sourcePromotable).toBe(false);
+      }
       pageResults.push({originalPage:ref.page,...metrics,
         imagePaintCount:imageReview.imagePaintCount,
         imageRegionsDetected:nativeImageRects.length,
@@ -139,6 +218,12 @@ for(const source of manifest.documents){
           .filter(d=>d.pageNumber===ref.page&&d.blockId.startsWith("native-captioned-text-grid-"))
           .map(d=>({blockId:d.blockId,hasTable:!!d.table,columns:d.columnDetection?.columns?.length??0,
             rows:d.rowDetection?.rows?.length??0})),
+        candidateTableAnalyses:(result.tableAnalyses??[])
+          .filter(a=>a.pageNumber===ref.page&&a.table)
+          .map(a=>({id:a.blockId,rows:a.table?.rows.length??0,
+            cols:a.columnDetection?.columns?.length??0,
+            bounds:Object.fromEntries(Object.entries(a.table.bounds).map(
+              ([k,v])=>[k,Number(v.toFixed(1))]))})),
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         publishedBoxGeometry:expected.map(box=>summarizeReferenceGeometry(viewport,box))});
@@ -208,6 +293,32 @@ for(const source of manifest.documents){
         originalPublisherPage:6,selectedPaintIndex:Number(firstPaint),
         reviewedRegionCount:1,sourceContentNotLogged:true,
         autoImageCellAcceptance:false,certifiedCells:0}));
+      // R150 real-source consumer acceptance: use published page 8's
+      // already detected native scientific table to preselect matching
+      // original PDF image paints. This is UI navigation ONLY; no OCR call,
+      // source-cell invention, automatic export or changed table bounds.
+      const originalScientificChoice=page.getByRole("radio",{
+        name:/Table \d+ — Page 8 — 12 rows/,
+      });
+      await expect(originalScientificChoice).toBeVisible();
+      await originalScientificChoice.check();
+      const related=page.getByRole("region",{
+        name:"Related native scientific table source images",
+      });
+      await expect(related).toBeVisible();
+      const sourceButtons=related.getByRole("button",{
+        name:/Select original image .* PDF page 8 for optional review/,
+      });
+      expect(await sourceButtons.count()).toBeGreaterThanOrEqual(2);
+      await sourceButtons.first().click();
+      await expect(page.getByLabel("Page to review")).toHaveValue("8");
+      await expect(page.getByLabel("Image region to review")).toHaveValue("0");
+      await expect(page.getByText(/No OCR has run/)).toBeVisible();
+      console.log(JSON.stringify({type:"R150_REVIEW_ONLY_SOURCE_TARGET_BROWSER",
+        sourceId:source.id,pageNumber:8,
+        candidatePaintControls:await sourceButtons.count(),
+        originalNativeTableUnmodified:true,ocrAutomaticallyRun:false,
+        acceptedCells:0,formalV4Credit:0}));
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
@@ -228,6 +339,7 @@ for(const source of manifest.documents){
       overlappingSourceBlocks:p.overlappingSourceBlocks,
       newTextGridRegionDiagnostics:p.newTextGridRegionDiagnostics,
       newTextGridTableAnalyses:p.newTextGridTableAnalyses,
+      candidateTableAnalyses:p.candidateTableAnalyses,
       geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
@@ -251,7 +363,10 @@ test.afterAll(async()=>{
   // baseline without increasing its two unmatched predictions.
   // These are spatial source-box checks, NOT cell/row certification.
   expect(summary.publishedBoxCount).toBe(6);
-  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(2);
+  // R150 independent original-publisher target: the upper original
+  // scientific table now includes explicit source-footnote geometry only.
+  // Previous accepted tables remain intact, and false positives cannot grow.
+  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(3);
   expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
   // R117 per-document regression: preserve the independently annotated
   // high-quality match that Release 112 obtained on original PMC page 7.

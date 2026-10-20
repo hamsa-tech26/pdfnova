@@ -42,7 +42,28 @@ for(const entry of config.sources){
       // which must never be mistaken for any of the five published tables.
       const nativeTables=inspector.tables.filter(table =>
         table.columnCount>=6 && table.rows.length>=4);
+      // The old total-only check let five spurious tables on one excerpt
+      // page stand in for five published table pages. Require source-page
+      // coverage and preserve counts for any missing page investigation.
+      const byPage=metadata.selectedPageNumbers.map((originalPage,i)=>{
+        const onPage=nativeTables.filter(table=>table.pageNumber===i+1);
+        return {originalPage,confirmedCandidateCount:onPage.length,
+          shapes:onPage.map(table=>[table.rows.length,table.columnCount])};
+      });
+      console.log("R143_USGS_PAGE_COVERAGE "+JSON.stringify({
+        sourceId:metadata.id,sourceHashVerified:true,
+        coverage:byPage,referenceStatus:"NOT_INDEPENDENTLY_ANNOTATED",
+        realWorldQualificationCredit:0,
+      }));
       expect(nativeTables.length).toBe(5);
+      expect(byPage.map(row=>row.confirmedCandidateCount))
+        .toEqual([1,1,1,1,1]);
+      // Original-publisher source excerpt's five developer-transcribed
+      // workbook table layouts. Presence without shape agreement is not
+      // good enough: it could be a false-positive table on the right page.
+      expect(byPage.map(row=>row.shapes)).toEqual([
+        [[6,6]],[[4,6]],[[4,6]],[[4,7]],[[5,7]],
+      ]);
     }
     // Public debug payload is numeric/enum only, never PDF text or coordinates.
     const scores=Array.isArray(inspector.candidateRegionDiagnostics)
