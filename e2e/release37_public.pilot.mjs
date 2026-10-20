@@ -113,9 +113,29 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",asyn
   expect(sourceMetadata.realDocumentCountCredit).toBe(0);
   await page.goto("/pdf-to-excel");
   await page.locator('input[type="file"]').first().setInputFiles(input);
-  const downloadPromise=page.waitForEvent("download",{timeout:160000});
+  // Fail quickly with non-sensitive diagnostic if an unexpected quality
+  // gate blocks this previously accepted real XLSX, rather than idling for
+  // 160 seconds waiting for a download that will never start.
+  const downloaded=page.waitForEvent("download",{timeout:160000})
+    .then(download=>({kind:"download",download}));
+  const withheld=page.getByRole("heading",{name:"Excel conversion withheld"})
+    .waitFor({state:"visible",timeout:160000})
+    .then(()=>({kind:"withheld",download:null}));
   await page.getByRole("button",{name:/Convert to Excel/i}).click();
-  const download=await downloadPromise;
+  const outcome=await Promise.any([downloaded,withheld]);
+  if(outcome.kind==="withheld"||!outcome.download){
+    const label=await page.getByRole("alert").locator("p").nth(1).innerText();
+    const reason=/choose an individual table/i.test(label)?"ONLY_REVIEW_REQUIRED_GRIDS":
+      /uncertain row or column structure/i.test(label)?"UNCERTAIN_STRUCTURE":
+      /overlapping table cells/i.test(label)?"OVERLAP":
+      /more than 12|maximum of 12/i.test(label)?"TOO_MANY_TABLES":
+      "OTHER_FAIL_CLOSED_REASON";
+    console.log("R130_USGS_EXPORT_REFUSAL "+JSON.stringify({
+      reason,sourceHashVerified:true,sourceContentNotLogged:true,acceptance:"BLOCKED",
+    }));
+    throw Error("USGS 147-cell source regression blocked: "+reason);
+  }
+  const download=outcome.download;
   expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
   const file=await download.path();
   if(!file)throw Error("No real USGS XLSX file");
