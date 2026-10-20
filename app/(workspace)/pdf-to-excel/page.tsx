@@ -561,14 +561,23 @@ export default function PdfToExcelPage() {
                 </label>
                 <textarea id="reviewed-image-grid" value={reviewedTsv}
                   onChange={e=>{setReviewedTsv(e.target.value);setReviewedRows(null);
-                    setReviewConfirmed(false);setImageStatus("");}}
+                    setReviewConfirmed(false);clearReviewedEditHistory();setImageStatus("");}}
                   rows={6} maxLength={30000}
                   placeholder={"Name\tAmount\nItem A\t00123\nItem B\t00456"}
                   className="w-full rounded-lg border p-3 font-mono text-sm text-slate-950 dark:bg-slate-900 dark:text-white"/>
-                <button type="button" onClick={previewUserGrid}
-                  className="rounded-lg border px-4 py-2 font-semibold text-sm">
-                  Preview my corrected cells
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={previewUserGrid}
+                    className="rounded-lg border px-4 py-2 font-semibold text-sm">
+                    Preview my corrected cells
+                  </button>
+                  {undoReviewedTsv!==null&&(
+                    <button type="button" disabled={busy||imageBusy}
+                      onClick={undoReviewedChange}
+                      className="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold">
+                      Undo last button edit — preview again
+                    </button>
+                  )}
+                </div>
                 {reviewedRows&&(
                   <div className="space-y-3">
                     <p className="text-sm font-semibold">User-entered cell preview — {reviewedRows.length} rows × {reviewedRows[0].length} columns</p>
@@ -588,6 +597,100 @@ export default function PdfToExcelPage() {
                         </tr>)}
                       </tbody></table>
                     </div>
+                    <section aria-label="Reviewed image grid row and column editor"
+                      className="space-y-3 rounded-xl border border-blue-200 p-3 text-sm dark:border-blue-800">
+                      <h4 className="font-semibold">Correct missing or extra rows and columns</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        No row or column content is invented. Enter the new source value or
+                        heading yourself. Each change clears preview and approval. Compare
+                        the entire table with the original image before exporting.
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="block font-medium">Data row to edit</span>
+                          <select aria-label="Data row to edit" value={Math.min(rowActionTarget,reviewedRows.length-1)}
+                            onChange={e=>setRowActionTarget(Number(e.target.value))}
+                            className="w-full rounded-lg border p-2 bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
+                            {reviewedRows.slice(1).map((_,index)=>(
+                              <option key={index+1} value={index+1}>Row {index+2} (sheet row)</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="block font-medium">New row's first source value</span>
+                          <input aria-label="New row first value" value={newRowSeed}
+                            maxLength={1000} onChange={e=>setNewRowSeed(e.target.value)}
+                            placeholder="Enter a value from source image"
+                            className="w-full rounded-lg border p-2 text-slate-950 dark:bg-slate-900 dark:text-white"/>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy||imageBusy||reviewedRows.length>=100}
+                          onClick={()=>applyReviewedStructureEdit(()=>
+                            insertReviewedImageRow(reviewedTsv,
+                              Math.min(rowActionTarget,reviewedRows.length-1),newRowSeed),
+                            "Source-entered data row inserted.")}
+                          className="rounded-lg border px-3 py-2 font-semibold">Add row below</button>
+                        <button type="button" disabled={busy||imageBusy||reviewedRows.length<=2}
+                          onClick={()=>{if(!window.confirm("Delete this reviewed row? You will need to preview and approve again."))return;
+                            applyReviewedStructureEdit(()=>
+                              removeReviewedImageRow(reviewedTsv,
+                                Math.min(rowActionTarget,reviewedRows.length-1)),
+                              "Chosen data row removed.");}}
+                          className="rounded-lg border border-red-500 px-3 py-2 font-semibold">
+                          Delete selected row
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="block font-medium">Column to edit</span>
+                          <select aria-label="Column to edit"
+                            value={Math.min(columnActionTarget,reviewedRows[0].length-1)}
+                            onChange={e=>setColumnActionTarget(Number(e.target.value))}
+                            className="w-full rounded-lg border p-2 bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
+                            {reviewedRows[0].map((heading,index)=>(
+                              <option key={index} value={index}>
+                                {pdfTableCellAddress(0,index).replace(/\\d+$/,"")} — {heading}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="block font-medium">New column heading</span>
+                          <input aria-label="New column heading" maxLength={1000}
+                            value={newColumnHeading}
+                            onChange={e=>setNewColumnHeading(e.target.value)}
+                            placeholder="Enter heading from source image"
+                            className="w-full rounded-lg border p-2 text-slate-950 dark:bg-slate-900 dark:text-white"/>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy||imageBusy||reviewedRows[0].length>=20}
+                          onClick={()=>applyReviewedStructureEdit(()=>
+                            insertReviewedImageColumn(reviewedTsv,
+                              Math.min(columnActionTarget,reviewedRows[0].length-1),newColumnHeading),
+                            "Source-named column inserted.")}
+                          className="rounded-lg border px-3 py-2 font-semibold">Add column after</button>
+                        <button type="button" disabled={busy||imageBusy||reviewedRows[0].length<=2}
+                          onClick={()=>{if(!window.confirm("Delete this reviewed column and its source values? You will need to preview and approve again."))return;
+                            applyReviewedStructureEdit(()=>
+                              removeReviewedImageColumn(reviewedTsv,
+                                Math.min(columnActionTarget,reviewedRows[0].length-1)),
+                              "Chosen column and its values removed.");}}
+                          className="rounded-lg border border-red-500 px-3 py-2 font-semibold">
+                          Delete selected column
+                        </button>
+                      </div>
+                      <div aria-label="Reviewed grid quality warnings"
+                        className="rounded-lg border border-amber-300 p-2 text-xs dark:border-amber-800">
+                        <p className="font-semibold">Source review checks — not cell accuracy certification</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {inspectReviewedImageGrid(reviewedTsv).warnings.map((warning,i)=>(
+                            <li key={i}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </section>
                     {imageEditCell&&(
                       <div className="space-y-2 rounded-lg border border-blue-300 p-3 dark:border-blue-800">
                         <label htmlFor="reviewed-image-cell-edit" className="block text-sm font-semibold">
