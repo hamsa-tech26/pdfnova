@@ -101,6 +101,30 @@ for(const source of manifest.documents){
         Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
+      if(source.id==="PMC1064098"&&ref.page===8){
+        // R147 original-source evidence: a native scientific header grid is
+        // followed by adjacent painted images. This is an OMITTED-CONTENT
+        // possibility only, not proof that painted images contain table rows.
+        const native=result.tableAnalyses?.find(a=>a.pageNumber===ref.page&&
+          a.blockId.startsWith("native-caption-header-grid-")&&a.table);
+        expect(native).toBeTruthy();
+        const tableRect=native.table.bounds;
+        const adjacent=nativeImageRects.filter(rect=>{
+          if(rect.width<32||rect.height<32)return false;
+          const horizontal=Math.max(0,Math.min(tableRect.x+tableRect.width,
+            rect.x+rect.width)-Math.max(tableRect.x,rect.x));
+          const gap=tableRect.y-(rect.y+rect.height);
+          return horizontal/Math.min(tableRect.width,rect.width)>=0.45&&
+            gap>=0&&gap<=75;
+        });
+        expect(adjacent.length).toBeGreaterThanOrEqual(1);
+        console.log(JSON.stringify({type:"R147_NATIVE_RASTER_ADJACENCY_EVIDENCE",
+          sourceId:source.id,originalPage:8,
+          reviewNativePhysicalRowCount:native.table.rows.length,
+          adjacentPaintCount:adjacent.length,contentNotInspected:true,
+          imageIsVerifiedTable:false,automaticImageCellRecovery:false,
+          acceptedFormalV4Credit:0}));
+      }
       if(source.id==="PMC1064082"&&ref.page===1){
         // Published reference rectangles are EVALUATION ONLY. The five
         // paired word rows share both x anchors and source-line continuity
