@@ -31,6 +31,7 @@ import {
 import {detectParallelNativeColumns} from "../analysis/parallelScientificTableRecovery";
 import {detectNativeElevenColumns} from "../analysis/nativeElevenColumnGrid";
 import {detectInterleavedNativeThreeColumns} from "../analysis/interleavedNativeThreeColumnGrid";
+import {findNativeScientificTableFootnoteBounds} from "../analysis/nativeScientificCaptionHeaderGrid";
 import {recoverSparseLeftNativeCaptionColumn} from "../analysis/scopedDenseCaptionGridRecovery";
 import {
   detectAdaptiveRowsV4,
@@ -1716,10 +1717,32 @@ const sourceTable =
   cellRepair?.table ??
   builtTable;
 
-const finalTable =
+const extractedTable =
   sourceTable
     ? repairPdfV4TableOcrCells(sourceTable)
     : null;
+
+// R150: a scientific table's clearly tagged native source footnotes may
+// count toward the table detection region, while remaining EXCLUDED from
+// logical Excel rows/cells. The original reader page lines and explicit
+// source markers are required; this is not a benchmark-box adjustment.
+const footnoteBounds=extractedTable&&extractedTable.rows.length>=10?
+  findNativeScientificTableFootnoteBounds(region.block,page.lines):null;
+const finalTable=extractedTable&&footnoteBounds?{
+  ...extractedTable,
+  bounds:{
+    x:Math.min(extractedTable.bounds.x,footnoteBounds.x),
+    y:Math.min(extractedTable.bounds.y,footnoteBounds.y),
+    width:Math.max(
+      extractedTable.bounds.x+extractedTable.bounds.width,
+      footnoteBounds.x+footnoteBounds.width,
+    )-Math.min(extractedTable.bounds.x,footnoteBounds.x),
+    height:Math.max(
+      extractedTable.bounds.y+extractedTable.bounds.height,
+      footnoteBounds.y+footnoteBounds.height,
+    )-Math.min(extractedTable.bounds.y,footnoteBounds.y),
+  },
+}:extractedTable;
 
   if (finalTable === null) {
   rejectedForTableBuildFailure +=
