@@ -809,7 +809,7 @@ export default function PdfToExcelPage() {
             {selectedIndex!==null&&scientificImageTargets.some(target=>
               target.tableIndex===selectedIndex)&&(
               <div className="space-y-3 rounded-xl border border-amber-300 bg-amber-50 p-4 dark:border-amber-700 dark:bg-slate-900"
-                aria-label="Related native scientific table source images">
+                role="region" aria-label="Related native scientific table source images">
                 <p className="font-semibold text-amber-950 dark:text-amber-100">
                   Possible incomplete scientific table — image review available
                 </p>
