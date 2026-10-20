@@ -53,9 +53,24 @@ export function inspectPdfV4XlsxChoices(
       "Pages "+pages[0]+"–"+pages[pages.length-1]:
       "Page "+(pages[0]??table.pageNumber);
     try{
-      prepareSelectedPdfV4XlsxExport(source,index);
+      const plan=prepareSelectedPdfV4XlsxExport(source,index);
+      const reviewOnly=table.rows.some(row=>{
+        const id=row.provenance?.blockId??"";
+        return id.startsWith("native-compact-grid-")||
+          id.startsWith("native-captioned-text-grid-")||
+          id.startsWith("native-caption-header-grid-");
+      });
+      const mayOmitPaintedContent=(plan.reviewNotes??[]).some(note=>
+        note.includes("POSSIBLE RASTER CONTINUATION"));
+      const reason=mayOmitPaintedContent?
+        "REVIEW ONLY: Native table may omit content in adjacent PDF images. "+
+        "Inspect the original image regions and every Excel cell before use.":
+        reviewOnly?
+          "REVIEW ONLY: Reconstructed scientific table is not independently "+
+          "verified. Inspect source headings, row grouping and every cell.":
+          "Passes automatic export checks. Review all cell values against the PDF.";
       return {index,pageLabel,rows:table.rows.length,columns:table.columnCount,
-        eligible:true,reason:"Passes automatic export checks. Review all cell values against the PDF."};
+        eligible:true,reason};
     }catch(cause){
       return {index,pageLabel,rows:table.rows.length,columns:table.columnCount,
         eligible:false,reason:cause instanceof Error?cause.message:"Export safety check failed."};
