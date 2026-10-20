@@ -619,7 +619,7 @@ export default function PdfToExcelPage() {
                           </select>
                         </label>
                         <label className="space-y-1">
-                          <span className="block font-medium">New row's first source value</span>
+                          <span className="block font-medium">New row&apos;s first source value</span>
                           <input aria-label="New row first value" value={newRowSeed}
                             maxLength={1000} onChange={e=>setNewRowSeed(e.target.value)}
                             placeholder="Enter a value from source image"
