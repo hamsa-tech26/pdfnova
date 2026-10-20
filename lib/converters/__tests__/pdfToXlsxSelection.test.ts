@@ -222,6 +222,8 @@ describe("R145 scientific native caption/header source review isolation",()=>{
     expect(notes).toContain("HIGH REVIEW PRIORITY");
     expect(notes).toContain("multi-tier scientific headings");
     expect(notes).toContain("physical text line");
+    expect(notes).toContain("footnotes");
+    expect(notes).toContain("NOT added as Excel data cells");
     const short=fixture();
     short.rows=short.rows.slice(0,2);
     expect(()=>prepareSelectedPdfV4XlsxExport(source([short]),0))
