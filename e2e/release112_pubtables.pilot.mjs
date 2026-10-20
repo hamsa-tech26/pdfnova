@@ -118,6 +118,28 @@ for(const source of manifest.documents){
             gap>=0&&gap<=75;
         });
         expect(adjacent.length).toBeGreaterThanOrEqual(1);
+        // Source-first diagnostic. Does an immediately trailing native text
+        // line have an explicit footnote/abbreviation marker? The next
+        // paragraph may be normal narrative and must NOT be swallowed just
+        // to increase a published benchmark IoU. Never log source text.
+        const sourceParagraph=(viewport.blocks??[]).find(b=>b.type==="paragraph"&&
+          (b.lines??[]).some(l=>/^table\\s+s?\\d{1,3}/i.test(l.text.trim()))&&
+          (b.lines??[]).some(l=>Math.abs(l.bounds.y-tableRect.y)<1.5));
+        const nearTail=(sourceParagraph?.lines??[]).filter(l=>
+          l.bounds.y<tableRect.y&&l.bounds.y>=tableRect.y-42)
+          .sort((a,b)=>b.bounds.y-a.bounds.y);
+        console.log(JSON.stringify({type:"R150_NATIVE_SOURCE_TRAILING_BOUNDARY_DIAGNOSTIC",
+          foundSourceParagraph:!!sourceParagraph,
+          followingLines:nearTail.map(line=>({
+            gapPoints:Number((tableRect.y-line.bounds.y).toFixed(1)),
+            words:line.words.length,
+            characterCount:line.text.trim().length,
+            nativeOnly:line.words.every(w=>
+              w.extractionProvenance?.source!=="ocr-tesseract"),
+            footnoteCue:/^(?:\\*|†|‡|#|note(?:s)?\\b|abbrev(?:iation)?s?\\b|source\\s*:|p\\s*[<>=])/i.test(line.text.trim()),
+            startsAsNarrative:/^(?:in\\s+|the\\s+|these\\s+|figure\\s+|as\\s+|we\\s+|our\\s+|however\\b)/i.test(line.text.trim()),
+          })),
+          publishedBoxUsedForSelection:false,exportCellsUnchanged:true}));
         console.log(JSON.stringify({type:"R147_NATIVE_RASTER_ADJACENCY_EVIDENCE",
           sourceId:source.id,originalPage:8,
           reviewNativePhysicalRowCount:native.table.rows.length,
