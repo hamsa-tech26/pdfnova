@@ -1587,9 +1587,11 @@ export function detectTableRegionsForPage(
     .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
       ...captionedTextGrids].some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
-    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
-    .filter(candidate=>candidate.analysis.breakdown.alignment.score>=12&&
-      candidate.analysis.totalScore>=25);
+    // Admission comes from the caption, repeated numeric row positions
+    // and stable source anchors in this specialist, not from generic
+    // prose-table numeric/spacing score thresholds. The downstream table
+    // builder must still find real columns and rows before any export.
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids,
     ...headerNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
