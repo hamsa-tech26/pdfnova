@@ -14,6 +14,7 @@ import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
+import {listEmbeddedImageReviewPages} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewPages";
 import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
 import {insertReviewedImageRow,removeReviewedImageRow,
   insertReviewedImageColumn,removeReviewedImageColumn,
@@ -141,7 +142,8 @@ export default function PdfToExcelPage() {
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
-      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
+      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
+        listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
       clearReviewedEditHistory();
       setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -159,7 +161,8 @@ export default function PdfToExcelPage() {
     try{
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
-      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
+      setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
+        listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");
       setChoices(analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[]);
       setSelectedIndex(null);setPreview(null);
@@ -455,8 +458,13 @@ export default function PdfToExcelPage() {
                 clearReviewedEditHistory();
                 setReviewConfirmed(false);setImageStatus("");}}
               className="rounded-lg border bg-white px-3 py-2 text-slate-900">
-              {inspected.imageContentReview.filter(p=>p.imageReviewRecommended).map(p=>(
-                <option key={p.pageNumber} value={p.pageNumber}>Page {p.pageNumber}</option>
+              {listEmbeddedImageReviewPages(inspected.document.pages,
+                inspected.imageContentReview).map(p=>(
+                <option key={p.pageNumber} value={p.pageNumber}>
+                  Page {p.pageNumber}{p.automaticRecommended?
+                    " (automatic review eligible)":
+                    " (manual image review only)"}
+                </option>
               ))}
             </select>
             <label htmlFor="manual-image-paint" className="block text-sm font-semibold">
@@ -483,8 +491,9 @@ export default function PdfToExcelPage() {
             </select>
             <p className="text-xs text-slate-600 dark:text-slate-300">
               Select one eligible painted image to inspect it explicitly, including images
-              with native text overlays. An image is not necessarily a table. This does
-              not alter the source PDF or automatically approve any OCR cells.
+              on pages not automatically recommended and with native text overlays.
+              These pages require manual image selection. An image is not necessarily
+              a table. This does not alter the PDF or approve OCR cells.
             </p>
             <div>
               <button type="button" disabled={busy||imageBusy} onClick={runImageOcrReview}
