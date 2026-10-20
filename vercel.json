@@ -27,7 +27,8 @@
       "feature/kukureku-r130-r134-native-scientific-grid-reliability": false,
       "feature/kukureku-r135-image-source-preview": false,
       "feature/kukureku-r136-targeted-embedded-image-review": false,
-      "feature/kukureku-r137-r141-reviewed-grid-editor": false
+      "feature/kukureku-r137-r141-reviewed-grid-editor": false,
+      "feature/kukureku-r142-production-acceptance": false
     }
   }
 }
