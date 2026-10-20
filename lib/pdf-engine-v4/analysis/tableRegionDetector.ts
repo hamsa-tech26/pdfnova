@@ -1,6 +1,7 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
 import {findNativeCompactScientificGrids} from "./nativeCompactScientificGrid";
+import {findCaptionedTwoColumnTextGrids} from "./captionedTwoColumnTextGrid";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
@@ -1571,7 +1572,15 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.alignment.score>=16 &&
       candidate.analysis.breakdown.spacing.score>=10 &&
       candidate.analysis.totalScore>=32);
-  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids]
+  const captionedTextGrids=findCaptionedTwoColumnTextGrids(splitNativeBlocks)
+    .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
+    .filter(candidate=>
+      candidate.analysis.breakdown.alignment.score>=16&&
+      candidate.analysis.breakdown.spacing.score>=9&&
+      candidate.analysis.totalScore>=35);
+  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();
