@@ -39,7 +39,6 @@ function build(withCaption=true):PdfParagraphBlock{
   lines.push(line(18,[[57,"Narrative resumes below the table"]]));
   lines.push(line(19,[[57,"Methodology and discussion of unrelated source findings"]]));
   lines.push(line(20,[[57,"Publication bibliography starts afterward"]]));
-  const all=lines.flatMap(l=>l.words);
   return {id:"source",type:"paragraph",pageNumber:1,confidence:0.86,
     bounds:{x:57,y:500,width:510,height:250},
     lines,text:lines.map(l=>l.text).join(" ")};
@@ -73,9 +72,9 @@ describe("caption-restricted two-column native text regions",()=>{
     expect(emitted).toHaveLength(sourceIds.length);
     expect(new Set(emitted)).toEqual(new Set(sourceIds));
     const fragments=regions.regions.filter(x=>x.block.type==="paragraph");
-    const emitted=fragments.flatMap(x=>x.block.type==="paragraph"?x.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
-    expect(emitted).toHaveLength(src.lines.flatMap(l=>l.words).length);
-    expect(new Set(emitted).size).toBe(emitted.length);
+    const fragmentWordIds=fragments.flatMap(x=>x.block.type==="paragraph"?x.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
+    expect(fragmentWordIds).toHaveLength(src.lines.flatMap(l=>l.words).length);
+    expect(new Set(fragmentWordIds).size).toBe(fragmentWordIds.length);
   });
   it("does not mistake uncaptained narrative columns for an exportable table",()=>{
     expect(findCaptionedTwoColumnTextGrids([build(false)])).toHaveLength(0);
