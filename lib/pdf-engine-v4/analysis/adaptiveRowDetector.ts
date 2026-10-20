@@ -1520,6 +1520,35 @@ function detectDenseCaptionPhysicalRows(
  * source-line-preserving route. Physical lines are explicitly NOT certified
  * semantic rows; downstream XLSX requires review and user selection.
  */
+/**
+ * R145 caption-backed scientific grid physical source-line recovery.
+ * Do NOT group multi-level headings or wrapped source lines into unproven
+ * semantic records. A source physical line is ONLY a reviewable row.
+ * The export gate must require deliberate per-table selection and review.
+ */
+function detectScientificCaptionHeaderPhysicalRows(
+  block:PdfVisualBlock,columns:ColumnCandidate[],
+):AdaptiveRowDetectionResult|null{
+  if(block.type!=="paragraph"||
+    !block.id.startsWith("native-caption-header-grid-")||
+    columns.length<4||columns.length>8||
+    block.lines.length<10||block.lines.length>20)return null;
+  if(block.lines.some(l=>l.words.some(w=>
+    w.extractionProvenance?.source==="ocr-tesseract")))return null;
+  const startX=block.lines.filter(l=>l.words.length>=4)
+    .map(l=>Math.min(...l.words.map(w=>w.bounds.x)));
+  const anchor=startX[0];
+  if(anchor===undefined||startX.filter(x=>Math.abs(x-anchor)<=12).length<5)
+    return null;
+  const rows=block.lines.map((line,index)=>createLogicalRow(line,index,{
+    score:82,confidence:0.82,isNewRecord:true,
+    breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+      emptyLeadingColumns:0,wrappedText:0},
+    reason:"native-scientific-caption-physical-line-review",
+  }));
+  return {rows,confidence:0.82};
+}
+
 function detectCaptionedTextPhysicalRows(
   block:PdfVisualBlock,columns:ColumnCandidate[],
 ):AdaptiveRowDetectionResult|null{
@@ -1651,6 +1680,9 @@ export function detectAdaptiveRowsV4(
 
   const denseCaptionGrid = detectDenseCaptionPhysicalRows(block, columns);
   if (denseCaptionGrid) return denseCaptionGrid;
+
+  const sourcePhysical=detectScientificCaptionHeaderPhysicalRows(block,columns);
+  if(sourcePhysical)return sourcePhysical;
 
   const captionedText=detectCaptionedTextPhysicalRows(block,columns);
   if(captionedText)return captionedText;
