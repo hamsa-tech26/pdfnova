@@ -84,7 +84,7 @@ export function prepareUserReviewedImageXlsx(input:ReviewedImageTableInput):PdfX
   const {x,y,width,height}=review.sourceBounds;
   const editedCells=rows.slice(1).flat();
   const emptyCells=editedCells.filter(value=>value==="").length;
-  const formulaLike=editedCells.filter(value=>/^[=+\\-@]/.test(value)).length;
+  const formulaLike=editedCells.filter(value=>/^[=+@-]/.test(value)).length;
   return {
     tables:[{name:"User-Reviewed Image Table",rows}],
     reviewNotes:[
