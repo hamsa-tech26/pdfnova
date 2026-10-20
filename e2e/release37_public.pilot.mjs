@@ -58,6 +58,12 @@ for(const entry of config.sources){
       expect(nativeTables.length).toBe(5);
       expect(byPage.map(row=>row.confirmedCandidateCount))
         .toEqual([1,1,1,1,1]);
+      // Original-publisher source excerpt's five developer-transcribed
+      // workbook table layouts. Presence without shape agreement is not
+      // good enough: it could be a false-positive table on the right page.
+      expect(byPage.map(row=>row.shapes)).toEqual([
+        [[6,6]],[[4,6]],[[4,6]],[[4,7]],[[5,7]],
+      ]);
     }
     // Public debug payload is numeric/enum only, never PDF text or coordinates.
     const scores=Array.isArray(inspector.candidateRegionDiagnostics)
