@@ -108,7 +108,22 @@ for(const source of manifest.documents){
         const native=result.tableAnalyses?.find(a=>a.pageNumber===ref.page&&
           a.blockId.startsWith("native-caption-header-grid-")&&a.table);
         expect(native).toBeTruthy();
+        // R150 acceptance uses the independent publisher box only AFTER
+        // source-first processing; box data never enters native detection.
+        // A genuine source footnote can extend physical table geometry
+        // without becoming an Excel data row or synthetic recovered cell.
+        expect(metrics.referenceBestIoU[0]).toBeGreaterThanOrEqual(0.5);
+        expect(native.table.rows.length).toBe(12);
         const tableRect=native.table.bounds;
+        const sourceFootnote=(viewport.lines??[]).find(line=>
+          Math.abs(line.bounds.y-tableRect.y)<=1.5);
+        expect(sourceFootnote).toBeTruthy();
+        expect(sourceFootnote.words.every(word=>
+          word.extractionProvenance?.source==="native-pdf")).toBe(true);
+        const exportedWordIds=new Set(native.table.rows.flatMap(row=>
+          row.cells.flatMap(cell=>cell.words.map(word=>word.id))));
+        expect(sourceFootnote.words.every(word=>
+          !exportedWordIds.has(word.id))).toBe(true);
         const adjacent=nativeImageRects.filter(rect=>{
           if(rect.width<32||rect.height<32)return false;
           const horizontal=Math.max(0,Math.min(tableRect.x+tableRect.width,
@@ -348,7 +363,10 @@ test.afterAll(async()=>{
   // baseline without increasing its two unmatched predictions.
   // These are spatial source-box checks, NOT cell/row certification.
   expect(summary.publishedBoxCount).toBe(6);
-  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(2);
+  // R150 independent original-publisher target: the upper original
+  // scientific table now includes explicit source-footnote geometry only.
+  // Previous accepted tables remain intact, and false positives cannot grow.
+  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(3);
   expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
   // R117 per-document regression: preserve the independently annotated
   // high-quality match that Release 112 obtained on original PMC page 7.
