@@ -15,6 +15,9 @@ import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
 import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
+import {insertReviewedImageRow,removeReviewedImageRow,
+  insertReviewedImageColumn,removeReviewedImageColumn,
+  inspectReviewedImageGrid} from "@/lib/converters/reviewedImageGridEdits";
 import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
   pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
   type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
@@ -52,6 +55,43 @@ export default function PdfToExcelPage() {
   const [reviewConfirmed,setReviewConfirmed]=useState(false);
   const [imageStatus,setImageStatus]=useState("");
   const [reviewRegionIndex,setReviewRegionIndex]=useState<number|null>(null);
+  const [undoReviewedTsv,setUndoReviewedTsv]=useState<string|null>(null);
+  const [manualButtonEdits,setManualButtonEdits]=useState(0);
+  const [newRowSeed,setNewRowSeed]=useState("");
+  const [newColumnHeading,setNewColumnHeading]=useState("");
+  const [rowActionTarget,setRowActionTarget]=useState(1);
+  const [columnActionTarget,setColumnActionTarget]=useState(0);
+
+  function clearReviewedEditHistory(){
+    setUndoReviewedTsv(null);setManualButtonEdits(0);
+    setNewRowSeed("");setNewColumnHeading("");
+    setImageEditCell(null);setImageEditValue("");
+    setRowActionTarget(1);setColumnActionTarget(0);
+  }
+  /** Every manual structure/cell operation invalidates old source approval. */
+  function applyReviewedChange(next:string,description:string){
+    setUndoReviewedTsv(reviewedTsv);
+    setReviewedTsv(next);setReviewedRows(null);setReviewConfirmed(false);
+    setImageEditCell(null);setImageEditValue("");
+    setManualButtonEdits(n=>Math.min(n+1,1000));
+    setImageStatus(description+" Preview the full corrected grid and approve it again.");
+  }
+  function applyReviewedStructureEdit(
+    transform:()=>string,description:string,
+  ){
+    try{applyReviewedChange(transform(),description);}
+    catch(cause){
+      setImageStatus(cause instanceof Error?cause.message:"Review structure edit was withheld.");
+    }
+  }
+  function undoReviewedChange(){
+    if(undoReviewedTsv===null)return;
+    setReviewedTsv(undoReviewedTsv);setUndoReviewedTsv(null);
+    setManualButtonEdits(n=>Math.max(0,n-1));
+    setReviewedRows(null);setReviewConfirmed(false);
+    setImageEditCell(null);setImageEditValue("");
+    setImageStatus("Last button edit undone. Preview all cells and approve again.");
+  }
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -63,6 +103,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
+    clearReviewedEditHistory();
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -77,6 +118,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
+    clearReviewedEditHistory();
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -101,6 +143,7 @@ export default function PdfToExcelPage() {
       setInspected(analyzed);setChoices(available);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
       setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+      clearReviewedEditHistory();
       setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
@@ -112,6 +155,7 @@ export default function PdfToExcelPage() {
     if(!file||busy)return;
     setBusy(true);setError("");setImageStatus("");setImageReview(null);
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    clearReviewedEditHistory();
     try{
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
@@ -127,6 +171,7 @@ export default function PdfToExcelPage() {
     if(!file||!inspected||busy||imageBusy||imagePage===null)return;
     setImageBusy(true);setImageStatus("");setImageReview(null);
     setReviewRegionIndex(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    clearReviewedEditHistory();
     try{
       const reviewed=await reviewEmbeddedImageRegions(file,
         inspected.document.pages.filter(p=>p.pageNumber===imagePage),
@@ -146,7 +191,7 @@ export default function PdfToExcelPage() {
       imageReview?.reviews[reviewRegionIndex]?.gridProposal;
     if(proposed?.status!=="PROPOSED_FOR_MANUAL_REVIEW"||!proposed.tsv)return;
     setReviewedTsv(proposed.tsv);
-    setReviewedRows(null);setReviewConfirmed(false);
+    setReviewedRows(null);setReviewConfirmed(false);clearReviewedEditHistory();
     setImageStatus("Tentative OCR grid copied to the editable form. Compare each heading and value against the source image, fix errors, then preview and approve.");
   }
   function previewUserGrid(){
@@ -173,12 +218,7 @@ export default function PdfToExcelPage() {
       const next=updateUserReviewedImageCell(
         reviewedTsv,imageEditCell.row,imageEditCell.column,imageEditValue,
       );
-      setReviewedTsv(next);
-      setReviewedRows(null);
-      setReviewConfirmed(false);
-      setImageEditCell(null);
-      setImageEditValue("");
-      setImageStatus("Correction saved locally. Preview all corrected cells and explicitly approve again before exporting.");
+      applyReviewedChange(next,"Source cell correction saved locally.");
     }catch(cause){
       setImageStatus(cause instanceof Error?cause.message:"The correction was not applied.");
     }
@@ -190,7 +230,9 @@ export default function PdfToExcelPage() {
       const reviewed=reviewRegionIndex===null?null:imageReview?.reviews[reviewRegionIndex];
       if(!reviewed)throw Error("Select a usable embedded image OCR review before exporting.");
       const plan=prepareUserReviewedImageXlsx({review:reviewed,tsv:reviewedTsv,
-        confirmed:reviewConfirmed,documentPageCount:inspected.document.pages.length});
+        confirmed:reviewConfirmed,documentPageCount:inspected.document.pages.length,
+        imagePaintIndex:selectedImagePaint===""?undefined:Number(selectedImagePaint),
+        manualButtonEdits});
       // Validate the exact currently edited grid again, not an old preview.
       if(JSON.stringify(plan.tables[0].rows)!==JSON.stringify(reviewedRows))
         throw Error("The reviewed cells changed. Preview and confirm the current values again.");
