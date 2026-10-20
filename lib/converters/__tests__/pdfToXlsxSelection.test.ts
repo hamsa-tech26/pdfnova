@@ -252,6 +252,10 @@ describe("R147 image paint proximity must not silently certify incomplete native
   it("warns on a wide raster paint directly below the native grid, without OCR or inserted cells",()=>{
     const doc=physicalSource([{bounds:{x:58,y:100,width:230,height:80}}]);
     expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
+    const choices=inspectPdfV4XlsxChoices(doc);
+    expect(choices[0].eligible).toBe(true);
+    expect(choices[0].reason).toContain("REVIEW ONLY");
+    expect(choices[0].reason).toContain("adjacent PDF images");
     const plan=prepareSelectedPdfV4XlsxExport(doc,0);
     const notes=plan.reviewNotes?.join(" ")??"";
     expect(notes).toContain("POSSIBLE RASTER CONTINUATION");
@@ -260,6 +264,8 @@ describe("R147 image paint proximity must not silently certify incomplete native
     expect(notes).toContain("no image data, OCR cells");
     expect(plan.tables[0].rows).toHaveLength(12);
     expect(plan.tables[0].rows[1][1]).toBe("00071");
+    expect(inspectPdfV4XlsxChoices(source([table(2,"ordinary")]))[0].reason)
+      .toContain("Passes automatic export checks.");
   });
   it("does not invent missing raster content from decorative, distant or invalid paints",()=>{
     const examples=[
