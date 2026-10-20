@@ -1,4 +1,4 @@
-import type {PdfLine,PdfParagraphBlock,PdfVisualBlock} from "../model/types";
+import type {PdfLine,PdfParagraphBlock,PdfVisualBlock,PdfBoundingBox} from "../model/types";
 
 /**
  * R145: isolate a caption-backed multi-column native scientific header + data
@@ -91,4 +91,55 @@ export function findNativeCaptionHeaderScientificGrids(
     }
   }
   return results;
+}
+
+/**
+ * Source-evidenced table-footnote geometry for detection localization.
+ * Some publisher table detection regions include native footnotes beneath
+ * the final data row. Keep these source words OUT of physical Excel rows,
+ * and include their actual geometry only when consecutive lines explicitly
+ * self-identify as table notes. Never use published reference boxes, page
+ * numbers, arbitrary padding, OCR, or global threshold changes here.
+ */
+export function findNativeScientificTableFootnoteBounds(
+  tableRegion:PdfVisualBlock,originalPageLines:readonly PdfLine[],
+):PdfBoundingBox|null{
+  if(tableRegion.type!=="paragraph"||
+    !tableRegion.id.startsWith("native-caption-header-grid-")||
+    tableRegion.lines.length<9||tableRegion.lines.length>20)return null;
+  const original=tableRegion.bounds;
+  const valid=(v:number)=>Number.isFinite(v);
+  if(![original.x,original.y,original.width,original.height].every(valid)||
+    original.width<=0||original.height<=0)return null;
+  const candidates=originalPageLines.filter(line=>
+    line.bounds.y<original.y&&
+    line.bounds.y>=original.y-50&&
+    line.bounds.x>=original.x-16&&
+    line.bounds.x<=original.x+16)
+    .sort((a,b)=>b.bounds.y-a.bounds.y);
+  const accepted:PdfLine[]=[];
+  let previousY=original.y;
+  for(const line of candidates){
+    if(accepted.length>=2||!isNative(line)||
+      line.words.length>3||line.words.length<1||
+      line.words.some(word=>!Number.isFinite(word.bounds.width)||
+        !Number.isFinite(word.bounds.height)||
+        word.bounds.width<=0||word.bounds.height<=0))break;
+    const top=line.bounds.y+line.bounds.height;
+    if(previousY-top<0||previousY-top>22)break;
+    const text=line.text.trim();
+    if(!/^(?:\\*|†|‡|#|notes?(?:\\s*[:.\\-]|\\s+(?:about|on|to)\\b)|abbrev(?:iation)?s?\\s*[:.\\-]|source\\s*:|p\\s*[<>=])/i.test(text))
+      break;
+    accepted.push(line);
+    previousY=line.bounds.y;
+  }
+  if(!accepted.length)return null;
+  const words=accepted.flatMap(line=>line.words);
+  const minX=Math.min(original.x,...words.map(word=>word.bounds.x));
+  const minY=Math.min(original.y,...words.map(word=>word.bounds.y));
+  const maxX=Math.max(original.x+original.width,
+    ...words.map(word=>word.bounds.x+word.bounds.width));
+  const maxY=Math.max(original.y+original.height,
+    ...words.map(word=>word.bounds.y+word.bounds.height));
+  return {x:minX,y:minY,width:maxX-minX,height:maxY-minY};
 }
