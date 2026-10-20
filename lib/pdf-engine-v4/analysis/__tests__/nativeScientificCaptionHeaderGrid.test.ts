@@ -1,5 +1,5 @@
 import {describe,expect,it} from "vitest";
-import {findNativeCaptionHeaderScientificGrids} from "../nativeScientificCaptionHeaderGrid";
+import {findNativeCaptionHeaderScientificGrids,findNativeScientificTableFootnoteBounds} from "../nativeScientificCaptionHeaderGrid";
 import {detectTableRegionsForPage} from "../tableRegionDetector";
 import {detectStableColumnsV4} from "../stableColumnDetector";
 import {detectAdaptiveRowsV4} from "../adaptiveRowDetector";
@@ -114,5 +114,47 @@ describe("R145 bounded native scientific caption-and-header segmentation",()=>{
     for(let i=8;i<=14;i++)for(const w of drifting.lines[i].words)
       w.bounds.x+=i*11;
     expect(findNativeCaptionHeaderScientificGrids([drifting])).toHaveLength(0);
+  });
+});
+
+describe("R150 native scientific table footnote ink extends detection only",()=>{
+  it("includes an explicitly labeled, adjacent native note without adding Excel rows",()=>{
+    const src=fixture();
+    const region=findNativeCaptionHeaderScientificGrids([src])[0]?.block;
+    expect(region).toBeDefined();
+    const before=region!.bounds;
+    const length=region!.lines.length;
+    const originalIds=region!.lines.flatMap(line=>line.words.map(w=>w.id));
+    const footnote=findNativeScientificTableFootnoteBounds(region!,src.lines);
+    expect(footnote).not.toBeNull();
+    expect(footnote!.y).toBe(505.7);
+    expect(footnote!.y+footnote!.height).toBeCloseTo(663.7);
+    expect(region!.bounds).toEqual(before);
+    expect(region!.lines).toHaveLength(length);
+    expect(region!.lines.flatMap(line=>line.words.map(w=>w.id))).toEqual(originalIds);
+    expect(region!.lines.some(line=>line.id==="line-15")).toBe(false);
+  });
+  it("never swallows nearby scientific prose or unlabeled document columns",()=>{
+    const src=fixture();
+    const region=findNativeCaptionHeaderScientificGrids([src])[0].block;
+    src.lines[15]=line(15,[[61,"The observations lead to a different result."]]);
+    expect(findNativeScientificTableFootnoteBounds(region,src.lines)).toBeNull();
+    // A note title alone is not sufficient if the region isn't a
+    // source-caption-qualified native scientific grid.
+    expect(findNativeScientificTableFootnoteBounds(src,fixture().lines)).toBeNull();
+  });
+  it("rejects OCR, far-away, or malformed notes",()=>{
+    const src=fixture();
+    const region=findNativeCaptionHeaderScientificGrids([src])[0].block;
+    src.lines[15].words[0].extractionProvenance={source:"ocr-tesseract"};
+    expect(findNativeScientificTableFootnoteBounds(region,src.lines)).toBeNull();
+    src.lines[15].words[0].extractionProvenance={source:"native-pdf"};
+    src.lines[15].bounds.y=475;
+    src.lines[15].words[0].bounds.y=475;
+    expect(findNativeScientificTableFootnoteBounds(region,src.lines)).toBeNull();
+    src.lines[15].bounds.y=505.7;
+    src.lines[15].words[0].bounds.y=505.7;
+    src.lines[15].words[0].bounds.width=NaN;
+    expect(findNativeScientificTableFootnoteBounds(region,src.lines)).toBeNull();
   });
 });
