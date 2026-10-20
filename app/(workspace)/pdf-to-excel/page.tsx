@@ -454,6 +454,30 @@ export default function PdfToExcelPage() {
                     )}
                   </div>
                 }
+                {reviewRegionIndex!==null&&(
+                  <figure className="space-y-2 rounded-xl border border-amber-300 p-3 dark:border-amber-800">
+                    <figcaption className="text-sm font-semibold">
+                      Original PDF image crop — image {reviewRegionIndex+1}, page {imageReview.reviews[reviewRegionIndex].pageNumber}
+                    </figcaption>
+                    {imageReview.reviews[reviewRegionIndex].sourcePreviewDataUrl ? (
+                      // This is a client-only canvas JPEG crop, not a remote URL.
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={imageReview.reviews[reviewRegionIndex].sourcePreviewDataUrl}
+                        alt={"Source PDF image region "+(reviewRegionIndex+1)+" for manual OCR cell checking"}
+                        referrerPolicy="no-referrer" loading="lazy" decoding="async"
+                        className="max-h-96 max-w-full rounded border object-contain" />
+                    ) : (
+                      <p className="text-sm text-amber-800 dark:text-amber-200">
+                        The local source crop could not be displayed. Open the original PDF
+                        and compare every cell there before approving an export.
+                      </p>
+                    )}
+                    <p className="text-xs text-slate-600 dark:text-slate-300">
+                      Browser-local visual reference only. This image does not certify OCR,
+                      automatically populate Excel, upload the PDF, or replace your review.
+                    </p>
+                  </figure>
+                )}
                 <label htmlFor="reviewed-image-grid" className="block font-semibold text-sm">
                   Your corrected table — tabs separate columns, new lines separate rows
                 </label>
