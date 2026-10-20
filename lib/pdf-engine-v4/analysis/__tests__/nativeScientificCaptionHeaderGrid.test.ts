@@ -66,11 +66,32 @@ describe("R145 bounded native scientific caption-and-header segmentation",()=>{
       row.reason==="native-scientific-caption-physical-line-review")).toBe(true);
     const table=buildSmartTableV4(8,rows.rows,columns.columns).table;
     expect(table?.rows).toHaveLength(12);
-    const words=table?.rows.flatMap(row=>row.cells.flatMap(c=>c.words.map(w=>w.id)))??[];
-    const recovered=nativeRegion!.block.type==="paragraph"?
-      nativeRegion!.block.lines.flatMap(l=>l.words.map(w=>w.id)):[];
-    expect(words).toHaveLength(recovered.length);
-    expect(new Set(words)).toEqual(new Set(recovered));
+    const out=table?.rows.flatMap(row=>row.cells.flatMap(c=>c.words))??[];
+    const sourceWords=nativeRegion!.block.type==="paragraph"?
+      nativeRegion!.block.lines.flatMap(l=>l.words):[];
+    // Cell analysis intentionally splits leading "1 label" tokens into
+    // "-serial" + "-content" fragments. Verify every source token is
+    // reconstructed once, not merely a matching total fragment count.
+    for(const sourceWord of sourceWords){
+      const tokens=out.filter(w=>w.id===sourceWord.id||
+        w.id===sourceWord.id+"-serial"||
+        w.id===sourceWord.id+"-content");
+      const direct=tokens.filter(w=>w.id===sourceWord.id);
+      const fragments=tokens.filter(w=>w.id!==sourceWord.id);
+      if(direct.length===1){
+        expect(fragments).toHaveLength(0);
+        expect(direct[0].text).toBe(sourceWord.text);
+      }else{
+        expect(direct).toHaveLength(0);
+        expect(fragments.map(w=>w.id).sort()).toEqual([
+          sourceWord.id+"-content",sourceWord.id+"-serial",
+        ]);
+        expect(tokens.map(w=>w.text).join(" ")).toBe(sourceWord.text);
+      }
+    }
+    expect(out.every(w=>sourceWords.some(sourceWord=>
+      w.id===sourceWord.id||w.id===sourceWord.id+"-serial"||
+      w.id===sourceWord.id+"-content"))).toBe(true);
     const ids=detected.regions.flatMap(r=>
       r.block.type==="paragraph"?r.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
     const expected=src.lines.flatMap(l=>l.words.map(w=>w.id));
