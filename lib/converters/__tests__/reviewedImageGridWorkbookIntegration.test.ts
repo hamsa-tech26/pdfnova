@@ -35,7 +35,7 @@ describe("R139–141 user-approved edited image workbook and provenance",()=>{
     expect(sheet).toContain("00071");
     expect(sheet).toContain("=2+2");
     expect(sheet).not.toContain("<f>");
-    expect(audit).toContain("source image paint");
+    expect(audit).toContain("PDF image paint number");
     expect(audit).toContain("NOT independent");
   });
   it("refuses invented edit counts and source image indices",()=>{
