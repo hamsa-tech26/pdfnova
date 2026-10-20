@@ -1,6 +1,9 @@
 import {describe,expect,it} from "vitest";
 import {findNativeCaptionHeaderScientificGrids} from "../nativeScientificCaptionHeaderGrid";
 import {detectTableRegionsForPage} from "../tableRegionDetector";
+import {detectStableColumnsV4} from "../stableColumnDetector";
+import {detectAdaptiveRowsV4} from "../adaptiveRowDetector";
+import {buildSmartTableV4} from "../smartCellBuilder";
 import type {PdfLine,PdfParagraphBlock,PdfWord} from "../../model/types";
 const ys=[701.3,682.4,673,654.7,647.8,640.7,622.6,615.6,
   601.1,586.6,572.1,557.6,550.6,536.1,521.6,505.7,488];
@@ -52,8 +55,22 @@ describe("R145 bounded native scientific caption-and-header segmentation",()=>{
     expect(found[0].block.bounds.y).toBe(521.6);
     expect(found[0].block.bounds.y+found[0].block.bounds.height).toBeCloseTo(663.7);
     const detected=detectTableRegionsForPage([src]);
-    expect(detected.tableRegions.some(t=>t.block.id.startsWith("native-caption-header-grid-")))
-      .toBe(true);
+    const nativeRegion=detected.tableRegions.find(t=>
+      t.block.id.startsWith("native-caption-header-grid-"));
+    expect(nativeRegion).toBeDefined();
+    const columns=detectStableColumnsV4(nativeRegion!.block);
+    expect(columns.columns.length).toBeGreaterThanOrEqual(4);
+    const rows=detectAdaptiveRowsV4(nativeRegion!.block,columns.columns);
+    expect(rows.rows).toHaveLength(12);
+    expect(rows.rows.every(row=>
+      row.reason==="native-scientific-caption-physical-line-review")).toBe(true);
+    const table=buildSmartTableV4(8,rows.rows,columns.columns).table;
+    expect(table?.rows).toHaveLength(12);
+    const words=table?.rows.flatMap(row=>row.cells.flatMap(c=>c.words.map(w=>w.id)))??[];
+    const recovered=nativeRegion!.block.type==="paragraph"?
+      nativeRegion!.block.lines.flatMap(l=>l.words.map(w=>w.id)):[];
+    expect(words).toHaveLength(recovered.length);
+    expect(new Set(words)).toEqual(new Set(recovered));
     const ids=detected.regions.flatMap(r=>
       r.block.type==="paragraph"?r.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
     const expected=src.lines.flatMap(l=>l.words.map(w=>w.id));
