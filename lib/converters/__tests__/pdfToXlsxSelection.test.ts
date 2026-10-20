@@ -228,3 +228,55 @@ describe("R145 scientific native caption/header source review isolation",()=>{
       .toThrow(/too few reconstructed physical lines/);
   });
 });
+
+describe("R147 image paint proximity must not silently certify incomplete native scientific rows",()=>{
+  function physicalSource(paints:unknown[]){
+    const t=table(4,"raster-adjacent");
+    t.bounds={x:60,y:220,width:420,height:140};
+    const original=t.rows;
+    t.rows=Array.from({length:12},(_,i)=>({
+      ...original[i%original.length],id:"r147-row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,
+        blockId:"native-caption-header-grid-4-original-paragraph-3",
+        originalRowIndex:i},
+      cells:original[i%original.length].cells.map(c=>({
+        ...c,id:"r147-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:348-i*10},
+      })),
+    }));
+    const doc=source([t]);
+    // Source image-paint metadata is optional and never contains image bytes.
+    doc.document.pages[3]={imagePaintRegions:paints};
+    return doc;
+  }
+  it("warns on a wide raster paint directly below the native grid, without OCR or inserted cells",()=>{
+    const doc=physicalSource([{bounds:{x:58,y:100,width:230,height:80}}]);
+    expect(()=>preparePdfV4XlsxExport(doc)).toThrow(/choose an individual table/);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    const notes=plan.reviewNotes?.join(" ")??"";
+    expect(notes).toContain("POSSIBLE RASTER CONTINUATION");
+    expect(notes).toContain("page(s) 4");
+    expect(notes).toContain("may be unrelated");
+    expect(notes).toContain("no image data, OCR cells");
+    expect(plan.tables[0].rows).toHaveLength(12);
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+  });
+  it("does not invent missing raster content from decorative, distant or invalid paints",()=>{
+    const examples=[
+      {bounds:{x:58,y:20,width:230,height:75}},
+      {bounds:{x:58,y:430,width:230,height:75}},
+      {bounds:{x:490,y:100,width:120,height:80}},
+      {bounds:{x:Number.NaN,y:100,width:230,height:80}},
+      {bounds:{x:58,y:100,width:4,height:5}},
+      null,
+    ];
+    const plan=prepareSelectedPdfV4XlsxExport(physicalSource(examples),0);
+    expect(plan.reviewNotes?.join(" ")).not.toContain("POSSIBLE RASTER CONTINUATION");
+    expect(plan.tables[0].rows).toHaveLength(12);
+  });
+  it("signals an image-painted region overlapping a native scientific table",()=>{
+    const doc=physicalSource([{bounds:{x:95,y:270,width:250,height:80}}]);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,0);
+    expect(plan.reviewNotes?.join(" ")).toContain("POSSIBLE RASTER CONTINUATION");
+  });
+});
