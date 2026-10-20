@@ -41,7 +41,7 @@ export async function createEmbeddedImageSourcePreview(
   );
   if(!dimensions||typeof window==="undefined"||
     typeof document==="undefined"||typeof Image==="undefined"||
-    !page.imageDataUrl.startsWith("data:image/"))return null;
+    !/^data:image\/(?:png|jpeg);base64,/.test(page.imageDataUrl))return null;
 
   const image=new Image();
   try{
