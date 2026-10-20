@@ -1576,10 +1576,12 @@ export function detectTableRegionsForPage(
     .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids].some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
     .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
+    // Long native text cells can lack numeric and regular-spacing scores.
+    // The source caption + >=8 repeated anchored two-column rows supplied by
+    // this specialist detector are the admission evidence; preserve native
+    // column alignment instead of applying numeric-table score assumptions.
     .filter(candidate=>
-      candidate.analysis.breakdown.alignment.score>=16&&
-      candidate.analysis.breakdown.spacing.score>=9&&
-      candidate.analysis.totalScore>=35);
+      candidate.analysis.breakdown.alignment.score>=12);
   const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
