@@ -158,6 +158,16 @@ for(const source of manifest.documents){
       });
       await expect(page.getByText(/OCR is unverified text for human review only/))
         .toBeVisible();
+      // R135: verify that source-rendered image regions can be visually
+      // compared on the real publisher document, without network uploads,
+      // altered native tables, or logged document/image data.
+      const localSourceCrop=page.getByRole("img",{
+        name:/Original source image crop for PDF page 6/,
+      });
+      await expect(localSourceCrop.first()).toBeVisible();
+      const cropSrc=await localSourceCrop.first().getAttribute("src");
+      expect(cropSrc?.startsWith("data:image/jpeg;base64,")).toBe(true);
+      expect(cropSrc?.length).toBeLessThanOrEqual(1_500_000);
       // The source V4 table result must stay byte-for-byte identical after
       // an optional review. Never replace native words or inferred XLSX.
       const secondDownload=page.waitForEvent("download");
