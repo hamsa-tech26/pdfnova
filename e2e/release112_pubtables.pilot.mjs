@@ -209,11 +209,11 @@ test.afterAll(async()=>{
   await writeFile(join(root,"reports/aggregate.json"),
     JSON.stringify(summary,null,2)+"\n");
   console.log(JSON.stringify(summary));
-  // R112 scoped acceptance: demonstrable independent spatial improvement
-  // over the observed 0/6 baseline, without more unmatched regions (3).
-  // This DOES NOT certify remaining missing image/irregular tables.
+  // R130–134 scoped acceptance: improvement over the R112 1/6 source-box
+  // baseline without increasing its two unmatched predictions.
+  // These are spatial source-box checks, NOT cell/row certification.
   expect(summary.publishedBoxCount).toBe(6);
-  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(1);
+  expect(summary.matchedBoxCount).toBeGreaterThanOrEqual(2);
   expect(summary.unmatchedPredictionCount).toBeLessThanOrEqual(2);
   // R117 per-document regression: preserve the independently annotated
   // high-quality match that Release 112 obtained on original PMC page 7.
@@ -221,4 +221,9 @@ test.afterAll(async()=>{
   const region=scientific?.annotatedPages.find(record=>record.originalPage===7);
   expect(region?.matchedCount).toBe(1);
   expect(region?.referenceBestIoU[0]).toBeGreaterThanOrEqual(0.95);
+  const page8=scientific?.annotatedPages.find(record=>record.originalPage===8);
+  const reviewedText=page8?.newTextGridTableAnalyses?.filter(entry=>entry.hasTable)??[];
+  expect(reviewedText.length).toBeGreaterThanOrEqual(1);
+  expect(reviewedText.every(entry=>entry.columns===2&&entry.rows>=8))
+    .toBe(true);
 });
