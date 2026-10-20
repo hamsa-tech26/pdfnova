@@ -365,10 +365,11 @@ export function preparePdfV4XlsxExport(
       "Wrapped physical lines, multi-tier scientific headings and sparse "+
       "continuation lines may belong to one semantic record; no row "+
       "continuation, field identity or grouping has been verified. "+
-      "Do not treat these rows as finalized spreadsheet records. "+
-      "Explicit native table footnotes may be included in the detected "+
-      "visual table region but are NOT added as Excel data cells; compare "+
-      "all footnotes and source notes against the original PDF.");
+      "Do not treat these rows as finalized spreadsheet records.");
+    if(scientificHeader)notes.push("Table "+number+
+      ": Explicit native table footnotes may be included in the detected "+
+      "visual table region but are NOT added as Excel data cells. Compare "+
+      "source notes and all footnotes against the original PDF.");
     if(scientificHeader){
       const nearPaints=possibleRasterContinuationPages(
         source.document.pages,table,sourcePages(table,pageCount));
