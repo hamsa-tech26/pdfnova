@@ -128,7 +128,7 @@ export function findNativeScientificTableFootnoteBounds(
     const top=line.bounds.y+line.bounds.height;
     if(previousY-top<0||previousY-top>22)break;
     const text=line.text.trim();
-    if(!/^(?:\\*|†|‡|#|notes?(?:\\s*[:.\\-]|\\s+(?:about|on|to)\\b)|abbrev(?:iation)?s?\\s*[:.\\-]|source\\s*:|p\\s*[<>=])/i.test(text))
+    if(!/^(?:\*|†|‡|#|notes?(?:\s*[:.\-]|\s+(?:about|on|to)\b)|abbrev(?:iation)?s?\s*[:.\-]|source\s*:|p\s*[<>=])/i.test(text))
       break;
     accepted.push(line);
     previousY=line.bounds.y;
