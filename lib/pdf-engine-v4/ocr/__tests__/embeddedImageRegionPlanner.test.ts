@@ -70,9 +70,9 @@ describe("R136 explicitly selected image-paint review inventory",()=>{
    }]);
  });
  it("rejects icons, invalid bounds, equivalent paints and unbounded work",()=>{
-   const many=Array.from({length:20},(_,i)=>({
-     bounds:{x:60+i*12,y:380-i*5,width:140,height:120},
-     areaFraction:140*120/(610*792),
+   const many=Array.from({length:12},(_,i)=>({
+     bounds:{x:50+(i%3)*165,y:70+Math.floor(i/3)*140,width:110,height:100},
+     areaFraction:110*100/(610*792),
    }));
    const regions=[{bounds:{x:2,y:1,width:20,height:15},areaFraction:0.001},
      {bounds:sample,areaFraction:0.081},
