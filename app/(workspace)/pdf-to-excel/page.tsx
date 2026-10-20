@@ -449,6 +449,11 @@ export default function PdfToExcelPage() {
                 {imageBusy?"Reviewing image locally…":"Run image OCR on selected page"}
               </button>
             </div>
+            {imageReview?.attempted&&(
+              <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+                {imageReview.warning}
+              </p>
+            )}
             {imageReview?.reviews.map((review,index)=>(
               <div key={index} className="space-y-3 rounded-xl border p-3 dark:border-slate-700">
                 <p className="font-semibold text-sm">Image {index+1}, page {review.pageNumber} · {review.status.replaceAll("_"," ")}</p>
