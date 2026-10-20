@@ -3,6 +3,8 @@ import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
 import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
+import {assessUncaptionedPairedNativeStream}
+  from "../benchmarks/release112/assessUncaptionedNativePairs.mjs";
 
 const root=resolve("benchmarks/release112");
 const manifest=JSON.parse(await readFile(join(root,"sources.json"),"utf8"));
@@ -99,6 +101,20 @@ for(const source of manifest.documents){
         Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
+      if(source.id==="PMC1064082"&&ref.page===1){
+        // Published reference rectangles are EVALUATION ONLY. The five
+        // paired word rows share both x anchors and source-line continuity
+        // with adjacent scientific article prose. Never auto-promote them.
+        const check=assessUncaptionedPairedNativeStream(viewport.blocks,expected[0]);
+        console.log("R144_UNCAPTIONED_NATIVE_SOURCE_CONTINUITY "+JSON.stringify({
+          sourceId:source.id,originalPage:ref.page,referenceOnlyEvaluation:true,
+          ...check,acceptedFormalV4Credit:0,
+        }));
+        expect(check.pairedInside).toBe(5);
+        expect(check.topContinues).toBe(true);
+        expect(check.bottomContinues).toBe(true);
+        expect(check.sourcePromotable).toBe(false);
+      }
       pageResults.push({originalPage:ref.page,...metrics,
         imagePaintCount:imageReview.imagePaintCount,
         imageRegionsDetected:nativeImageRects.length,
@@ -116,7 +132,7 @@ for(const source of manifest.documents){
               /\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())).length;
             return {type:b.type,within,intersectionOverUnion:Number(bounded.toFixed(4)),
               lineCount:lines.length,captionLines,
-              nativeTwoColumnSignatures:lines.length<=(source.id==="PMC1064082"&&ref.page===1?65:40)?lines.map((line,index)=>{
+              nativeTwoColumnSignatures:lines.length<=40?lines.map((line,index)=>{
                 const words=[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x);
                 const gaps=words.slice(1).map((w,i)=>w.bounds.x-words[i].bounds.x);
                 const biggest=gaps.length?Math.max(...gaps):0;
@@ -124,10 +140,7 @@ for(const source of manifest.documents){
                 return {index,y:Number(line.bounds.y.toFixed(1)),count:words.length,
                   left:words[0]?Number(words[0].bounds.x.toFixed(1)):null,
                   right:biggest>=120?Number(words[pivot].bounds.x.toFixed(1)):null,
-                  gap:Number(biggest.toFixed(1)),height:Number(line.bounds.height.toFixed(1)),
-                  wordLengths:words.map(w=>w.text.length),
-                  anchors:words.map(w=>Number(w.bounds.x.toFixed(1))),
-                  ocr:words.some(w=>
+                  gap:Number(biggest.toFixed(1)),ocr:words.some(w=>
                     w.extractionProvenance?.source==="ocr-tesseract"),
                   caption:/\b(?:table|tab\.?)\s*(?:s?\d{1,3})\b/i.test(line.text.trim())};
               }):[],
