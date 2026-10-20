@@ -38,3 +38,28 @@ test("Bad annotation and invalid threshold fail closed",()=>{
   assert.throws(()=>parseDetectionXml(""),/image size/);
   assert.throws(()=>scoreDetectionPage([],[],0),/Invalid/);
 });
+
+test("Overlapping published regions use maximum one-to-one recall, not greedy highest IoU",()=>{
+  // R0/P0 (.739) ties R0/P1; greedily picking R0/P0 would
+  // strand R1, despite R1/P0 (.6) satisfying the unchanged 0.5 gate.
+  const refs=[{x:0,y:0,width:10,height:10},{x:4,y:0,width:10,height:10}];
+  const predictions=[{x:1.5,y:0,width:10,height:10},
+    {x:-1.5,y:0,width:10,height:10}];
+  assert.equal(rectangleIoU(refs[1],predictions[0]),0.6);
+  assert.ok(rectangleIoU(refs[1],predictions[1])<0.5);
+  const result=scoreDetectionPage(refs,predictions);
+  assert.deepEqual([result.matchedCount,result.missedCount,
+    result.unmatchedPredictionCount],[2,0,0]);
+  assert.deepEqual(result.referenceBestIoU,[0.7391,0.6]);
+});
+test("Maximum matching never credits duplicate predictions or cross-threshold rectangles",()=>{
+  const reference=[{x:0,y:0,width:10,height:10},
+    {x:4,y:0,width:10,height:10}];
+  const candidates=[{x:1.5,y:0,width:10,height:10}];
+  const scored=scoreDetectionPage(reference,candidates);
+  assert.deepEqual([scored.matchedCount,scored.missedCount,
+    scored.unmatchedPredictionCount],[1,1,0]);
+  const strict=scoreDetectionPage(reference,candidates,0.75);
+  assert.deepEqual([strict.matchedCount,strict.missedCount,
+    strict.unmatchedPredictionCount],[0,2,1]);
+});
