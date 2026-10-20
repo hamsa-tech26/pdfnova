@@ -262,7 +262,7 @@ for(const source of manifest.documents){
       // original PDF image paints. This is UI navigation ONLY; no OCR call,
       // source-cell invention, automatic export or changed table bounds.
       const originalScientificChoice=page.getByRole("radio",{
-        name:/Table \\d+ — Page 8 — 12 rows/,
+        name:/Table \d+ — Page 8 — 12 rows/,
       });
       await expect(originalScientificChoice).toBeVisible();
       await originalScientificChoice.check();
