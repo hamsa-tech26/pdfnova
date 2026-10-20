@@ -227,7 +227,12 @@ function projectNativeGroupedHeaders(
     note: "Length and girth measurement groups were preserved from native page header words." };
 }
 
-export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxInput {
+/** R134: Compact scientific rescues require a deliberate table selection;
+ * the all-tables path must never silently certify their positional recovery. */
+export function preparePdfV4XlsxExport(
+  source: PdfV4XlsxExportSource,
+  options?: { allowSelectedCompactGrid?: boolean },
+): PdfXlsxInput {
   const pageCount = source.document.pages.length;
   if (pageCount < 1 || pageCount > 25) {
     throw new Error("This converter supports 1–25 PDF pages.");
@@ -246,6 +251,10 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
   }
+  const hasCompactGrid=source.tables.some(table=>table.rows.some(row=>
+    row.provenance?.blockId?.startsWith("native-compact-grid-")));
+  if(hasCompactGrid&&!options?.allowSelectedCompactGrid)
+    throw new Error("A compact scientific table requires explicit selection and source-cell review; automatic all-table Excel export was withheld.");
 
 
   // Before trusting the engine's logical column count, verify whether a
@@ -277,6 +286,13 @@ export function preparePdfV4XlsxExport(source: PdfV4XlsxExportSource): PdfXlsxIn
   ];
   const tables = source.tables.map((table, index) => {
     const number = index + 1;
+    if(table.rows.some(row=>row.provenance?.blockId?.startsWith("native-compact-grid-"))){
+      notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered compact "+
+        "native scientific grid using repeated source-word positions only. "+
+        "Row and column labels, blank cells and scientific values have NOT "+
+        "been independently verified. Compare EVERY cell against the "+
+        "original PDF before using the export.");
+    }
     if (!Number.isFinite(table.confidence) || table.confidence < 0.65 ||
         !Number.isInteger(table.columnCount) || table.columnCount < 2 ||
         table.columnCount > 128 || table.rows.length < 2 ||
