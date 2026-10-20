@@ -3,6 +3,7 @@ import {preparePdfV4OcrPages} from "./ocrPageRenderer";
 import {recognizePdfV4OcrRegions} from "./ocrRecognizer";
 import {imageRegionToOcrRectangle,planEmbeddedImageOcrRegions} from "./embeddedImageRegionPlanner";
 import {suggestEmbeddedImageGrid,type ImageGridProposal} from "./embeddedImageGridSuggestion";
+import {createEmbeddedImageSourcePreview} from "./embeddedImageSourcePreview";
 
 /**
  * R120: human-requested inline-image OCR on hybrid/native PDF pages.
@@ -17,6 +18,8 @@ export type EmbeddedImageOcrReview={
   status:"TEXT_REVIEW_ONLY"|"NO_RELIABLE_TEXT";
   /** Unverified geometry proposal, never an approved spreadsheet or source table. */
   gridProposal?:ImageGridProposal;
+  /** Ephemeral locally-rendered crop for manual visual cross-check. Not exported. */
+  sourcePreviewDataUrl?:string;
 };
 export type EmbeddedImageOcrReviewResult={
   attempted:boolean;
@@ -45,12 +48,21 @@ export async function reviewEmbeddedImageRegions(
   });
   if(!selected.length)return{attempted:false,sourceRegionCount:0,reviews:[],warning};
   const raw=await recognizePdfV4OcrRegions(selected.map(entry=>entry.request));
+  // Preview errors must NEVER block the original opt-in OCR result. No image
+  // pixels or preview URLs are persisted or uploaded.
+  const previews=await Promise.all(selected.map(async entry=>{
+    try{
+      return await createEmbeddedImageSourcePreview(
+        entry.request.page,entry.request.rectangle);
+    }catch{return null;}
+  }));
   const reviews=raw.map((r,i)=>{
     const source=selected[i].candidate;
     const wordCount=r.words.filter(w=>w.text.trim().length>0&&w.confidence>=35).length;
     const accepted=r.confidence>=45&&wordCount>=2;
     return {pageNumber:r.pageNumber,
       sourceBounds:source.sourceBounds,
+      ...(previews[i]?{sourcePreviewDataUrl:previews[i]}:{}),
       text:accepted?r.text:"",
       wordCount,confidence:r.confidence,
       gridProposal:accepted?suggestEmbeddedImageGrid(r.words,r.renderedWidth,r.renderedHeight):
