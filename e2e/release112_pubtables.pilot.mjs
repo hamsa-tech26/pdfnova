@@ -180,6 +180,34 @@ for(const source of manifest.documents){
         publisherId:source.id,selectedOriginalPage:6,
         localReviewCompleted:true,sourceTablesUnchanged:true,
         formalV4Credit:0}));
+      // R136: re-open the same original PDF in the consumer tool; explicit
+      // source-paint selection must run OCR on exactly ONE bounded region,
+      // without converting or accepting a guessed image table.
+      await page.goto("/pdf-to-excel");
+      await page.locator('input[type="file"]').first()
+        .setInputFiles(join(root,"private",source.id+".pdf"));
+      await page.getByRole("button",{name:"Inspect embedded images for optional OCR"})
+        .click();
+      await page.getByLabel("Page to review").selectOption("6");
+      const regionChoice=page.getByLabel("Image region to review");
+      await expect(regionChoice).toBeVisible();
+      const paintOptions=regionChoice.locator("option");
+      expect(await paintOptions.count()).toBeGreaterThanOrEqual(2);
+      const firstPaint=await paintOptions.nth(1).getAttribute("value");
+      expect(firstPaint).not.toBeNull();
+      await regionChoice.selectOption(firstPaint);
+      await page.getByRole("button",{name:"Run image OCR on selected page"}).click();
+      await expect(page.getByText(/Image 1, page 6/)).toBeVisible({
+        timeout:240000,
+      });
+      expect(await page.locator("#public-image-region option").count())
+        .toBeLessThanOrEqual(1);
+      await expect(page.getByText(/You explicitly selected an image paint region/))
+        .toBeVisible();
+      console.log(JSON.stringify({type:"R136_EXPLICIT_IMAGE_REGION_BROWSER_REVIEW",
+        originalPublisherPage:6,selectedPaintIndex:Number(firstPaint),
+        reviewedRegionCount:1,originalPdfUploadedToServer:false,
+        autoImageCellAcceptance:false,certifiedCells:0}));
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
