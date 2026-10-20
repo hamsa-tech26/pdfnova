@@ -11,6 +11,10 @@ export type ReviewedImageTableInput={
   tsv:string;
   confirmed:boolean;
   documentPageCount:number;
+  /** Optional explicit painted-source region index (metadata, not accuracy). */
+  imagePaintIndex?:number;
+  /** Count of explicit UI edit operations, not a measure of correctness. */
+  manualButtonEdits?:number;
 };
 export function parseUserReviewedImageGrid(tsv:string):string[][]{
   if(typeof tsv!=="string"||tsv.length>30000)
@@ -58,6 +62,14 @@ export function prepareUserReviewedImageXlsx(input:ReviewedImageTableInput):PdfX
   if(!input.confirmed)
     throw Error("Confirm that you checked the image and every edited table cell before exporting.");
   const {review,documentPageCount}=input;
+  if(input.imagePaintIndex!==undefined&&
+    (!Number.isSafeInteger(input.imagePaintIndex)||input.imagePaintIndex<0||
+     input.imagePaintIndex>39))
+    throw Error("Invalid selected source image paint index.");
+  if(input.manualButtonEdits!==undefined&&
+    (!Number.isSafeInteger(input.manualButtonEdits)||input.manualButtonEdits<0||
+      input.manualButtonEdits>1000))
+    throw Error("Invalid manual edit action count.");
   if(!Number.isInteger(documentPageCount)||documentPageCount<1||documentPageCount>25||
     !Number.isInteger(review.pageNumber)||review.pageNumber<1||
     review.pageNumber>documentPageCount||
@@ -70,6 +82,9 @@ export function prepareUserReviewedImageXlsx(input:ReviewedImageTableInput):PdfX
     throw Error("No suitable source image OCR review is available for export.");
   const rows=parseUserReviewedImageGrid(input.tsv);
   const {x,y,width,height}=review.sourceBounds;
+  const editedCells=rows.slice(1).flat();
+  const emptyCells=editedCells.filter(value=>value==="").length;
+  const formulaLike=editedCells.filter(value=>/^[=+@-]/.test(value)).length;
   return {
     tables:[{name:"User-Reviewed Image Table",rows}],
     reviewNotes:[
@@ -78,6 +93,15 @@ export function prepareUserReviewedImageXlsx(input:ReviewedImageTableInput):PdfX
       "SOURCE: PDF page "+review.pageNumber+" of "+documentPageCount+
         "; image bounds (PDF points): x="+x.toFixed(1)+", y="+y.toFixed(1)+
         ", width="+width.toFixed(1)+", height="+height.toFixed(1)+".",
+      ...(input.imagePaintIndex===undefined?[]:[
+        "Selected original PDF image paint number: "+(input.imagePaintIndex+1)+
+        ". This is a PDF image operation, NOT evidence of a table."]),
+      "FINAL REVIEWED GRID: "+rows.length+" rows (including headings) × "+
+        rows[0].length+" columns; "+emptyCells+" blank data cells; "+
+        formulaLike+" formula-like source values stored literally.",
+      "UI cell/row/column edit actions since the most recent manual paste: "+
+        (input.manualButtonEdits??0)+
+        ". This action count is NOT independent source-cell verification.",
       "Tesseract source-review confidence "+Math.round(review.confidence)+
         "%; "+review.wordCount+" OCR words. These are not cell-level accuracy guarantees.",
       "Values, column assignments and headings come from user-reviewed input. "+

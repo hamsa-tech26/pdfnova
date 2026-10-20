@@ -15,6 +15,9 @@ import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
 import {parseUserReviewedImageGrid,prepareUserReviewedImageXlsx,updateUserReviewedImageCell} from "@/lib/converters/reviewedImageTableWorkbook";
+import {insertReviewedImageRow,removeReviewedImageRow,
+  insertReviewedImageColumn,removeReviewedImageColumn,
+  inspectReviewedImageGrid} from "@/lib/converters/reviewedImageGridEdits";
 import {buildPdfTablePreview,inspectPdfTableCell,parsePdfTableCellAddress,
   pdfTableCellAddress,PREVIEW_MAX_ROWS,PREVIEW_MAX_COLUMNS,
   type PdfTablePreview} from "@/lib/converters/pdfToXlsxPreview";
@@ -52,6 +55,43 @@ export default function PdfToExcelPage() {
   const [reviewConfirmed,setReviewConfirmed]=useState(false);
   const [imageStatus,setImageStatus]=useState("");
   const [reviewRegionIndex,setReviewRegionIndex]=useState<number|null>(null);
+  const [undoReviewedTsv,setUndoReviewedTsv]=useState<string|null>(null);
+  const [manualButtonEdits,setManualButtonEdits]=useState(0);
+  const [newRowSeed,setNewRowSeed]=useState("");
+  const [newColumnHeading,setNewColumnHeading]=useState("");
+  const [rowActionTarget,setRowActionTarget]=useState(1);
+  const [columnActionTarget,setColumnActionTarget]=useState(0);
+
+  function clearReviewedEditHistory(){
+    setUndoReviewedTsv(null);setManualButtonEdits(0);
+    setNewRowSeed("");setNewColumnHeading("");
+    setImageEditCell(null);setImageEditValue("");
+    setRowActionTarget(1);setColumnActionTarget(0);
+  }
+  /** Every manual structure/cell operation invalidates old source approval. */
+  function applyReviewedChange(next:string,description:string){
+    setUndoReviewedTsv(reviewedTsv);
+    setReviewedTsv(next);setReviewedRows(null);setReviewConfirmed(false);
+    setImageEditCell(null);setImageEditValue("");
+    setManualButtonEdits(n=>Math.min(n+1,1000));
+    setImageStatus(description+" Preview the full corrected grid and approve it again.");
+  }
+  function applyReviewedStructureEdit(
+    transform:()=>string,description:string,
+  ){
+    try{applyReviewedChange(transform(),description);}
+    catch(cause){
+      setImageStatus(cause instanceof Error?cause.message:"Review structure edit was withheld.");
+    }
+  }
+  function undoReviewedChange(){
+    if(undoReviewedTsv===null)return;
+    setReviewedTsv(undoReviewedTsv);setUndoReviewedTsv(null);
+    setManualButtonEdits(n=>Math.max(0,n-1));
+    setReviewedRows(null);setReviewConfirmed(false);
+    setImageEditCell(null);setImageEditValue("");
+    setImageStatus("Last button edit undone. Preview all cells and approve again.");
+  }
 
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
@@ -63,6 +103,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
+    clearReviewedEditHistory();
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -77,6 +118,7 @@ export default function PdfToExcelPage() {
     setInspected(null);
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
+    clearReviewedEditHistory();
     setChoices([]);
     setSelectedIndex(null);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
@@ -101,6 +143,7 @@ export default function PdfToExcelPage() {
       setInspected(analyzed);setChoices(available);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??null);
       setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+      clearReviewedEditHistory();
       setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
@@ -112,6 +155,7 @@ export default function PdfToExcelPage() {
     if(!file||busy)return;
     setBusy(true);setError("");setImageStatus("");setImageReview(null);
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    clearReviewedEditHistory();
     try{
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
@@ -127,6 +171,7 @@ export default function PdfToExcelPage() {
     if(!file||!inspected||busy||imageBusy||imagePage===null)return;
     setImageBusy(true);setImageStatus("");setImageReview(null);
     setReviewRegionIndex(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
+    clearReviewedEditHistory();
     try{
       const reviewed=await reviewEmbeddedImageRegions(file,
         inspected.document.pages.filter(p=>p.pageNumber===imagePage),
@@ -146,7 +191,7 @@ export default function PdfToExcelPage() {
       imageReview?.reviews[reviewRegionIndex]?.gridProposal;
     if(proposed?.status!=="PROPOSED_FOR_MANUAL_REVIEW"||!proposed.tsv)return;
     setReviewedTsv(proposed.tsv);
-    setReviewedRows(null);setReviewConfirmed(false);
+    setReviewedRows(null);setReviewConfirmed(false);clearReviewedEditHistory();
     setImageStatus("Tentative OCR grid copied to the editable form. Compare each heading and value against the source image, fix errors, then preview and approve.");
   }
   function previewUserGrid(){
@@ -173,12 +218,7 @@ export default function PdfToExcelPage() {
       const next=updateUserReviewedImageCell(
         reviewedTsv,imageEditCell.row,imageEditCell.column,imageEditValue,
       );
-      setReviewedTsv(next);
-      setReviewedRows(null);
-      setReviewConfirmed(false);
-      setImageEditCell(null);
-      setImageEditValue("");
-      setImageStatus("Correction saved locally. Preview all corrected cells and explicitly approve again before exporting.");
+      applyReviewedChange(next,"Source cell correction saved locally.");
     }catch(cause){
       setImageStatus(cause instanceof Error?cause.message:"The correction was not applied.");
     }
@@ -190,7 +230,9 @@ export default function PdfToExcelPage() {
       const reviewed=reviewRegionIndex===null?null:imageReview?.reviews[reviewRegionIndex];
       if(!reviewed)throw Error("Select a usable embedded image OCR review before exporting.");
       const plan=prepareUserReviewedImageXlsx({review:reviewed,tsv:reviewedTsv,
-        confirmed:reviewConfirmed,documentPageCount:inspected.document.pages.length});
+        confirmed:reviewConfirmed,documentPageCount:inspected.document.pages.length,
+        imagePaintIndex:selectedImagePaint===""?undefined:Number(selectedImagePaint),
+        manualButtonEdits});
       // Validate the exact currently edited grid again, not an old preview.
       if(JSON.stringify(plan.tables[0].rows)!==JSON.stringify(reviewedRows))
         throw Error("The reviewed cells changed. Preview and confirm the current values again.");
@@ -410,6 +452,7 @@ export default function PdfToExcelPage() {
               disabled={busy||imageBusy}
               onChange={e=>{setImagePage(Number(e.target.value));setImageReview(null);
                 setSelectedImagePaint("");setReviewRegionIndex(null);setReviewedRows(null);setReviewedTsv("");
+                clearReviewedEditHistory();
                 setReviewConfirmed(false);setImageStatus("");}}
               className="rounded-lg border bg-white px-3 py-2 text-slate-900">
               {inspected.imageContentReview.filter(p=>p.imageReviewRecommended).map(p=>(
@@ -423,7 +466,7 @@ export default function PdfToExcelPage() {
               disabled={busy||imageBusy}
               onChange={event=>{setSelectedImagePaint(event.target.value);
                 setImageReview(null);setReviewRegionIndex(null);
-                setReviewedTsv("");setReviewedRows(null);setImageEditCell(null);
+                setReviewedTsv("");setReviewedRows(null);clearReviewedEditHistory();
                 setReviewConfirmed(false);setImageStatus("");}}
               className="w-full rounded-lg border bg-white px-3 py-2 text-slate-950 dark:bg-slate-900 dark:text-white">
               <option value="">Conservative automatic selection (up to 2 images)</option>
@@ -466,7 +509,8 @@ export default function PdfToExcelPage() {
                 <label htmlFor="public-image-region" className="block text-sm font-semibold">Select OCR image region</label>
                 <select id="public-image-region" value={reviewRegionIndex??""}
                   onChange={e=>{setReviewRegionIndex(Number(e.target.value));
-                    setReviewedRows(null);setReviewedTsv("");setReviewConfirmed(false);}}
+                    setReviewedRows(null);setReviewedTsv("");setReviewConfirmed(false);
+                    clearReviewedEditHistory();}}
                   className="rounded-lg border bg-white px-3 py-2 text-slate-900">
                   {imageReview.reviews.map((r,i)=>r.status==="TEXT_REVIEW_ONLY"&&(
                     <option key={i} value={i}>Image {i+1} (PDF page {r.pageNumber})</option>
@@ -519,14 +563,23 @@ export default function PdfToExcelPage() {
                 </label>
                 <textarea id="reviewed-image-grid" value={reviewedTsv}
                   onChange={e=>{setReviewedTsv(e.target.value);setReviewedRows(null);
-                    setReviewConfirmed(false);setImageStatus("");}}
+                    setReviewConfirmed(false);clearReviewedEditHistory();setImageStatus("");}}
                   rows={6} maxLength={30000}
                   placeholder={"Name\tAmount\nItem A\t00123\nItem B\t00456"}
                   className="w-full rounded-lg border p-3 font-mono text-sm text-slate-950 dark:bg-slate-900 dark:text-white"/>
-                <button type="button" onClick={previewUserGrid}
-                  className="rounded-lg border px-4 py-2 font-semibold text-sm">
-                  Preview my corrected cells
-                </button>
+                <div className="flex flex-wrap gap-2">
+                  <button type="button" onClick={previewUserGrid}
+                    className="rounded-lg border px-4 py-2 font-semibold text-sm">
+                    Preview my corrected cells
+                  </button>
+                  {undoReviewedTsv!==null&&(
+                    <button type="button" disabled={busy||imageBusy}
+                      onClick={undoReviewedChange}
+                      className="rounded-lg border border-amber-600 px-4 py-2 text-sm font-semibold">
+                      Undo last button edit — preview again
+                    </button>
+                  )}
+                </div>
                 {reviewedRows&&(
                   <div className="space-y-3">
                     <p className="text-sm font-semibold">User-entered cell preview — {reviewedRows.length} rows × {reviewedRows[0].length} columns</p>
@@ -546,6 +599,100 @@ export default function PdfToExcelPage() {
                         </tr>)}
                       </tbody></table>
                     </div>
+                    <section aria-label="Reviewed image grid row and column editor"
+                      className="space-y-3 rounded-xl border border-blue-200 p-3 text-sm dark:border-blue-800">
+                      <h4 className="font-semibold">Correct missing or extra rows and columns</h4>
+                      <p className="text-xs text-slate-600 dark:text-slate-300">
+                        No row or column content is invented. Enter the new source value or
+                        heading yourself. Each change clears preview and approval. Compare
+                        the entire table with the original image before exporting.
+                      </p>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="block font-medium">Data row to edit</span>
+                          <select aria-label="Data row to edit" value={Math.min(rowActionTarget,reviewedRows.length-1)}
+                            onChange={e=>setRowActionTarget(Number(e.target.value))}
+                            className="w-full rounded-lg border p-2 bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
+                            {reviewedRows.slice(1).map((_,index)=>(
+                              <option key={index+1} value={index+1}>Row {index+2} (sheet row)</option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="block font-medium">New row&apos;s first source value</span>
+                          <input aria-label="New row first value" value={newRowSeed}
+                            maxLength={1000} onChange={e=>setNewRowSeed(e.target.value)}
+                            placeholder="Enter a value from source image"
+                            className="w-full rounded-lg border p-2 text-slate-950 dark:bg-slate-900 dark:text-white"/>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy||imageBusy||reviewedRows.length>=100}
+                          onClick={()=>applyReviewedStructureEdit(()=>
+                            insertReviewedImageRow(reviewedTsv,
+                              Math.min(rowActionTarget,reviewedRows.length-1),newRowSeed),
+                            "Source-entered data row inserted.")}
+                          className="rounded-lg border px-3 py-2 font-semibold">Add row below</button>
+                        <button type="button" disabled={busy||imageBusy||reviewedRows.length<=2}
+                          onClick={()=>{if(!window.confirm("Delete this reviewed row? You will need to preview and approve again."))return;
+                            applyReviewedStructureEdit(()=>
+                              removeReviewedImageRow(reviewedTsv,
+                                Math.min(rowActionTarget,reviewedRows.length-1)),
+                              "Chosen data row removed.");}}
+                          className="rounded-lg border border-red-500 px-3 py-2 font-semibold">
+                          Delete selected row
+                        </button>
+                      </div>
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        <label className="space-y-1">
+                          <span className="block font-medium">Column to edit</span>
+                          <select aria-label="Column to edit"
+                            value={Math.min(columnActionTarget,reviewedRows[0].length-1)}
+                            onChange={e=>setColumnActionTarget(Number(e.target.value))}
+                            className="w-full rounded-lg border p-2 bg-white text-slate-950 dark:bg-slate-900 dark:text-white">
+                            {reviewedRows[0].map((heading,index)=>(
+                              <option key={index} value={index}>
+                                {pdfTableCellAddress(0,index).replace(/\d+$/,"")} — {heading}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                        <label className="space-y-1">
+                          <span className="block font-medium">New column heading</span>
+                          <input aria-label="New column heading" maxLength={1000}
+                            value={newColumnHeading}
+                            onChange={e=>setNewColumnHeading(e.target.value)}
+                            placeholder="Enter heading from source image"
+                            className="w-full rounded-lg border p-2 text-slate-950 dark:bg-slate-900 dark:text-white"/>
+                        </label>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <button type="button" disabled={busy||imageBusy||reviewedRows[0].length>=20}
+                          onClick={()=>applyReviewedStructureEdit(()=>
+                            insertReviewedImageColumn(reviewedTsv,
+                              Math.min(columnActionTarget,reviewedRows[0].length-1),newColumnHeading),
+                            "Source-named column inserted.")}
+                          className="rounded-lg border px-3 py-2 font-semibold">Add column after</button>
+                        <button type="button" disabled={busy||imageBusy||reviewedRows[0].length<=2}
+                          onClick={()=>{if(!window.confirm("Delete this reviewed column and its source values? You will need to preview and approve again."))return;
+                            applyReviewedStructureEdit(()=>
+                              removeReviewedImageColumn(reviewedTsv,
+                                Math.min(columnActionTarget,reviewedRows[0].length-1)),
+                              "Chosen column and its values removed.");}}
+                          className="rounded-lg border border-red-500 px-3 py-2 font-semibold">
+                          Delete selected column
+                        </button>
+                      </div>
+                      <div aria-label="Reviewed grid quality warnings"
+                        className="rounded-lg border border-amber-300 p-2 text-xs dark:border-amber-800">
+                        <p className="font-semibold">Source review checks — not cell accuracy certification</p>
+                        <ul className="mt-2 list-disc space-y-1 pl-5">
+                          {inspectReviewedImageGrid(reviewedTsv).warnings.map((warning,i)=>(
+                            <li key={i}>{warning}</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </section>
                     {imageEditCell&&(
                       <div className="space-y-2 rounded-lg border border-blue-300 p-3 dark:border-blue-800">
                         <label htmlFor="reviewed-image-cell-edit" className="block text-sm font-semibold">
