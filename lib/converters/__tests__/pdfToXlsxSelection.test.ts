@@ -188,3 +188,43 @@ describe("R134 no regression of established all-table native XLSX exports",()=>{
       .toThrow(/choose an individual table/);
   });
 });
+
+describe("R145 scientific native caption/header source review isolation",()=>{
+  function fixture(){
+    const t=table(4,"native-scientific");
+    const base=t.rows.map(r=>({...r,cells:r.cells.map(c=>({...c}))}));
+    t.rows=Array.from({length:12},(_,i)=>({
+      ...base[i%base.length],id:"native-scientific-row-"+i,rowIndex:i,
+      provenance:{pageNumber:4,
+        blockId:"native-caption-header-grid-4-original-paragraph-3",
+        originalRowIndex:i},
+      cells:base[i%base.length].cells.map(c=>({...c,
+        id:"native-scientific-cell-"+i+"-"+c.columnIndex,rowIndex:i,
+        bounds:{...c.bounds,y:190-i*13}})),
+    }));
+    return t;
+  }
+  it("will never silently add new scientific source rows to unattended XLSX",()=>{
+    const newGrid=fixture();
+    expect(()=>preparePdfV4XlsxExport(source([newGrid])))
+      .toThrow(/choose an individual table/);
+    const old=table(2,"established");
+    const plan=preparePdfV4XlsxExport(source([old,newGrid]));
+    expect(plan.tables).toHaveLength(1);
+    expect(plan.reviewNotes?.join(" ")).toContain("omitted");
+    expect(plan.tables[0].rows[1][1]).toBe("00071");
+  });
+  it("allows only deliberate reviewed selection with physical-row warnings",()=>{
+    const t=fixture();
+    const plan=prepareSelectedPdfV4XlsxExport(source([t]),0);
+    expect(plan.tables[0].rows).toHaveLength(12);
+    const notes=plan.reviewNotes?.join(" ")??"";
+    expect(notes).toContain("HIGH REVIEW PRIORITY");
+    expect(notes).toContain("multi-tier scientific headings");
+    expect(notes).toContain("physical text line");
+    const short=fixture();
+    short.rows=short.rows.slice(0,2);
+    expect(()=>prepareSelectedPdfV4XlsxExport(source([short]),0))
+      .toThrow(/too few reconstructed physical lines/);
+  });
+});
