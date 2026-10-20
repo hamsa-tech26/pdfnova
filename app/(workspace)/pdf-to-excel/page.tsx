@@ -836,7 +836,7 @@ export default function PdfToExcelPage() {
                 <p className="text-xs text-amber-900 dark:text-amber-200">
                   After selection, use the separate embedded-image review
                   controls above. OCR is optional, local and never added
-                  automatically to this table's Excel file.
+                  automatically to this table&apos;s Excel file.
                 </p>
               </div>
             )}
