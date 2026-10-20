@@ -30,8 +30,10 @@ jobs:
           node-version: "24"
           cache: npm
       - run: npm ci --no-audit --no-fund
-      - name: Validate annotation-box scorer
-        run: node --test scripts/__tests__/release112Detection.nodecheck.mjs
+      - name: Validate annotation-box scorer and fail-closed native prose continuity
+        run: |
+          node --test scripts/__tests__/release112Detection.nodecheck.mjs
+          node --test scripts/__tests__/release144UncaptionedPairs.nodecheck.mjs
       - name: Verify V4 Stable remains BLOCKED
         run: |
           node --input-type=module -e '
