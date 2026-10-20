@@ -16,11 +16,33 @@ function summarizeReferenceGeometry(viewport,box){
   const wordCounts=lines.map(line=>line.words.filter(word=>
     inside(word.bounds.x+word.bounds.width/2,
       word.bounds.y+word.bounds.height/2)).length);
+  // R135 investigation-only: numeric and boolean source signals, never text.
+  // Caption evidence must be measured before trying an ambiguous two-column
+  // prose-vs-table detector, not imagined from a publisher box.
+  const near=(line)=>{
+    const center=line.bounds.y+line.bounds.height/2;
+    return center>=box.y-55&&center<=box.y+box.height+55;
+  };
+  const nearbyCaptions=(viewport.lines??[]).filter(line=>near(line)&&
+    /\\b(?:table|tab\\.?)\\s*(?:s?\\d{1,3})\\b/i.test(line.text.trim()));
+  const captionClosestGap=nearbyCaptions.length?Math.min(...nearbyCaptions.map(line=>{
+    const cy=line.bounds.y+line.bounds.height/2;
+    return Number(Math.max(0,box.y-cy,cy-(box.y+box.height)).toFixed(1));
+  })):null;
+  const exactlyTwoNativeColumns=lines.filter(line=>{
+    const insideWords=line.words.filter(word=>inside(word.bounds.x+word.bounds.width/2,
+      word.bounds.y+word.bounds.height/2));
+    return insideWords.length===2 &&
+      insideWords.every(w=>w.extractionProvenance?.source!=="ocr-tesseract")&&
+      insideWords[1].bounds.x-insideWords[0].bounds.x>=120;
+  }).length;
   const uniqueX=new Set(lines.flatMap(line=>line.words.filter(word=>
     inside(word.bounds.x+word.bounds.width/2,
       word.bounds.y+word.bounds.height/2))
     .map(word=>Math.round(word.bounds.x/10)*10)));
   return {lineCount:lines.length,wordCount:wordCounts.reduce((a,b)=>a+b,0),
+    nearbyTableCaptionCount:nearbyCaptions.length,captionClosestGap,
+    exactlyTwoNativeColumns,
     medianWordsPerLine:wordCounts.length?
       [...wordCounts].sort((a,b)=>a-b)[Math.floor(wordCounts.length/2)]:0,
     linesAtLeast3Words:wordCounts.filter(n=>n>=3).length,
@@ -81,6 +103,7 @@ for(const source of manifest.documents){
         imagePaintCount:imageReview.imagePaintCount,
         imageRegionsDetected:nativeImageRects.length,
         publishedImageBestIoU,
+        imagePaintRects:nativeImageRects.slice(0,20).map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         imageReviewRecommended:imageReview.imageReviewRecommended,
         actualReferenceRects:expected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
         predictedRects:detected.map(box=>Object.fromEntries(Object.entries(box).map(([k,v])=>[k,Number(v.toFixed(1))]))),
@@ -129,7 +152,8 @@ for(const source of manifest.documents){
       imageReviewRecommended:p.imageReviewRecommended,
       imageRegionsDetected:p.imageRegionsDetected,publishedImageBestIoU:p.publishedImageBestIoU,
       referenceBoxes:p.actualReferenceRects,
-      detectedBoxes:p.predictedRects,geometry:p.publishedBoxGeometry
+      detectedBoxes:p.predictedRects,imagePaintRects:p.imagePaintRects,
+      geometry:p.publishedBoxGeometry
     })),formalV4Credit:0}));
   });
 }
