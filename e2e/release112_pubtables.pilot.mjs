@@ -257,6 +257,32 @@ for(const source of manifest.documents){
         originalPublisherPage:6,selectedPaintIndex:Number(firstPaint),
         reviewedRegionCount:1,sourceContentNotLogged:true,
         autoImageCellAcceptance:false,certifiedCells:0}));
+      // R150 real-source consumer acceptance: use published page 8's
+      // already detected native scientific table to preselect matching
+      // original PDF image paints. This is UI navigation ONLY; no OCR call,
+      // source-cell invention, automatic export or changed table bounds.
+      const originalScientificChoice=page.getByRole("radio",{
+        name:/Table \\d+ — Page 8 — 12 rows/,
+      });
+      await expect(originalScientificChoice).toBeVisible();
+      await originalScientificChoice.check();
+      const related=page.getByRole("region",{
+        name:"Related native scientific table source images",
+      });
+      await expect(related).toBeVisible();
+      const sourceButtons=related.getByRole("button",{
+        name:/Select original image .* PDF page 8 for optional review/,
+      });
+      expect(await sourceButtons.count()).toBeGreaterThanOrEqual(2);
+      await sourceButtons.first().click();
+      await expect(page.getByLabel("Page to review")).toHaveValue("8");
+      await expect(page.getByLabel("Image region to review")).toHaveValue("0");
+      await expect(page.getByText(/No OCR has run/)).toBeVisible();
+      console.log(JSON.stringify({type:"R150_REVIEW_ONLY_SOURCE_TARGET_BROWSER",
+        sourceId:source.id,pageNumber:8,
+        candidatePaintControls:await sourceButtons.count(),
+        originalNativeTableUnmodified:true,ocrAutomaticallyRun:false,
+        acceptedCells:0,formalV4Credit:0}));
     }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
