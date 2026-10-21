@@ -302,6 +302,26 @@ for(const source of manifest.documents){
       });
       await expect(originalScientificChoice).toBeVisible();
       await originalScientificChoice.check();
+      // R154: review-only scientific tables must never be downloaded
+      // without a per-selection acknowledgement, regardless of export format.
+      const xlsx=page.getByRole("button",{name:"Export selected table (.xlsx)"});
+      const csv=page.getByRole("button",{name:"Export selected table (.csv)"});
+      await expect(xlsx).toBeDisabled();
+      await expect(csv).toBeDisabled();
+      const sourceReview=page.getByRole("checkbox",{
+        name:"Acknowledge scientific table source review",
+      });
+      await expect(sourceReview).not.toBeChecked();
+      await sourceReview.check();
+      await expect(xlsx).toBeEnabled();
+      await expect(csv).toBeEnabled();
+      await sourceReview.uncheck();
+      await expect(xlsx).toBeDisabled();
+      await expect(csv).toBeDisabled();
+      console.log(JSON.stringify({type:"R154_SCIENTIFIC_DOWNLOAD_CONSENT",
+        sourceId:source.id,originalPage:8,
+        requiresSelectionSpecificConsent:true,controlsBothFormats:true,
+        automaticXlsxAttempt:false,automaticCsvAttempt:false}));
       const related=page.getByRole("region",{
         name:"Related native scientific table source images",
       });
