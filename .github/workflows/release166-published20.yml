@@ -4,6 +4,7 @@ on:
     branches: [main]
     paths:
       - "scripts/downloadRelease166Published20.mjs"
+      - "scripts/evaluateRelease166VisualTableModel.mjs"
       - "e2e/release166_published20.pilot.mjs"
       - "playwright.release166.config.mjs"
       - ".github/workflows/release166-published20.yml"
@@ -46,6 +47,17 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Score source PDF bounding boxes, never feed labels into detector
         run: npx playwright test --config=playwright.release166.config.mjs
+      - name: Fetch two previously identified original failure PDFs
+        run: node scripts/downloadRelease112TablePilot.mjs
+      - name: Prepare model-only CPU raster tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          npm install --no-save --no-audit --no-fund @huggingface/transformers@3.8.1
+      - name: Evaluate pinned visual detector locally on three original misses
+        env:
+          HF_HUB_DISABLE_TELEMETRY: "1"
+        run: node scripts/evaluateRelease166VisualTableModel.mjs
       - name: Preserve numeric external benchmark scores only
         if: always()
         uses: actions/upload-artifact@v4
