@@ -71,7 +71,7 @@ for(const source of manifest.documents){
           line.words??[]).filter(w=>inside(w)&&
           w.extractionProvenance?.source!=="ocr-tesseract"))
           .filter(words=>words.length>0);
-        const numeric=/^[+\\-−]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:%|[a-zA-Z]{1,2})?$/u;
+        const numeric=/^[+\-−]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|[a-zA-Z]{1,2})?$/u;
         const selected=(pageModel.words??[]).filter(w=>inside(w)&&
           w.extractionProvenance?.source!=="ocr-tesseract");
         const sourceRows={originalPublisherPage:ref.page,
