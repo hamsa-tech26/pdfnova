@@ -37,8 +37,8 @@ test("source OCR, unequal number positions and y gaps block automatic candidate"
   assert.deepEqual(proposeNativeGridRegions(page(gap)),[]);
   const displaced=Array.from({length:5},(_,i)=>
     makeLine(i,["Site"+i,String(2020+i),String(10+i)]));
-  for(let i=1;i<displaced.length;i++)
-    displaced[i].words[2].bounds.x+=40;
+  for(let i=0;i<displaced.length;i++)
+    displaced[i].words[2].bounds.x+=i%2===0?45:0;
   assert.deepEqual(proposeNativeGridRegions(page(displaced)),[]);
 });
 test("never returns candidate for unbounded or invalid geometry",()=>{
