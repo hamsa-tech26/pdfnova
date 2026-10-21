@@ -90,7 +90,9 @@ export function inspectPdfV4OcrCheckboxCandidates(
     valid(w, page.renderedWidth, page.renderedHeight),
   );
   const header = findHeader(words);
-  if (!header) return [];
+  // Uncertain OCR header labels can select a wrong checkbox column even
+  // when the geometry is perfect. In that case decline to infer proximity.
+  if (!header || header.some(h => h.word.confidence < 70)) return [];
   const headerY = Math.max(...header.map((h) => h.word.bounds.y1));
   const firstColumnStart = header[0].word.bounds.x0;
   const gap = Math.min(
@@ -102,10 +104,13 @@ export function inspectPdfV4OcrCheckboxCandidates(
   // Weak OCR marks must still block a conflicting confident X on the same row.
   // They cannot themselves become candidate selections.
   const allMarks = words.filter((w) =>
-    /^[Xx]$/.test(w.text.trim()) &&
+    /^(?:[Xx]|[✓✔☑×✕])$/.test(w.text.trim()) &&
     w.bounds.y0 > headerY + 2,
   );
-  const marks = allMarks.filter((w) => w.confidence >= 65);
+  // Nearby OCR checkmarks/ambiguous strokes block claiming a single X,
+  // but only an actual OCR X can become a candidate observation.
+  const marks = allMarks.filter((w) =>
+    /^[Xx]$/.test(w.text.trim()) && w.confidence >= 65);
   const observations: PdfV4OcrCheckboxCandidate[] = [];
   for (const mark of marks) {
     const y = centerY(mark);
@@ -125,7 +130,7 @@ export function inspectPdfV4OcrCheckboxCandidates(
     }
     const rowLabel = words
       .filter((w) =>
-        w !== mark &&
+        w !== mark && w.confidence >= 60 &&
         centerX(w) < firstColumnStart - 8 &&
         Math.abs(centerY(w) - y) <= lineTolerance &&
         !/^[|_\\-]+$/.test(w.text.trim()),
