@@ -83,31 +83,39 @@ export function suggestPdfV4OcrColumnPreview(
     Number.isFinite(word.bounds.y1),
   );
   if (words.length < 25) return null;
+  // Very wide source words can be full-width headings or misplaced sidebar
+  // regions. Treat them as UNASSIGNED evidence instead of forcing an
+  // arbitrary column and misleadingly losing a heading.
+  const spanning=words.filter(w=>w.bounds.x1-w.bounds.x0>=
+    page.renderedWidth*.28&&w.bounds.x0<page.renderedWidth*.75&&
+    w.bounds.x1>page.renderedWidth*.25);
+  const columnWords=words.filter(w=>!spanning.includes(w));
+  if(columnWords.length<25)return null;
 
   let best: { split: number; crossing: number; balance: number } | null = null;
   for (let pct = 35; pct <= 80; pct += 1) {
     const split = (page.renderedWidth * pct) / 100;
-    const left = words.filter((w) => w.bounds.x1 < split);
-    const right = words.filter((w) => w.bounds.x0 > split);
-    const crossing = words.length - left.length - right.length;
-    if (left.length < 10 || right.length < 10 || crossing > words.length * 0.025) {
+    const left = columnWords.filter((w) => w.bounds.x1 < split);
+    const right = columnWords.filter((w) => w.bounds.x0 > split);
+    const crossing = columnWords.length - left.length - right.length;
+    if (left.length < 10 || right.length < 10 || crossing > columnWords.length * 0.025) {
       continue;
     }
-    const balance = Math.min(left.length, right.length) / words.length;
+    const balance = Math.min(left.length, right.length) / columnWords.length;
     if (!best || crossing < best.crossing ||
         (crossing === best.crossing && balance > best.balance)) {
       best = { split, crossing, balance };
     }
   }
   if (!best) return null;
-  const left = makeLines(words.filter((w) => w.bounds.x1 < best!.split));
-  const right = makeLines(words.filter((w) => w.bounds.x0 > best!.split));
+  const left = makeLines(columnWords.filter((w) => w.bounds.x1 < best!.split));
+  const right = makeLines(columnWords.filter((w) => w.bounds.x0 > best!.split));
   if (left.length < 4 || right.length < 4) return null;
   // OCR words crossing the column split (including a true full-width
   // heading or a misplaced sidebar word) must not disappear from the
   // alternate view. Keep them unassigned, rather than guessing order.
-  const unassigned=words.filter(w=>
-    w.bounds.x1>=best!.split && w.bounds.x0<=best!.split);
+  const unassigned=[...spanning,...columnWords.filter(w=>
+    w.bounds.x1>=best!.split && w.bounds.x0<=best!.split)];
   const extra=unassigned.length?
     "\n\n[SPANNING OR UNCERTAIN WORDS - SOURCE ORDER UNVERIFIED]\n"+
     linesToText(makeLines(unassigned)):"";
