@@ -13,6 +13,7 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import {validateLocalPdfInput} from "@/lib/converters/localPdfInputGate";
+import {auditPdfPageCoverage,type PdfPageCoverageFlag} from "@/lib/converters/pdfPageCoverageAudit";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
@@ -44,6 +45,7 @@ export default function PdfToExcelPage() {
   const [error, setError] = useState("");
   const [inspected, setInspected] = useState<Awaited<ReturnType<typeof analyzePdfV4>> | null>(null);
   const [choices, setChoices] = useState<PdfXlsxTableChoice[]>([]);
+  const [pageCoverageFlags,setPageCoverageFlags]=useState<PdfPageCoverageFlag[]>([]);
   const [scientificImageTargets,setScientificImageTargets] =
     useState<ScientificRasterReviewTarget[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
@@ -112,7 +114,7 @@ export default function PdfToExcelPage() {
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
-    setChoices([]);setScientificImageTargets([]);
+    setChoices([]);setScientificImageTargets([]);setPageCoverageFlags([]);
     setSelectedIndex(null);setScientificTableConfirmed(false);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
   }
@@ -127,7 +129,7 @@ export default function PdfToExcelPage() {
     setImageReview(null);setImagePage(null);setSelectedImagePaint("");setReviewedTsv("");setReviewedRows(null);
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
-    setChoices([]);setScientificImageTargets([]);
+    setChoices([]);setScientificImageTargets([]);setPageCoverageFlags([]);
     setSelectedIndex(null);setScientificTableConfirmed(false);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     if (!selected || !selected.name.toLowerCase().endsWith(".pdf") ||
@@ -150,6 +152,7 @@ export default function PdfToExcelPage() {
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
+      setPageCoverageFlags(auditPdfPageCoverage(analyzed.document.pages,analyzed.tables));
       setScientificImageTargets(findNativeScientificRasterReviewTargets(
         analyzed.document.pages,analyzed.tables));
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
@@ -172,6 +175,7 @@ export default function PdfToExcelPage() {
       await validateLocalPdfInput(file);
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
+      setPageCoverageFlags(auditPdfPageCoverage(analyzed.document.pages,analyzed.tables));
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
         listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");
@@ -205,23 +209,25 @@ export default function PdfToExcelPage() {
    * R150: a source-grounded review shortcut, NOT automatic image OCR.
    * Recheck eligibility at click time and invalidate any old image approval.
    */
-  function prepareScientificImageReview(target:ScientificRasterReviewTarget){
+  function selectOriginalPaintForReview(pageNumber:number,imagePaintIndex:number){
     if(!inspected||busy||imageBusy)return;
-    const page=inspected.document.pages.find(p=>p.pageNumber===target.pageNumber);
+    const page=inspected.document.pages.find(p=>p.pageNumber===pageNumber);
     if(!page||!listManuallyReviewableImageRegions(page).some(region=>
-      region.imagePaintIndex===target.imagePaintIndex)){
+      region.imagePaintIndex===imagePaintIndex)){
       setError("This source image cannot be safely selected for review.");
       return;
     }
-    setImagePage(target.pageNumber);
-    setSelectedImagePaint(String(target.imagePaintIndex));
+    setImagePage(pageNumber);setSelectedImagePaint(String(imagePaintIndex));
     setImageReview(null);setReviewRegionIndex(null);
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
-    clearReviewedEditHistory();
-    setImageStatus("Original image paint "+(target.imagePaintIndex+1)+
-      " on page "+target.pageNumber+" was selected for optional review. "+
-      "No OCR has run. Use the image review controls above, compare the "+
-      "source image and manually approve any corrected cells.");
+    setScientificTableConfirmed(false);clearReviewedEditHistory();
+    setImageStatus("Original image paint "+(imagePaintIndex+1)+
+      " on page "+pageNumber+" was selected for optional review. "+
+      "No OCR has run. Use separate image review controls, compare "+
+      "the original PDF and approve only manually checked cells.");
+  }
+  function prepareScientificImageReview(target:ScientificRasterReviewTarget){
+    selectOriginalPaintForReview(target.pageNumber,target.imagePaintIndex);
   }
 
   /** R127: suggestion ONLY fills editable input; it never previews, approves or exports. */
@@ -444,7 +450,7 @@ export default function PdfToExcelPage() {
       faqs={[
         { question: "Will my PDF be uploaded?", answer: "No. Extraction and XLSX generation happen in the browser." },
         { question: "Can I choose one table if another fails?", answer: "Yes. Inspect candidates, choose an eligible table, and review its extracted cell preview before exporting. Other tables stay excluded. All original safety checks still apply." },
-        { question: "Does it convert scans or every table?", answer: "Automatic export accepts only structured selectable-text tables. An optional image-OCR review can create a separately labeled XLSX only after you manually correct, preview and confirm its cells. Fully scanned documents remain unsupported." },
+        { question: "Does it convert scans or every table?", answer: "Automatic export accepts only structured selectable-text tables. An optional image-OCR review can create a separately labeled XLSX only after you manually correct, preview and confirm its cells. Fully scanned pages cannot be converted automatically; bounded embedded images may be reviewed manually when the PDF exposes them." },
       ]}
       howToTitle="How to convert a PDF table to Excel"
       howToSteps={[
@@ -478,6 +484,54 @@ export default function PdfToExcelPage() {
             className="w-full rounded-xl border border-amber-300 px-5 py-3 font-semibold text-amber-800 disabled:opacity-60 dark:border-amber-700 dark:text-amber-200">
             Inspect embedded images for optional OCR
           </button>
+        )}
+        {!output && inspected && pageCoverageFlags.length>0 &&(
+          <section aria-label="Source page completeness review"
+            className="space-y-3 rounded-2xl border border-slate-300 p-5 dark:border-slate-700">
+            <h3 className="font-bold text-lg">Review possible omitted source content</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              These original PDF pages contain painted images or no detected table.
+              Images may be diagrams, logos or table content; none is assumed
+              to be a table. A detected table does not certify adjacent images.
+              Selecting a region never initiates OCR or approves Excel cells.
+            </p>
+            <div className="space-y-2">
+              {pageCoverageFlags.map(flag=>(
+                <div key={flag.pageNumber} className="rounded-lg border p-3 text-sm">
+                  <p className="font-semibold">
+                    PDF page {flag.pageNumber} · {flag.tableCandidateCount} detected
+                    table candidate(s) · {flag.paintedImageCount} painted image(s)
+                  </p>
+                  <p className="text-xs text-slate-600 dark:text-slate-300">
+                    {flag.reason==="native-text-no-table"
+                      ?"Native text found, but no reliable table was detected. Ordinary article columns must not be invented as spreadsheet tables."
+                      :flag.reason==="no-reviewable-content"
+                        ?"No verified native table or safely selectable image is available on this page."
+                        :"Source images are not verified table data. Compare against the original PDF."}
+                  </p>
+                  {flag.paintedImageCount>0&&!flag.manualImages.length&&(
+                    <p className="text-xs text-amber-800 dark:text-amber-200">
+                      No image region meets the bounded manual review eligibility.
+                    </p>
+                  )}
+                  {flag.manualImages.length>0&&(
+                    <div className="mt-2 flex flex-wrap gap-2">
+                      {flag.manualImages.map(image=>(
+                        <button key={image.imagePaintIndex} type="button"
+                          disabled={busy||imageBusy}
+                          onClick={()=>selectOriginalPaintForReview(
+                            flag.pageNumber,image.imagePaintIndex)}
+                          className="rounded-lg border border-amber-500 px-3 py-2 text-xs font-semibold text-amber-900 dark:text-amber-200 disabled:opacity-40">
+                          {"Select image "+(image.imagePaintIndex+1)+
+                            " on PDF page "+flag.pageNumber+" for manual OCR review"}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </section>
         )}
         {!output && inspected && imagePage!==null && (
           <section aria-labelledby="image-review-heading"
@@ -1050,6 +1104,12 @@ export default function PdfToExcelPage() {
             setOutput(null);setOutputName("");setWarnings([]);setSelectedIndex(null);setScientificTableConfirmed(false);setPreview(null);
           }} className="w-full rounded-xl border border-blue-300 px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">
             Choose another table from this PDF
+          </button>
+        )}
+        {!busy && error && file && !inspected &&(
+          <button type="button" onClick={inspectImageContent}
+            className="w-full rounded-lg border border-amber-500 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-200">
+            Inspect source pages and recoverable images instead (local)
           </button>
         )}
         {!busy && error && <ErrorCard title="Excel conversion withheld"

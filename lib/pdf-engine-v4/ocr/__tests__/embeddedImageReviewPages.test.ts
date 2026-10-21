@@ -31,11 +31,26 @@ describe("R142 complete optional embedded-image review page navigation",()=>{
     expect(selected.map(x=>x.automaticRecommended)).toEqual([true,false,false]);
     expect(listEmbeddedImageReviewPages([pages[0],pages[0]],[])).toHaveLength(1);
   });
-  it("does not offer logo-only, invalid or low-native-text candidate pages",()=>{
+  it("excludes logos but keeps explicit low-text page review available",()=>{
     const tiny=fixture(1);tiny.imagePaintRegions=[
       {bounds:{x:30,y:30,width:20,height:20},areaFraction:.001}];
     const weak=fixture(2);weak.textExtraction={...weak.textExtraction,status:"low"};
-    expect(listEmbeddedImageReviewPages([tiny,weak],[])).toEqual([]);
+    expect(listEmbeddedImageReviewPages([tiny,weak],[])).toEqual([{
+      pageNumber:2,manualCandidateCount:1,automaticRecommended:false,
+    }]);
     expect(listEmbeddedImageReviewPages([],[])).toEqual([]);
+  });
+});
+
+describe("R157 scanned pages remain explicit-review-only",()=>{
+  it("lists bounded full-page image from a scanned PDF without claiming a table",()=>{
+    const scan=fixture(3);
+    scan.textExtraction.status="none";
+    scan.words=[];
+    scan.imagePaintRegions=[{bounds:{x:0,y:0,width:610,height:792},areaFraction:1}];
+    expect(planEmbeddedImageOcrRegions([scan])).toEqual([]);
+    expect(listEmbeddedImageReviewPages([scan],[])).toEqual([{
+      pageNumber:3,automaticRecommended:false,manualCandidateCount:1,
+    }]);
   });
 });
