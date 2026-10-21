@@ -3,6 +3,7 @@ import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
 import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import {preserveNativeWideHeaderLines} from "./nativeWideHeaderLines";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
+import {inspectTableStructuralEvidence} from "./pdfToXlsxStructuralEvidence";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
 
@@ -394,6 +395,22 @@ export function preparePdfV4XlsxExport(
     const pages = sourcePages(table, pageCount);
     pages.forEach(page => covered.add(page));
     const counts = table.rows.map(row => checkRow(row, table.columnCount));
+    const sourceEvidence=inspectTableStructuralEvidence(table);
+    if(sourceEvidence.missingSourcePositions||sourceEvidence.explicitlyEmptySourceCells){
+      notes.push("Table "+number+": SOURCE POSITION AUDIT: "+
+        sourceEvidence.missingSourcePositions+" column position(s) had NO "+
+        "detected PDF cell; "+sourceEvidence.explicitlyEmptySourceCells+
+        " detected cell(s) contained empty text, across "+
+        sourceEvidence.incompleteRows+" incomplete row(s). Both export as "+
+        "empty text at their original column position. Neither establishes "+
+        "a verified blank in the printed PDF; inspect the source.");
+    }
+    if(sourceEvidence.firstRowUnverifiedPositions){
+      notes.push("Table "+number+": HEADER REVIEW: "+
+        sourceEvidence.firstRowUnverifiedPositions+" first-row position(s) "+
+        "lack detected source text. Do not infer headings, merge cells "+
+        "or interpret an empty position as a verified source blank.");
+    }
     if (counts.every(n => n === 0)) {
       throw new Error("A table has no populated cells; Excel export was withheld.");
     }
