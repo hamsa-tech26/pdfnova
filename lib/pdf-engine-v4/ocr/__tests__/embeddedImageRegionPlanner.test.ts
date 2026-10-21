@@ -103,7 +103,7 @@ describe("R157 explicitly reviewed low-text and scanned source images",()=>{
      textExtraction:{...scan.textExtraction,status:"sufficient"}})).toEqual([]);
  });
  it("never admits out-of-bounds, tiny image, or impossible source rectangles",()=>{
-   const src=page([{bounds:{x:0,y:0,width:611,height:792},areaFraction:1},
+   const src=page([{bounds:{x:0,y:0,width:612,height:792},areaFraction:1},
      {bounds:{x:2,y:5,width:31,height:25},areaFraction:.001},
      {bounds:{x:30,y:60,width:200,height:90},areaFraction:.04}]);
    src.textExtraction.status="low";
