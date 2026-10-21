@@ -45,6 +45,7 @@ export function isScientificReviewOnlyTable(table:LogicalTable):boolean{
     const id=row.provenance?.blockId??"";
     return id.startsWith("native-compact-grid-")||
       id.startsWith("native-captioned-text-grid-")||
-      id.startsWith("native-caption-header-grid-");
+      id.startsWith("native-caption-header-grid-")||
+      id.startsWith("native-short-header-grid-");
   });
 }
