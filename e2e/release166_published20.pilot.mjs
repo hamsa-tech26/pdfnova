@@ -3,6 +3,7 @@ import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
 import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage}
   from "../benchmarks/release112/scoreTableRegions.mjs";
+import {proposeNativeGridRegions} from "../benchmarks/release166/nativeGridShadow.mjs";
 const root=resolve("benchmarks/release166");
 const privateRoot=join(root,"private");
 const manifest=JSON.parse(await readFile(join(privateRoot,"manifest.json"),"utf8"));
@@ -14,6 +15,8 @@ const totals={sourceCount:0,sourcePageCount:0,independentPublishedBoxCount:0,
   matchedBoxCount:0,missedBoxCount:0,unmatchedPredictionCount:0,
   boxesWithNoNativeWords:0,boxesWithTenPlusNativeWords:0,
   boxesOverlappingPaints:0,boxesWithNeitherNativeWordsNorPaints:0,
+  shadowCandidateCount:0,shadowMatchedBoxes:0,
+  augmentedMatchedBoxes:0,augmentedUnmatchedPredictions:0,
   sourceHashes:new Set()};
 for(const source of manifest.documents){
   test("Published20 held-out original PDF: "+source.id,async({page})=>{
@@ -31,6 +34,7 @@ for(const source of manifest.documents){
     expect(result.document?.pages?.length).toBe(source.pageCount);
     expect(Array.isArray(result.tables)).toBe(true);
     let boxes=0,matched=0,missed=0,unmatched=0;
+    let shadowCount=0,shadowMatched=0,augmentedMatched=0,augmentedUnmatched=0;
     let noNative=0,tenPlusNative=0,paintOverlap=0,noNativeOrPaint=0;
     for(const ref of source.referencePages){
       const annotation=parseDetectionXml(await readFile(
@@ -41,6 +45,16 @@ for(const source of manifest.documents){
       const predictions=result.tables.filter(t=>t.pageNumber===ref.page)
         .map(t=>t.bounds);
       const score=scoreDetectionPage(expected,predictions,0.5);
+      // Shadow R167 operates only on source word geometry; published labels
+      // are used for scoring AFTER proposing candidates.
+      const shadow=proposeNativeGridRegions(pageModel);
+      const shadowScore=scoreDetectionPage(expected,shadow.map(x=>x.bounds),0.5);
+      const combined=scoreDetectionPage(expected,
+        [...predictions,...shadow.map(x=>x.bounds)],0.5);
+      shadowCount+=shadow.length;
+      shadowMatched+=shadowScore.matchedCount;
+      augmentedMatched+=combined.matchedCount;
+      augmentedUnmatched+=combined.unmatchedPredictionCount;
       boxes+=score.referenceCount;
       matched+=score.matchedCount;
       missed+=score.missedCount;
@@ -75,6 +89,10 @@ for(const source of manifest.documents){
     totals.matchedBoxCount+=matched;
     totals.missedBoxCount+=missed;
     totals.unmatchedPredictionCount+=unmatched;
+    totals.shadowCandidateCount+=shadowCount;
+    totals.shadowMatchedBoxes+=shadowMatched;
+    totals.augmentedMatchedBoxes+=augmentedMatched;
+    totals.augmentedUnmatchedPredictions+=augmentedUnmatched;
     totals.boxesWithNoNativeWords+=noNative;
     totals.boxesWithTenPlusNativeWords+=tenPlusNative;
     totals.boxesOverlappingPaints+=paintOverlap;
@@ -83,6 +101,9 @@ for(const source of manifest.documents){
     const report={sourceId:source.id,sourceSha256:source.sha256,
       sourcePages:source.pageCount,referenceBoxCount:boxes,matchedBoxCount:matched,
       missedBoxCount:missed,unmatchedPredictionCount:unmatched,
+      shadowCandidates:shadowCount,shadowMatchedBoxes:shadowMatched,
+      augmentedMatchedBoxes:augmentedMatched,
+      augmentedUnmatchedPredictions:augmentedUnmatched,
       publishedBoxesWithNoNativeWords:noNative,
       publishedBoxesWithTenPlusNativeWords:tenPlusNative,
       publishedBoxesOverlappingImagePaints:paintOverlap,
@@ -103,6 +124,10 @@ test.afterAll(async()=>{
     publishedBoxes:totals.independentPublishedBoxCount,
     matchedBoxes:totals.matchedBoxCount,missedBoxes:totals.missedBoxCount,
     unmatchedPredictions:totals.unmatchedPredictionCount,thresholdIoU:0.5,
+    shadowNativeCandidateCount:totals.shadowCandidateCount,
+    shadowNativeMatchedBoxes:totals.shadowMatchedBoxes,
+    augmentedMatchedBoxes:totals.augmentedMatchedBoxes,
+    augmentedUnmatchedPredictions:totals.augmentedUnmatchedPredictions,
     boxesWithNoNativeWords:totals.boxesWithNoNativeWords,
     boxesWithTenPlusNativeWords:totals.boxesWithTenPlusNativeWords,
     boxesOverlappingPaints:totals.boxesOverlappingPaints,
