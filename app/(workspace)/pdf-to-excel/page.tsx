@@ -12,6 +12,7 @@ import {inspectTableStructuralEvidence,isScientificReviewOnlyTable} from "@/lib/
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import {validateLocalPdfInput} from "@/lib/converters/localPdfInputGate";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
@@ -145,6 +146,7 @@ export default function PdfToExcelPage() {
     if(!file||busy)return;
     setBusy(true);setError("");setOutput(null);setWarnings([]);
     try{
+      await validateLocalPdfInput(file);
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
@@ -167,6 +169,7 @@ export default function PdfToExcelPage() {
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
     clearReviewedEditHistory();
     try{
+      await validateLocalPdfInput(file);
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
@@ -399,6 +402,7 @@ export default function PdfToExcelPage() {
     try {
       // V4 is intentionally used without scanned-page OCR. This MVP accepts
       // text-selectable source PDFs only; an image scan must fail clearly.
+      await validateLocalPdfInput(file);
       const analyzed = inspected ?? await analyzePdfV4(file, { enableControlledOcr: false });
       // Centralized fail-closed quality checks preserve multi-page row
       // provenance, do not infer merged-cell formatting, and report omissions.
