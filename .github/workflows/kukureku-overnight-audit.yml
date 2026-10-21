@@ -1,0 +1,69 @@
+name: Kukureku Overnight Safe Audit
+
+on:
+  # 01:47 IST Mon-Fri (20:17 UTC Sunday-Thursday). UTC cron; can be delayed.
+  schedule:
+    - cron: "17 20 * * 0-4"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: kukureku-nightly-safe-audit
+  cancel-in-progress: true
+
+jobs:
+  overnight:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 14
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      CI: "true"
+    steps:
+      - name: Check out reviewed production source (read-only)
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Set up pinned Node.js and npm cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Install existing lockfile dependencies without funding/audit prompts
+        run: npm ci --no-audit --no-fund
+      - name: Verify tool registry and source-privacy output contract
+        run: |
+          npm run check:tools
+          npm run check:output-evidence
+      - name: Run existing unit and regression tests
+        run: npm test
+      - name: Check current production dependency advisories
+        run: npm audit --omit=dev --audit-level=high
+      - name: Check public homepage, robots and sitemap (one bounded retry)
+        run: |
+          node scripts/auditPublicHttp.mjs || {
+            sleep 12
+            node scripts/auditPublicHttp.mjs
+          }
+      - name: Summarize safe checks without claiming full PDF certification
+        if: always()
+        run: |
+          {
+            echo '## Kukureku Overnight Audit'
+            echo ''
+            echo '- Scope: read-only GitHub Actions, current default branch; no write token, no deployments.'
+            echo '- Checks: lockfile install, tool registry, output privacy, unit tests, prod dependency advisories, public URLs.'
+            echo '- PDF Engine V4 Stable / independent-source certification: NOT assessed by this job.'
+            echo '- Full publisher-PDF and browser acceptance suites remain separately gated.'
+            echo '- Any failure requires review; **no self-fix or automatic merge**.'
+          } >> "$GITHUB_STEP_SUMMARY"
+      - name: Preserve HTTP status metadata only (never source PDFs)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: overnight-public-status-only
+          path: benchmarks/website/reports/public-http.json
+          retention-days: 7
+          if-no-files-found: ignore
