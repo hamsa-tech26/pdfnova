@@ -1,0 +1,111 @@
+{
+  "schema": "kukureku-pubtables-heldout-test20-locked-v1",
+  "lockedFromCompletedRun": "https://github.com/hamsa-tech26/pdfnova/actions/runs/39599997335",
+  "annotationArchiveSha256": "6787eb4da4b6e975ec5df46d1d836d072cce3fb645e150039ac88fd02d056b48",
+  "purpose": "DETECTION_BOX_EVALUATION_ONLY",
+  "independentCellReviewApproved": false,
+  "rightsCleared": false,
+  "formalStableDocumentCredit": 0,
+  "documents": [
+    {
+      "id": "PMC4674581",
+      "sourcePdfSha256": "26e511d3fa7961f17ee8a6239c692836e7e827a21c68255a6dc09f28af378ba8",
+      "sourcePages": 6
+    },
+    {
+      "id": "PMC4646346",
+      "sourcePdfSha256": "2433b69c459b6d80db1de9a8f5ac75a15e8388e796a647a4573c7935fb473a60",
+      "sourcePages": 14
+    },
+    {
+      "id": "PMC5758706",
+      "sourcePdfSha256": "40935bc76d4122d03c11d2e5877eb4665b2dd27220bef5e55e44d71c2d562ccf",
+      "sourcePages": 8
+    },
+    {
+      "id": "PMC5868562",
+      "sourcePdfSha256": "25e1a9662330cc4baceeb671665e4646935ab2788470c33be6c0be8a05901029",
+      "sourcePages": 12
+    },
+    {
+      "id": "PMC5750890",
+      "sourcePdfSha256": "aa789c33dae5aaaa29e3c948aea09fb17ba27b6e0d96b2ea839abe91abf1d62c",
+      "sourcePages": 13
+    },
+    {
+      "id": "PMC4888675",
+      "sourcePdfSha256": "96e617c94e43c24e2d8beed5d57c481d1384df66da1f210ba9cc74beef4c9757",
+      "sourcePages": 10
+    },
+    {
+      "id": "PMC4526471",
+      "sourcePdfSha256": "cfab3eda6c531a14cdd39d9e60dcbca77a933e5b6c52d8bd7ba5bf900ec24b61",
+      "sourcePages": 25
+    },
+    {
+      "id": "PMC4497374",
+      "sourcePdfSha256": "61d0c937f1925ba5d916769d74c2e496c64e2b56f2139d5c0dd7f7798e960c03",
+      "sourcePages": 13
+    },
+    {
+      "id": "PMC5069815",
+      "sourcePdfSha256": "6fdf83bea2dbaabef0429b25c192fa90948e4f8f54d03ac757685d20754502fa",
+      "sourcePages": 14
+    },
+    {
+      "id": "PMC2443377",
+      "sourcePdfSha256": "912a13efec63e7ed2179fd6c894ab23f8c49986e65ac8713bcbe3db3a075846b",
+      "sourcePages": 8
+    },
+    {
+      "id": "PMC2911226",
+      "sourcePdfSha256": "26825a9c1949a325c8617eb229694e0bdd37194e17f534d5dc79a77c83dc44f2",
+      "sourcePages": 16
+    },
+    {
+      "id": "PMC4522978",
+      "sourcePdfSha256": "de2506faad7a74a6c712bcdb06883a53bce99f0ef0d006b135d29e04a48ec675",
+      "sourcePages": 17
+    },
+    {
+      "id": "PMC3563475",
+      "sourcePdfSha256": "62f077a08261a45f0a9986343ceb6d1dc9a6c150912aa2775895c7da59df3051",
+      "sourcePages": 13
+    },
+    {
+      "id": "PMC4587361",
+      "sourcePdfSha256": "d3e3eaeb5ebb7900276a5af0c1445950982db42ac32424cd312c2c22cf082163",
+      "sourcePages": 11
+    },
+    {
+      "id": "PMC5149535",
+      "sourcePdfSha256": "e8a3610a9e4401075968dccca248165645916eafd54493e890eb2c7d759d231e",
+      "sourcePages": 9
+    },
+    {
+      "id": "PMC6034423",
+      "sourcePdfSha256": "3aac5bab25cc7f25886c8f3a2646f18420ce15c1f6e75381a0de6f4c45f39d5e",
+      "sourcePages": 11
+    },
+    {
+      "id": "PMC4913311",
+      "sourcePdfSha256": "fe609246f81cd4a874c16f660a1b82b98ac0a9dfbea57f563060bac85a30df14",
+      "sourcePages": 10
+    },
+    {
+      "id": "PMC6624266",
+      "sourcePdfSha256": "1acfeefb37ce7f92510ba79bbcc79eb59bab659e5a4628b2b93a39d86801d051",
+      "sourcePages": 14
+    },
+    {
+      "id": "PMC6518593",
+      "sourcePdfSha256": "cf58120563cbf5740201a8d2c649f3e2f2b9cd6bfb56c60df1b62ed15b18ca03",
+      "sourcePages": 6
+    },
+    {
+      "id": "PMC3585325",
+      "sourcePdfSha256": "959cbce2d6c72d21cf72f8591c9e58b59a635abd73dd58032dacfb0a8ba02c67",
+      "sourcePages": 12
+    }
+  ]
+}
