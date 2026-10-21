@@ -18,10 +18,6 @@ jobs:
         with:
           node-version: 24
           cache: npm
-      # Temporary read-only package registry probe for a new upstream advisory.
-      # Remove this step after the lockfile has been regenerated and verified.
-      - name: Probe Vite patched metadata (temporary)
-        run: npm view vite@8.2.4 dist.integrity dist.tarball dependencies --json
       - run: npm ci --no-audit --no-fund
       - run: npm run check:golden
       - run: npm run check:golden:realworld
@@ -54,6 +50,9 @@ jobs:
       - name: Audit production dependencies for high and critical advisories
         if: always()
         run: npm audit --omit=dev --audit-level=high
+      - name: Verify patched and pinned Vite development dependency
+        if: always()
+        run: node scripts/checkViteSecurityBaseline.mjs
       - name: Audit complete dependency tree for high and critical advisories
         if: always()
         run: npm audit --audit-level=high
