@@ -95,7 +95,7 @@ export function acceptIdentifierLineReview(
   if (candidate.length > 150) return null;
   // A targeted reread must identify exactly one labelled value; otherwise
   // even a plausible disagreement could be about a different source field.
-  const pattern = /\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/gi;
+  const pattern = /\b((?:(?:record|invoice|application|serial|facility|package)\s+(?:id|number|code)|reference(?:\s+(?:id|number|code))?))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/gi;
   const reads = [...candidate.matchAll(pattern)];
   if (reads.length !== 1) return null;
   const sourceMatches = [...rawOcrText.matchAll(pattern)]
