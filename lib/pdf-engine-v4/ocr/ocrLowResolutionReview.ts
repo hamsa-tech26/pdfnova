@@ -16,7 +16,7 @@ export function shouldReviewLowResolutionOcr(
   const truncatedCommonLabel = /(?:^|\n)\s*tems\s+(?:expected|received)\s*:/im.test(text);
   const unreliableIdentifier =
     Number.isFinite(confidence) && confidence < 80 &&
-    /\b(?:record|invoice|application)\s+(?:id|number)\s*:/i.test(text);
+    /\b(?:(?:record|invoice|application|serial|facility|package)\s+(?:id|number|code)|reference(?:\s+(?:id|number|code))?)\s*:/i.test(text);
   return truncatedCommonLabel || unreliableIdentifier;
 }
 
