@@ -6,6 +6,8 @@ on:
       - "scripts/downloadRelease166Published20.mjs"
       - "scripts/evaluateRelease166VisualTableModel.mjs"
       - "scripts/evaluateRelease166VisualHeldout.mjs"
+      - "benchmarks/release166/**"
+      - "scripts/__tests__/release167NativeShadow.nodecheck.mjs"
       - "e2e/release166_published20.pilot.mjs"
       - "playwright.release166.config.mjs"
       - ".github/workflows/release166-published20.yml"
@@ -32,6 +34,7 @@ jobs:
         run: |
           node --check scripts/downloadRelease166Published20.mjs
           node --check e2e/release166_published20.pilot.mjs
+          node --test scripts/__tests__/release167NativeShadow.nodecheck.mjs
       - name: Enforce certification remains blocked before sampling
         run: |
           node --input-type=module -e '
