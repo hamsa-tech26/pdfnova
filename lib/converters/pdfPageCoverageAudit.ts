@@ -33,8 +33,9 @@ export function auditPdfPageCoverage(
       t.pageNumber===page.pageNumber||
       t.rows.some(r=>r.provenance?.pageNumber===page.pageNumber)).length;
     const paintedImageCount=Math.max(page.imagePaintRegions?.length??0,
-      Number.isSafeInteger(page.imagePaintCount)&&page.imagePaintCount!>=0?
-        page.imagePaintCount!:0);
+      typeof page.imagePaintCount==="number"&&
+      Number.isSafeInteger(page.imagePaintCount)&&page.imagePaintCount>=0?
+        page.imagePaintCount:0);
     const manualImages=listManuallyReviewableImageRegions(page)
       .slice(0,2).map(i=>({imagePaintIndex:i.imagePaintIndex,
         nativeWordOverlap:i.nativeWordOverlap}));
