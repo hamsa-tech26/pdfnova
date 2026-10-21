@@ -85,7 +85,30 @@ describe("R136 explicitly selected image-paint review inventory",()=>{
    expect(chosen.some(item=>item.imagePaintIndex===3)).toBe(false);
    const base=page([{bounds:sample,areaFraction:0.081}]);
    expect(listManuallyReviewableImageRegions({...base,
-     textExtraction:{...base.textExtraction,status:"low"}})).toEqual([]);
+     textExtraction:{...base.textExtraction,status:"low"}})).toHaveLength(1);
    expect(listManuallyReviewableImageRegions({...base,pageNumber:0})).toEqual([]);
+ });
+});
+
+describe("R157 explicitly reviewed low-text and scanned source images",()=>{
+ it("allows a fully painted scanned page only by explicit source-image selection",()=>{
+   const b={x:0,y:0,width:610,height:792};
+   const scan=page([{bounds:b,areaFraction:1}]);
+   scan.textExtraction.status="none";scan.words=[];scan.textExtraction.wordCount=0;
+   expect(planEmbeddedImageOcrRegions([scan])).toEqual([]);
+   expect(listManuallyReviewableImageRegions(scan)).toEqual([{
+     pageNumber:6,sourceBounds:b,imagePaintIndex:0,nativeWordOverlap:0,
+   }]);
+   expect(listManuallyReviewableImageRegions({...scan,
+     textExtraction:{...scan.textExtraction,status:"sufficient"}})).toEqual([]);
+ });
+ it("never admits out-of-bounds, tiny image, or impossible source rectangles",()=>{
+   const src=page([{bounds:{x:0,y:0,width:611,height:792},areaFraction:1},
+     {bounds:{x:2,y:5,width:31,height:25},areaFraction:.001},
+     {bounds:{x:30,y:60,width:200,height:90},areaFraction:.04}]);
+   src.textExtraction.status="low";
+   expect(listManuallyReviewableImageRegions(src).map(x=>x.imagePaintIndex))
+     .toEqual([2]);
+   expect(planEmbeddedImageOcrRegions([src])).toEqual([]);
  });
 });
