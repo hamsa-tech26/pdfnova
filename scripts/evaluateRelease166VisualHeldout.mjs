@@ -22,8 +22,10 @@ const results=thresholds.map(confidence=>({confidence,publishedBoxes:0,
   detectedBoxes:0,matchedBoxes:0,missedBoxes:0,unmatchedPredictions:0}));
 const MODEL="Xenova/table-transformer-detection";
 const REVISION="187ac355617c8fee3d69c00d461ecf8eb8a4a5b7";
+const requestedDtype=process.env.V4_VISUAL_MODEL_DTYPE;
+const dtype=requestedDtype==="fp32"?"fp32":"q8";
 const detector=await pipeline("object-detection",MODEL,{
- revision:REVISION,dtype:"q8",
+ revision:REVISION,dtype,
 });
 let originalPages=0;const start=Date.now();
 for(const source of manifest.documents){
@@ -79,7 +81,7 @@ for(const source of manifest.documents){
 }
 const report={type:"VISUAL_HELDOUT_20_PDF_CONFIDENCE_SWEEP",
  sourceCount:manifest.documents.length,annotatedPages:originalPages,
- model:MODEL,revision:REVISION,dtype:"q8",
+ model:MODEL,revision:REVISION,dtype,
  input:"ORIGINAL_PDF_RASTER_LOCALLY_IN_GITHUB_CI",
  uploadedSourcePixels:false,sourceRightsConfirmed:false,
  thresholdIoU:0.5,baselineKukurekuMatched:5,baselineKukurekuPublished:34,
@@ -89,7 +91,7 @@ const report={type:"VISUAL_HELDOUT_20_PDF_CONFIDENCE_SWEEP",
  caveat:"Fixed grid diagnostic only; do not tune to held-out test labels and claim general accuracy."};
 const out=resolve("benchmarks/release166/reports");
 await mkdir(out,{recursive:true});
-await writeFile(join(out,"visual-heldout20-confidence-sweep.json"),
+await writeFile(join(out,"visual-heldout20-"+dtype+"-confidence-sweep.json"),
  JSON.stringify(report,null,2)+"\n");
 console.log(JSON.stringify(report));
 if(results.some(r=>r.publishedBoxes!==34)||originalPages<20)
