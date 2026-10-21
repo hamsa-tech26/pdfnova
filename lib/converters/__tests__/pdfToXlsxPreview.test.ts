@@ -104,12 +104,12 @@ describe("Release 82 bounded exact-XLSX source table preview",()=>{
     expect(initial.rows[0][0]).toHaveLength(PREVIEW_MAX_CHARACTERS+1);
     const exact=inspectPdfTableCell(doc,0,0,0);
     expect(exact).toEqual({address:"A1",value:"X".repeat(PREVIEW_MAX_CHARACTERS+20),
-      sourcePage:3});
+      sourcePage:3,evidence:"source-text"});
     expect(inspectPdfTableCell(doc,0,1,1)).toEqual({
-      address:"B2",value:"=HYPERLINK(1)",sourcePage:3,
+      address:"B2",value:"=HYPERLINK(1)",sourcePage:3,evidence:"source-text",
     });
     expect(inspectPdfTableCell(doc,0,12,9)).toEqual({
-      address:"J13",value:"R12C9",sourcePage:4,
+      address:"J13",value:"R12C9",sourcePage:4,evidence:"source-text",
     });
     expect(buildPdfTablePreview(doc,0,{rowStart:12,columnStart:8})
       .visibleRowPages).toEqual(Array(11).fill(4));
