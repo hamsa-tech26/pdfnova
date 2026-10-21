@@ -12,6 +12,8 @@ if(manifest.acceptedFormalV4DocumentCredit!==0||
   throw Error("Published20 diagnostic cannot grant formal certification");
 const totals={sourceCount:0,sourcePageCount:0,independentPublishedBoxCount:0,
   matchedBoxCount:0,missedBoxCount:0,unmatchedPredictionCount:0,
+  boxesWithNoNativeWords:0,boxesWithTenPlusNativeWords:0,
+  boxesOverlappingPaints:0,boxesWithNeitherNativeWordsNorPaints:0,
   sourceHashes:new Set()};
 for(const source of manifest.documents){
   test("Published20 held-out original PDF: "+source.id,async({page})=>{
@@ -29,6 +31,7 @@ for(const source of manifest.documents){
     expect(result.document?.pages?.length).toBe(source.pageCount);
     expect(Array.isArray(result.tables)).toBe(true);
     let boxes=0,matched=0,missed=0,unmatched=0;
+    let noNative=0,tenPlusNative=0,paintOverlap=0,noNativeOrPaint=0;
     for(const ref of source.referencePages){
       const annotation=parseDetectionXml(await readFile(
         join(privateRoot,ref.annotation),"utf8"));
@@ -42,6 +45,29 @@ for(const source of manifest.documents){
       matched+=score.matchedCount;
       missed+=score.missedCount;
       unmatched+=score.unmatchedPredictionCount;
+      // R166 source-mapping investigation: use the EXTERNAL published box
+      // only after V4 has emitted its predictions. Never feed it into the
+      // engine or claim that words/paint alone prove a true cell.
+      for(const box of expected){
+        const native=(pageModel.words??[]).filter(w=>{
+          const x=w.bounds.x+w.bounds.width/2,y=w.bounds.y+w.bounds.height/2;
+          return w.extractionProvenance?.source!=="ocr-tesseract"&&
+            x>=box.x&&x<=box.x+box.width&&
+            y>=box.y&&y<=box.y+box.height;
+        }).length;
+        const painted=(pageModel.imagePaintRegions??[]).some(r=>{
+          const z=r.bounds;
+          const xx=Math.max(0,Math.min(box.x+box.width,z.x+z.width)-
+            Math.max(box.x,z.x));
+          const yy=Math.max(0,Math.min(box.y+box.height,z.y+z.height)-
+            Math.max(box.y,z.y));
+          return xx*yy/(box.width*box.height)>=.1;
+        });
+        if(native===0)noNative++;
+        if(native>=10)tenPlusNative++;
+        if(painted)paintOverlap++;
+        if(native===0&&!painted)noNativeOrPaint++;
+      }
     }
     totals.sourceCount++;
     totals.sourcePageCount+=source.pageCount;
@@ -49,10 +75,18 @@ for(const source of manifest.documents){
     totals.matchedBoxCount+=matched;
     totals.missedBoxCount+=missed;
     totals.unmatchedPredictionCount+=unmatched;
+    totals.boxesWithNoNativeWords+=noNative;
+    totals.boxesWithTenPlusNativeWords+=tenPlusNative;
+    totals.boxesOverlappingPaints+=paintOverlap;
+    totals.boxesWithNeitherNativeWordsNorPaints+=noNativeOrPaint;
     totals.sourceHashes.add(source.sha256);
     const report={sourceId:source.id,sourceSha256:source.sha256,
       sourcePages:source.pageCount,referenceBoxCount:boxes,matchedBoxCount:matched,
       missedBoxCount:missed,unmatchedPredictionCount:unmatched,
+      publishedBoxesWithNoNativeWords:noNative,
+      publishedBoxesWithTenPlusNativeWords:tenPlusNative,
+      publishedBoxesOverlappingImagePaints:paintOverlap,
+      publishedBoxesWithNeitherNativeWordsNorPaints:noNativeOrPaint,
       matchingIoU:0.50,referenceType:"PUBLISHED_DETECTION_BOXES_ONLY",
       cellGroundTruthVerified:false,rightsIndependentlyReviewed:false,
       acceptedFormalV4Credit:0};
@@ -69,6 +103,11 @@ test.afterAll(async()=>{
     publishedBoxes:totals.independentPublishedBoxCount,
     matchedBoxes:totals.matchedBoxCount,missedBoxes:totals.missedBoxCount,
     unmatchedPredictions:totals.unmatchedPredictionCount,thresholdIoU:0.5,
+    boxesWithNoNativeWords:totals.boxesWithNoNativeWords,
+    boxesWithTenPlusNativeWords:totals.boxesWithTenPlusNativeWords,
+    boxesOverlappingPaints:totals.boxesOverlappingPaints,
+    boxesWithNeitherNativeWordsNorPaints:
+      totals.boxesWithNeitherNativeWordsNorPaints,
     certifiedDocuments:0,certifiedCellStructures:0,formalV4Stable:"BLOCKED",
     note:"Independent published DETECTION boxes only. No independently human-verified cell accuracy or rights approval."};
   await mkdir(join(root,"reports"),{recursive:true});
