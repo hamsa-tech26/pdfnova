@@ -103,10 +103,17 @@ export function suggestPdfV4OcrColumnPreview(
   const left = makeLines(words.filter((w) => w.bounds.x1 < best!.split));
   const right = makeLines(words.filter((w) => w.bounds.x0 > best!.split));
   if (left.length < 4 || right.length < 4) return null;
-  // This is a review aid rather than a replacement for source reading order.
+  // OCR words crossing the column split (including a true full-width
+  // heading or a misplaced sidebar word) must not disappear from the
+  // alternate view. Keep them unassigned, rather than guessing order.
+  const unassigned=words.filter(w=>
+    w.bounds.x1>=best!.split && w.bounds.x0<=best!.split);
+  const extra=unassigned.length?
+    "\n\n[SPANNING OR UNCERTAIN WORDS - SOURCE ORDER UNVERIFIED]\n"+
+    linesToText(makeLines(unassigned)):"";
   return "[LEFT COLUMN - CHECK AGAINST ORIGINAL]\n" +
     linesToText(left) + "\n\n[RIGHT COLUMN - CHECK AGAINST ORIGINAL]\n" +
-    linesToText(right);
+    linesToText(right)+extra;
 }
 
 export function buildPdfV4OcrTextExport(
