@@ -1,5 +1,6 @@
 import type { PdfV4OcrPageResult, PdfV4OcrWord } from "./ocrRecognizer";
 import { inspectPdfV4OcrCheckboxCandidates, formatPdfV4OcrCheckboxCandidates } from "./ocrCheckboxReview";
+import {inspectOcrIdentifierRisks} from "./ocrIdentifierRisks";
 
 /**
  * OCR text is evidence, not a structured/form-verified transcript.
@@ -82,30 +83,45 @@ export function suggestPdfV4OcrColumnPreview(
     Number.isFinite(word.bounds.y1),
   );
   if (words.length < 25) return null;
+  // Very wide source words can be full-width headings or misplaced sidebar
+  // regions. Treat them as UNASSIGNED evidence instead of forcing an
+  // arbitrary column and misleadingly losing a heading.
+  const spanning=words.filter(w=>w.bounds.x1-w.bounds.x0>=
+    page.renderedWidth*.28&&w.bounds.x0<page.renderedWidth*.75&&
+    w.bounds.x1>page.renderedWidth*.25);
+  const columnWords=words.filter(w=>!spanning.includes(w));
+  if(columnWords.length<25)return null;
 
   let best: { split: number; crossing: number; balance: number } | null = null;
   for (let pct = 35; pct <= 80; pct += 1) {
     const split = (page.renderedWidth * pct) / 100;
-    const left = words.filter((w) => w.bounds.x1 < split);
-    const right = words.filter((w) => w.bounds.x0 > split);
-    const crossing = words.length - left.length - right.length;
-    if (left.length < 10 || right.length < 10 || crossing > words.length * 0.025) {
+    const left = columnWords.filter((w) => w.bounds.x1 < split);
+    const right = columnWords.filter((w) => w.bounds.x0 > split);
+    const crossing = columnWords.length - left.length - right.length;
+    if (left.length < 10 || right.length < 10 || crossing > columnWords.length * 0.025) {
       continue;
     }
-    const balance = Math.min(left.length, right.length) / words.length;
+    const balance = Math.min(left.length, right.length) / columnWords.length;
     if (!best || crossing < best.crossing ||
         (crossing === best.crossing && balance > best.balance)) {
       best = { split, crossing, balance };
     }
   }
   if (!best) return null;
-  const left = makeLines(words.filter((w) => w.bounds.x1 < best!.split));
-  const right = makeLines(words.filter((w) => w.bounds.x0 > best!.split));
+  const left = makeLines(columnWords.filter((w) => w.bounds.x1 < best!.split));
+  const right = makeLines(columnWords.filter((w) => w.bounds.x0 > best!.split));
   if (left.length < 4 || right.length < 4) return null;
-  // This is a review aid rather than a replacement for source reading order.
+  // OCR words crossing the column split (including a true full-width
+  // heading or a misplaced sidebar word) must not disappear from the
+  // alternate view. Keep them unassigned, rather than guessing order.
+  const unassigned=[...spanning,...columnWords.filter(w=>
+    w.bounds.x1>=best!.split && w.bounds.x0<=best!.split)];
+  const extra=unassigned.length?
+    "\n\n[SPANNING OR UNCERTAIN WORDS - SOURCE ORDER UNVERIFIED]\n"+
+    linesToText(makeLines(unassigned)):"";
   return "[LEFT COLUMN - CHECK AGAINST ORIGINAL]\n" +
     linesToText(left) + "\n\n[RIGHT COLUMN - CHECK AGAINST ORIGINAL]\n" +
-    linesToText(right);
+    linesToText(right)+extra;
 }
 
 export function buildPdfV4OcrTextExport(
@@ -118,6 +134,13 @@ export function buildPdfV4OcrTextExport(
   }
   if (/\b(?:record\s+id|invoice\s+id|application\s+id|serial\s+number|reference\s*(?:number|:)|facility\s+code|package\s+code)\b/i.test(text)) {
     warnings.push("Verify exact identifiers character by character (for example O/0, I/1 and 7/T).");
+  }
+  const identifierRisks=inspectOcrIdentifierRisks(text);
+  if(identifierRisks.length) {
+    warnings.push("Potential OCR character confusion in "+
+      identifierRisks.length+" exact identifier(s). Check those "+
+      "characters against the original PDF; no automatic correction "+
+      "has been applied.");
   }
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
@@ -154,6 +177,14 @@ export function formatPdfV4OcrPageExport(
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
       output.columnPreview);
+  }
+  const risks=inspectOcrIdentifierRisks(output.text);
+  if(risks.length){
+    sections.push("[EXACT IDENTIFIER SOURCE CHECK - NOT VERIFIED]\n" +
+      risks.map(r=>"OCR line "+r.lineNumber+" ("+r.label+
+        "): "+r.ambiguousCharacterCount+
+        " visually confusable characters; verify source image; not corrected.")
+        .join("\n"));
   }
   if (page.lowResolutionIdentifierReview) {
     sections.push("[OPTIONAL TARGETED IDENTIFIER OCR - NOT VERIFIED]\n" +

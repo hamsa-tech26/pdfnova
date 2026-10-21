@@ -16,7 +16,7 @@ export function shouldReviewLowResolutionOcr(
   const truncatedCommonLabel = /(?:^|\n)\s*tems\s+(?:expected|received)\s*:/im.test(text);
   const unreliableIdentifier =
     Number.isFinite(confidence) && confidence < 80 &&
-    /\b(?:record|invoice|application)\s+(?:id|number)\s*:/i.test(text);
+    /\b(?:(?:record|invoice|application|serial|facility|package)\s+(?:id|number|code)|reference(?:\s+(?:id|number|code))?)\s*:/i.test(text);
   return truncatedCommonLabel || unreliableIdentifier;
 }
 
@@ -53,12 +53,21 @@ export function planLowResolutionIdentifierLine(
       candidate.bounds.x0 >= word.bounds.x0 - heightPx,
     ).sort((a, b) => a.bounds.x0 - b.bounds.x0);
     const index = line.indexOf(word);
-    if (index < 0 || index + 2 >= line.length) continue;
-    const key = line[index + 1].text.replace(/[^A-Za-z]/g, "").toLowerCase();
-    if (!/^(id|number|code)$/.test(key)) continue;
-    const rest = line.slice(index + 2).filter((w) => w.text.trim().length);
-    if (!rest.length) continue;
-    const range = line.slice(index);
+    if(index<0)continue;
+    const standaloneReference=base==="reference"&&
+      /:\s*$/.test(word.text);
+    const key=standaloneReference?"reference":
+      line[index+1]?.text.replace(/[^A-Za-z]/g,"").toLowerCase();
+    if(!standaloneReference&&!/^(id|number|code)$/.test(key??""))continue;
+    const offset=standaloneReference?1:2;
+    const rest=line.slice(index+offset).filter(w=>w.text.trim().length);
+    if(!rest.length||rest.length>6||line.length-index>9)continue;
+    if(!rest.some(w=>/[A-Za-z0-9]{3}/.test(w.text)))continue;
+    // A candidate field must be compact enough to isolate a single source
+    // identifier, not capture an unrelated article paragraph or second column.
+    const range=line.slice(index);
+    if(range[range.length-1].bounds.x1-word.bounds.x0>width*.46)
+      continue;
     const minX = Math.min(...range.map((w) => w.bounds.x0));
     const maxX = Math.max(...range.map((w) => w.bounds.x1));
     const minY = Math.min(...range.map((w) => w.bounds.y0));
@@ -86,7 +95,7 @@ export function acceptIdentifierLineReview(
   if (candidate.length > 150) return null;
   // A targeted reread must identify exactly one labelled value; otherwise
   // even a plausible disagreement could be about a different source field.
-  const pattern = /\b((?:record|invoice|application|serial|facility|package|reference)\s+(?:id|number|code))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/gi;
+  const pattern = /\b((?:(?:record|invoice|application|serial|facility|package)\s+(?:id|number|code)|reference(?:\s+(?:id|number|code))?))\s*:\s*([A-Za-z0-9][A-Za-z0-9._/-]{2,})\b/gi;
   const reads = [...candidate.matchAll(pattern)];
   if (reads.length !== 1) return null;
   const sourceMatches = [...rawOcrText.matchAll(pattern)]
