@@ -1,5 +1,6 @@
 import type {PdfXlsxInput} from "./pdfToXlsx";
 import {preparePdfV4XlsxExport,type PdfV4XlsxExportSource} from "./pdfToXlsxQuality";
+import {isScientificReviewOnlyTable} from "./pdfToXlsxStructuralEvidence";
 
 /** A candidate passes unchanged V4 export checks, not an independent content review. */
 export type PdfXlsxTableChoice={
@@ -54,12 +55,7 @@ export function inspectPdfV4XlsxChoices(
       "Page "+(pages[0]??table.pageNumber);
     try{
       const plan=prepareSelectedPdfV4XlsxExport(source,index);
-      const reviewOnly=table.rows.some(row=>{
-        const id=row.provenance?.blockId??"";
-        return id.startsWith("native-compact-grid-")||
-          id.startsWith("native-captioned-text-grid-")||
-          id.startsWith("native-caption-header-grid-");
-      });
+      const reviewOnly=isScientificReviewOnlyTable(table);
       const mayOmitPaintedContent=(plan.reviewNotes??[]).some(note=>
         note.includes("POSSIBLE RASTER CONTINUATION"));
       const reason=mayOmitPaintedContent?
