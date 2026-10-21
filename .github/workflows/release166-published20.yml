@@ -1,0 +1,56 @@
+name: Real Publisher 20-Document Table Diagnostic
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/downloadRelease166Published20.mjs"
+      - "e2e/release166_published20.pilot.mjs"
+      - "playwright.release166.config.mjs"
+      - ".github/workflows/release166-published20.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: published20-pr-166
+  cancel-in-progress: true
+jobs:
+  independently-published-source-diagnostic:
+    runs-on: ubuntu-latest
+    timeout-minutes: 42
+    env:
+      NEXT_TELEMETRY_DISABLED: 1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify source-only benchmark scripts compile
+        run: |
+          node --check scripts/downloadRelease166Published20.mjs
+          node --check e2e/release166_published20.pilot.mjs
+      - name: Enforce certification remains blocked before sampling
+        run: |
+          node --input-type=module -e '
+          import {readFileSync} from "node:fs";
+          import {checkRelease37Gate} from "./scripts/checkRelease37Gate.mjs";
+          const report=JSON.parse(readFileSync("benchmarks/release37/report.json","utf8"));
+          if(checkRelease37Gate(report).status!=="BLOCKED")process.exit(1);
+          '
+      - name: Fetch checksum-pinned published TEST archive and twenty original PDFs
+        run: node scripts/downloadRelease166Published20.mjs
+      - name: Install ephemeral Chrome automation
+        run: |
+          npm install --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Score source PDF bounding boxes, never feed labels into detector
+        run: npx playwright test --config=playwright.release166.config.mjs
+      - name: Preserve numeric external benchmark scores only
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-20-source-table-diagnostic-numeric-only
+          path: benchmarks/release166/reports/*.json
+          retention-days: 7
+          if-no-files-found: warn
