@@ -172,11 +172,11 @@ export function formatPdfV4OcrPageExport(
   }
   const risks=inspectOcrIdentifierRisks(output.text);
   if(risks.length){
-    sections.push("[EXACT IDENTIFIER SOURCE CHECK - NOT VERIFIED]\\n" +
+    sections.push("[EXACT IDENTIFIER SOURCE CHECK - NOT VERIFIED]\n" +
       risks.map(r=>"OCR line "+r.lineNumber+" ("+r.label+
         "): "+r.ambiguousCharacterCount+
         " visually confusable characters; verify source image; not corrected.")
-        .join("\\n"));
+        .join("\n"));
   }
   if (page.lowResolutionIdentifierReview) {
     sections.push("[OPTIONAL TARGETED IDENTIFIER OCR - NOT VERIFIED]\n" +
