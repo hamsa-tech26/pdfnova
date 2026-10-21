@@ -298,7 +298,8 @@ export function preparePdfV4XlsxExport(
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
     id.startsWith("native-captioned-text-grid-")||
-    id.startsWith("native-caption-header-grid-"));
+    id.startsWith("native-caption-header-grid-")||
+      id.startsWith("native-short-header-grid-"));
   const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
     needsExplicitReview(row.provenance?.blockId)));
   const excludedReviewCount=!options?.allowSelectedCompactGrid?

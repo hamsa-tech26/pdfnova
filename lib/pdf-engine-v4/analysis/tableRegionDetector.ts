@@ -1,6 +1,7 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
 import {findNativeCompactScientificGrids} from "./nativeCompactScientificGrid";
+import {findNativeShortHeaderGrids} from "./nativeShortHeaderGrid";
 import {findCaptionedTwoColumnTextGrids} from "./captionedTwoColumnTextGrid";
 import {findNativeCaptionHeaderScientificGrids} from "./nativeScientificCaptionHeaderGrid";
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
@@ -1583,8 +1584,17 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.alignment.score>=16 &&
       candidate.analysis.breakdown.spacing.score>=10 &&
       candidate.analysis.totalScore>=32);
-  const captionedTextGrids=findCaptionedTwoColumnTextGrids(splitNativeBlocks)
+  const shortHeaderGrids=findNativeShortHeaderGrids(splitNativeBlocks)
     .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
+    // Strong source header and four independently placed numeric rows are
+    // separate evidence; never relax the generic table threshold.
+    .filter(candidate=>
+      candidate.analysis.breakdown.alignment.score>=12&&
+      candidate.analysis.breakdown.spacing.score>=8);
+  const captionedTextGrids=findCaptionedTwoColumnTextGrids(splitNativeBlocks)
+    .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,...shortHeaderGrids].some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
     .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}))
     // Long native text cells can lack numeric and regular-spacing scores.
@@ -1595,12 +1605,12 @@ export function detectTableRegionsForPage(
       candidate.analysis.breakdown.alignment.score>=12);
   const headerNativeGrids=headerSourceGrids
     .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
-      ...captionedTextGrids].some(existing=>
+      ...shortHeaderGrids,...captionedTextGrids].some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)));
   // Admission comes from source caption + repeated native numeric anchors,
   // not generic prose scoring; downstream table building remains mandatory.
-  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids,
-    ...headerNativeGrids]
+  const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,
+    ...shortHeaderGrids,...captionedTextGrids,...headerNativeGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();
