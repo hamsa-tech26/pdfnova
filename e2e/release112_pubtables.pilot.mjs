@@ -340,6 +340,33 @@ for(const source of manifest.documents){
         originalNativeTableUnmodified:true,ocrAutomaticallyRun:false,
         acceptedCells:0,formalV4Credit:0}));
     }
+    // R159: source-backed consumer navigation to the real, unrecognized
+    // original publisher page 4 painted image. Original page 1 has native
+    // article prose but no table; do not offer phantom image OCR there.
+    if(source.id==="PMC1064082"){
+      await page.goto("/pdf-to-excel");
+      await page.locator('input[type="file"]').first()
+        .setInputFiles(join(root,"private",source.id+".pdf"));
+      await page.getByRole("button",{name:"Inspect embedded images for optional OCR"})
+        .click();
+      const sourceAudit=page.getByRole("region",{
+        name:"Source page completeness review",
+      });
+      await expect(sourceAudit).toBeVisible();
+      await expect(sourceAudit.getByText(/PDF page 1.*0 detected/)).toBeVisible();
+      const p4=sourceAudit.getByRole("button",{
+        name:/Select image .* on PDF page 4 for manual OCR review/,
+      });
+      expect(await p4.count()).toBeGreaterThan(0);
+      await p4.first().click();
+      await expect(page.getByLabel("Page to review")).toHaveValue("4");
+      await expect(page.getByLabel("Image region to review")).not.toHaveValue("");
+      await expect(page.getByText(/No OCR has run/)).toBeVisible();
+      console.log(JSON.stringify({type:"R159_PUBLISHER_UNRECOGNIZED_IMAGE_REVIEW",
+        originalPage:4,sourceId:source.id,unpromotedProsePage:1,
+        sourceImageSelectionOnly:true,autoOcr:false,
+        autoAddedCells:0,acceptedFormalV4Credit:0}));
+    }
     runs.push({id:source.id,sourceSha256:source.sha256,annotatedPages:pageResults,
       totalTableCandidates:allTables.length});
     // Only aggregate counts and IoUs are persisted; no article text/PDF bytes.
