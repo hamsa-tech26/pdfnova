@@ -62,9 +62,10 @@ jobs:
         env:
           HF_HUB_DISABLE_TELEMETRY: "1"
         run: node scripts/evaluateRelease166VisualTableModel.mjs
-      - name: Benchmark CPU-local visual model on twenty held-out original PDFs
+      - name: Compare full-precision local visual table model on twenty original PDFs
         env:
           HF_HUB_DISABLE_TELEMETRY: "1"
+          V4_VISUAL_MODEL_DTYPE: "fp32"
         run: node scripts/evaluateRelease166VisualHeldout.mjs
       - name: Preserve numeric external benchmark scores only
         if: always()
