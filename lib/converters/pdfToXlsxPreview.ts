@@ -1,5 +1,6 @@
 import type {PdfV4XlsxExportSource} from "./pdfToXlsxQuality";
 import {prepareSelectedPdfV4XlsxExport} from "./pdfToXlsxSelection";
+import {classifySourceCell,type SourceCellEvidence} from "./pdfToXlsxStructuralEvidence";
 
 export const PREVIEW_MAX_ROWS=12;
 export const PREVIEW_MAX_COLUMNS=8;
@@ -30,6 +31,7 @@ export type PdfTablePreview={
   /** Pair merges can render only when all seven header columns are visible. */
   pairedHeaderLayout:boolean;
   rows:string[][];
+  cellEvidence:SourceCellEvidence[][];
 };
 
 function printable(value:unknown):{text:string;trimmed:boolean}{
@@ -73,6 +75,9 @@ export function buildPdfTablePreview(
       if(v.trimmed)trimmedCells++;
       return v.text;
     }));
+  const cellEvidence=Array.from({length:visibleRows},(_,rowOffset)=>
+    Array.from({length:visibleColumns},(_,columnOffset)=>
+      classifySourceCell(t.rows[rowStart+rowOffset],columnStart+columnOffset)));
   const sourcePages=[...new Set(t.rows.map(row=>
     row.provenance?.pageNumber??t.pageNumber))].sort((a,b)=>a-b);
   const visibleRowPages=Array.from({length:visibleRows},(_,offset)=>
@@ -81,7 +86,7 @@ export function buildPdfTablePreview(
     rowStart,columnStart,rowEnd,columnEnd,visibleRows,visibleColumns,
     trimmedCells,visibleRowPages,
     pairedHeaderLayout:sheet.nativePairedHeader===true &&
-      rowStart===0 && columnStart===0 && visibleColumns>=7,rows};
+      rowStart===0 && columnStart===0 && visibleColumns>=7,rows,cellEvidence};
 }
 
 /** User-readable A1 address, pure and independent of source cell content. */
@@ -116,7 +121,7 @@ export function parsePdfTableCellAddress(address:string,totalRows:number,totalCo
 /** Exact value view for any validated source cell, including the hidden tail. */
 export function inspectPdfTableCell(
   source:PdfV4XlsxExportSource,index:number,rowIndex:number,columnIndex:number,
-):{address:string;value:string;sourcePage:number}{
+):{address:string;value:string;sourcePage:number;evidence:SourceCellEvidence}{
   // Same quality gate and export plan as the XLSX/CSV download.
   const plan=prepareSelectedPdfV4XlsxExport(source,index);
   const table=source.tables[index];
@@ -126,5 +131,6 @@ export function inspectPdfTableCell(
   if(rowIndex>=sheet.rows.length||columnIndex>=totalColumns)
     throw new Error("The requested cell is outside this source table.");
   const sourcePage=table.rows[rowIndex]?.provenance?.pageNumber??table.pageNumber;
-  return {address,value:String(sheet.rows[rowIndex][columnIndex]??""),sourcePage};
+  return {address,value:String(sheet.rows[rowIndex][columnIndex]??""),sourcePage,
+    evidence:classifySourceCell(table.rows[rowIndex],columnIndex)};
 }
