@@ -67,8 +67,17 @@ async function run(){
     group.push({page:Number(match[2]),path:item});
     lookup.set(match[1],group);
   }
+  const locked=JSON.parse(await readFile(join(root,"locked-sources.json"),"utf8"));
+  if(locked.schema!=="kukureku-pubtables-heldout-test20-locked-v1"||
+    locked.formalStableDocumentCredit!==0||
+    locked.annotationArchiveSha256!==archiveSha||
+    locked.documents?.length!==SOURCE_TARGET)
+    throw Error("Invalid independently published source pin set");
   const chosen=[];let attempted=0,skipped=0;
-  for(const id of candidateDocumentIds(listing)){
+  for(const pinned of locked.documents){
+    const id=pinned.id;
+    if(!/^PMC\d{5,10}$/.test(id)||!lookup.has(id))
+      throw Error("Locked publisher source missing from official annotation archive");
     if(chosen.length>=SOURCE_TARGET)break;
     attempted++;
     const source="https://pmc-oa-opendata.s3.amazonaws.com/"+id+".1/"+id+".1.pdf";
@@ -84,6 +93,8 @@ async function run(){
       if(!annotations.length||annotations.length>25)
         throw Error("Annotation count unsuitable");
       const sourceHash=digest(bytes);
+      if(sourceHash!==pinned.sourcePdfSha256||pages!==pinned.sourcePages)
+        throw Error("Locked original PDF hash or page count changed");
       await writeFile(join(hidden,id+".pdf"),bytes);
       const references=[];
       for(const entry of annotations){
@@ -99,17 +110,16 @@ async function run(){
       console.log(JSON.stringify({id,pages,referencePages:references.length,
         publishedHashVerified:true,formalV4Credit:0}));
     }catch(err){
-      skipped++;
-      // No private PDF, PDF text, URLs, or raw error payload printed.
-      console.log(JSON.stringify({candidateNumber:attempted,accepted:false,
-        reason:"unavailable-or-out-of-bounds",formalV4Credit:0}));
+      // Locked sources are mandatory. Do not silently substitute a different
+      // original PDF and bias results or silently lose failed documents.
+      throw Error("Pinned publisher document unavailable or mismatched: "+id);
     }
   }
   const manifest={schema:"kukureku-pubtables-test20-v1",
     status:chosen.length===SOURCE_TARGET?"PUBLISHED_BOX_BENCHMARK_READY":"INCOMPLETE",
     source:"PubTables-1M held-out detection TEST annotations",
     annotationArchiveSha256:archiveSha,
-    sampledDeterministically:true,
+    sampledDeterministically:true,lockedSourceHashesVerified:true,
     acceptedFormalV4DocumentCredit:0,
     rightsAndIndependentCellReferenceStatus:"NOT_REVIEWED",
     attemptedCandidates:attempted,skippedCandidates:skipped,
