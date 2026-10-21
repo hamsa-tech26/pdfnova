@@ -55,7 +55,7 @@ export function planLowResolutionIdentifierLine(
     const index = line.indexOf(word);
     if(index<0)continue;
     const standaloneReference=base==="reference"&&
-      /:\\s*$/.test(word.text);
+      /:\s*$/.test(word.text);
     const key=standaloneReference?"reference":
       line[index+1]?.text.replace(/[^A-Za-z]/g,"").toLowerCase();
     if(!standaloneReference&&!/^(id|number|code)$/.test(key??""))continue;
