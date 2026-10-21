@@ -41,6 +41,21 @@ for(const source of manifest.documents){
         join(privateRoot,ref.annotation),"utf8"));
       const pageModel=result.document.pages[ref.page-1];
       expect(pageModel.pageNumber).toBe(ref.page);
+      // PubTables Detection XML boxes describe a published PAGE IMAGE. This
+      // independently downloaded PMC PDF has a pinned source SHA, but its
+      // pixels have NOT been verified identical to that published page image.
+      // Comparing aspect ratios can reject mismatches, not prove identity.
+      const imageAspect=annotation.imageWidth/annotation.imageHeight;
+      const sourceAspect=pageModel.width/pageModel.height;
+      const aspectDeviationPct=100*Math.abs(imageAspect-sourceAspect)/imageAspect;
+      expect(Number.isFinite(aspectDeviationPct)).toBe(true);
+      console.log(JSON.stringify({
+        type:"PUBLISHED_PAGE_IMAGE_MAPPING_PREFLIGHT",
+        sourceId:source.id,originalPage:ref.page,
+        aspectDeviationPct:Number(aspectDeviationPct.toFixed(3)),
+        exactPublishedImagePixelIdentityVerified:false,
+        originalPdfShaPinned:true,
+        pixelEquivalenceStatus:"NOT_VERIFIED"}));
       const expected=annotation.boxes.map(x=>annotationToPdfBox(x,annotation,pageModel));
       const predictions=result.tables.filter(t=>t.pageNumber===ref.page)
         .map(t=>t.bounds);
@@ -133,6 +148,7 @@ for(const source of manifest.documents){
       publishedBoxesOverlappingImagePaints:paintOverlap,
       publishedBoxesWithNeitherNativeWordsNorPaints:noNativeOrPaint,
       matchingIoU:0.50,referenceType:"PUBLISHED_DETECTION_BOXES_ONLY",
+      publishedPagePixelIdentityVerified:false,
       cellGroundTruthVerified:false,rightsIndependentlyReviewed:false,
       acceptedFormalV4Credit:0};
     await mkdir(join(root,"reports"),{recursive:true});
@@ -157,6 +173,7 @@ test.afterAll(async()=>{
     boxesOverlappingPaints:totals.boxesOverlappingPaints,
     boxesWithNeitherNativeWordsNorPaints:
       totals.boxesWithNeitherNativeWordsNorPaints,
+    verifiedPublishedPagePixelIdentities:0,
     certifiedDocuments:0,certifiedCellStructures:0,formalV4Stable:"BLOCKED",
     note:"Independent published DETECTION boxes only. No independently human-verified cell accuracy or rights approval."};
   await mkdir(join(root,"reports"),{recursive:true});
