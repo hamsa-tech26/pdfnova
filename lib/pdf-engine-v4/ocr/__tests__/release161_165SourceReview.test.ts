@@ -67,7 +67,7 @@ describe("R162 bounded reread of independent Reference: source line",()=>{
   });
 });
 describe("R163 conservatively refuse ambiguous OCR checkbox assignments",()=>{
-  const headings=[w("Pass",550,80),w("Fail",650,80),w("N/A",750,80)];
+  const headings=[w("Pass",550,80),w("Fail",650,80),w("N/A",750,80),w("Checklist",40,40)];
   const row=[w("Water",40,160),w("works",98,160),w("X",650,160)];
   it("shows evidence only when header and row text are reliable",()=>{
     expect(inspectPdfV4OcrCheckboxCandidates(page([...headings,...row])))
