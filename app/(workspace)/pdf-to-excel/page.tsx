@@ -1014,6 +1014,18 @@ export default function PdfToExcelPage() {
               className="w-full rounded-xl border border-blue-300 bg-white px-5 py-3 font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-200">
               {busy?"Preparing selected table…":"Export selected table (.csv)"}
             </button>
+            {inspected&&selectedIndex!==null&&(()=>{
+              const evidence=inspectTableStructuralEvidence(inspected.tables[selectedIndex]);
+              return evidence.missingSourcePositions>0||
+                evidence.explicitlyEmptySourceCells>0;
+            })()&&(
+              <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+                This selected table has unverified empty positions. Excel includes
+                a review worksheet, but CSV cannot carry those source-evidence
+                warnings. Before CSV export, inspect every source gap against
+                the PDF; missing detected cells are not verified PDF blanks.
+              </p>
+            )}
             <p className="text-xs text-slate-600 dark:text-slate-300">
               CSV retains table cells but not merged headings or a review-notes sheet.
               Formula-like values are text-escaped; verify against the original PDF.
