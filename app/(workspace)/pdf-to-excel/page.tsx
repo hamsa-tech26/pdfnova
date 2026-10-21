@@ -1106,6 +1106,12 @@ export default function PdfToExcelPage() {
             Choose another table from this PDF
           </button>
         )}
+        {!busy && error && file && !inspected &&(
+          <button type="button" onClick={inspectImageContent}
+            className="w-full rounded-lg border border-amber-500 px-4 py-3 text-sm font-semibold text-amber-800 dark:text-amber-200">
+            Inspect source pages and recoverable images instead (local)
+          </button>
+        )}
         {!busy && error && <ErrorCard title="Excel conversion withheld"
           description={error}
           reasons={["Scanned, mixed, or image-only PDFs are not supported.",
