@@ -62,7 +62,31 @@ for(const source of manifest.documents){
       // R166 source-mapping investigation: use the EXTERNAL published box
       // only after V4 has emitted its predictions. Never feed it into the
       // engine or claim that words/paint alone prove a true cell.
-      for(const box of expected){
+      for(const [sourceBoxIndex,box] of expected.entries()){
+        const inside=(w)=>{
+          const x=w.bounds.x+w.bounds.width/2,y=w.bounds.y+w.bounds.height/2;
+          return x>=box.x&&x<=box.x+box.width&&y>=box.y&&y<=box.y+box.height;
+        };
+        const bands=(pageModel.lines??[]).map(line=>(
+          line.words??[]).filter(w=>inside(w)&&
+          w.extractionProvenance?.source!=="ocr-tesseract"))
+          .filter(words=>words.length>0);
+        const numeric=/^[+\\-−]?(?:\\d{1,3}(?:,\\d{3})+|\\d+)(?:\\.\\d+)?(?:%|[a-zA-Z]{1,2})?$/u;
+        const selected=(pageModel.words??[]).filter(w=>inside(w)&&
+          w.extractionProvenance?.source!=="ocr-tesseract");
+        const sourceRows={originalPublisherPage:ref.page,
+          originalPublishedBoxIndex:sourceBoxIndex,
+          baselineIoU:score.referenceBestIoU[sourceBoxIndex],
+          nativeWords:selected.length,linesWithAnyNativeWords:bands.length,
+          linesWithTwoOrMoreWords:bands.filter(b=>b.length>=2).length,
+          linesWithThreeOrMoreWords:bands.filter(b=>b.length>=3).length,
+          linesWithTwoOrMoreNumbers:bands.filter(b=>
+            b.filter(w=>numeric.test(w.text.trim())).length>=2).length,
+          totalNumericWords:selected.filter(w=>numeric.test(w.text.trim())).length,
+          linesWithEightOrMoreWords:bands.filter(b=>b.length>=8).length,
+          largestLineWordCount:Math.max(0,...bands.map(b=>b.length))};
+        console.log(JSON.stringify({type:"R168_PUBLISHED_SOURCE_LAYOUT_DIAG",
+          sourceId:source.id,...sourceRows}));
         const native=(pageModel.words??[]).filter(w=>{
           const x=w.bounds.x+w.bounds.width/2,y=w.bounds.y+w.bounds.height/2;
           return w.extractionProvenance?.source!=="ocr-tesseract"&&
