@@ -8,9 +8,11 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { analyzePdfV4 } from "@/lib/pdf-engine-v4/pipeline/analyzePdfV4";
 import { preparePdfV4XlsxExport } from "@/lib/converters/pdfToXlsxQuality";
+import {inspectTableStructuralEvidence,isScientificReviewOnlyTable} from "@/lib/converters/pdfToXlsxStructuralEvidence";
 import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
+import {validateLocalPdfInput} from "@/lib/converters/localPdfInputGate";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
 import {listManuallyReviewableImageRegions} from "@/lib/pdf-engine-v4/ocr/embeddedImageRegionPlanner";
@@ -45,6 +47,7 @@ export default function PdfToExcelPage() {
   const [scientificImageTargets,setScientificImageTargets] =
     useState<ScientificRasterReviewTarget[]>([]);
   const [selectedIndex, setSelectedIndex] = useState<number | null>(null);
+  const [scientificTableConfirmed,setScientificTableConfirmed]=useState(false);
   const [preview, setPreview] = useState<PdfTablePreview | null>(null);
   const [cellAddressInput,setCellAddressInput]=useState("");
   const [cellDetail,setCellDetail]=useState<ReturnType<typeof inspectPdfTableCell>|null>(null);
@@ -110,7 +113,7 @@ export default function PdfToExcelPage() {
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
     setChoices([]);setScientificImageTargets([]);
-    setSelectedIndex(null);
+    setSelectedIndex(null);setScientificTableConfirmed(false);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
   }
 
@@ -125,7 +128,7 @@ export default function PdfToExcelPage() {
     setReviewConfirmed(false);setImageStatus("");setReviewRegionIndex(null);
     clearReviewedEditHistory();
     setChoices([]);setScientificImageTargets([]);
-    setSelectedIndex(null);
+    setSelectedIndex(null);setScientificTableConfirmed(false);
     setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     if (!selected || !selected.name.toLowerCase().endsWith(".pdf") ||
         selected.size > MAX_FILE_BYTES || selected.size === 0) {
@@ -143,6 +146,7 @@ export default function PdfToExcelPage() {
     if(!file||busy)return;
     setBusy(true);setError("");setOutput(null);setWarnings([]);
     try{
+      await validateLocalPdfInput(file);
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
       setInspected(analyzed);setChoices(available);
@@ -152,7 +156,7 @@ export default function PdfToExcelPage() {
         listEmbeddedImageReviewPages(analyzed.document.pages,analyzed.imageContentReview)[0]?.pageNumber??null);
       setSelectedImagePaint("");setImageReview(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
       clearReviewedEditHistory();
-      setSelectedIndex(null);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
+      setSelectedIndex(null);setScientificTableConfirmed(false);setPreview(null);setCellAddressInput("");setCellDetail(null);setCellStatus("");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect this PDF.");
     }finally{setBusy(false);}
@@ -165,6 +169,7 @@ export default function PdfToExcelPage() {
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
     clearReviewedEditHistory();
     try{
+      await validateLocalPdfInput(file);
       const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
       setInspected(analyzed);
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
@@ -173,7 +178,7 @@ export default function PdfToExcelPage() {
       setChoices(analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[]);
       setScientificImageTargets(findNativeScientificRasterReviewTargets(
         analyzed.document.pages,analyzed.tables));
-      setSelectedIndex(null);setPreview(null);
+      setSelectedIndex(null);setScientificTableConfirmed(false);setPreview(null);
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Unable to inspect image content.");
     }finally{setBusy(false);}
@@ -292,10 +297,11 @@ export default function PdfToExcelPage() {
     if(!inspected||!choices.some(c=>c.index===index&&c.eligible))return;
     try{
       const proposed=buildPdfTablePreview(inspected,index);
-      setSelectedIndex(index);setPreview(proposed);setError("");
+      setSelectedIndex(index);setScientificTableConfirmed(false);
+      setPreview(proposed);setError("");
       setCellDetail(null);setCellStatus("");setCellAddressInput("");
     }catch(cause){
-      setSelectedIndex(null);setPreview(null);
+      setSelectedIndex(null);setScientificTableConfirmed(false);setPreview(null);
       setError(cause instanceof Error?cause.message:"Table preview was withheld.");
     }
   }
@@ -349,6 +355,8 @@ export default function PdfToExcelPage() {
     try{
       const choice=choices.find(c=>c.index===selectedIndex);
       if(!choice?.eligible)throw new Error("The selected table failed export safety checks.");
+      if(isScientificReviewOnlyTable(inspected.tables[selectedIndex])&&
+        !scientificTableConfirmed)throw new Error("Acknowledge and inspect the scientific source table before exporting.");
       // Validate the table AGAIN at actual export time, never trust a UI badge.
       const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
       const stem=file.name.replace(/\.pdf$/i,"")||"kukureku";
@@ -368,6 +376,8 @@ export default function PdfToExcelPage() {
     try{
       const choice=choices.find(c=>c.index===selectedIndex);
       if(!choice?.eligible)throw new Error("The selected table failed export safety checks.");
+      if(isScientificReviewOnlyTable(inspected.tables[selectedIndex])&&
+        !scientificTableConfirmed)throw new Error("Acknowledge and inspect the scientific source table before exporting.");
       const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
       if(plan.tables.length!==1)throw new Error("Expected exactly one selected table.");
       const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+
@@ -392,6 +402,7 @@ export default function PdfToExcelPage() {
     try {
       // V4 is intentionally used without scanned-page OCR. This MVP accepts
       // text-selectable source PDFs only; an image scan must fail clearly.
+      await validateLocalPdfInput(file);
       const analyzed = inspected ?? await analyzePdfV4(file, { enableControlledOcr: false });
       // Centralized fail-closed quality checks preserve multi-page row
       // provenance, do not infer merged-cell formatting, and report omissions.
@@ -856,6 +867,15 @@ export default function PdfToExcelPage() {
                   rendering of the original PDF.
                   Check against the source before using the spreadsheet.
                 </p>
+                {inspected && selectedIndex!==null &&
+                  inspectTableStructuralEvidence(inspected.tables[selectedIndex])
+                    .firstRowUnverifiedPositions>0 && (
+                  <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+                    Source header uncertainty: one or more first-row columns have
+                    no detected PDF cell or empty extracted text. Preserve the
+                    gaps; do not infer merged headings from the preview.
+                  </p>
+                )}
                 {preview.pairedHeaderLayout && (
                   <p role="status" className="text-sm font-medium text-amber-800 dark:text-amber-200">
                     Two-level native header detected: paired parent headings are grouped
@@ -896,7 +916,11 @@ export default function PdfToExcelPage() {
                                 onClick={()=>showExactCell(preview.rowStart+row,preview.columnStart+col)}
                                 aria-label={"Inspect exact cell "+pdfTableCellAddress(preview.rowStart+row,preview.columnStart+col)}
                                 className="w-full whitespace-pre-wrap break-words text-left underline-offset-2 hover:underline focus-visible:underline">
-                                {value || <span className="text-slate-400">(blank)</span>}
+                                {value || <span className="text-slate-400">{
+                                  preview.cellEvidence[row][col]==="no-detected-source-cell"
+                                    ?"(blank — no detected source cell)"
+                                    :"(empty extracted source cell)"
+                                }</span>}
                               </button>
                             </td>
                           ))}
@@ -937,7 +961,11 @@ export default function PdfToExcelPage() {
                     className="space-y-2 rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
                     <p className="font-semibold">Exact cell {cellDetail.address} · Source PDF page {cellDetail.sourcePage}</p>
                     <p className="text-xs text-amber-800 dark:text-amber-200">
-                      This is unverified extracted text, not a certified transcription.
+                      {cellDetail.evidence==="no-detected-source-cell"
+                        ?"No PDF cell was detected at this column. The Excel position is empty; this does not prove a blank source cell."
+                        :cellDetail.evidence==="empty-source-cell"
+                          ?"An extracted PDF cell exists but contains empty text. This is not a verified visual blank."
+                          :"This is unverified extracted text, not a certified transcription."}
                       The XLSX/CSV value is unchanged by reviewing or copying.
                     </p>
                     <pre className="max-h-40 overflow-auto whitespace-pre-wrap break-all rounded-lg bg-slate-100 p-2 dark:bg-slate-900"
@@ -958,16 +986,46 @@ export default function PdfToExcelPage() {
                 )}
               </div>
             )}
+            {inspected&&selectedIndex!==null&&
+              isScientificReviewOnlyTable(inspected.tables[selectedIndex])&&(
+              <label className="flex items-start gap-3 rounded-lg border border-amber-400 p-3 text-sm dark:border-amber-700">
+                <input type="checkbox" checked={scientificTableConfirmed}
+                  onChange={event=>setScientificTableConfirmed(event.target.checked)}
+                  aria-label="Acknowledge scientific table source review"/>
+                I understand this scientific table is reconstructed from
+                physical PDF text lines. Headings, row groups and blank
+                positions are unverified; source notes may be omitted from
+                the data grid. I will check the original PDF before using it.
+              </label>
+            )}
             <button type="button" onClick={exportSelected}
-              disabled={busy||selectedIndex===null}
+              disabled={busy||selectedIndex===null||
+                (inspected!==null&&selectedIndex!==null&&
+                  isScientificReviewOnlyTable(inspected.tables[selectedIndex])&&
+                  !scientificTableConfirmed)}
               className="w-full rounded-xl bg-blue-700 px-5 py-3 font-semibold text-white hover:bg-blue-800 disabled:cursor-not-allowed disabled:opacity-50">
               {busy?"Preparing selected table…":"Export selected table (.xlsx)"}
             </button>
             <button type="button" onClick={exportSelectedCsv}
-              disabled={busy||selectedIndex===null}
+              disabled={busy||selectedIndex===null||
+                (inspected!==null&&selectedIndex!==null&&
+                  isScientificReviewOnlyTable(inspected.tables[selectedIndex])&&
+                  !scientificTableConfirmed)}
               className="w-full rounded-xl border border-blue-300 bg-white px-5 py-3 font-semibold text-blue-800 hover:bg-blue-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-blue-800 dark:bg-slate-900 dark:text-blue-200">
               {busy?"Preparing selected table…":"Export selected table (.csv)"}
             </button>
+            {inspected&&selectedIndex!==null&&(()=>{
+              const evidence=inspectTableStructuralEvidence(inspected.tables[selectedIndex]);
+              return evidence.missingSourcePositions>0||
+                evidence.explicitlyEmptySourceCells>0;
+            })()&&(
+              <p role="status" className="text-sm text-amber-800 dark:text-amber-200">
+                This selected table has unverified empty positions. Excel includes
+                a review worksheet, but CSV cannot carry those source-evidence
+                warnings. Before CSV export, inspect every source gap against
+                the PDF; missing detected cells are not verified PDF blanks.
+              </p>
+            )}
             <p className="text-xs text-slate-600 dark:text-slate-300">
               CSV retains table cells but not merged headings or a review-notes sheet.
               Formula-like values are text-escaped; verify against the original PDF.
@@ -989,7 +1047,7 @@ export default function PdfToExcelPage() {
         </>}
         {!busy && output && inspected && (
           <button type="button" onClick={()=>{
-            setOutput(null);setOutputName("");setWarnings([]);setSelectedIndex(null);setPreview(null);
+            setOutput(null);setOutputName("");setWarnings([]);setSelectedIndex(null);setScientificTableConfirmed(false);setPreview(null);
           }} className="w-full rounded-xl border border-blue-300 px-4 py-3 font-semibold text-blue-800 dark:text-blue-200">
             Choose another table from this PDF
           </button>

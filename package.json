@@ -54,7 +54,8 @@
     "tailwindcss": "^4",
     "typescript": "^5",
     "vitest": "^4.1.11",
-    "fast-glob": "file:vendor/next-eslint-glob"
+    "fast-glob": "file:vendor/next-eslint-glob",
+    "vite": "8.2.4"
   },
   "overrides": {
     "argparse": "2.0.1",

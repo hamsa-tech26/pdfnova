@@ -29,7 +29,8 @@
       "feature/kukureku-r136-targeted-embedded-image-review": false,
       "feature/kukureku-r137-r141-reviewed-grid-editor": false,
       "feature/kukureku-r142-production-acceptance": false,
-      "feature/kukureku-r143-original-table-page-audit": false
+      "feature/kukureku-r143-original-table-page-audit": false,
+      "feature/kukureku-r151-r155-review-safety": false
     }
   }
 }
