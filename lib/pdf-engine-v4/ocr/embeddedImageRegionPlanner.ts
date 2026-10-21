@@ -52,7 +52,10 @@ export function planEmbeddedImageOcrRegions(pages:PdfPageModel[]):EmbeddedImageR
 export function listManuallyReviewableImageRegions(
   page:PdfPageModel,
 ):EmbeddedImageRegionPlan[]{
-  if(page.textExtraction.status!=="sufficient"||
+  // R157: an explicitly selected painted image on a low-text or image-only
+  // page may be inspected. The automatic planner ABOVE still requires
+  // sufficient native text, and NO OCR ever starts from page inventory alone.
+  if(!["sufficient","low","none"].includes(page.textExtraction.status)||
     !Number.isSafeInteger(page.pageNumber)||page.pageNumber<1||
     !Number.isFinite(page.width)||!Number.isFinite(page.height)||
     page.width<=0||page.height<=0)return [];
@@ -62,7 +65,9 @@ export function listManuallyReviewableImageRegions(
     if(![b.x,b.y,b.width,b.height,image.areaFraction].every(Number.isFinite)||
       b.x<0||b.y<0||b.width<75||b.height<40||
       b.x+b.width>page.width+1||b.y+b.height>page.height+1||
-      image.areaFraction<0.02||image.areaFraction>0.78)return [];
+      image.areaFraction<0.02||
+      image.areaFraction>(page.textExtraction.status==="sufficient"?0.78:1.0))
+      return [];
     const nativeWordOverlap=page.words.filter(w=>contains(b,
       w.bounds.x+w.bounds.width/2,w.bounds.y+w.bounds.height/2)).length;
     return [{pageNumber:page.pageNumber,sourceBounds:{...b},
