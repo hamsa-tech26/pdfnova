@@ -1,5 +1,6 @@
 import type { PdfV4OcrPageResult, PdfV4OcrWord } from "./ocrRecognizer";
 import { inspectPdfV4OcrCheckboxCandidates, formatPdfV4OcrCheckboxCandidates } from "./ocrCheckboxReview";
+import {inspectOcrIdentifierRisks} from "./ocrIdentifierRisks";
 
 /**
  * OCR text is evidence, not a structured/form-verified transcript.
@@ -119,6 +120,13 @@ export function buildPdfV4OcrTextExport(
   if (/\b(?:record\s+id|invoice\s+id|application\s+id|serial\s+number|reference\s*(?:number|:)|facility\s+code|package\s+code)\b/i.test(text)) {
     warnings.push("Verify exact identifiers character by character (for example O/0, I/1 and 7/T).");
   }
+  const identifierRisks=inspectOcrIdentifierRisks(text);
+  if(identifierRisks.length) {
+    warnings.push("Potential OCR character confusion in "+
+      identifierRisks.length+" exact identifier(s). Check those "+
+      "characters against the original PDF; no automatic correction "+
+      "has been applied.");
+  }
   if (/\bPass\s+Fail\s+N\s*\/?\s*A\b/i.test(text) && /(?:^|\s)X(?:\s|$)/m.test(text)) {
     warnings.push("Checkbox status UNKNOWN from plain TXT: X marks may not retain Pass/Fail/N/A column associations. Verify against the original form.");
   }
@@ -154,6 +162,14 @@ export function formatPdfV4OcrPageExport(
   if (output.columnPreview) {
     sections.push("[OPTIONAL COLUMN-AWARE PREVIEW - NOT VERIFIED]\n" +
       output.columnPreview);
+  }
+  const risks=inspectOcrIdentifierRisks(output.text);
+  if(risks.length){
+    sections.push("[EXACT IDENTIFIER SOURCE CHECK - NOT VERIFIED]\\n" +
+      risks.map(r=>"OCR line "+r.lineNumber+" ("+r.label+
+        "): "+r.ambiguousCharacterCount+
+        " visually confusable characters; verify source image; not corrected.")
+        .join("\\n"));
   }
   if (page.lowResolutionIdentifierReview) {
     sections.push("[OPTIONAL TARGETED IDENTIFIER OCR - NOT VERIFIED]\n" +
