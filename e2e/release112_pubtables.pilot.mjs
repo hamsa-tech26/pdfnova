@@ -101,6 +101,27 @@ for(const source of manifest.documents){
         Number(Math.max(0,...nativeImageRects.map(rect=>rectangleIoU(rect,box))).toFixed(4)));
       const imageReview=result.imageContentReview.find(x=>x.pageNumber===ref.page);
       expect(imageReview).toBeTruthy();
+      // R165: verify the original-publisher image-only missed region cannot
+      // be silently classified as a native source-table from OCR guesswork.
+      // The independently published box is used for post-hoc evaluation,
+      // never as a runtime detector input or OCR crop coordinate.
+      if(source.id==="PMC1064098"&&ref.page===6){
+        const pub=expected[0];
+        const sourceNativeWords=viewport.words.filter(word=>{
+          const x=word.bounds.x+word.bounds.width/2;
+          const y=word.bounds.y+word.bounds.height/2;
+          return x>=pub.x&&x<=pub.x+pub.width&&
+            y>=pub.y&&y<=pub.y+pub.height&&
+            word.extractionProvenance?.source==="native-pdf";
+        });
+        expect(sourceNativeWords).toHaveLength(0);
+        expect(imageReview.imagePaintCount).toBeGreaterThan(0);
+        console.log(JSON.stringify({type:"R165_REAL_IMAGE_ONLY_TABLE_SOURCE_EVIDENCE",
+          sourceId:source.id,originalPage:6,
+          nativeWordsInsideOriginalPublishedBox:sourceNativeWords.length,
+          imagePaintsPresent:true,sourceBoxNeverDetectorInput:true,
+          sourceOcrAutomaticallyApproved:false,formalV4Credit:0}));
+      }
       if(source.id==="PMC1064098"&&ref.page===8){
         // R147 original-source evidence: a native scientific header grid is
         // followed by adjacent painted images. This is an OMITTED-CONTENT
