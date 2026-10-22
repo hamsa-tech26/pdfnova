@@ -40,7 +40,17 @@ for(const sample of manifest.samples){
       referenceCount+=s.referenceCount;
       predicted+=s.predictionCount;
       unmatched+=s.unmatchedPredictionCount;
-      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount});
+      // Keep rejection metadata scoped to its own source page. A document-wide
+      // count alone cannot tell which independently annotated table was missed.
+      // Missing page numbers remain unassigned, never silently attributed.
+      const rejectedOnPage=(result.candidateRegionDiagnostics??[])
+        .filter(d=>d.pageNumber===pageNo)
+        .reduce((counts,item)=>{
+          const key=item.outcome||"unspecified";
+          counts[key]=(counts[key]??0)+1;
+          return counts;
+        },{});
+      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,rejectedCandidateOutcomes:rejectedOnPage});
     }
     // Unannotated pages lack ground truth; these predictions are NOT known false positives.
     const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
