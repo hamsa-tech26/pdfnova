@@ -50,7 +50,7 @@ for(const sample of manifest.samples){
           counts[key]=(counts[key]??0)+1;
           return counts;
         },{});
-      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,rejectedCandidateOutcomes:rejectedOnPage});
+      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,referenceBestIoU:s.referenceBestIoU,rejectedCandidateOutcomes:rejectedOnPage});
     }
     // Unannotated pages lack ground truth; these predictions are NOT known false positives.
     const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
