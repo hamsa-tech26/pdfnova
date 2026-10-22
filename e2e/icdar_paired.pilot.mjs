@@ -107,11 +107,19 @@ for(const sample of manifest.samples){
         // Count uninterrupted eligible runs in extraction order. Aggregate
         // total eligibility can hide several short unrelated groups.
         let longestEligibleRun=0,run=0,eligibleRunsAtLeastFive=0;
+        let priorEligibleLine=null;
+        const flush=()=>{if(run>=5)eligibleRunsAtLeastFive++;run=0;};
         for(const line of lines){
-          if(eligible.includes(line)){run++;longestEligibleRun=Math.max(longestEligibleRun,run);}
-          else {if(run>=5)eligibleRunsAtLeastFive++;run=0;}
+          if(!eligible.includes(line)){flush();priorEligibleLine=null;continue;}
+          const gap=priorEligibleLine===null?0:Math.abs(
+            (priorEligibleLine.bounds.y+priorEligibleLine.bounds.height/2)-
+            (line.bounds.y+line.bounds.height/2));
+          if(priorEligibleLine!==null&&(gap>29||gap<1))flush();
+          run++;
+          longestEligibleRun=Math.max(longestEligibleRun,run);
+          priorEligibleLine=line;
         }
-        if(run>=5)eligibleRunsAtLeastFive++;
+        flush();
         return {pageNumber:pageNo,sourceLineCount:lines.length,
           longestConsecutiveNumericEligibleRun:longestEligibleRun,
           numericEligibleRunsAtLeastFive:eligibleRunsAtLeastFive,
