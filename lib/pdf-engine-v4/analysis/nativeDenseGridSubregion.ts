@@ -15,10 +15,24 @@ export type NativeGridSegment={
 const centerY=(l:PdfLine)=>l.bounds.y+l.bounds.height/2;
 const native=(l:PdfLine)=>l.words.length>0&&l.words.every(w=>
   w.extractionProvenance?.source!=="ocr-tesseract");
+// A native financial grid can have one long description item followed by
+// four or more separately positioned numeric cells. The description length
+// is not prose evidence when every other cell has this stronger signature.
+// Keep the ordinary row count, spacing, alignment and OCR gates unchanged.
+function hasNumericCellsAfterLongLabel(sorted:PdfLine["words"]):boolean{
+  if(sorted.length<5||sorted[0].text.trim().length>180)return false;
+  const cells=sorted.slice(1);
+  const numeric=/^[+\-−]?(?:\(?[£$€¥]?\d[\d,]*(?:\.\d+)?\)?%?)$/u;
+  return cells.every((word,index)=>word.text.trim().length<=24&&
+    numeric.test(word.text.trim())&&
+    (index===0||word.bounds.x-cells[index-1].bounds.x>=18))&&
+    cells[cells.length-1].bounds.x-cells[0].bounds.x>=160;
+}
 function rowEvidence(l:PdfLine){
   if(!native(l)||l.words.length<4||l.words.length>16)return false;
   const sorted=[...l.words].sort((a,b)=>a.bounds.x-b.bounds.x);
-  if(sorted.some(w=>w.text.trim().length>38))return false;
+  if(sorted.some(w=>w.text.trim().length>38)&&
+    !hasNumericCellsAfterLongLabel(sorted))return false;
   if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
   return sorted.filter(w=>/\d/u.test(w.text)).length>=2;
 }

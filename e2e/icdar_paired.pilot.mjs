@@ -53,11 +53,8 @@ for(const sample of manifest.samples){
         },{});
       perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,referenceBestIoU:s.referenceBestIoU,rejectedCandidateOutcomes:rejectedOnPage});
     }
-    // The fixed, SHA-pinned three-document development baseline is 0/1,
-    // 0/2 and 3/3 annotated regions. Previously this test logged accuracy
-    // but returned PASS even if the one known-good document regressed to 0/3.
-    // Gate only the demonstrated positive baseline, not a false claim of
-    // overall recall or independently certified cell accuracy.
+    // Preserve the known-good three-region document independently of the
+    // targeted long-description correction. Localization is not cell truth.
     if(sample.sampleIndex===3){
       expect(referenceCount).toBe(3);
       expect(matched).toBe(3);
@@ -147,5 +144,13 @@ for(const sample of manifest.samples){
         const key=item.outcome||"unspecified";counts[key]=(counts[key]??0)+1;return counts;
       },{})
     }));
+    // Require the long-label correction to recover BOTH source references,
+    // without an unmatched prediction. Log the measured evidence first so
+    // a failed experiment remains diagnosable rather than a false success.
+    if(sample.sampleIndex===2){
+      expect(referenceCount).toBe(2);
+      expect(matched).toBe(2);
+      expect(unmatched).toBe(0);
+    }
   });
 }
