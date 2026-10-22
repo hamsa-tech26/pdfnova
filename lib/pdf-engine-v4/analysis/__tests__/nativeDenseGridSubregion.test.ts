@@ -21,6 +21,32 @@ function block(rows:PdfLine[]):PdfParagraphBlock{
     confidence:0.8};
 }
 describe("R112 conservative native scientific grid segmentation",()=>{
+  it("recovers a short, widely spaced eight-numeric-column grid without lowering the ordinary minimum",()=>{
+    const before=Array.from({length:20},(_,i)=>line(i,800-i*12,[["Narrative surrounding the source grid",64]]));
+    const data=Array.from({length:5},(_,i)=>line(21+i,393-i*29.45,[
+      ["Metric-"+i,95],...Array.from({length:8},(_,c)=>[
+        i===0?String(2001+c):String(100+c+i),
+        177+c*44-(i===0?39:24),
+      ] as [string,number]),
+    ]));
+    // The numeric header is centred differently; four distinct body rows
+    // support the same eight source column edges.
+    for(const row of data)for(const word of row.words.slice(1))word.bounds.width=24;
+    const after=Array.from({length:10},(_,i)=>line(26+i,235-i*12,[["Narrative after the source grid",64]]));
+    const source=block([...before,line(20,422,[["Units",308]]),...data,...after]);
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(1);
+    expect(found[0].block.lines.map(l=>l.id)).toEqual(data.map(l=>l.id));
+    expect(detectTableRegionsForPage([source]).tableRegions.some(r=>r.block.id===found[0].block.id)).toBe(true);
+    const tooShort=block([...before,...data.slice(0,4),...after]);
+    expect(findNativeDenseGridSubregions([tooShort])).toEqual([]);
+    const fewerColumns=block([...before,...data.map(row=>({...row,words:row.words.slice(0,8)})),...after]);
+    expect(findNativeDenseGridSubregions([fewerColumns])).toEqual([]);
+    const drifting=block([...before,...data.map((row,i)=>({...row,words:row.words.map(w=>({
+      ...w,bounds:{...w.bounds,x:w.bounds.x+i*15},
+    }))})),...after]);
+    expect(findNativeDenseGridSubregions([drifting])).toEqual([]);
+  });
   it("recovers two long-label numeric grids while retaining every source word once",()=>{
     const longLabel="An independently positioned description cell with more than thirty-eight characters";
     const first=Array.from({length:19},(_,i)=>line(i+4,616-i*8.4,[

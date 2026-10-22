@@ -8,6 +8,7 @@ on:
       - "scripts/testIcdarPairedCorpus.py"
       - "scripts/validateIcdarPairedGeometry.py"
       - "scripts/prepareIcdarPilot.py"
+      - "scripts/compareIcdarHeldout.py"
       - "e2e/icdar_paired.pilot.mjs"
       - "playwright.icdar-paired.config.mjs"
       - ".github/workflows/paired-original-pdf-baseline.yml"
@@ -48,6 +49,22 @@ jobs:
           npx playwright install --with-deps chromium
       - name: Test current V4 Inspector on actual source PDFs and separate ground truth
         run: npx playwright test --config=playwright.icdar-paired.config.mjs
+      - name: Prepare the reserved six documents only after development acceptance passes
+        run: python scripts/prepareIcdarPilot.py --heldout
+      - name: Compare baseline and frozen corrected detector on the reserved documents
+        run: |
+          mkdir -p work
+          detector=lib/pdf-engine-v4/analysis/nativeDenseGridSubregion.ts
+          cp "$detector" work/frozen-native-grid.txt
+          trap 'cp work/frozen-native-grid.txt "$detector"' EXIT
+          sha256sum "$detector"
+          git fetch --no-tags --depth=1 origin 619eb410bb97d68ad795959b6dc0666749c37c60
+          git show "619eb410bb97d68ad795959b6dc0666749c37c60:$detector" > "$detector"
+          ICDAR_SPLIT=heldout ICDAR_VARIANT=baseline npx playwright test --config=playwright.icdar-paired.config.mjs
+          cp work/frozen-native-grid.txt "$detector"
+          cmp work/frozen-native-grid.txt "$detector"
+          ICDAR_SPLIT=heldout ICDAR_VARIANT=corrected npx playwright test --config=playwright.icdar-paired.config.mjs
+          python scripts/compareIcdarHeldout.py
       - name: Explicit limits
         if: always()
         run: |

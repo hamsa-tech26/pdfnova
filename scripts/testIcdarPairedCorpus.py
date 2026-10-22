@@ -2,6 +2,8 @@ import io
 import tarfile
 import unittest
 from auditIcdarPairedCorpus import inspect, stem_of
+from compareIcdarHeldout import compare_reports
+from copy import deepcopy
 
 def fixture(entries):
     output=io.BytesIO()
@@ -14,6 +16,19 @@ def fixture(entries):
     return output
 
 class BoundedCorpusTests(unittest.TestCase):
+    def test_reserved_comparison_rejects_regression_source_substitution_and_duplicate_content(self):
+        baseline=[{"sampleIndex":i,"pdfSha256":str(i)*64,"referenceXmlSha256":"a"*64,
+                   "referenceRegions":1,"matchedRegions":1,"predictions":1,"unmatchedPredictions":0}
+                  for i in range(4,10)]
+        self.assertEqual(compare_reports(baseline,deepcopy(baseline))["baselineMatched"],6)
+        for mode in ("miss","falsePositive","source","duplicate","missing"):
+            candidate=deepcopy(baseline)
+            if mode=="miss":candidate[0].update(matchedRegions=0,predictions=0)
+            if mode=="falsePositive":candidate[0].update(predictions=2,unmatchedPredictions=1)
+            if mode=="source":candidate[0]["referenceXmlSha256"]="b"*64
+            if mode=="duplicate":candidate[0]["pdfSha256"]=candidate[1]["pdfSha256"]
+            if mode=="missing":candidate.pop()
+            with self.subTest(mode=mode),self.assertRaises(ValueError):compare_reports(baseline,candidate)
     def test_filename_pair_normalization(self):
         self.assertEqual(stem_of("folder/PUB-001.pdf"),"pub-001")
         self.assertEqual(stem_of("gold/Pub-001-reg.xml"),"pub-001")

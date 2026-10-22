@@ -1,12 +1,19 @@
 import {test,expect} from "@playwright/test";
-import {readFile} from "node:fs/promises";
+import {readFile,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
 import {scoreDetectionPage} from "../benchmarks/release112/scoreTableRegions.mjs";
 
-const root=resolve("benchmarks/icdar/private");
+const split=process.env.ICDAR_SPLIT??"development";
+const variant=process.env.ICDAR_VARIANT??"corrected";
+if(!["development","heldout"].includes(split)||!["baseline","corrected"].includes(variant))
+  throw Error("Unknown benchmark split or detector variant");
+const heldout=split==="heldout";
+const root=resolve("benchmarks/icdar/private",heldout?"heldout":".");
 const manifest=JSON.parse(await readFile(join(root,"pilot.json"),"utf8"));
-if(manifest.approvedV4StableCredit!==0||manifest.unseenHeldout!==false||
-  manifest.rightsIndependentlyVerified!==false||manifest.samples.length!==3)
+if(manifest.approvedV4StableCredit!==0||(!heldout&&manifest.unseenHeldout!==false)||
+  (heldout&&manifest.excludedFromDevelopment!==true)||
+  manifest.rightsIndependentlyVerified!==false||manifest.samples.length!==(heldout?6:3)||
+  manifest.samples.some((s,i)=>s.sampleIndex!==i+(heldout?4:1)))
   throw Error("Invalid source-rights/qualification preflight");
 
 for(const sample of manifest.samples){
@@ -55,13 +62,18 @@ for(const sample of manifest.samples){
     }
     // Preserve the known-good three-region document independently of the
     // targeted long-description correction. Localization is not cell truth.
-    if(sample.sampleIndex===3){
+    if(!heldout&&sample.sampleIndex===3){
       expect(referenceCount).toBe(3);
       expect(matched).toBe(3);
       expect(unmatched).toBe(0);
     }
     // Unannotated pages lack ground truth; these predictions are NOT known false positives.
     const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
+    await writeFile(join(root,`score-${variant}-${sample.sampleIndex}.json`),JSON.stringify({
+      sampleIndex:sample.sampleIndex,pdfSha256:sample.pdfSha256,
+      referenceXmlSha256:sample.referenceSha256,referenceRegions:referenceCount,
+      matchedRegions:matched,predictions:predicted,unmatchedPredictions:unmatched,
+    }));
     console.log(JSON.stringify({
       type:"ICDAR_PAIRED_PDF_V4_SOURCE_DIAGNOSTIC",
       sampleIndex:sample.sampleIndex,
@@ -79,7 +91,8 @@ for(const sample of manifest.samples){
       unannotatedPagePredictionsAreNotCertifiedFalsePositives:true,
       independentlyRightsReviewed:false,
       acceptedV4StableCredit:0,
-      genuineUnseenHeldout:false,
+      evaluationSplit:split,detectorVariant:variant,
+      excludedFromDevelopment:heldout,
       // Bounded line-level geometry for the two already-used failures only.
       // Never print document text or individual word geometry; held-out
       // documents are neither opened nor inspected by this development probe.
@@ -92,6 +105,12 @@ for(const sample of manifest.samples){
           wordCount:line.words.length,
           numericWordCount:line.words.filter(w=>/\d/u.test(w.text??"")).length,
           longWordCount:line.words.filter(w=>(w.text??"").trim().length>38).length,
+          // Character classes only, never original numeric values or text.
+          leadingItemLength:[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x)[0]?.text.trim().length??0,
+          numericCellPatterns:line.words.length>=5?[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x)
+            .slice(1).map(w=>Array.from(w.text.trim()).slice(0,24).map(c=>
+              /\d/u.test(c)?"d":/\p{L}/u.test(c)?"L":/\s/u.test(c)?"_":
+                ".,()%$£€¥+-−".includes(c)?c:"?").join("")):undefined,
         })),
       })):undefined,
       originalPageSourceStats:(result.document.pages??[]).map(p=>({
@@ -147,7 +166,12 @@ for(const sample of manifest.samples){
     // Require the long-label correction to recover BOTH source references,
     // without an unmatched prediction. Log the measured evidence first so
     // a failed experiment remains diagnosable rather than a false success.
-    if(sample.sampleIndex===2){
+    if(!heldout&&sample.sampleIndex===1){
+      expect(referenceCount).toBe(1);
+      expect(matched).toBe(1);
+      expect(unmatched).toBe(0);
+    }
+    if(!heldout&&sample.sampleIndex===2){
       expect(referenceCount).toBe(2);
       expect(matched).toBe(2);
       expect(unmatched).toBe(0);
