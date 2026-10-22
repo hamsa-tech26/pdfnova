@@ -137,6 +137,10 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       for(let i=start+1;i<lines.length&&i<start+20;i++){
         const distance=Math.abs(centerY(lines[i-1])-centerY(lines[i]));
         if(distance>29||distance<1)break;
+        if(!eligible[i]&&lines[i].words.length<=2&&(
+          /^\s*(?:table|tab\.)\s+\d/iu.test(lines[i].text)||
+          (lines[i].bounds.height>=lines[i-1].bounds.height*1.2&&
+            centerY(lines[i-1])-centerY(lines[i])>=Math.max(16,lines[i-1].bounds.height*2.5))))break;
         if(!eligible[i]&&(!eligible[i+1]||!eligible[i-1]))break;
         if(eligible[i])count++;
         end=i;
@@ -164,7 +168,9 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
         from=i;
       }
       if(candidate.end-from+1>20)continue;
-      if(accepted.some(previous=>from<=previous.end+1&&candidate.end>=previous.from-1))continue;
+      // Consecutive source indices can belong to separate tables when a
+      // section boundary intervenes. Reject shared lines, not adjacency.
+      if(accepted.some(previous=>from<=previous.end&&candidate.end>=previous.from))continue;
       accepted.push({from,end:candidate.end,count:candidate.count});
       if(accepted.length===3)break; // bound complexity per source block
     }

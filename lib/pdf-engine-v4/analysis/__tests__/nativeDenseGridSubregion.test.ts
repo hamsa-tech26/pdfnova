@@ -21,6 +21,34 @@ function block(rows:PdfLine[]):PdfParagraphBlock{
     confidence:0.8};
 }
 describe("R112 conservative native scientific grid segmentation",()=>{
+  it("keeps neighboring right-aligned tables separate across a larger-font section heading",()=>{
+    const label="Long native description for an independently positioned numeric grid";
+    const formats=["1","12","123","1,234","12,345","123,456","1,234,567"];
+    const ys=[616.07,...Array.from({length:17},(_,i)=>600.95-i*8.4),451.91];
+    const grid=(offset:number,index:number)=>ys.map((y,i)=>{
+      const value=formats[i%formats.length];
+      const row=line(index+i,y-offset,[[label,30],
+        ...[320,392,466,539].map(right=>[value,right-value.length*4] as [string,number])]);
+      row.bounds.height=6.96;
+      for(const word of row.words)word.bounds.height=6.96;
+      row.words[0].bounds.width=200;
+      return row;
+    });
+    const before=[685.19,658.79,649.19,634.55].map((y,i)=>line(i,y,[["Introductory section",29]]));
+    const boundary=line(23,424.07,[["Section 2 report",29]]);
+    boundary.bounds.height=8.88;boundary.words[0].bounds.height=8.88;
+    const source=block([...before,...grid(0,4),boundary,...grid(210.24,24),
+      ...Array.from({length:4},(_,i)=>line(i+43,229-i*12,[["Concluding section",29]]))]);
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(2);
+    expect(found[0].lastLineIndex).toBeLessThan(found[1].firstLineIndex);
+    const detected=detectTableRegionsForPage([source]);
+    expect(detected.tableRegions.filter(r=>r.block.id.startsWith("native-dense-grid-"))).toHaveLength(2);
+    const ids=detected.regions.flatMap(r=>r.block.type==="paragraph"?
+      r.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
+    expect(ids).toHaveLength(source.lines.flatMap(l=>l.words).length);
+    expect(new Set(ids)).toEqual(new Set(source.lines.flatMap(l=>l.words.map(w=>w.id))));
+  });
   it("recognizes numeric right edges when one-to-seven-digit values shift the left edges",()=>{
     const label="Long description occupying its own native source cell rather than prose";
     const formats=["1","12","123","1,234","12,345","123,456","1,234,567"];
