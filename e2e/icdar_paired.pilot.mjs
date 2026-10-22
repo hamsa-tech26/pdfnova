@@ -104,7 +104,17 @@ for(const sample of manifest.samples){
           if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
           return words.filter(word=>/\d/u.test(word.text??"")).length>=2;
         });
+        // Count uninterrupted eligible runs in extraction order. Aggregate
+        // total eligibility can hide several short unrelated groups.
+        let longestEligibleRun=0,run=0,eligibleRunsAtLeastFive=0;
+        for(const line of lines){
+          if(eligible.includes(line)){run++;longestEligibleRun=Math.max(longestEligibleRun,run);}
+          else {if(run>=5)eligibleRunsAtLeastFive++;run=0;}
+        }
+        if(run>=5)eligibleRunsAtLeastFive++;
         return {pageNumber:pageNo,sourceLineCount:lines.length,
+          longestConsecutiveNumericEligibleRun:longestEligibleRun,
+          numericEligibleRunsAtLeastFive:eligibleRunsAtLeastFive,
           numericGridEligibleLineCount:eligible.length,
           nativeDenseGridMinimumRows:7,
           candidateMinimumRowsSatisfied:eligible.length>=7,
