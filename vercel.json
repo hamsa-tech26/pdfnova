@@ -33,7 +33,8 @@
       "feature/kukureku-r151-r155-review-safety": false,
       "feature/kukureku-r156-r160-source-coverage": false,
       "feature/kukureku-r161-r165-ocr-source-review": false,
-      "research/kukureku-paired-original-pdf-baseline": false
+      "research/kukureku-paired-original-pdf-baseline": false,
+      "fix/kukureku-backup-privacy": false
     }
   }
 }
