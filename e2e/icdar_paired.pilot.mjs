@@ -91,6 +91,25 @@ for(const sample of manifest.samples){
         blockCount:p.blocks?.length??0,
         textExtractionStatus:p.textExtraction?.status??"unknown"
       })),
+      // Aggregate native numeric row evidence only. No source text, word
+      // geometry, individual values, or document bytes in CI output.
+      nativeRowEvidenceByReferencePage:[...indexed].map(pageNo=>{
+        const lines=result.document.pages[pageNo-1]?.lines??[];
+        const eligible=lines.filter(line=>{
+          const words=line.words??[];
+          if(words.length<4||words.length>16)return false;
+          if(words.some(word=>word.extractionProvenance?.source==="ocr-tesseract"))return false;
+          if(words.some(word=>(word.text??"").trim().length>38))return false;
+          const sorted=[...words].sort((a,b)=>a.bounds.x-b.bounds.x);
+          if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
+          return words.filter(word=>/\\d/u.test(word.text??"")).length>=2;
+        });
+        return {pageNumber:pageNo,sourceLineCount:lines.length,
+          numericGridEligibleLineCount:eligible.length,
+          nativeDenseGridMinimumRows:7,
+          candidateMinimumRowsSatisfied:eligible.length>=7,
+          candidateRequiresConsecutiveAlignedRows:true};
+      }),
       detectorRejectionReasons:(result.candidateRegionDiagnostics??[]).reduce((counts,item)=>{
         const key=item.outcome||"unspecified";counts[key]=(counts[key]??0)+1;return counts;
       },{})
