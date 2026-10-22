@@ -26,6 +26,7 @@ for(const sample of manifest.samples){
     expect(Array.isArray(result.tables)).toBe(true);
     let matched=0,referenceCount=0,predicted=0,unmatched=0;
     const indexed=new Set(sample.regions.map(x=>x.page));
+    const perReferencePage=[];
     for(const pageNo of indexed){
       const pageModel=result.document.pages[pageNo-1];
       const refs=sample.regions.filter(x=>x.page===pageNo);
@@ -39,7 +40,10 @@ for(const sample of manifest.samples){
       referenceCount+=s.referenceCount;
       predicted+=s.predictionCount;
       unmatched+=s.unmatchedPredictionCount;
+      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount});
     }
+    // Unannotated pages lack ground truth; these predictions are NOT known false positives.
+    const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
     console.log(JSON.stringify({
       type:"ICDAR_PAIRED_PDF_V4_SOURCE_DIAGNOSTIC",
       sampleIndex:sample.sampleIndex,
@@ -51,6 +55,10 @@ for(const sample of manifest.samples){
       missedRegions:referenceCount-matched,
       candidateRegions:predicted,
       unmatchedPredictions:unmatched,
+      referencePageResults:perReferencePage,
+      unannotatedPagesNotScored:sample.pageCount-indexed.size,
+      predictionsOnUnannotatedPages,
+      unannotatedPagePredictionsAreNotCertifiedFalsePositives:true,
       independentlyRightsReviewed:false,
       acceptedV4StableCredit:0,
       genuineUnseenHeldout:false,
