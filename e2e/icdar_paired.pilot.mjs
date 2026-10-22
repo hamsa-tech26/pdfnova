@@ -52,6 +52,16 @@ for(const sample of manifest.samples){
         },{});
       perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,referenceBestIoU:s.referenceBestIoU,rejectedCandidateOutcomes:rejectedOnPage});
     }
+    // The fixed, SHA-pinned three-document development baseline is 0/1,
+    // 0/2 and 3/3 annotated regions. Previously this test logged accuracy
+    // but returned PASS even if the one known-good document regressed to 0/3.
+    // Gate only the demonstrated positive baseline, not a false claim of
+    // overall recall or independently certified cell accuracy.
+    if(sample.sampleIndex===3){
+      expect(referenceCount).toBe(3);
+      expect(matched).toBe(3);
+      expect(unmatched).toBe(0);
+    }
     // Unannotated pages lack ground truth; these predictions are NOT known false positives.
     const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
     console.log(JSON.stringify({
