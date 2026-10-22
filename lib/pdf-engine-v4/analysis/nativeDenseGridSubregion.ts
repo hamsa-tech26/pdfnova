@@ -46,13 +46,34 @@ function columnsInRun(rows:PdfLine[]):number[]{
   }
   return anchors.filter(a=>a.count>=rows.length*.7).map(a=>a.x);
 }
+function rightAlignedNumericRowCount(rows:PdfLine[]):number{
+  const numericRows=rows.map(row=>[...row.words].sort((a,b)=>a.bounds.x-b.bounds.x))
+    .filter(words=>hasNumericCellsAfterLongLabel(words)&&words.every(w=>
+      w.extractionProvenance?.source==="native-pdf"));
+  // This fallback belongs only to the long-description native numeric shape.
+  // Four recurring numeric right edges replace the weaker two-left-edge
+  // signature; seven distinct supported rows are still mandatory.
+  if(numericRows.length<7||!numericRows.some(words=>words[0].text.trim().length>38))return 0;
+  const anchors:{x:number;rows:Set<number>}[]=[];
+  for(const [index,words] of numericRows.entries())for(const word of words.slice(1)){
+    const x=word.bounds.x+word.bounds.width;
+    const anchor=anchors.find(a=>Math.abs(a.x-x)<=7);
+    if(anchor)anchor.rows.add(index);
+    else anchors.push({x,rows:new Set([index])});
+  }
+  const strong=anchors.filter(a=>a.rows.size>=Math.ceil(numericRows.length*.7));
+  if(strong.length<4||Math.max(...strong.map(a=>a.x))-Math.min(...strong.map(a=>a.x))<160)return 0;
+  return numericRows.filter(words=>strong.filter(a=>words.slice(1).some(w=>
+    Math.abs(w.bounds.x+w.bounds.width-a.x)<=7)).length>=4).length;
+}
 /** Short wide grids need substantially stronger evidence than the normal run:
  * eight separate numeric columns, five/six uninterrupted native rows, regular
  * spacing, and eight column edges supported by distinct physical rows.
  * Check both edges because native numeric cells may be right aligned.
  */
 function shortWideNumericRuns(lines:PdfLine[]){
-  const sorted=lines.map(line=>[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x));
+  const sorted=lines.map(line=>line.words.length>=9&&line.words.length<=16?
+    [...line.words].sort((a,b)=>a.bounds.x-b.bounds.x):[]);
   const eligible=lines.map((line,i)=>sorted[i].length>=9&&sorted[i].length<=16&&
     line.words.every(w=>w.extractionProvenance?.source==="native-pdf"&&
       [w.bounds.x,w.bounds.y,w.bounds.width,w.bounds.height].every(Number.isFinite)&&
@@ -125,10 +146,10 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       const anchors=columnsInRun(rows);
       // Two recurrent, distant source x positions and real numeric content
       // are mandatory; no publisher text, document IDs or fixture keys.
-      if(!anchors.some(x=>anchors.some(y=>y-x>=85)))continue;
       const matches=rows.filter(row=>
         anchors.filter(anchor=>row.words.some(w=>Math.abs(w.bounds.x-anchor)<=9)).length>=2);
-      if(matches.length<7)continue;
+      const leftSupported=anchors.some(x=>anchors.some(y=>y-x>=85))&&matches.length>=7;
+      if(!leftSupported&&rightAlignedNumericRowCount(rows)<7)continue;
       potential.push({start,end,count});
     }
     potential.push(...shortWideNumericRuns(lines));

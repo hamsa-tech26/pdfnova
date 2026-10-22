@@ -21,6 +21,23 @@ function block(rows:PdfLine[]):PdfParagraphBlock{
     confidence:0.8};
 }
 describe("R112 conservative native scientific grid segmentation",()=>{
+  it("recognizes numeric right edges when one-to-seven-digit values shift the left edges",()=>{
+    const label="Long description occupying its own native source cell rather than prose";
+    const formats=["1","12","123","1,234","12,345","123,456","1,234,567"];
+    const data=Array.from({length:19},(_,i)=>{
+      const value=formats[i%formats.length];
+      const row=line(i+4,616-i*8.4,[[label,30],
+        ...[320,392,466,539].map(right=>[value,right-value.length*4] as [string,number])]);
+      row.words[0].bounds.width=245;
+      return row;
+    });
+    const before=Array.from({length:4},(_,i)=>line(i,690-i*12,[["Introductory narrative",30]]));
+    const after=Array.from({length:5},(_,i)=>line(i+23,440-i*12,[["Following narrative",30]]));
+    const source=block([...before,...data,...after]);
+    expect(findNativeDenseGridSubregions([source])).toHaveLength(1);
+    expect(detectTableRegionsForPage([source]).tableRegions.some(r=>
+      r.block.id.startsWith("native-dense-grid-"))).toBe(true);
+  });
   it("recovers a short, widely spaced eight-numeric-column grid without lowering the ordinary minimum",()=>{
     const before=Array.from({length:20},(_,i)=>line(i,800-i*12,[["Narrative surrounding the source grid",64]]));
     const data=Array.from({length:5},(_,i)=>line(21+i,393-i*29.45,[

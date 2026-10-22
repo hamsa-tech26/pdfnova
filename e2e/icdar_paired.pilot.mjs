@@ -152,6 +152,7 @@ for(const sample of manifest.samples){
         }
         flush();
         return {pageNumber:pageNo,sourceLineCount:lines.length,
+          rowEvidenceDefinition:"Legacy ordinary-row baseline only; excludes scoped long-label and short-wide evidence",
           longestConsecutiveNumericEligibleRun:longestEligibleRun,
           numericEligibleRunsAtLeastFive:eligibleRunsAtLeastFive,
           numericGridEligibleLineCount:eligible.length,
