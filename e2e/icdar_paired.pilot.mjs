@@ -102,7 +102,7 @@ for(const sample of manifest.samples){
           if(words.some(word=>(word.text??"").trim().length>38))return false;
           const sorted=[...words].sort((a,b)=>a.bounds.x-b.bounds.x);
           if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
-          return words.filter(word=>/\\d/u.test(word.text??"")).length>=2;
+          return words.filter(word=>/\d/u.test(word.text??"")).length>=2;
         });
         return {pageNumber:pageNo,sourceLineCount:lines.length,
           numericGridEligibleLineCount:eligible.length,
