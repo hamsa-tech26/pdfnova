@@ -1691,6 +1691,7 @@ const rowDetection =
           page.pageNumber,
           rowDetection.rows,
           columnDetection.columns,
+          {sourceBlockId: region.block.id},
         );
 
       const builtTable =

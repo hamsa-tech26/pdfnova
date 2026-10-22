@@ -24,6 +24,7 @@ for(const sample of manifest.samples){
     const result=JSON.parse(await readFile(file,"utf8"));
     expect(result.document?.pages?.length).toBe(sample.pageCount);
     expect(Array.isArray(result.tables)).toBe(true);
+    expect(new Set(result.tables.map(table=>table.id)).size).toBe(result.tables.length);
     let matched=0,referenceCount=0,predicted=0,unmatched=0;
     const indexed=new Set(sample.regions.map(x=>x.page));
     const perReferencePage=[];
@@ -82,6 +83,20 @@ for(const sample of manifest.samples){
       independentlyRightsReviewed:false,
       acceptedV4StableCredit:0,
       genuineUnseenHeldout:false,
+      // Bounded line-level geometry for the two already-used failures only.
+      // Never print document text or individual word geometry; held-out
+      // documents are neither opened nor inspected by this development probe.
+      developmentLineGeometry:sample.sampleIndex<=2?result.document.pages.map(p=>({
+        pageNumber:p.pageNumber,
+        referenceBounds:sample.regions.filter(r=>r.page===p.pageNumber).map(r=>r.bounds),
+        lines:(p.lines??[]).slice(0,160).map((line,sourceLineIndex)=>({
+          sourceLineIndex,
+          bounds:Object.fromEntries(Object.entries(line.bounds).map(([key,value])=>[key,Math.round(value*100)/100])),
+          wordCount:line.words.length,
+          numericWordCount:line.words.filter(w=>/\d/u.test(w.text??"")).length,
+          longWordCount:line.words.filter(w=>(w.text??"").trim().length>38).length,
+        })),
+      })):undefined,
       originalPageSourceStats:(result.document.pages??[]).map(p=>({
         nativeWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source!=="ocr-tesseract").length,
         ocrWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source==="ocr-tesseract").length,
