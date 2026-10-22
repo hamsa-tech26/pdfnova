@@ -1,0 +1,43 @@
+name: Bounded Paired Original PDF Benchmark Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/auditIcdarPairedCorpus.py"
+      - "scripts/testIcdarPairedCorpus.py"
+      - ".github/workflows/paired-original-pdf-baseline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paired-pdf-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-corpus-inventory:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Positive and negative corpus guardrails
+        run: python -m unittest discover -s scripts -p testIcdarPairedCorpus.py -v
+      - name: Obtain pinned small public research corpus with actual original PDF and annotation
+        run: python scripts/auditIcdarPairedCorpus.py
+      - name: Explicit limits
+        if: always()
+        run: |
+          {
+            echo '## Bounded actual-PDF source availability'
+            echo '- No PDFs or source XML uploaded, printed, or committed.'
+            echo '- The dataset card identifies CDLA-Permissive-2.0, but its original ICDAR documents have no known license; rights are NOT independently confirmed.'
+            echo '- Pairing by filename within one published archive is not a certified cell-ground-truth or page geometry alignment.'
+            echo '- This check grants 0 accepted V4 Stable documents and never changes the live detector.'
+          } >> "$GITHUB_STEP_SUMMARY"
