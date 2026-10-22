@@ -7,6 +7,9 @@ on:
       - "scripts/auditIcdarPairedCorpus.py"
       - "scripts/testIcdarPairedCorpus.py"
       - "scripts/validateIcdarPairedGeometry.py"
+      - "scripts/prepareIcdarPilot.py"
+      - "e2e/icdar_paired.pilot.mjs"
+      - "playwright.icdar-paired.config.mjs"
       - ".github/workflows/paired-original-pdf-baseline.yml"
   workflow_dispatch:
 
@@ -20,7 +23,7 @@ concurrency:
 jobs:
   paired-corpus-inventory:
     runs-on: ubuntu-latest
-    timeout-minutes: 12
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
         with:
@@ -36,6 +39,15 @@ jobs:
         run: python -m pip install --disable-pip-version-check --no-cache-dir PyMuPDF==1.26.6
       - name: Verify independent XML references actually map onto each source PDF and page
         run: python scripts/validateIcdarPairedGeometry.py
+      - name: Prepare three same-archive source-checked PDF/region reference cases
+        run: python scripts/prepareIcdarPilot.py
+      - name: Install existing website dependencies and pinned test browser
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test current V4 Inspector on actual source PDFs and separate ground truth
+        run: npx playwright test --config=playwright.icdar-paired.config.mjs
       - name: Explicit limits
         if: always()
         run: |
