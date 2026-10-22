@@ -53,7 +53,19 @@ for(const sample of manifest.samples){
       unmatchedPredictions:unmatched,
       independentlyRightsReviewed:false,
       acceptedV4StableCredit:0,
-      genuineUnseenHeldout:false
+      genuineUnseenHeldout:false,
+      originalPageSourceStats:(result.document.pages??[]).map(p=>({
+        nativeWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source!=="ocr-tesseract").length,
+        ocrWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source==="ocr-tesseract").length,
+        lineCount:p.lines?.length??0,
+        paragraphCount:(p.blocks??[]).filter(b=>b.type==="paragraph").length,
+        nativeImagePaintCount:p.imagePaintCount??0,
+        blockCount:p.blocks?.length??0,
+        textExtractionStatus:p.textExtraction?.status??"unknown"
+      })),
+      detectorRejectionReasons:(result.candidateRegionDiagnostics??[]).reduce((counts,item)=>{
+        const key=item.outcome||"unspecified";counts[key]=(counts[key]??0)+1;return counts;
+      },{})
     }));
   });
 }
