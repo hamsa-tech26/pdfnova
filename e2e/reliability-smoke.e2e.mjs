@@ -622,6 +622,7 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
     "browser-rotate-continuity.pdf",
   );
 
+  await expect(page.getByText(/This source PDF is saved locally in this browser\./)).toBeVisible();
   await page.goto("/dashboard");
 
   const rotateLink =
@@ -658,6 +659,7 @@ test("Rotate PDF persists a derived workspace version from a Dashboard handoff",
     "browser-rotate-continuity-rotated.pdf",
   );
 
+  await expect(page.getByRole("heading", { name: "Your rotated PDF is ready", exact: true })).toBeVisible();
   await page.goto("/dashboard");
 
   await expect(
