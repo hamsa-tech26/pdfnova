@@ -1,8 +1,8 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
 
-// Guard against accidentally reintroducing patched Next.js October 2026
-// advisories. This does not suppress transitive npm audit findings.
+// Enforce the October 2026 Next.js security upgrade for RCE/DoS
+// advisories. npm audit separately evaluates current and transitive risks.
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 const lock = JSON.parse(fs.readFileSync("package-lock.json", "utf8"));
 const specs = {
@@ -23,7 +23,7 @@ assert.equal(specs.next, specs["eslint-config-next"],
   "Next.js and eslint-config-next must stay version-aligned");
 const [major, minor, patch] = specs.next.split(".").map(Number);
 assert.ok(major > 16 || (major === 16 &&
-  (minor > 3 || (minor === 3 && patch >= 8))),
-  "Next.js is below patched 16.3.8 security baseline");
+  (minor > 4 || (minor === 4 && patch >= 2))),
+  "Next.js is below patched 16.4.2 security baseline");
 console.log("Next.js and eslint-config-next:", specs.next,
-  "(aligned, pinned, patched minimum 16.3.8)");
+  "(aligned, pinned, patched minimum 16.4.2)");
