@@ -2,6 +2,7 @@ import {test,expect} from "@playwright/test";
 import {readFile,writeFile} from "node:fs/promises";
 import {resolve,join} from "node:path";
 import {scoreDetectionPage} from "../benchmarks/release112/scoreTableRegions.mjs";
+import {regionEvidence} from "../scripts/icdarRegionEvidence.mjs";
 
 const split=process.env.ICDAR_SPLIT??"development";
 const variant=process.env.ICDAR_VARIANT??"corrected";
@@ -92,7 +93,9 @@ for(const sample of manifest.samples){
       independentlyRightsReviewed:false,
       acceptedV4StableCredit:0,
       evaluationSplit:split,detectorVariant:variant,
-      excludedFromDevelopment:heldout,
+      excludedFromDevelopment:false,
+      previouslyReservedRegressionSet:heldout,
+      task167RegionEvidence:[5,8,9].includes(sample.sampleIndex)?regionEvidence(result,sample):undefined,
       // Bounded line-level geometry for the two already-used failures only.
       // Never print document text or individual word geometry; held-out
       // documents are neither opened nor inspected by this development probe.
