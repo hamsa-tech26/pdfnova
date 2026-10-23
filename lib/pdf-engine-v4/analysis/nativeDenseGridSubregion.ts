@@ -15,10 +15,24 @@ export type NativeGridSegment={
 const centerY=(l:PdfLine)=>l.bounds.y+l.bounds.height/2;
 const native=(l:PdfLine)=>l.words.length>0&&l.words.every(w=>
   w.extractionProvenance?.source!=="ocr-tesseract");
+const numericCell=/^[+\-−]?(?:\(?[£$€¥]?\d[\d,]*(?:\.\d+)?\)?%?)$/u;
+// A native financial grid can have one long description item followed by
+// four or more separately positioned numeric cells. The description length
+// is not prose evidence when every other cell has this stronger signature.
+// Keep the ordinary row count, spacing, alignment and OCR gates unchanged.
+function hasNumericCellsAfterLongLabel(sorted:PdfLine["words"]):boolean{
+  if(sorted.length<5||sorted[0].text.trim().length>180)return false;
+  const cells=sorted.slice(1);
+  return cells.every((word,index)=>word.text.trim().length<=24&&
+    numericCell.test(word.text.trim())&&
+    (index===0||word.bounds.x-cells[index-1].bounds.x>=18))&&
+    cells[cells.length-1].bounds.x-cells[0].bounds.x>=160;
+}
 function rowEvidence(l:PdfLine){
   if(!native(l)||l.words.length<4||l.words.length>16)return false;
   const sorted=[...l.words].sort((a,b)=>a.bounds.x-b.bounds.x);
-  if(sorted.some(w=>w.text.trim().length>38))return false;
+  if(sorted.some(w=>w.text.trim().length>38)&&
+    !hasNumericCellsAfterLongLabel(sorted))return false;
   if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
   return sorted.filter(w=>/\d/u.test(w.text)).length>=2;
 }
@@ -31,6 +45,72 @@ function columnsInRun(rows:PdfLine[]):number[]{
     else anchors.push({x,count:1});
   }
   return anchors.filter(a=>a.count>=rows.length*.7).map(a=>a.x);
+}
+function rightAlignedNumericRowCount(rows:PdfLine[]):number{
+  const numericRows=rows.map(row=>[...row.words].sort((a,b)=>a.bounds.x-b.bounds.x))
+    .filter(words=>hasNumericCellsAfterLongLabel(words)&&words.every(w=>
+      w.extractionProvenance?.source==="native-pdf"));
+  // This fallback belongs only to the long-description native numeric shape.
+  // Four recurring numeric right edges replace the weaker two-left-edge
+  // signature; seven distinct supported rows are still mandatory.
+  if(numericRows.length<7||!numericRows.some(words=>words[0].text.trim().length>38))return 0;
+  const anchors:{x:number;rows:Set<number>}[]=[];
+  for(const [index,words] of numericRows.entries())for(const word of words.slice(1)){
+    const x=word.bounds.x+word.bounds.width;
+    const anchor=anchors.find(a=>Math.abs(a.x-x)<=7);
+    if(anchor)anchor.rows.add(index);
+    else anchors.push({x,rows:new Set([index])});
+  }
+  const strong=anchors.filter(a=>a.rows.size>=Math.ceil(numericRows.length*.7));
+  if(strong.length<4||Math.max(...strong.map(a=>a.x))-Math.min(...strong.map(a=>a.x))<160)return 0;
+  return numericRows.filter(words=>strong.filter(a=>words.slice(1).some(w=>
+    Math.abs(w.bounds.x+w.bounds.width-a.x)<=7)).length>=4).length;
+}
+/** Short wide grids need substantially stronger evidence than the normal run:
+ * eight separate numeric columns, five/six uninterrupted native rows, regular
+ * spacing, and eight column edges supported by distinct physical rows.
+ * Check both edges because native numeric cells may be right aligned.
+ */
+function shortWideNumericRuns(lines:PdfLine[]){
+  const sorted=lines.map(line=>line.words.length>=9&&line.words.length<=16?
+    [...line.words].sort((a,b)=>a.bounds.x-b.bounds.x):[]);
+  const eligible=lines.map((line,i)=>sorted[i].length>=9&&sorted[i].length<=16&&
+    line.words.every(w=>w.extractionProvenance?.source==="native-pdf"&&
+      [w.bounds.x,w.bounds.y,w.bounds.width,w.bounds.height].every(Number.isFinite)&&
+      w.bounds.width>0&&w.bounds.height>0)&&
+    hasNumericCellsAfterLongLabel(sorted[i])&&
+    sorted[i].at(-1)!.bounds.x-sorted[i][1].bounds.x>=250);
+  const adjacent=(a:PdfLine,b:PdfLine)=>{
+    const gap=centerY(a)-centerY(b);return gap>=8&&gap<=36;
+  };
+  const result:{start:number;end:number;count:number}[]=[];
+  for(let start=0;start<lines.length;start++){
+    if(!eligible[start]||(eligible[start-1]&&adjacent(lines[start-1],lines[start])))continue;
+    let end=start;
+    while(end+1<lines.length&&eligible[end+1]&&adjacent(lines[end],lines[end+1]))end++;
+    const count=end-start+1;
+    if(count<5||count>6)continue;
+    const rows=sorted.slice(start,end+1).map(words=>words.slice(1));
+    const steps=lines.slice(start+1,end+1).map((line,i)=>centerY(lines[start+i])-centerY(line));
+    const step=[...steps].sort((a,b)=>a-b)[Math.floor(steps.length/2)];
+    if(steps.some(gap=>Math.abs(gap-step)>Math.max(.8,step*.08)))continue;
+    const supported=(["left","right"] as const).some(edge=>{
+      const position=(word:PdfLine["words"][number])=>
+        word.bounds.x+(edge==="right"?word.bounds.width:0);
+      const anchors:{x:number;rows:Set<number>}[]=[];
+      for(const [index,words] of rows.entries())for(const word of words){
+        const x=position(word);
+        const anchor=anchors.find(a=>Math.abs(a.x-x)<=7);
+        if(anchor)anchor.rows.add(index);
+        else anchors.push({x,rows:new Set([index])});
+      }
+      const strong=anchors.filter(a=>a.rows.size>=Math.ceil(count*.75));
+      return strong.length>=8&&rows.filter(words=>strong.filter(a=>
+        words.some(w=>Math.abs(position(w)-a.x)<=7)).length>=8).length>=Math.ceil(count*.75);
+    });
+    if(supported)result.push({start,end,count});
+  }
+  return result;
 }
 function boundedParagraph(source:PdfParagraphBlock,lines:PdfLine[],start:number):PdfParagraphBlock{
   const words=lines.flatMap(l=>l.words);
@@ -57,6 +137,10 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       for(let i=start+1;i<lines.length&&i<start+20;i++){
         const distance=Math.abs(centerY(lines[i-1])-centerY(lines[i]));
         if(distance>29||distance<1)break;
+        if(!eligible[i]&&lines[i].words.length<=2&&(
+          /^\s*(?:table|tab\.)\s+\d/iu.test(lines[i].text)||
+          (lines[i].bounds.height>=lines[i-1].bounds.height*1.2&&
+            centerY(lines[i-1])-centerY(lines[i])>=Math.max(16,lines[i-1].bounds.height*2.5))))break;
         if(!eligible[i]&&(!eligible[i+1]||!eligible[i-1]))break;
         if(eligible[i])count++;
         end=i;
@@ -66,12 +150,13 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
       const anchors=columnsInRun(rows);
       // Two recurrent, distant source x positions and real numeric content
       // are mandatory; no publisher text, document IDs or fixture keys.
-      if(!anchors.some(x=>anchors.some(y=>y-x>=85)))continue;
       const matches=rows.filter(row=>
         anchors.filter(anchor=>row.words.some(w=>Math.abs(w.bounds.x-anchor)<=9)).length>=2);
-      if(matches.length<7)continue;
+      const leftSupported=anchors.some(x=>anchors.some(y=>y-x>=85))&&matches.length>=7;
+      if(!leftSupported&&rightAlignedNumericRowCount(rows)<7)continue;
       potential.push({start,end,count});
     }
+    potential.push(...shortWideNumericRuns(lines));
     // R113: a single visual block can hold multiple separated numeric
     // tables. Prefer the longest supported runs and never duplicate lines.
     const accepted:{from:number;end:number;count:number}[]=[];
@@ -83,7 +168,9 @@ export function findNativeDenseGridSubregions(blocks:PdfVisualBlock[]):NativeGri
         from=i;
       }
       if(candidate.end-from+1>20)continue;
-      if(accepted.some(previous=>from<=previous.end+1&&candidate.end>=previous.from-1))continue;
+      // Consecutive source indices can belong to separate tables when a
+      // section boundary intervenes. Reject shared lines, not adjacency.
+      if(accepted.some(previous=>from<=previous.end&&candidate.end>=previous.from))continue;
       accepted.push({from,end:candidate.end,count:candidate.count});
       if(accepted.length===3)break; // bound complexity per source block
     }

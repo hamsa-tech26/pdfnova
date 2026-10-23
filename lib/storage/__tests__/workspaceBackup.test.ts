@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import JSZip from "jszip";
 import {
   createWorkspaceBackupArchive, parseWorkspaceBackupArchive,
@@ -22,6 +22,43 @@ function make(id: string, parents: string[] = []): WorkspaceBackupEntry {
   return {summary, bytes:new Uint8Array(pdf)};
 }
 describe("private ZIP backup integrity",()=>{
+  it.each(["manifest.json", "files/0.pdf"])("rejects compressed %s before inflating any entry", async name=>{
+    const zip=await JSZip.loadAsync(await createWorkspaceBackupArchive([make("source")]));
+    const entry=zip.file(name)!;
+    const content=await entry.async("uint8array");
+    zip.file(name,content,{compression:"DEFLATE"});
+    const archive=await zip.generateAsync({type:"uint8array"});
+    const read=vi.spyOn(Object.getPrototypeOf(entry),"async");
+    try {
+      await expect(parseWorkspaceBackupArchive(archive)).rejects.toThrow(/original uncompressed ZIP/);
+      expect(read).not.toHaveBeenCalled();
+    } finally { read.mockRestore(); }
+  });
+  it("refuses a forged small-size compressed manifest before reading its expanded content", async()=>{
+    const zip=await JSZip.loadAsync(await createWorkspaceBackupArchive([make("source")]));
+    const entry=zip.file("manifest.json")!;
+    const manifest=await entry.async("string");
+    zip.file("manifest.json",manifest+" ".repeat(1024*1024),{compression:"DEFLATE"});
+    const archive=await zip.generateAsync({type:"uint8array"});
+    const view=new DataView(archive.buffer,archive.byteOffset,archive.byteLength);
+    let patched=false;
+    for(let offset=0;offset+46<=archive.length;offset++){
+      if(view.getUint32(offset,true)!==0x02014b50)continue;
+      const length=view.getUint16(offset+28,true);
+      if(new TextDecoder().decode(archive.subarray(offset+46,offset+46+length))!=="manifest.json")continue;
+      view.setUint32(offset+24,manifest.length,true);
+      const localOffset=view.getUint32(offset+42,true);
+      view.setUint32(localOffset+22,manifest.length,true);
+      patched=true;
+      break;
+    }
+    expect(patched).toBe(true);
+    const read=vi.spyOn(Object.getPrototypeOf(entry),"async");
+    try {
+      await expect(parseWorkspaceBackupArchive(archive)).rejects.toThrow(/original uncompressed ZIP/);
+      expect(read).not.toHaveBeenCalled();
+    } finally { read.mockRestore(); }
+  });
   it("exports and reimports PDF bytes and full version lineage", async()=>{
     const archive=await createWorkspaceBackupArchive([make("source"),make("revision",["source"])]);
     const parsed=await parseWorkspaceBackupArchive(archive);

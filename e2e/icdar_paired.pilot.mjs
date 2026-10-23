@@ -1,0 +1,181 @@
+import {test,expect} from "@playwright/test";
+import {readFile,writeFile} from "node:fs/promises";
+import {resolve,join} from "node:path";
+import {scoreDetectionPage} from "../benchmarks/release112/scoreTableRegions.mjs";
+
+const split=process.env.ICDAR_SPLIT??"development";
+const variant=process.env.ICDAR_VARIANT??"corrected";
+if(!["development","heldout"].includes(split)||!["baseline","corrected"].includes(variant))
+  throw Error("Unknown benchmark split or detector variant");
+const heldout=split==="heldout";
+const root=resolve("benchmarks/icdar/private",heldout?"heldout":".");
+const manifest=JSON.parse(await readFile(join(root,"pilot.json"),"utf8"));
+if(manifest.approvedV4StableCredit!==0||(!heldout&&manifest.unseenHeldout!==false)||
+  (heldout&&manifest.excludedFromDevelopment!==true)||
+  manifest.rightsIndependentlyVerified!==false||manifest.samples.length!==(heldout?6:3)||
+  manifest.samples.some((s,i)=>s.sampleIndex!==i+(heldout?4:1)))
+  throw Error("Invalid source-rights/qualification preflight");
+
+for(const sample of manifest.samples){
+  test("Real paired PDF/region benchmark #"+sample.sampleIndex,async({page})=>{
+    test.setTimeout(185000);
+    await page.goto("/engine-inspector");
+    await page.locator('input[type="file"]').first()
+      .setInputFiles(join(root,"sample-"+sample.sampleIndex+".pdf"));
+    const complete=page.getByRole("button",{name:"Download complete result JSON"});
+    await expect(complete).toBeVisible({timeout:175000});
+    const download=page.waitForEvent("download");
+    await complete.click();
+    const file=await (await download).path();
+    if(!file)throw Error("Inspector result unavailable");
+    const result=JSON.parse(await readFile(file,"utf8"));
+    expect(result.document?.pages?.length).toBe(sample.pageCount);
+    expect(Array.isArray(result.tables)).toBe(true);
+    expect(new Set(result.tables.map(table=>table.id)).size).toBe(result.tables.length);
+    let matched=0,referenceCount=0,predicted=0,unmatched=0;
+    const indexed=new Set(sample.regions.map(x=>x.page));
+    const perReferencePage=[];
+    for(const pageNo of indexed){
+      const pageModel=result.document.pages[pageNo-1];
+      const refs=sample.regions.filter(x=>x.page===pageNo);
+      // Source geometry is tested in Python. Require the inspected page to
+      // have the same size; do not silently rescale to boost the match.
+      expect(Math.abs(pageModel.width-refs[0].pageWidth)).toBeLessThan(3);
+      expect(Math.abs(pageModel.height-refs[0].pageHeight)).toBeLessThan(3);
+      const actual=result.tables.filter(t=>t.pageNumber===pageNo).map(t=>t.bounds);
+      const s=scoreDetectionPage(refs.map(x=>x.bounds),actual,.5);
+      matched+=s.matchedCount;
+      referenceCount+=s.referenceCount;
+      predicted+=s.predictionCount;
+      unmatched+=s.unmatchedPredictionCount;
+      // Keep rejection metadata scoped to its own source page. A document-wide
+      // count alone cannot tell which independently annotated table was missed.
+      // Missing page numbers remain unassigned, never silently attributed.
+      const rejectedOnPage=(result.candidateRegionDiagnostics??[])
+        .filter(d=>d.pageNumber===pageNo)
+        .reduce((counts,item)=>{
+          const key=item.outcome||"unspecified";
+          counts[key]=(counts[key]??0)+1;
+          return counts;
+        },{});
+      perReferencePage.push({pageNumber:pageNo,referenceRegions:s.referenceCount,matchedRegions:s.matchedCount,missedRegions:s.referenceCount-s.matchedCount,detectorPredictions:s.predictionCount,unmatchedPredictions:s.unmatchedPredictionCount,referenceBestIoU:s.referenceBestIoU,rejectedCandidateOutcomes:rejectedOnPage});
+    }
+    // Preserve the known-good three-region document independently of the
+    // targeted long-description correction. Localization is not cell truth.
+    if(!heldout&&sample.sampleIndex===3){
+      expect(referenceCount).toBe(3);
+      expect(matched).toBe(3);
+      expect(unmatched).toBe(0);
+    }
+    // Unannotated pages lack ground truth; these predictions are NOT known false positives.
+    const predictionsOnUnannotatedPages=result.tables.filter(t=>!indexed.has(t.pageNumber)).length;
+    await writeFile(join(root,`score-${variant}-${sample.sampleIndex}.json`),JSON.stringify({
+      sampleIndex:sample.sampleIndex,pdfSha256:sample.pdfSha256,
+      referenceXmlSha256:sample.referenceSha256,referenceRegions:referenceCount,
+      matchedRegions:matched,predictions:predicted,unmatchedPredictions:unmatched,
+    }));
+    console.log(JSON.stringify({
+      type:"ICDAR_PAIRED_PDF_V4_SOURCE_DIAGNOSTIC",
+      sampleIndex:sample.sampleIndex,
+      pdfSha256:sample.pdfSha256,
+      referenceXmlSha256:sample.referenceSha256,
+      sourcePdfPages:sample.pageCount,
+      referenceRegions:referenceCount,
+      matchedRegionsAtIoU0_5:matched,
+      missedRegions:referenceCount-matched,
+      candidateRegions:predicted,
+      unmatchedPredictions:unmatched,
+      referencePageResults:perReferencePage,
+      unannotatedPagesNotScored:sample.pageCount-indexed.size,
+      predictionsOnUnannotatedPages,
+      unannotatedPagePredictionsAreNotCertifiedFalsePositives:true,
+      independentlyRightsReviewed:false,
+      acceptedV4StableCredit:0,
+      evaluationSplit:split,detectorVariant:variant,
+      excludedFromDevelopment:heldout,
+      // Bounded line-level geometry for the two already-used failures only.
+      // Never print document text or individual word geometry; held-out
+      // documents are neither opened nor inspected by this development probe.
+      developmentLineGeometry:sample.sampleIndex<=2?result.document.pages.map(p=>({
+        pageNumber:p.pageNumber,
+        referenceBounds:sample.regions.filter(r=>r.page===p.pageNumber).map(r=>r.bounds),
+        lines:(p.lines??[]).slice(0,160).map((line,sourceLineIndex)=>({
+          sourceLineIndex,
+          bounds:Object.fromEntries(Object.entries(line.bounds).map(([key,value])=>[key,Math.round(value*100)/100])),
+          wordCount:line.words.length,
+          numericWordCount:line.words.filter(w=>/\d/u.test(w.text??"")).length,
+          longWordCount:line.words.filter(w=>(w.text??"").trim().length>38).length,
+          // Character classes only, never original numeric values or text.
+          leadingItemLength:[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x)[0]?.text.trim().length??0,
+          numericCellPatterns:line.words.length>=5?[...line.words].sort((a,b)=>a.bounds.x-b.bounds.x)
+            .slice(1).map(w=>Array.from(w.text.trim()).slice(0,24).map(c=>
+              /\d/u.test(c)?"d":/\p{L}/u.test(c)?"L":/\s/u.test(c)?"_":
+                ".,()%$£€¥+-−".includes(c)?c:"?").join("")):undefined,
+        })),
+      })):undefined,
+      originalPageSourceStats:(result.document.pages??[]).map(p=>({
+        nativeWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source!=="ocr-tesseract").length,
+        ocrWordCount:(p.words??[]).filter(w=>w.extractionProvenance?.source==="ocr-tesseract").length,
+        lineCount:p.lines?.length??0,
+        paragraphCount:(p.blocks??[]).filter(b=>b.type==="paragraph").length,
+        nativeImagePaintCount:p.imagePaintCount??0,
+        blockCount:p.blocks?.length??0,
+        textExtractionStatus:p.textExtraction?.status??"unknown"
+      })),
+      // Aggregate native numeric row evidence only. No source text, word
+      // geometry, individual values, or document bytes in CI output.
+      nativeRowEvidenceByReferencePage:[...indexed].map(pageNo=>{
+        const lines=result.document.pages[pageNo-1]?.lines??[];
+        const eligible=lines.filter(line=>{
+          const words=line.words??[];
+          if(words.length<4||words.length>16)return false;
+          if(words.some(word=>word.extractionProvenance?.source==="ocr-tesseract"))return false;
+          if(words.some(word=>(word.text??"").trim().length>38))return false;
+          const sorted=[...words].sort((a,b)=>a.bounds.x-b.bounds.x);
+          if(sorted[sorted.length-1].bounds.x-sorted[0].bounds.x<110)return false;
+          return words.filter(word=>/\d/u.test(word.text??"")).length>=2;
+        });
+        // Count uninterrupted eligible runs in extraction order. Aggregate
+        // total eligibility can hide several short unrelated groups.
+        let longestEligibleRun=0,run=0,eligibleRunsAtLeastFive=0;
+        let priorEligibleLine=null;
+        const flush=()=>{if(run>=5)eligibleRunsAtLeastFive++;run=0;};
+        for(const line of lines){
+          if(!eligible.includes(line)){flush();priorEligibleLine=null;continue;}
+          const gap=priorEligibleLine===null?0:Math.abs(
+            (priorEligibleLine.bounds.y+priorEligibleLine.bounds.height/2)-
+            (line.bounds.y+line.bounds.height/2));
+          if(priorEligibleLine!==null&&(gap>29||gap<1))flush();
+          run++;
+          longestEligibleRun=Math.max(longestEligibleRun,run);
+          priorEligibleLine=line;
+        }
+        flush();
+        return {pageNumber:pageNo,sourceLineCount:lines.length,
+          rowEvidenceDefinition:"Legacy ordinary-row baseline only; excludes scoped long-label and short-wide evidence",
+          longestConsecutiveNumericEligibleRun:longestEligibleRun,
+          numericEligibleRunsAtLeastFive:eligibleRunsAtLeastFive,
+          numericGridEligibleLineCount:eligible.length,
+          nativeDenseGridMinimumRows:7,
+          candidateMinimumRowsSatisfied:eligible.length>=7,
+          candidateRequiresConsecutiveAlignedRows:true};
+      }),
+      detectorRejectionReasons:(result.candidateRegionDiagnostics??[]).reduce((counts,item)=>{
+        const key=item.outcome||"unspecified";counts[key]=(counts[key]??0)+1;return counts;
+      },{})
+    }));
+    // Require the long-label correction to recover BOTH source references,
+    // without an unmatched prediction. Log the measured evidence first so
+    // a failed experiment remains diagnosable rather than a false success.
+    if(!heldout&&sample.sampleIndex===1){
+      expect(referenceCount).toBe(1);
+      expect(matched).toBe(1);
+      expect(unmatched).toBe(0);
+    }
+    if(!heldout&&sample.sampleIndex===2){
+      expect(referenceCount).toBe(2);
+      expect(matched).toBe(2);
+      expect(unmatched).toBe(0);
+    }
+  });
+}

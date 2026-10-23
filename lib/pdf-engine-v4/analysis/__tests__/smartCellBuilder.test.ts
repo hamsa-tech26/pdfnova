@@ -131,6 +131,26 @@ function createColumn(
 describe(
   "buildSmartTableV4",
   () => {
+    it("keeps independent tables on the same page distinct and deterministic", () => {
+      const columns = [createColumn("a", 50, 40, 120), createColumn("b", 200, 120, 300)];
+      const rows = [createRow("first", 0, 650, [
+        createWord("a1", "Group", 50, 650), createWord("b1", "Value", 200, 650),
+      ]), createRow("second", 1, 630, [
+        createWord("a2", "Control", 50, 630), createWord("b2", "12", 200, 630),
+      ])];
+      const build = (sourceBlockId: string) =>
+        buildSmartTableV4(1, rows, columns, {sourceBlockId}).table!;
+      const first = build("upper-region");
+      const second = build("lower-region");
+      expect(first.id).not.toBe(second.id);
+      expect(build("upper-region").id).toBe(first.id);
+      expect(first.rows).toEqual(second.rows);
+      expect(first.bounds).toEqual(second.bounds);
+      expect(first.rows.flatMap(row => row.cells.map(cell => cell.text))).toEqual([
+        "Group", "Value", "Control", "12",
+      ]);
+    });
+
     it(
       "keeps OCR words in the intended wide text column",
       () => {

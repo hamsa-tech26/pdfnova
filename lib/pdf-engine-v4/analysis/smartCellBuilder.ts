@@ -21,6 +21,7 @@ export type SmartCellBuilderResult = {
 
 type SmartCellBuilderOptions = {
   minimumCellConfidence?: number;
+  sourceBlockId?: string;
 };
 
 const DEFAULT_MINIMUM_CELL_CONFIDENCE = 0.35;
@@ -60,8 +61,10 @@ function createRowId(rowIndex: number) {
   return `logical-row-${rowIndex}`;
 }
 
-function createTableId(pageNumber: number) {
-  return `logical-table-${pageNumber}`;
+function createTableId(pageNumber: number, sourceBlockId?: string) {
+  return sourceBlockId
+    ? `logical-table-${pageNumber}-${sourceBlockId}`
+    : `logical-table-${pageNumber}`;
 }
 
 function findNearestColumn(
@@ -729,7 +732,7 @@ export function buildSmartTableV4(
     );
 
   const table: LogicalTable = {
-    id: createTableId(pageNumber),
+    id: createTableId(pageNumber, options?.sourceBlockId),
     pageNumber,
     rows: populatedRows,
     columnCount: columns.length,

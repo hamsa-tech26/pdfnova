@@ -21,6 +21,116 @@ function block(rows:PdfLine[]):PdfParagraphBlock{
     confidence:0.8};
 }
 describe("R112 conservative native scientific grid segmentation",()=>{
+  it("keeps neighboring right-aligned tables separate across a larger-font section heading",()=>{
+    const label="Long native description for an independently positioned numeric grid";
+    const formats=["1","12","123","1,234","12,345","123,456","1,234,567"];
+    const ys=[616.07,...Array.from({length:17},(_,i)=>600.95-i*8.4),451.91];
+    const grid=(offset:number,index:number)=>ys.map((y,i)=>{
+      const value=formats[i%formats.length];
+      const row=line(index+i,y-offset,[[label,30],
+        ...[320,392,466,539].map(right=>[value,right-value.length*4] as [string,number])]);
+      row.bounds.height=6.96;
+      for(const word of row.words)word.bounds.height=6.96;
+      row.words[0].bounds.width=200;
+      return row;
+    });
+    const before=[685.19,658.79,649.19,634.55].map((y,i)=>line(i,y,[["Introductory section",29]]));
+    const boundary=line(23,424.07,[["Section 2 report",29]]);
+    boundary.bounds.height=8.88;boundary.words[0].bounds.height=8.88;
+    const source=block([...before,...grid(0,4),boundary,...grid(210.24,24),
+      ...Array.from({length:4},(_,i)=>line(i+43,229-i*12,[["Concluding section",29]]))]);
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(2);
+    expect(found[0].lastLineIndex).toBeLessThan(found[1].firstLineIndex);
+    const detected=detectTableRegionsForPage([source]);
+    expect(detected.tableRegions.filter(r=>r.block.id.startsWith("native-dense-grid-"))).toHaveLength(2);
+    const ids=detected.regions.flatMap(r=>r.block.type==="paragraph"?
+      r.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
+    expect(ids).toHaveLength(source.lines.flatMap(l=>l.words).length);
+    expect(new Set(ids)).toEqual(new Set(source.lines.flatMap(l=>l.words.map(w=>w.id))));
+  });
+  it("recognizes numeric right edges when one-to-seven-digit values shift the left edges",()=>{
+    const label="Long description occupying its own native source cell rather than prose";
+    const formats=["1","12","123","1,234","12,345","123,456","1,234,567"];
+    const data=Array.from({length:19},(_,i)=>{
+      const value=formats[i%formats.length];
+      const row=line(i+4,616-i*8.4,[[label,30],
+        ...[320,392,466,539].map(right=>[value,right-value.length*4] as [string,number])]);
+      row.words[0].bounds.width=245;
+      return row;
+    });
+    const before=Array.from({length:4},(_,i)=>line(i,690-i*12,[["Introductory narrative",30]]));
+    const after=Array.from({length:5},(_,i)=>line(i+23,440-i*12,[["Following narrative",30]]));
+    const source=block([...before,...data,...after]);
+    expect(findNativeDenseGridSubregions([source])).toHaveLength(1);
+    expect(detectTableRegionsForPage([source]).tableRegions.some(r=>
+      r.block.id.startsWith("native-dense-grid-"))).toBe(true);
+  });
+  it("recovers a short, widely spaced eight-numeric-column grid without lowering the ordinary minimum",()=>{
+    const before=Array.from({length:20},(_,i)=>line(i,800-i*12,[["Narrative surrounding the source grid",64]]));
+    const data=Array.from({length:5},(_,i)=>line(21+i,393-i*29.45,[
+      ["Metric-"+i,95],...Array.from({length:8},(_,c)=>[
+        i===0?String(2001+c):String(100+c+i),
+        177+c*44-(i===0?39:24),
+      ] as [string,number]),
+    ]));
+    // The numeric header is centred differently; four distinct body rows
+    // support the same eight source column edges.
+    for(const row of data)for(const word of row.words.slice(1))word.bounds.width=24;
+    const after=Array.from({length:10},(_,i)=>line(26+i,235-i*12,[["Narrative after the source grid",64]]));
+    const source=block([...before,line(20,422,[["Units",308]]),...data,...after]);
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(1);
+    expect(found[0].block.lines.map(l=>l.id)).toEqual(data.map(l=>l.id));
+    expect(detectTableRegionsForPage([source]).tableRegions.some(r=>r.block.id===found[0].block.id)).toBe(true);
+    const tooShort=block([...before,...data.slice(0,4),...after]);
+    expect(findNativeDenseGridSubregions([tooShort])).toEqual([]);
+    const fewerColumns=block([...before,...data.map(row=>({...row,words:row.words.slice(0,8)})),...after]);
+    expect(findNativeDenseGridSubregions([fewerColumns])).toEqual([]);
+    const drifting=block([...before,...data.map((row,i)=>({...row,words:row.words.map(w=>({
+      ...w,bounds:{...w.bounds,x:w.bounds.x+i*15},
+    }))})),...after]);
+    expect(findNativeDenseGridSubregions([drifting])).toEqual([]);
+  });
+  it("recovers two long-label numeric grids while retaining every source word once",()=>{
+    const longLabel="An independently positioned description cell with more than thirty-eight characters";
+    const first=Array.from({length:19},(_,i)=>line(i+4,616-i*8.4,[
+      [longLabel,30],["1,210",299],["3,450",375],["8,130",451],["4,980",519],
+    ]));
+    const second=Array.from({length:19},(_,i)=>line(i+24,406-i*8.4,[
+      [longLabel,30],["2,310",299],["4,560",375],["9,240",451],["5,090",519],
+    ]));
+    const before=Array.from({length:4},(_,i)=>line(i,690-i*12,[["Ordinary introductory narrative",30]]));
+    const source=block([...before,...first,line(23,424,[["Section heading",30]]),...second,
+      ...Array.from({length:4},(_,i)=>line(i+43,220-i*12,[["Concluding narrative",30]]))]);
+    // Label width is deliberately bounded independently of character count:
+    // PDF text items can contain an entire description cell.
+    for(const row of [...first,...second])row.words[0].bounds.width=245;
+    const found=findNativeDenseGridSubregions([source]);
+    expect(found).toHaveLength(2);
+    const detected=detectTableRegionsForPage([source]);
+    expect(detected.tableRegions.filter(r=>r.block.id.startsWith("native-dense-grid-"))).toHaveLength(2);
+    const all=detected.regions.flatMap(r=>r.block.type==="paragraph"?
+      r.block.lines.flatMap(l=>l.words.map(w=>w.id)):[]);
+    const original=source.lines.flatMap(l=>l.words.map(w=>w.id));
+    expect(all).toHaveLength(original.length);
+    expect(new Set(all)).toEqual(new Set(original));
+  });
+  it("rejects long prose with incidental numerals, additional long cells or drifting columns",()=>{
+    const longLabel="An article sentence with several incidental numbers in its description";
+    const rows=Array.from({length:26},(_,i)=>line(i,740-i*12,[
+      [longLabel,30],["12 cases",299],["34 observations",375],["56 participants",451],["78 months",519],
+    ]));
+    expect(findNativeDenseGridSubregions([block(rows)])).toEqual([]);
+    const numeric=rows.map((row,i)=>line(i,740-i*12,[
+      [longLabel,30],["120",299+i*10],["340",375+i*10],["560",451+i*10],["780",519+i*10],
+    ]));
+    expect(findNativeDenseGridSubregions([block(numeric)])).toEqual([]);
+    const extraLong=rows.map((row,i)=>line(i,740-i*12,[
+      [longLabel,30],[longLabel,299],["340",375],["560",451],["780",519],
+    ]));
+    expect(findNativeDenseGridSubregions([block(extraLong)])).toEqual([]);
+  });
   it("extracts numeric rows and nearby headers without swallowing surrounding prose",()=>{
     const pre=Array.from({length:9},(_,i)=>line(i,740-i*12,[["Ordinary laboratory article sentence describing conditions",55]]));
     const headers=[line(9,631,[["Subject",61],["Treatment",179],["Response",347]]),

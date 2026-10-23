@@ -132,6 +132,22 @@ export async function parseWorkspaceBackupArchive(bytes: Uint8Array): Promise<Wo
   // validated PDF after bounded decompression instead.
   try { zip = await JSZip.loadAsync(bytes, {checkCRC32:false}); }
   catch { throw new Error("The selected ZIP is damaged or invalid."); }
+  // Kukureku has always exported STORE entries. A compressed archive's
+  // declared expanded sizes are attacker-controlled; JSZip checks the real
+  // size only after inflating it. Refuse recompressed entries before ANY read
+  // so a forged small size cannot bypass the browser memory budget.
+  const files = Object.values(zip.files).filter(file => !file.dir);
+  if (files.length > WORKSPACE_BACKUP_MAX_FILES + 1) throw new Error("Backup has too many file entries.");
+  for (const file of files) {
+    const data = (file as unknown as {_data?: {
+      compression?: {magic?: string}; compressedSize?: number; uncompressedSize?: number;
+    }})._data;
+    if (data?.compression?.magic !== "\u0000\u0000" ||
+        !Number.isSafeInteger(data.uncompressedSize) || (data.uncompressedSize as number) < 0 ||
+        data.compressedSize !== data.uncompressedSize) {
+      throw new Error("Restore requires the original uncompressed ZIP exported by Kukureku. Choose that backup instead of a recompressed copy.");
+    }
+  }
   const manifestFile = zip.file("manifest.json");
   if (!manifestFile) throw new Error("Backup is missing manifest.json.");
   const manifestSize = (manifestFile as unknown as {_data?: {uncompressedSize?: number}})._data?.uncompressedSize;

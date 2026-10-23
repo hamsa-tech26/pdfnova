@@ -1,0 +1,77 @@
+name: Bounded Paired Original PDF Benchmark Preflight
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/auditIcdarPairedCorpus.py"
+      - "scripts/testIcdarPairedCorpus.py"
+      - "scripts/validateIcdarPairedGeometry.py"
+      - "scripts/prepareIcdarPilot.py"
+      - "scripts/compareIcdarHeldout.py"
+      - "e2e/icdar_paired.pilot.mjs"
+      - "playwright.icdar-paired.config.mjs"
+      - ".github/workflows/paired-original-pdf-baseline.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: paired-pdf-source-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  paired-corpus-inventory:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Positive and negative corpus guardrails
+        run: python -m unittest discover -s scripts -p testIcdarPairedCorpus.py -v
+      - name: Obtain pinned small public research corpus with actual original PDF and annotation
+        run: python scripts/auditIcdarPairedCorpus.py
+      - name: Install bounded original-PDF page geometry reader
+        run: python -m pip install --disable-pip-version-check --no-cache-dir PyMuPDF==1.26.6
+      - name: Verify independent XML references actually map onto each source PDF and page
+        run: python scripts/validateIcdarPairedGeometry.py
+      - name: Prepare three same-archive source-checked PDF/region reference cases
+        run: python scripts/prepareIcdarPilot.py
+      - name: Install existing website dependencies and pinned test browser
+        run: |
+          npm ci --no-audit --no-fund
+          npm install --no-save @playwright/test@1.56.1
+          npx playwright install --with-deps chromium
+      - name: Test current V4 Inspector on actual source PDFs and separate ground truth
+        run: npx playwright test --config=playwright.icdar-paired.config.mjs
+      - name: Prepare the reserved six documents only after development acceptance passes
+        run: python scripts/prepareIcdarPilot.py --heldout
+      - name: Compare baseline and frozen corrected detector on the reserved documents
+        run: |
+          mkdir -p work
+          detector=lib/pdf-engine-v4/analysis/nativeDenseGridSubregion.ts
+          cp "$detector" work/frozen-native-grid.txt
+          trap 'cp work/frozen-native-grid.txt "$detector"' EXIT
+          sha256sum "$detector"
+          git fetch --no-tags --depth=1 origin 619eb410bb97d68ad795959b6dc0666749c37c60
+          git show "619eb410bb97d68ad795959b6dc0666749c37c60:$detector" > "$detector"
+          ICDAR_SPLIT=heldout ICDAR_VARIANT=baseline npx playwright test --config=playwright.icdar-paired.config.mjs
+          cp work/frozen-native-grid.txt "$detector"
+          cmp work/frozen-native-grid.txt "$detector"
+          ICDAR_SPLIT=heldout ICDAR_VARIANT=corrected npx playwright test --config=playwright.icdar-paired.config.mjs
+          python scripts/compareIcdarHeldout.py
+      - name: Explicit limits
+        if: always()
+        run: |
+          {
+            echo '## Bounded actual-PDF source availability'
+            echo '- No PDFs or source XML uploaded, printed, or committed.'
+            echo '- The dataset card identifies CDLA-Permissive-2.0, but its original ICDAR documents have no known license; rights are NOT independently confirmed.'
+            echo '- Pairing by filename within one published archive is not a certified cell-ground-truth or page geometry alignment.'
+            echo '- This check grants 0 accepted V4 Stable documents and never changes the live detector.'
+          } >> "$GITHUB_STEP_SUMMARY"

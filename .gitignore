@@ -60,3 +60,6 @@ next-env.d.ts
 # R112: original publisher PDFs, PubTables XML and per-run numeric CI reports
 /benchmarks/release112/private/
 /benchmarks/release112/reports/
+
+# Ephemeral corrected ICDAR PDFs + annotations, never commit user/reference bytes
+benchmarks/icdar/private/
