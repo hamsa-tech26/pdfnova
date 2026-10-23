@@ -1,0 +1,50 @@
+name: One-time Next.js security lockfile regeneration
+
+on:
+  push:
+    branches: [fix/kukureku-next-16-4-2-security]
+    paths: [package.json]
+
+permissions:
+  contents: write
+
+jobs:
+  regenerate:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Regenerate npm v3 lockfile without executing dependency scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify exact aligned patched Next.js versions
+        run: node scripts/checkNextSecurityBaseline.mjs
+      - name: Verify npm ci reproducibly installs the pinned tree
+        run: npm ci --ignore-scripts --no-audit --no-fund
+      - name: Audit production dependencies
+        run: npm audit --omit=dev --audit-level=high
+      - name: Preserve generated lockfile for recovery
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task168-generated-lockfile
+          path: package-lock.json
+          retention-days: 3
+          if-no-files-found: error
+      - name: Commit only the resulting npm lockfile to the security branch
+        run: |
+          set -euo pipefail
+          git diff --quiet -- package.json
+          git add -- package-lock.json
+          if git diff --cached --quiet; then
+            echo "No lockfile changes, stopping"
+            exit 1
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Lock patched Next.js 16.4.2 dependency tree"
+          git push origin HEAD:refs/heads/fix/kukureku-next-16-4-2-security
