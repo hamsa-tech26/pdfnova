@@ -22,6 +22,7 @@ test("complete private backup restores a composed document graph in a new browse
   const mergeDownload=page.waitForEvent("download");
   await page.getByRole("button",{name:"Merge and Download PDF"}).click();
   expect((await PDFDocument.load(await readFile(await (await mergeDownload).path()))).getPageCount()).toBe(2);
+  await expect(page.getByText("Saved as a new composed document in this browser workspace",{exact:true})).toBeVisible();
   await page.goto("/workspace-health");
   await expect(page.getByRole("button",{name:"Download full workspace backup (ZIP)"})).toBeEnabled();
   const dl=page.waitForEvent("download");
@@ -64,6 +65,7 @@ test("rejects an altered backup before any workspace file is restored", async({p
   const dl=page.waitForEvent("download");
   await page.getByRole("button",{name:"Merge and Download PDF"}).click();
   await dl;
+  await expect(page.getByText("Saved as a new composed document in this browser workspace",{exact:true})).toBeVisible();
   await page.goto("/workspace-health");
   const backup=page.waitForEvent("download");
   await page.getByRole("button",{name:"Download full workspace backup (ZIP)"}).click();
