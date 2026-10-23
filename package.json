@@ -53,7 +53,7 @@
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.11",
+    "vitest": "4.1.12",
     "fast-glob": "file:vendor/next-eslint-glob",
     "vite": "8.2.4"
   },
