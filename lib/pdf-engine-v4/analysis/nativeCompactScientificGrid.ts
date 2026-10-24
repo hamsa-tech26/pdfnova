@@ -29,7 +29,9 @@ type RowSignature={x:number[];y:number;columns:3|4};
 const numeric=/^[+\-−]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|[a-zA-Z]{1,2})?$/u;
 function signature(line:PdfLine):RowSignature|null{
   if(line.words.length!==3&&line.words.length!==4)return null;
-  if(line.words.some(w=>w.extractionProvenance?.source==="ocr-tesseract"||
+  // Source-native scientific recovery requires positive attribution;
+  // missing provenance is not evidence of native text (nor safe OCR input).
+  if(line.words.some(w=>w.extractionProvenance?.source!=="native-pdf"||
       !Number.isFinite(w.bounds.x)||!Number.isFinite(w.bounds.y)||
       !Number.isFinite(w.bounds.width)||w.bounds.width<=0||
       w.text.trim().length===0||w.text.length>35))return null;

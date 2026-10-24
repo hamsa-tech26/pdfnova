@@ -71,6 +71,29 @@ describe("R130–132 native compact scientific grids",()=>{
     tooShort.lines.splice(5,3);
     expect(findNativeCompactScientificGrids([tooShort])).toHaveLength(0);
   });
+  it("fails closed on unknown or mixed-origin cells instead of promoting them as native",()=>{
+    const confirmed=source(3);
+    const original=JSON.stringify(confirmed);
+    expect(findNativeCompactScientificGrids([confirmed])).toHaveLength(1);
+
+    // Provenance is optional on legacy-extracted words, and must never
+    // be interpreted as confirmed native PDF or accepted OCR input.
+    const unknown=source(3);
+    for(const row of unknown.lines)for(const word of row.words)
+      word.extractionProvenance=undefined;
+    expect(findNativeCompactScientificGrids([unknown])).toEqual([]);
+    expect(detectTableRegionsForPage([unknown]).tableRegions.some(region=>
+      region.block.id.startsWith("native-compact-grid-"))).toBe(false);
+
+    const mixed=source(3);
+    mixed.lines[5].words[1].extractionProvenance=undefined;
+    expect(findNativeCompactScientificGrids([mixed])).toEqual([]);
+    // Valid source evidence and exact source word IDs remain unchanged.
+    expect(JSON.stringify(confirmed)).toBe(original);
+    expect(confirmed.lines.flatMap(row=>row.words.map(word=>word.id))).toEqual(
+      unknown.lines.flatMap(row=>row.words.map(word=>word.id)));
+  });
+
   it("refuses a loose long-row layout and does not lower the global threshold",()=>{
     const irregular=source(3);
     irregular.lines[6].bounds.y-=45;
