@@ -43,13 +43,16 @@ function xmlSafe(value: unknown): string {
   if (original.length > MAX_CELL_CHARACTERS) {
     throw new Error("A cell exceeds the 10,000-character safety limit.");
   }
-  // XML 1.0 legal code points only, retaining all ordinary Unicode.
-  return original.replace(
-    /[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/gu,
-    "",
-  ).replace(/&/g, "&amp;").replace(/</g, "&lt;")
+  // Withhold export instead of silently deleting source characters that XML
+  // 1.0 cannot represent, including unpaired UTF-16 surrogates.
+  if (/[^\u0009\u000A\u000D\u0020-\uD7FF\uE000-\uFFFD\u{10000}-\u{10FFFF}]/u.test(original)) {
+    throw new Error("A spreadsheet value contains unsupported characters; export was withheld to avoid changing source text.");
+  }
+  return original.replace(/&/g, "&amp;").replace(/</g, "&lt;")
     .replace(/>/g, "&gt;").replace(/"/g, "&quot;")
-    .replace(/'/g, "&apos;");
+    .replace(/'/g, "&apos;")
+    // Literal CR and CRLF are normalized by XML parsers, even with xml:space.
+    .replace(/\r/g, "&#13;");
 }
 
 function cellColumn(index: number): string {
