@@ -3,7 +3,7 @@ import {createRequire} from "node:module";
 import {PDFDocument, PDFString, StandardFonts, rgb} from "pdf-lib";
 import {writeFile} from "node:fs/promises";
 import {execFileSync, spawnSync} from "node:child_process";
-const {normalizeRedactionRect, redactionPixelBounds} = createRequire(import.meta.url)("../lib/pdf/redaction.ts");
+const {normalizeRedactionRect, redactionPixelBounds} = createRequire(import.meta.url)("../lib/pdf/redactionGeometry.ts");
 
 test("downloaded redacted PDF removes secret text, underlying objects and attachments", async ({page}) => {
   const source = await PDFDocument.create();
