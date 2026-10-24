@@ -3,7 +3,8 @@ import { PDFDocument, StandardFonts } from "pdf-lib";
 import JSZip from "jszip";
 import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
-import { createPdfXlsxWorkbook } from "../lib/converters/pdfToXlsx.ts";
+import { createRequire } from "node:module";
+const { createPdfXlsxWorkbook } = createRequire(import.meta.url)("../lib/converters/pdfToXlsx.ts");
 
 test("independent XLSX reader preserves exact text, numbers, blanks and source-supported merges", async () => {
   // Serializer integration only: these constructed source grids do not grant
