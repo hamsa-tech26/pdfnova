@@ -9,6 +9,7 @@ Do not print PDF cell text, reference content or user file paths.
 import json
 import sys
 from pathlib import Path
+from io import BytesIO
 
 from openpyxl import load_workbook
 
@@ -47,7 +48,10 @@ def inspect(xlsx_path, reference_path):
     formulas = 0
     observed = 0
     CURRENT_STAGE = "OPENPYXL_LOAD"
-    workbook = load_workbook(filename=workbook_path, read_only=True,
+    # Browser downloads have UUID temporary names without a .xlsx suffix.
+    # A bounded binary stream bypasses filename-suffix validation while
+    # preserving openpyxl's actual ZIP and OOXML parsing checks.
+    workbook = load_workbook(filename=BytesIO(workbook_path.read_bytes()), read_only=True,
                              data_only=False, keep_links=True)
     try:
         CURRENT_STAGE = "WORKBOOK_STRUCTURE"
