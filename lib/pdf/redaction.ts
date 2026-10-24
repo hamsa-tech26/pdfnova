@@ -1,36 +1,9 @@
 import { PDFDocument } from "pdf-lib";
 import { forEachRenderedPdfPage } from "./render";
-
-export type RedactionRect = {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-};
+import {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, type RedactionRect} from "./redactionGeometry";
+export {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, type RedactionRect} from "./redactionGeometry";
 
 export type RedactionsByPage = Record<number, RedactionRect[]>;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(max, Math.max(min, value));
-}
-
-export function normalizeRedactionRect(rect: RedactionRect): RedactionRect {
-  const x1 = clamp(Math.min(rect.x, rect.x + rect.width), 0, 1);
-  const y1 = clamp(Math.min(rect.y, rect.y + rect.height), 0, 1);
-  const x2 = clamp(Math.max(rect.x, rect.x + rect.width), 0, 1);
-  const y2 = clamp(Math.max(rect.y, rect.y + rect.height), 0, 1);
-  return {
-    x: x1,
-    y: y1,
-    width: x2 - x1,
-    height: y2 - y1,
-  };
-}
-
-export function isUsefulRedactionRect(rect: RedactionRect) {
-  const normalized = normalizeRedactionRect(rect);
-  return normalized.width >= 0.005 && normalized.height >= 0.005;
-}
 
 function dataUrlToBytes(dataUrl: string) {
   const commaIndex = dataUrl.indexOf(",");
@@ -151,24 +124,8 @@ export async function createRasterRedactedPdf(
             continue;
           }
 
-          context.fillRect(
-            Math.round(
-              rect.x *
-                canvas.width,
-            ),
-            Math.round(
-              rect.y *
-                canvas.height,
-            ),
-            Math.ceil(
-              rect.width *
-                canvas.width,
-            ),
-            Math.ceil(
-              rect.height *
-                canvas.height,
-            ),
-          );
+          const pixels = redactionPixelBounds(rect, canvas.width, canvas.height);
+          context.fillRect(pixels.x, pixels.y, pixels.width, pixels.height);
         }
 
         const jpegDataUrl =
