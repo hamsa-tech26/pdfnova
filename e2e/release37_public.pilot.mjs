@@ -2,7 +2,7 @@ import JSZip from "jszip";
 import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
 import {test,expect} from "@playwright/test";
-import {execFileSync} from "node:child_process";
+import {spawnSync} from "node:child_process";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
 
@@ -224,9 +224,14 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",asyn
   // The project-transcribed publisher comparison stays diagnostic, not blind.
   const privateExpected=test.info().outputPath("usgs-publisher-cell-reference.json");
   await writeFile(privateExpected,JSON.stringify(expected),"utf8");
-  const externalReport=JSON.parse(execFileSync("python",[
+  const independent=spawnSync("python",[
     "scripts/checkRelease37XlsxReader.py",file,privateExpected,
-  ],{encoding:"utf8",timeout:25000,maxBuffer:256*1024}));
+  ],{encoding:"utf8",timeout:25000,maxBuffer:256*1024});
+  const externalReport=JSON.parse(independent.stdout.trim());
+  if(independent.error||independent.status!==0){
+    // Only the checker-generated safe enum/count summary reaches CI logs.
+    throw Error("Independent workbook verification: "+JSON.stringify(externalReport));
+  }
   expect(externalReport).toMatchObject({
     status:"PASS",reader:"openpyxl",tables:5,comparedCells:147,
     mismatches:0,formulaCells:0,referenceStatus:"PROJECT_TRANSCRIBED_NOT_INDEPENDENT",

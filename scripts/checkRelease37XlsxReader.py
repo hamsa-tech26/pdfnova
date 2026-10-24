@@ -12,6 +12,13 @@ from pathlib import Path
 
 from openpyxl import load_workbook
 
+
+class ReaderCheckFailure(Exception):
+    def __init__(self, code, **safe_fields):
+        super().__init__(code)
+        self.code = code
+        self.safe_fields = safe_fields
+
 MAX_BYTES = 25 * 1024 * 1024
 TABLES = 5
 EXPECTED_CELLS = 147
@@ -39,14 +46,14 @@ def inspect(xlsx_path, reference_path):
                              data_only=False, keep_links=True)
     try:
         if len(workbook.worksheets) != TABLES + 1:
-            raise ValueError("Workbook sheet count differs from expected table and review sheets")
+            raise ReaderCheckFailure("SHEET_COUNT", actualSheets=len(workbook.worksheets))
         if workbook._external_links:
-            raise ValueError("Unexpected external workbook references")
+            raise ReaderCheckFailure("EXTERNAL_LINKS")
         for index, rows in enumerate(reference):
             sheet = workbook.worksheets[index]
             width = len(rows[0])
             if sheet.max_row != len(rows) or sheet.max_column != width:
-                raise ValueError("Workbook dimension differs from project-publisher table")
+                raise ReaderCheckFailure("DIMENSIONS", tableNumber=index+1, actualRows=sheet.max_row, actualColumns=sheet.max_column, expectedRows=len(rows), expectedColumns=width)
             for row_number, cells in enumerate(sheet.iter_rows(
                     min_row=1, max_row=len(rows), min_col=1,
                     max_col=width), start=0):
@@ -58,11 +65,11 @@ def inspect(xlsx_path, reference_path):
                     observed += 1
         review_sheet = workbook.worksheets[-1]
         if "EXTRACTION NOT VERIFIED" not in str(review_sheet.cell(1, 1).value):
-            raise ValueError("Workbook review-notes warning missing")
+            raise ReaderCheckFailure("REVIEW_NOTE")
     finally:
         workbook.close()
     if observed != EXPECTED_CELLS or mismatch or formulas:
-        raise ValueError("Independent workbook reader found mismatched cells or formulas")
+        raise ReaderCheckFailure("CELL_VALUES_OR_FORMULAS", comparedCells=observed, mismatches=mismatch, formulaCells=formulas)
     return {
         "status": "PASS", "reader": "openpyxl", "tables": TABLES,
         "comparedCells": observed, "mismatches": mismatch, "formulaCells": formulas,
@@ -77,9 +84,13 @@ def main():
     try:
         result = inspect(sys.argv[1], sys.argv[2])
         print(json.dumps(result))
+    except ReaderCheckFailure as exc:
+        # Bounded counts and enum only. No source values, paths or formulas.
+        print(json.dumps({"status": "FAILED", "reason": exc.code,
+                          **exc.safe_fields, "formalV4Credit": 0}))
+        raise SystemExit(2)
     except Exception:
-        # Never leak source/reference cells or local file paths in CI logs.
-        print(json.dumps({"status": "FAILED", "reason": "INDEPENDENT_READER_CHECK_FAILED",
+        print(json.dumps({"status": "FAILED", "reason": "READER_EXCEPTION",
                           "formalV4Credit": 0}))
         raise SystemExit(2)
 
