@@ -19,18 +19,22 @@ class ReaderCheckFailure(Exception):
         self.code = code
         self.safe_fields = safe_fields
 
+CURRENT_STAGE = "BEFORE_INPUT"  # Safe diagnostic enum; never source text.
 MAX_BYTES = 25 * 1024 * 1024
 TABLES = 5
 EXPECTED_CELLS = 147
 
 
 def inspect(xlsx_path, reference_path):
+    global CURRENT_STAGE
+    CURRENT_STAGE = "INPUT_PREFLIGHT"
     workbook_path = Path(xlsx_path)
     reference_file = Path(reference_path)
     if not workbook_path.is_file() or workbook_path.stat().st_size > MAX_BYTES:
         raise ValueError("Missing or oversized independent-read workbook")
     if not reference_file.is_file() or reference_file.stat().st_size > 100_000:
         raise ValueError("Missing or oversized source reference")
+    CURRENT_STAGE = "REFERENCE_READ"
     reference = json.loads(reference_file.read_text(encoding="utf-8"))
     if (not isinstance(reference, list) or len(reference) != TABLES
             or not all(isinstance(rows, list) and rows and all(
@@ -42,13 +46,16 @@ def inspect(xlsx_path, reference_path):
     mismatch = 0
     formulas = 0
     observed = 0
+    CURRENT_STAGE = "OPENPYXL_LOAD"
     workbook = load_workbook(filename=workbook_path, read_only=True,
                              data_only=False, keep_links=True)
     try:
+        CURRENT_STAGE = "WORKBOOK_STRUCTURE"
         if len(workbook.worksheets) != TABLES + 1:
             raise ReaderCheckFailure("SHEET_COUNT", actualSheets=len(workbook.worksheets))
         if workbook._external_links:
             raise ReaderCheckFailure("EXTERNAL_LINKS")
+        CURRENT_STAGE = "CELL_ITERATION"
         for index, rows in enumerate(reference):
             sheet = workbook.worksheets[index]
             width = len(rows[0])
@@ -63,6 +70,7 @@ def inspect(xlsx_path, reference_path):
                     if value != rows[row_number][column_number]:
                         mismatch += 1
                     observed += 1
+        CURRENT_STAGE = "REVIEW_NOTE"
         review_sheet = workbook.worksheets[-1]
         if "EXTRACTION NOT VERIFIED" not in str(review_sheet.cell(1, 1).value):
             raise ReaderCheckFailure("REVIEW_NOTE")
@@ -89,8 +97,11 @@ def main():
         print(json.dumps({"status": "FAILED", "reason": exc.code,
                           **exc.safe_fields, "formalV4Credit": 0}))
         raise SystemExit(2)
-    except Exception:
+    except Exception as exc:
+        # Only report the stage and built-in exception class; never the message.
+        cls = type(exc).__name__ if type(exc).__module__ == "builtins" else "LIBRARY_EXCEPTION"
         print(json.dumps({"status": "FAILED", "reason": "READER_EXCEPTION",
+                          "stage": CURRENT_STAGE, "exceptionClass": cls,
                           "formalV4Credit": 0}))
         raise SystemExit(2)
 
