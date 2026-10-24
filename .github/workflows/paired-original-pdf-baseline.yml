@@ -9,6 +9,8 @@ on:
       - "scripts/validateIcdarPairedGeometry.py"
       - "scripts/prepareIcdarPilot.py"
       - "scripts/compareIcdarHeldout.py"
+      - "scripts/reviewIcdarReferenceOverlay.py"
+      - "scripts/__tests__/reviewIcdarReferenceOverlay_test.py"
       - "scripts/icdarRegionEvidence.mjs"
       - "scripts/__tests__/icdarRegionEvidence.nodecheck.mjs"
       - "e2e/icdar_paired.pilot.mjs"
@@ -41,7 +43,9 @@ jobs:
       - name: Obtain pinned small public research corpus with actual original PDF and annotation
         run: python scripts/auditIcdarPairedCorpus.py
       - name: Install bounded original-PDF page geometry reader
-        run: python -m pip install --disable-pip-version-check --no-cache-dir PyMuPDF==1.26.6
+        run: python -m pip install --disable-pip-version-check --no-cache-dir PyMuPDF==1.26.6 Pillow==11.3.0
+      - name: Private visual-reference overlay safety tests (synthetic PDFs only)
+        run: python -m unittest discover -s scripts/__tests__ -p reviewIcdarReferenceOverlay_test.py -v
       - name: Verify independent XML references actually map onto each source PDF and page
         run: python scripts/validateIcdarPairedGeometry.py
       - name: Prepare three same-archive source-checked PDF/region reference cases
