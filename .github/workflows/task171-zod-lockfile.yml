@@ -1,0 +1,55 @@
+name: One-time bounded Zod advisory lock refresh
+
+on:
+  push:
+    branches: [fix/task169-vitest-security]
+    paths: [package.json]
+
+permissions:
+  contents: write
+
+jobs:
+  lockfile:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - name: Resolve pinned Zod override without running installer scripts
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Reject unrelated lockfile changes
+        run: |
+          python - <<'PY'
+          import json,subprocess
+          old=json.loads(subprocess.check_output(['git','show','HEAD:package-lock.json']))
+          new=json.load(open('package-lock.json'))
+          a,b=old['packages'],new['packages']
+          diff={name for name in set(a)|set(b) if a.get(name)!=b.get(name)}
+          if diff!={'','node_modules/zod'}:
+              raise SystemExit('Unexpected lockfile changes: '+str(sorted(diff)))
+          if new['packages']['node_modules/zod']['version']!='4.6.7':
+              raise SystemExit('Wrong Zod resolution')
+          if new['packages'][''].get('overrides',{}).get('zod')!='4.6.7':
+              raise SystemExit('Missing exact Zod override in root lockfile')
+          print('Verified only Zod and root lock metadata changed')
+          PY
+      - name: Verify reproducible dependency tree and advisories
+        run: |
+          npm ci --ignore-scripts --no-audit --no-fund
+          npm ls zod next vitest
+          npm audit --omit=dev --audit-level=high
+          npm audit --audit-level=high
+      - name: Commit generated lockfile
+        run: |
+          set -euo pipefail
+          git diff --quiet -- package.json
+          git add -- package-lock.json
+          if git diff --cached --quiet; then echo "Missing lockfile update"; exit 1; fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Lock patched Zod transitive dependency to 4.6.7"
+          git push origin HEAD:refs/heads/fix/task169-vitest-security
