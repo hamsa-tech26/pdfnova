@@ -84,3 +84,30 @@ Next PDF gate: inspect exact source regions and original image correspondence
 using authorized originals before designing a correction. Separately,
 production's critical Next.js audit failure needs a focused patched-version
 upgrade and full regression validation; this diagnostic does not fix it.
+
+
+## Continuation: private visual source adjudication
+
+The earlier critical Next.js audit failure discussed above is historical.
+Production now uses Next.js 16.4.2 at c55ea065; maintenance PR #119 remains separate.
+
+The new scripts/reviewIcdarReferenceOverlay.py is a private offline review
+tool for already-exposed Samples 5, 8 and 9. It checks the prepared original
+PDF's SHA256 and page geometry, rejects tampered and rotated/cropped originals,
+and renders both possible XML Y-axis interpretations side by side. Image
+overlays are written only to gitignored benchmarks/icdar/private/review/.
+No original PDF, XML, reference text or preview is uploaded to GitHub.
+
+After preparing the source bundle with prepareIcdarPilot.py --heldout
+in an environment legitimately permitted to use the original documents,
+run: python scripts/reviewIcdarReferenceOverlay.py --sample-index 8
+(or use --sample-index 9 or 5). Dependencies are PyMuPDF and Pillow.
+Five synthetic-only Python tests cover tamper refusal, malformed coordinates,
+certification safeguards, bounded samples, and both rendered orientations.
+
+The benchmark mirror describes CDLA-Permissive-2.0, but its dataset card
+states that the underlying original ICDAR documents have no known license.
+Original-document rights, source-image identity, visual coordinate mapping,
+independent cell accuracy and real-document generalization remain unverified.
+The tool produces a review aid, not a detector correction or certification.
+Formal Engine V4 Stable remains 0/20.
