@@ -46,9 +46,12 @@ test("downloaded redacted PDF removes secret text, underlying objects and attach
     await controls.getByLabel(label, {exact: true}).fill(value);
   }
   await page.getByRole("button", {name: "Add redaction area", exact: true}).click();
-  const pending = page.waitForEvent("download");
-  await page.getByRole("button", {name: "Redact and Download PDF", exact: true}).click();
-  const downloaded = await pending;
+  await expect(page.getByText("Page 1: 1 redaction area marked.", {exact: true})).toBeVisible();
+  const exportButton = page.getByRole("button", {name: "Redact and Download PDF"});
+  await expect(exportButton).toBeEnabled();
+  const [downloaded] = await Promise.all([
+    page.waitForEvent("download"), exportButton.click(),
+  ]);
   const outputPath = await downloaded.path();
   expect(outputPath).toBeTruthy();
   const result = execFileSync("python", ["scripts/checkSyntheticRedactionOutput.py", sourcePath, outputPath], {encoding: "utf8", timeout: 15000}).trim();
