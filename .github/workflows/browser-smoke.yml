@@ -2,7 +2,7 @@ name: Browser Reliability Smoke
 
 on:
   pull_request:
-    branches: [main]
+    branches: [main, fix/task169-vitest-security]
   workflow_dispatch:
 
 permissions:
@@ -21,6 +21,9 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
 
       - uses: actions/setup-node@v4
         with:

@@ -96,6 +96,33 @@ describe("PDF to genuine XLSX OOXML export", () => {
     expect(workbook).toContain('name="Review Notes"');
   });
 
+  it("preserves carriage returns and CRLF without changing tabs, LF or literal XML-looking text", async () => {
+    const zip = await JSZip.loadAsync(await createPdfXlsxWorkbook({
+      tables: [{name: "Text", rows: [["A\rB", "A\r\nB", "A\nB", "A\tB", "&#13;", "বাংলা 🐓"]]}],
+      reviewNotes: ["First\r\nSecond"],
+    }));
+    const xml = await zip.file("xl/worksheets/sheet1.xml")!.async("string");
+    expect(xml).toContain('xml:space="preserve">A&#13;B</t>');
+    expect(xml).toContain('xml:space="preserve">A&#13;\nB</t>');
+    expect(xml).toContain('xml:space="preserve">A\nB</t>');
+    expect(xml).toContain('xml:space="preserve">A\tB</t>');
+    expect(xml).toContain('&amp;#13;');
+    expect(xml).toContain("বাংলা 🐓");
+    expect(await zip.file("xl/worksheets/sheet2.xml")!.async("string"))
+      .toContain("First&#13;\nSecond");
+  });
+
+  it("withholds export instead of deleting unsupported source characters or exposing the value in errors", async () => {
+    for (const invalid of ["\u0000", "\u0001", "\u000b", "\u001f", "\ud800", "\udfff", "\ufffe", "\uffff"]) {
+      const value = "PRIVATE_VALUE" + invalid + "END";
+      await expect(createPdfXlsxWorkbook({tables: [{name: "Text", rows: [[value]]}]}))
+        .rejects.toThrow("A spreadsheet value contains unsupported characters; export was withheld to avoid changing source text.");
+    }
+    await expect(createPdfXlsxWorkbook({
+      tables: [{name: "Text", rows: [["safe"]]}], reviewNotes: ["PRIVATE\u0001NOTE"],
+    })).rejects.toThrow(/unsupported characters/);
+  });
+
   it("does not truncate review notes or exceed worksheet limits", async () => {
     const tables = Array.from({ length: 12 }, (_, i) => ({
       name: "Table " + i, rows: [["ID", String(i)]],
