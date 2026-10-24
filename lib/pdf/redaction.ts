@@ -1,7 +1,7 @@
 import { PDFDocument } from "pdf-lib";
 import { forEachRenderedPdfPage } from "./render";
-import {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, type RedactionRect} from "./redactionGeometry";
-export {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, type RedactionRect} from "./redactionGeometry";
+import {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, validateRedactionPlan, type RedactionRect} from "./redactionGeometry";
+export {normalizeRedactionRect, isUsefulRedactionRect, redactionPixelBounds, validateRedactionPlan, type RedactionRect} from "./redactionGeometry";
 
 export type RedactionsByPage = Record<number, RedactionRect[]>;
 
@@ -33,17 +33,12 @@ export async function createRasterRedactedPdf(
     throw new Error("PDF redaction is only available in the browser.");
   }
 
-  const redactionCount = Object.values(redactionsByPage)
-    .flat()
-    .filter(isUsefulRedactionRect)
-    .length;
-
-  if (redactionCount === 0) {
-    throw new Error("Add at least one redaction area before creating the PDF.");
-  }
-
   const source = await PDFDocument.load(await file.arrayBuffer());
   const pageCount = source.getPageCount();
+
+  // Never report a successful download if even one marked area would be
+  // omitted (for example because its selected page no longer exists).
+  validateRedactionPlan(redactionsByPage, pageCount);
 
   const output = await PDFDocument.create();
 

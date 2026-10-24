@@ -31,3 +31,48 @@ export function redactionPixelBounds(rect: RedactionRect, width: number, height:
   const bottom = Math.min(height, Math.ceil((normalized.y + normalized.height) * height));
   return {x, y, width: right - x, height: bottom - y};
 }
+
+/**
+ * Fail closed before raster export when a saved mask is malformed, out of
+ * source-page range, or too small to be applied. Otherwise a caller with a
+ * stale page map could download an apparently redacted but unmasked page.
+ *
+ * UI drags may use negative widths/heights; those are still normalized.
+ */
+export function validateRedactionPlan(
+  redactionsByPage: Record<number, RedactionRect[]>,
+  pageCount: number,
+): void {
+  if (!Number.isSafeInteger(pageCount) || pageCount < 1 ||
+      !redactionsByPage || typeof redactionsByPage !== "object" ||
+      Array.isArray(redactionsByPage)) {
+    throw new Error("Invalid redaction source or page selections.");
+  }
+
+  let selectedCount = 0;
+  for (const [pageKey, rects] of Object.entries(redactionsByPage)) {
+    const pageNumber = Number(pageKey);
+    if (!/^[1-9][0-9]*$/.test(pageKey) ||
+        !Number.isSafeInteger(pageNumber) || pageNumber > pageCount) {
+      throw new Error("A redaction area refers to a page outside this PDF; export was withheld.");
+    }
+    if (!Array.isArray(rects)) {
+      throw new Error("A redaction page contains invalid selection data; export was withheld.");
+    }
+    for (const rect of rects) {
+      if (!rect || typeof rect !== "object" ||
+          ![rect.x, rect.y, rect.width, rect.height].every(
+            value => typeof value === "number" && Number.isFinite(value),
+          ) || !Number.isFinite(rect.x + rect.width) ||
+          !Number.isFinite(rect.y + rect.height) ||
+          !isUsefulRedactionRect(rect)) {
+        throw new Error("A redaction area could not be safely applied; export was withheld.");
+      }
+      selectedCount += 1;
+    }
+  }
+
+  if (selectedCount === 0) {
+    throw new Error("Add at least one redaction area before creating the PDF.");
+  }
+}
