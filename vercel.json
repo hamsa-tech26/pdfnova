@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "integration/task172-maintenance-xlsx-redaction": false,
+      "fix/task171-xlsx-text-fidelity": false,
+      "fix/task171-redaction-coverage": false,
       "fix/task169-vitest-security": false,
       "fix/kukureku-usgs-row-reconstruction": false,
       "feature/kukureku-v4-blind-reference-review-v1": false,
