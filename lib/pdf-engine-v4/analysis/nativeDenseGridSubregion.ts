@@ -13,8 +13,10 @@ export type NativeGridSegment={
   block:PdfParagraphBlock;
 };
 const centerY=(l:PdfLine)=>l.bounds.y+l.bounds.height/2;
+// Native-grid recovery must not infer provenance from a missing marker.
+// Unknown source and OCR text belong to distinct evidence classes.
 const native=(l:PdfLine)=>l.words.length>0&&l.words.every(w=>
-  w.extractionProvenance?.source!=="ocr-tesseract");
+  w.extractionProvenance?.source==="native-pdf");
 const numericCell=/^[+\-−]?(?:\(?[£$€¥]?\d[\d,]*(?:\.\d+)?\)?%?)$/u;
 // A native financial grid can have one long description item followed by
 // four or more separately positioned numeric cells. The description length

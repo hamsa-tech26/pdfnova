@@ -2,6 +2,9 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "integration/task176-source-integrity-xlsx-review": false,
+      "fix/task174-native-grid-provenance-guard": false,
+      "test/task175-independent-usgs-xlsx": false,
       "fix/task173-redaction-plan-validation": false,
       "integration/task172-maintenance-xlsx-redaction": false,
       "fix/task171-xlsx-text-fidelity": false,
