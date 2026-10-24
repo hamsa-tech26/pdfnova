@@ -32,6 +32,16 @@ export function isUsefulRedactionRect(rect: RedactionRect) {
   return normalized.width >= 0.005 && normalized.height >= 0.005;
 }
 
+/** Cover every pixel touched by the selected area, including fractional edges. */
+export function redactionPixelBounds(rect: RedactionRect, width: number, height: number) {
+  const normalized = normalizeRedactionRect(rect);
+  const x = Math.floor(normalized.x * width);
+  const y = Math.floor(normalized.y * height);
+  const right = Math.min(width, Math.ceil((normalized.x + normalized.width) * width));
+  const bottom = Math.min(height, Math.ceil((normalized.y + normalized.height) * height));
+  return { x, y, width: right - x, height: bottom - y };
+}
+
 function dataUrlToBytes(dataUrl: string) {
   const commaIndex = dataUrl.indexOf(",");
   if (commaIndex < 0) throw new Error("Unable to encode the redacted page.");
@@ -151,24 +161,8 @@ export async function createRasterRedactedPdf(
             continue;
           }
 
-          context.fillRect(
-            Math.round(
-              rect.x *
-                canvas.width,
-            ),
-            Math.round(
-              rect.y *
-                canvas.height,
-            ),
-            Math.ceil(
-              rect.width *
-                canvas.width,
-            ),
-            Math.ceil(
-              rect.height *
-                canvas.height,
-            ),
-          );
+          const pixels = redactionPixelBounds(rect, canvas.width, canvas.height);
+          context.fillRect(pixels.x, pixels.y, pixels.width, pixels.height);
         }
 
         const jpegDataUrl =
