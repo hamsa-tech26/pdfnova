@@ -2,6 +2,11 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "fix/task173-redaction-plan-validation": false,
+      "integration/task172-maintenance-xlsx-redaction": false,
+      "fix/task171-xlsx-text-fidelity": false,
+      "fix/task171-redaction-coverage": false,
+      "fix/task169-vitest-security": false,
       "fix/kukureku-usgs-row-reconstruction": false,
       "feature/kukureku-v4-blind-reference-review-v1": false,
       "integration/kukureku-usgs-blind-reference-20261016": false,
@@ -35,6 +40,7 @@
       "feature/kukureku-r161-r165-ocr-source-review": false,
       "research/kukureku-paired-original-pdf-baseline": false,
       "fix/kukureku-backup-privacy": false,
+      "test/task169-package-guard-save": false,
       "fix/kukureku-next-16-4-2-security": false
     }
   }

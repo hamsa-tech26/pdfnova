@@ -53,12 +53,13 @@
     "eslint-config-next": "16.4.2",
     "tailwindcss": "^4",
     "typescript": "^5",
-    "vitest": "^4.1.11",
+    "vitest": "4.1.12",
     "fast-glob": "file:vendor/next-eslint-glob",
     "vite": "8.2.4"
   },
   "overrides": {
     "argparse": "2.0.1",
-    "fast-glob": "$fast-glob"
+    "fast-glob": "$fast-glob",
+    "zod": "4.6.7"
   }
 }

@@ -1156,6 +1156,10 @@ test("Package Guard blocks strict issues and passes the same package under integ
   await page.goto("/magic-drop");
   await uploadPdf(page, source, "package-application.pdf");
 
+  await expect(
+    page.getByText(/This source PDF is saved locally in this browser\./),
+  ).toBeVisible();
+
   await page.goto("/package-guard");
 
   await expect(

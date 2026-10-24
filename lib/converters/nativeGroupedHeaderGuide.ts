@@ -12,6 +12,9 @@ function label(value:unknown):string{
 export function describeNativePairedGroupHeaders(rows:readonly (readonly string[])[])
   :NativeGroupedHeaderGuide|null{
   if(rows.length<3||rows[0]?.length!==7||rows[1]?.length!==7)return null;
+  // Spreadsheet readers discard merged child values. Whitespace/control text
+  // must not become an empty destination merely through label normalization.
+  if([2,4,6].some(i=>String(rows[0][i]??"")!==""))return null;
   const top=rows[0].map(label),lower=rows[1].map(label);
   const parentIndexes=[1,3,5];
   if(!top[0]||!lower[0]||

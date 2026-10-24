@@ -2,6 +2,65 @@ import { test, expect } from "@playwright/test";
 import { PDFDocument, StandardFonts } from "pdf-lib";
 import JSZip from "jszip";
 import { execFileSync } from "node:child_process";
+import { writeFile } from "node:fs/promises";
+import { createRequire } from "node:module";
+const { createPdfXlsxWorkbook } = createRequire(import.meta.url)("../lib/converters/pdfToXlsx.ts");
+const { describeNativePairedGroupHeaders } = createRequire(import.meta.url)("../lib/converters/nativeGroupedHeaderGuide.ts");
+
+test("independent XLSX reader preserves exact text, numbers, blanks and source-supported merges", async () => {
+  // Serializer integration only: these constructed source grids do not grant
+  // PDF localization, real-document cell accuracy or Stable qualification.
+  const literalRows = [
+    ["Identifier", "Metric", "Literal text", "Blank"],
+    ["00071", "12", "before\rafter", ""],
+    ["00072", "0", "before\r\nafter", ""],
+    ["00073", "0013", "before\nafter\tend", ""],
+    ["=1+1", "9999999999999999", "বাংলা 🐓 & <source> &#13;", ""],
+    ["00075", "=2+2", "  padded text  ", ""],
+  ];
+  const mergedRows = [
+    ["Item", "Group A", "", "Group B", "", "Group C", ""],
+    ["ID", "Count", "Length", "Count", "Length", "Count", "Length"],
+    ["00001", "2", "3.50", "4", "5.00", "6", "7.25"],
+  ];
+  const nonemptyChildRows = mergedRows.map(row => [...row]);
+  nonemptyChildRows[0][2] = "\t";
+  const bytes = await createPdfXlsxWorkbook({tables: [
+    {name: "Literal", rows: literalRows, numericColumns: [1]},
+    {name: "Grouped", rows: mergedRows, nativePairedHeader: true},
+    {name: "Nonempty child", rows: nonemptyChildRows, nativePairedHeader: !!describeNativePairedGroupHeaders(nonemptyChildRows)},
+  ], reviewNotes: ["Source note\r\nKeep exact"]});
+  const outputPath = test.info().outputPath("source-fidelity.xlsx");
+  await writeFile(outputPath, bytes);
+  const result = execFileSync("python", ["-c", `
+import sys, io, json
+from openpyxl import load_workbook
+payload = json.loads(sys.argv[2])
+w = load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), data_only=False)
+assert w.sheetnames == ['Literal', 'Grouped', 'Nonempty child', 'Review Notes']
+s = w['Literal']
+expected = payload['literalRows']
+expected[1][1] = 12
+expected[2][1] = 0
+assert (s.max_row, s.max_column) == (6, 4)
+assert list(s.values) == [tuple(row) for row in expected], 'literal row/column fidelity'
+assert s['B2'].data_type == s['B3'].data_type == 'n'
+assert s['A2'].data_type == s['A5'].data_type == s['B6'].data_type == 's'
+g = w['Grouped']
+assert (g.max_row, g.max_column) == (3, 7)
+assert {str(r) for r in g.merged_cells.ranges} == {'B1:C1', 'D1:E1', 'F1:G1'}
+expected = payload['mergedRows']
+for col in [2, 4, 6]: expected[0][col] = None
+assert list(g.values) == [tuple(row) for row in expected], 'merged row/column fidelity'
+assert g.freeze_panes == 'A3'
+assert not w['Nonempty child'].merged_cells.ranges
+assert list(w['Nonempty child'].values) == [tuple(row) for row in payload['nonemptyChildRows']], 'nonempty merge child lost'
+assert w['Review Notes']['A2'].value == 'Source note\\r\\nKeep exact'
+assert all(cell.data_type != 'f' for sheet in w for row in sheet for cell in row)
+print('XLSX_SOURCE_FIDELITY_OK')
+`, outputPath, JSON.stringify({literalRows, mergedRows, nonemptyChildRows})], {encoding: "utf8", timeout: 15000});
+  expect(result.trim()).toBe("XLSX_SOURCE_FIDELITY_OK");
+});
 
 test("browser downloads real XLSX from an independent five-column PDF", async ({ page }) => {
   const pdf = await PDFDocument.create();
@@ -47,13 +106,14 @@ test("browser downloads real XLSX from an independent five-column PDF", async ({
   // ZIP string inspection alone does not establish Excel interoperability.
   const independentlyParsed = execFileSync("python", [
     "-c",
-    "import sys,io; from openpyxl import load_workbook; " +
+    "import sys,io,json; from openpyxl import load_workbook; " +
       "w=load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), read_only=True, data_only=False); " +
       "s=w['Table 1']; r=list(s.values); " +
-      "assert any(len(x)>=5 and x[1]=='00071' and x[2]=='Station 1' and x[3]=='1000' for x in r), 'row/column mismatch'; " +
-      "assert any(len(x)>=5 and x[2]=='Station 12' for x in r), 'missing final row'; " +
+      "expected=json.loads(sys.argv[2]); " +
+      "assert r==[tuple(row) for row in expected], 'complete source row/column/value mismatch'; " +
+      "assert all(c.data_type!='f' for row in s for c in row), 'invented formula'; " +
       "assert w['Review Notes']['A1'].value.startswith('EXTRACTION NOT VERIFIED'); print('OPENPYXL_OK')",
-    path,
+    path, JSON.stringify(rows),
   ], {encoding:"utf8"}).trim();
   expect(independentlyParsed).toContain("OPENPYXL_OK");
 
