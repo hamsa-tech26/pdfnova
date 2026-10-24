@@ -4,7 +4,7 @@ on:
   push:
     branches: [main, prelaunch-brand-transition]
   pull_request:
-    branches: [main]
+    branches: [main, fix/task169-vitest-security]
 
 permissions:
   contents: read
@@ -14,6 +14,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 24
@@ -34,6 +37,8 @@ jobs:
       - run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+      - name: Standalone TypeScript check on the published source
+        run: npx tsc --noEmit
       - name: Verify patched and pinned Next.js with matching ESLint config
         if: always()
         run: node scripts/checkNextSecurityBaseline.mjs
