@@ -204,4 +204,39 @@ describe("Releases 113-114: multiple native scientific grids",()=>{
     ]));
     expect(findNativeDenseGridSubregions([block([...numeric,...prose])])).toHaveLength(1);
   });
+
+  it("requires explicit native provenance before recovering a numeric grid",()=>{
+    const pre=Array.from({length:10},(_,i)=>line(i,740-i*12,[
+      ["Ordinary surrounding research narrative",55]
+    ]));
+    const data=Array.from({length:8},(_,i)=>line(i+10,590-i*14,[
+      ["Specimen-"+i,61],["30"+i,120],["2."+i,179],["6."+i,347]
+    ]));
+    const post=Array.from({length:10},(_,i)=>line(i+18,440-i*12,[
+      ["Ordinary conclusions outside source table",55]
+    ]));
+    const confirmed=block([...pre,...data,...post]);
+    const before=JSON.stringify(confirmed);
+    expect(findNativeDenseGridSubregions([confirmed])).toHaveLength(1);
+
+    // Legacy/unverified PDF extraction can omit provenance entirely.
+    // It must not gain the privileges of positively attributed native text.
+    const unknown=block(confirmed.lines.map(row=>({
+      ...row,words:row.words.map(word=>({...word,extractionProvenance:undefined}))
+    })));
+    expect(findNativeDenseGridSubregions([unknown])).toEqual([]);
+
+    // One unknown-origin cell in an otherwise confirmed native source must
+    // not be silently promoted to a native numeric-grid candidate.
+    const mixed=block(confirmed.lines.map((row,i)=>({
+      ...row,words:row.words.map((word,j)=>i===13&&j===2?
+        {...word,extractionProvenance:undefined}:word)
+    })));
+    expect(findNativeDenseGridSubregions([mixed])).toEqual([]);
+    expect(JSON.stringify(confirmed)).toBe(before);
+    expect(confirmed.lines.flatMap(row=>row.words.map(word=>word.id))).toEqual(
+      unknown.lines.flatMap(row=>row.words.map(word=>word.id))
+    );
+  });
+
 });
