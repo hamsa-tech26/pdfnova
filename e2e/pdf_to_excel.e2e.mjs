@@ -5,6 +5,7 @@ import { execFileSync } from "node:child_process";
 import { writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 const { createPdfXlsxWorkbook } = createRequire(import.meta.url)("../lib/converters/pdfToXlsx.ts");
+const { describeNativePairedGroupHeaders } = createRequire(import.meta.url)("../lib/converters/nativeGroupedHeaderGuide.ts");
 
 test("independent XLSX reader preserves exact text, numbers, blanks and source-supported merges", async () => {
   // Serializer integration only: these constructed source grids do not grant
@@ -22,9 +23,12 @@ test("independent XLSX reader preserves exact text, numbers, blanks and source-s
     ["ID", "Count", "Length", "Count", "Length", "Count", "Length"],
     ["00001", "2", "3.50", "4", "5.00", "6", "7.25"],
   ];
+  const nonemptyChildRows = mergedRows.map(row => [...row]);
+  nonemptyChildRows[0][2] = "\t";
   const bytes = await createPdfXlsxWorkbook({tables: [
     {name: "Literal", rows: literalRows, numericColumns: [1]},
     {name: "Grouped", rows: mergedRows, nativePairedHeader: true},
+    {name: "Nonempty child", rows: nonemptyChildRows, nativePairedHeader: !!describeNativePairedGroupHeaders(nonemptyChildRows)},
   ], reviewNotes: ["Source note\r\nKeep exact"]});
   const outputPath = test.info().outputPath("source-fidelity.xlsx");
   await writeFile(outputPath, bytes);
@@ -33,7 +37,7 @@ import sys, io, json
 from openpyxl import load_workbook
 payload = json.loads(sys.argv[2])
 w = load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), data_only=False)
-assert w.sheetnames == ['Literal', 'Grouped', 'Review Notes']
+assert w.sheetnames == ['Literal', 'Grouped', 'Nonempty child', 'Review Notes']
 s = w['Literal']
 expected = payload['literalRows']
 expected[1][1] = 12
@@ -49,10 +53,12 @@ expected = payload['mergedRows']
 for col in [2, 4, 6]: expected[0][col] = None
 assert list(g.values) == [tuple(row) for row in expected], 'merged row/column fidelity'
 assert g.freeze_panes == 'A3'
+assert not w['Nonempty child'].merged_cells.ranges
+assert list(w['Nonempty child'].values) == [tuple(row) for row in payload['nonemptyChildRows']], 'nonempty merge child lost'
 assert w['Review Notes']['A2'].value == 'Source note\\r\\nKeep exact'
 assert all(cell.data_type != 'f' for sheet in w for row in sheet for cell in row)
 print('XLSX_SOURCE_FIDELITY_OK')
-`, outputPath, JSON.stringify({literalRows, mergedRows})], {encoding: "utf8", timeout: 15000});
+`, outputPath, JSON.stringify({literalRows, mergedRows, nonemptyChildRows})], {encoding: "utf8", timeout: 15000});
   expect(result.trim()).toBe("XLSX_SOURCE_FIDELITY_OK");
 });
 

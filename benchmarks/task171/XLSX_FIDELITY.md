@@ -67,3 +67,10 @@ column and value of the constructed five-column source PDF, rather than only
 first/last records. The separate serializer check covers exact CR/CRLF,
 Unicode, numbers, blanks, merged headers and formula-like literals. Hosted
 results will be recorded in the draft description after those jobs complete.
+
+A further independent-reader check exposed nonempty tab-only parent-header
+children being merged away because the heading guide normalized them to empty.
+The guide now requires exactly empty destination values before enabling merges.
+Whitespace, CR/LF, NBSP and DEL children remain at their original unmerged
+coordinates; explicit forced merges are refused. The existing truly empty
+grouped-header positive remains merged and the independent reader checks both.

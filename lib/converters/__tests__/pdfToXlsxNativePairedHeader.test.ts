@@ -95,4 +95,21 @@ describe("Release 91 real Excel two-tier native grouped header presentation",()=
         ["1","2","3","4","5","6","7"]],
     }]})).rejects.toThrow(/Two-level native header/);
   });
+
+  it("preserves nonempty whitespace/control header children without merging them away",async()=>{
+    for(const value of [" ","\t","\n","\r\n","\u00a0","\u007f"]){
+      const src=source();
+      src.tables[0].rows[0].cells[2].text=value;
+      const plan=preparePdfV4XlsxExport(src);
+      expect(plan.tables[0].nativePairedHeader).toBeUndefined();
+      expect(plan.tables[0].rows[0][2]).toBe(value);
+      expect(buildPdfTablePreview(src,0).pairedHeaderLayout).toBe(false);
+      const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
+      expect(await zip.file("xl/worksheets/sheet1.xml")!.async("string"))
+        .not.toContain("<mergeCells");
+      await expect(createPdfXlsxWorkbook({tables:[{
+        ...plan.tables[0],nativePairedHeader:true,
+      }]})).rejects.toThrow(/Two-level native header/);
+    }
+  });
 });
