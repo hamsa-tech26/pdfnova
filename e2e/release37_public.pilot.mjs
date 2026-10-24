@@ -2,6 +2,7 @@ import JSZip from "jszip";
 import {PDFDocument} from "pdf-lib";
 import {createHash} from "node:crypto";
 import {test,expect} from "@playwright/test";
+import {execFileSync} from "node:child_process";
 import {readFile,mkdir,writeFile} from "node:fs/promises";
 import path from "node:path";
 
@@ -218,6 +219,19 @@ test("USGS OFR 2024-1025: actual XLSX preserves all 147 source table cells",asyn
     count+=rows.reduce((sum,row)=>sum+row.length,0);
   }
   expect(count).toBe(147);
+  // Verify the downloaded workbook through an independent spreadsheet reader,
+  // not only through the exporter-generated worksheet XML regexes above.
+  // The project-transcribed publisher comparison stays diagnostic, not blind.
+  const privateExpected=test.info().outputPath("usgs-publisher-cell-reference.json");
+  await writeFile(privateExpected,JSON.stringify(expected),"utf8");
+  const externalReport=JSON.parse(execFileSync("python",[
+    "scripts/checkRelease37XlsxReader.py",file,privateExpected,
+  ],{encoding:"utf8",timeout:25000,maxBuffer:256*1024}));
+  expect(externalReport).toMatchObject({
+    status:"PASS",reader:"openpyxl",tables:5,comparedCells:147,
+    mismatches:0,formulaCells:0,referenceStatus:"PROJECT_TRANSCRIBED_NOT_INDEPENDENT",
+    formalV4Credit:0,
+  });
   const review=await zip.file("xl/worksheets/sheet6.xml")?.async("string");
   expect(review).toContain("EXTRACTION NOT VERIFIED");
 });
