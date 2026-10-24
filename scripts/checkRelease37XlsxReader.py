@@ -99,7 +99,7 @@ def main():
         raise SystemExit(2)
     except Exception as exc:
         # Only report the stage and built-in exception class; never the message.
-        cls = type(exc).__name__ if type(exc).__module__ == "builtins" else "LIBRARY_EXCEPTION"
+        cls = type(exc).__name__[:80]  # Static class name only; never exception text.
         print(json.dumps({"status": "FAILED", "reason": "READER_EXCEPTION",
                           "stage": CURRENT_STAGE, "exceptionClass": cls,
                           "formalV4Credit": 0}))
