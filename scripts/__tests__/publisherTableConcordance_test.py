@@ -92,6 +92,24 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(out["matchingDistinctCells"], 0)
         self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 1)
         self.assertEqual(out["pdfCellTextWordJoinDisagreements"], 1)
+        self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 1)
+        self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 0)
+        self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 1)
+        self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 0)
+        self.assertEqual(out["formalV4Credit"], 0)
+        self.assertNotIn("Specimen", json.dumps(out))
+
+    def test_an_overwide_cell_is_distinct_from_correct_cell_grouping(self):
+        payload = {"document": {"pages": [{} for _ in range(14)]},
+                   "tables": [{"rows": [{"cells": [
+                       {"text": "Prefix Specimen 000123 Suffix", "words": [
+                           {"text": "Prefix"}, {"text": "Specimen"}, {"text": "000123"},
+                           {"text": "Suffix"}]},
+                   ]}]}]}
+        out = mod.compare(fixture(), json.dumps(payload))
+        self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 0)
+        self.assertEqual(out["publisherCellsEmbeddedInLargerPdfCell"], 1)
+        self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 0)
         self.assertEqual(out["formalV4Credit"], 0)
         self.assertNotIn("Specimen", json.dumps(out))
 
