@@ -47,7 +47,8 @@
       "research/kukureku-paired-original-pdf-baseline": false,
       "fix/kukureku-backup-privacy": false,
       "test/task169-package-guard-save": false,
-      "fix/kukureku-next-16-4-2-security": false
+      "fix/kukureku-next-16-4-2-security": false,
+      "fix/task181-redaction-cancellation": false
     }
   }
 }
