@@ -55,7 +55,7 @@ class PublisherConcordanceTests(unittest.TestCase):
                 mod.parse_publisher(bad)
 
     def test_comparison_is_diagnostic_and_never_logs_cells(self):
-        payload = {"document": {"pages": [{} for _ in range(14)]},
+        payload = {"document": {"pages": [{"words": [{"text": "Specimen"}]}] + [{} for _ in range(13)]},
                    "tables": [{"rows": [{"cells": [
                        {"words": [{"text": "Specimen"}, {"text": "000123"}]},
                        {"words": [{"text": "12.3"}]},
@@ -64,6 +64,9 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(out["publisherTables"], 4)
         self.assertEqual(out["pdfPages"], 14)
         self.assertEqual(out["matchingDistinctCells"], 1)
+        self.assertGreaterEqual(out["publisherTokensAnywhereInPdf"], 1)
+        self.assertGreaterEqual(out["publisherTokensInDetectedTables"], 1)
+        self.assertLessEqual(out["publisherTokensInDetectedTables"], out["distinctivePublisherTokens"])
         self.assertEqual(out["formalV4Credit"], 0)
         self.assertFalse(out["sourceVersionAligned"])
         self.assertNotIn("Specimen", json.dumps(out))
