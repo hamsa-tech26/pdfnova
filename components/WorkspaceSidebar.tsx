@@ -103,6 +103,12 @@ const navigationGroups: SidebarGroup[] = [
         icon: Sparkles,
       },
       {
+        label: "Smart Scanner",
+        href: "/smart-scan",
+        icon: ScanText,
+        badge: "V0.1",
+      },
+      {
         label: "Workflow Recipes",
         href: "/workflow-recipes",
         icon: ListChecks,
