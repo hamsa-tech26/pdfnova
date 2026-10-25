@@ -6,6 +6,57 @@ import { writeFile } from "node:fs/promises";
 import { createRequire } from "node:module";
 const { createPdfXlsxWorkbook } = createRequire(import.meta.url)("../lib/converters/pdfToXlsx.ts");
 const { describeNativePairedGroupHeaders } = createRequire(import.meta.url)("../lib/converters/nativeGroupedHeaderGuide.ts");
+const { preserveNativeWideHeaderLines } = createRequire(import.meta.url)("../lib/converters/nativeWideHeaderLines.ts");
+
+test("independent XLSX reader preserves exact source headers when native words differ", async () => {
+  const cases = [
+    ...[["㎎", "mg"], ["Ω", "Ω"], ["ﬃ", "ffi"], ["Ａ", "A"], ["²", "2"], ["µ", "μ"]]
+      .map(([word, label]) => ({words: ["Dose", word], ys: [690, 677], label: "Dose " + label})),
+    ...["Dose\tper day", "Dose\u00a0per day", "Dose per\r\nday", "Dose  per day", " Dose per day "]
+      .map(label => ({words: ["Dose", "per", "day"], ys: [690, 690, 677], label})),
+    {words: ["Dose", "per", "day"], ys: [690, 690, 677], label: "Dose per day", expected: "Dose per\nday"},
+  ];
+  const expected = [];
+  const tables = cases.map((sample, index) => {
+    const rows = Array.from({length: 11}, (_, r) =>
+      Array.from({length: 11}, (_, c) => r === 0 ? "Header " + c : String(r * 100 + c)));
+    rows[0][2] = sample.label;
+    const words = sample.words.map((text, i) => ({
+      text, bounds: {x: 100 + i * 35, y: sample.ys[i], width: 30, height: 9},
+      extractionProvenance: {source: "native-pdf"},
+    }));
+    const table = {columnCount: 11, rows: rows.map((row, r) => ({
+      provenance: {blockId: "dense-native-eleven-grid-test-" + r},
+      cells: row.map((text, columnIndex) => ({text, columnIndex,
+        words: r === 0 && columnIndex === 2 ? words : [],
+        extractionProvenance: {source: "native-pdf"},
+      })),
+    }))};
+    const repaired = preserveNativeWideHeaderLines(table, rows);
+    const reference = rows.map(row => [...row]);
+    reference[0][2] = sample.expected ?? sample.label;
+    expected.push(reference);
+    return {name: "Source " + (index + 1), rows: repaired.rows,
+      ...(repaired.headerWrapped ? {nativeWideMultilineHeader: true} : {})};
+  });
+  const outputPath = test.info().outputPath("exact-header-characters.xlsx");
+  await writeFile(outputPath, await createPdfXlsxWorkbook({tables}));
+  const result = execFileSync("python", ["-c", `
+import io, json, sys
+from openpyxl import load_workbook
+expected = json.loads(sys.argv[2])
+w = load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), data_only=False)
+assert len(w.worksheets) == len(expected) == 12
+assert not w._external_links
+for sheet, rows in zip(w.worksheets, expected):
+    assert (sheet.max_row, sheet.max_column) == (11, 11)
+    assert list(sheet.values) == [tuple(row) for row in rows], 'exact header/grid mismatch'
+    assert not sheet.merged_cells.ranges
+    assert all(cell.data_type != 'f' for row in sheet for cell in row)
+print('EXACT_HEADER_READER_OK:1452')
+`, outputPath, JSON.stringify(expected)], {encoding: "utf8", timeout: 15000});
+  expect(result.trim()).toBe("EXACT_HEADER_READER_OK:1452");
+});
 
 test("independent XLSX reader preserves exact text, numbers, blanks and source-supported merges", async () => {
   // Serializer integration only: these constructed source grids do not grant
