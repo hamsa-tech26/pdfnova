@@ -1,6 +1,7 @@
 import {test,expect} from "@playwright/test";
 import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
+import {execFileSync} from "node:child_process";
 import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
 import {assessUncaptionedPairedNativeStream}
@@ -74,6 +75,26 @@ for(const source of manifest.documents){
     const result=JSON.parse(await readFile(file,"utf8"));
     expect(result.document?.pages?.length).toBe(source.sourcePages);
     expect(Array.isArray(result.tables)).toBe(true);
+    // R178: compare the *complete original publisher article's* JATS table
+    // cells against the source PDF's observed table-cell text. This is a
+    // diagnostic only: article-to-page correspondence is not proven.
+    if(source.id==="PMC1064098"){
+      const jats=join(root,"private","PMC1064098.publisher.xml");
+      const out=execFileSync("python3",[
+        "scripts/checkPublisherTableConcordance.py","compare",jats,file,
+      ],{encoding:"utf8",timeout:30000,maxBuffer:131072});
+      const publisher=JSON.parse(out);
+      expect(publisher).toMatchObject({
+        status:"DIAGNOSTIC_ONLY",publisherId:"PMC1064098",
+        publisherTables:4,pdfPages:14,sourceVersionAligned:false,
+        cellStructureIndependentlyAdjudicated:false,formalV4Credit:0,
+      });
+      expect(publisher.distinctPublisherCells).toBeGreaterThan(0);
+      // Content stays in memory/ephemeral runner. Report numeric counts only.
+      console.log(JSON.stringify({type:"R178_PUBLISHER_JATS_TO_PDF_CONCORDANCE",
+        ...publisher}));
+    }
+
     // R117: Inspector must expose evidence-only image review for ALL pages.
     // It is NOT a source-table detector or permission to run extra OCR.
     expect(Array.isArray(result.imageContentReview)).toBe(true);

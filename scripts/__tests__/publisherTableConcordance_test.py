@@ -1,0 +1,64 @@
+import unittest
+import json
+import importlib.util
+from pathlib import Path
+
+p = Path(__file__).resolve().parents[1] / "checkPublisherTableConcordance.py"
+spec = importlib.util.spec_from_file_location("publisher", p)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+def fixture():
+    wraps = "".join(
+        '<table-wrap><label>Table %d</label><table><tbody>'
+        '<tr><th>Sample identity %d</th><th>Value</th></tr>'
+        '<tr><td>Specimen 000123</td><td>12.3</td></tr>'
+        '</tbody></table></table-wrap>' % (n, n)
+        for n in range(1, 5)
+    )
+    return ('<article><front><article-meta>'
+            '<article-id pub-id-type="doi">10.1186/bcr949</article-id>'
+            '<article-id pub-id-type="pmc">1064098</article-id>'
+            '<permissions><license xmlns:xlink="http://www.w3.org/1999/xlink" '
+            'xlink:href="http://creativecommons.org/licenses/by/2.0/"/>'
+            '</permissions></article-meta></front><body>' + wraps +
+            '</body></article>').encode()
+
+class PublisherConcordanceTests(unittest.TestCase):
+    def test_four_original_article_tables_with_blanks_and_spans(self):
+        value = fixture()
+        items = mod.parse_publisher(value)
+        self.assertEqual(len(items), 4)
+        self.assertTrue(all("Specimen 000123" in x for x in items))
+
+    def test_rejects_wrong_doi_missing_license_and_unbounded_xml(self):
+        good = fixture()
+        for bad in [good.replace(b"bcr949", b"WRONG"),
+                    good.replace(b"creativecommons.org/licenses/by/", b"unknown/license/"),
+                    b"<!DOCTYPE article><article/>",
+                    good + b" "*mod.MAX_JATS]:
+            with self.assertRaises(Exception):
+                mod.parse_publisher(bad)
+
+    def test_comparison_is_diagnostic_and_never_logs_cells(self):
+        payload = {"document": {"pages": [{} for _ in range(14)]},
+                   "tables": [{"rows": [{"cells": [
+                       {"words": [{"text": "Specimen"}, {"text": "000123"}]},
+                       {"words": [{"text": "12.3"}]},
+                   ]}]}]}
+        out = mod.compare(fixture(), json.dumps(payload))
+        self.assertEqual(out["publisherTables"], 4)
+        self.assertEqual(out["pdfPages"], 14)
+        self.assertEqual(out["matchingDistinctCells"], 1)
+        self.assertEqual(out["formalV4Credit"], 0)
+        self.assertFalse(out["sourceVersionAligned"])
+        self.assertNotIn("Specimen", json.dumps(out))
+        self.assertNotIn("12.3", json.dumps(out))
+
+    def test_rejects_non_original_inspector_shape(self):
+        with self.assertRaises(Exception):
+            mod.compare(fixture(), json.dumps({"document": {"pages": [{}]},
+                                               "tables": []}))
+
+if __name__ == "__main__":
+    unittest.main()
