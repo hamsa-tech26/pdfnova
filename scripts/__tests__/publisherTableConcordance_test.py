@@ -121,6 +121,8 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(out["matchingDistinctCells"], 0)
         self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 0)
         self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 1)
+        self.assertEqual(out["publisherCellsExactlyRecoveredByAdjacentCellPair"], 1)
+        self.assertEqual(out["publisherCellsExactlyRecoveredByCloseAdjacentPair"], 0)
         self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 0)
         self.assertGreaterEqual(out["publisherCellsContiguousWithinPdfRow"], 1)
         self.assertEqual(out["formalV4Credit"], 0)
