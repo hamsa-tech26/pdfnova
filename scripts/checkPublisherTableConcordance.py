@@ -128,6 +128,20 @@ def compare(jats, inspector):
     distinct = set(value for value in pub_values if len(value) >= 8
                    and any(char.isalpha() for char in value))
     matches = distinct.intersection(observed)
+    # Secondary diagnostic: find substantial publisher words anywhere in the
+    # PDF versus only inside automatically detected table cells. This does NOT
+    # establish row/cell structure or document/page version correspondence.
+    def tokens(values):
+        return {word for value in values
+                for word in re.findall(r"[a-zA-Z][a-zA-Z0-9]{5,}", value)}
+    publisher_tokens = tokens(pub_values)
+    full_pdf_words = []
+    for page in pages:
+        words = page.get("words", [])
+        require(isinstance(words, list) and len(words) <= 20000)
+        full_pdf_words.extend(str(word.get("text", "")) for word in words)
+    pdf_tokens = tokens([normalize(v) for v in full_pdf_words])
+    detected_table_tokens = tokens(observed)
     return {
         "status": "DIAGNOSTIC_ONLY", "publisherId": ARTICLE_ID,
         "publisherTables": len(publisher), "publisherNonemptyCells": len(pub_values),
@@ -135,6 +149,9 @@ def compare(jats, inspector):
         "pdfObservedNonemptyCells": len(observed),
         "distinctPublisherCells": len(distinct),
         "matchingDistinctCells": len(matches),
+        "distinctivePublisherTokens": len(publisher_tokens),
+        "publisherTokensAnywhereInPdf": len(publisher_tokens & pdf_tokens),
+        "publisherTokensInDetectedTables": len(publisher_tokens & detected_table_tokens),
         "sourceVersionAligned": False,
         "cellStructureIndependentlyAdjudicated": False,
         "formalV4Credit": 0,
