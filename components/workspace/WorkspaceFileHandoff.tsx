@@ -192,9 +192,12 @@ export default function WorkspaceFileHandoff() {
                 workspaceFileIds,
               );
 
+              // The active workspace document must remain a PDF. Smart
+              // Scanner may hand off a locally stored JPG/PNG to its PDF
+              // converter without replacing the active PDF with an image.
               if (
-                workspaceFileIds.length ===
-                1
+                workspaceFileIds.length === 1 &&
+                files[0]?.type === "application/pdf"
               ) {
                 void setActiveWorkspaceFile(
                   workspaceFileIds[0],
