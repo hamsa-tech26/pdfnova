@@ -59,7 +59,12 @@ def parse_publisher(xml):
     ids = [(element.attrib.get("pub-id-type", "").lower(), text_of(element).lower())
            for element in root.iter() if tag(element) == "article-id"]
     STAGE = "ARTICLE_ID"
-    require(("doi", DOI) in ids and ("pmc", "1064098") in ids)
+    doi_ok = ("doi", DOI) in ids
+    pmc_ok = any(kind in ("pmc", "pmcid") and value in ("1064098", "pmc1064098")
+                 for kind, value in ids)
+    # Both independent identifiers are required. An HTTP response from a
+    # plausible endpoint is not enough to authenticate publisher content.
+    require(doi_ok and pmc_ok)
     license_refs = [
         str(v).lower()
         for element in root.iter() if tag(element) == "license"
