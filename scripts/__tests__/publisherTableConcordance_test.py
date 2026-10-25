@@ -64,6 +64,10 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(out["publisherTables"], 4)
         self.assertEqual(out["pdfPages"], 14)
         self.assertEqual(out["matchingDistinctCells"], 1)
+        self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 0)
+        self.assertEqual(out["matchingDistinctCellsFormatInsensitiveWordJoin"], 1)
+        self.assertGreaterEqual(out["publisherCellsContiguousWithinPdfRow"], 1)
+        self.assertGreaterEqual(out["publisherCellsContiguousWithinPdfTable"], 1)
         self.assertGreaterEqual(out["publisherTokensAnywhereInPdf"], 1)
         self.assertGreaterEqual(out["publisherTokensInDetectedTables"], 1)
         self.assertLessEqual(out["publisherTokensInDetectedTables"], out["distinctivePublisherTokens"])
@@ -71,6 +75,31 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertFalse(out["sourceVersionAligned"])
         self.assertNotIn("Specimen", json.dumps(out))
         self.assertNotIn("12.3", json.dumps(out))
+
+    def test_cell_text_can_disagree_with_joined_words_without_conferring_certification(self):
+        payload = {"document": {"pages": [{} for _ in range(14)]},
+                   "tables": [{"rows": [{"cells": [
+                       {"text": "Specimen 000123", "words": [
+                           {"text": "Specimen"}, {"text": "broken"}]},
+                   ]}]}]}
+        out = mod.compare(fixture(), json.dumps(payload))
+        self.assertEqual(out["matchingDistinctCells"], 0)
+        self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 1)
+        self.assertEqual(out["pdfCellTextWordJoinDisagreements"], 1)
+        self.assertEqual(out["formalV4Credit"], 0)
+        self.assertNotIn("Specimen", json.dumps(out))
+
+    def test_source_cell_split_across_detected_cells_is_not_an_exact_cell_match(self):
+        payload = {"document": {"pages": [{} for _ in range(14)]},
+                   "tables": [{"rows": [{"cells": [
+                       {"text": "Specimen", "words": [{"text": "Specimen"}]},
+                       {"text": "000123", "words": [{"text": "000123"}]},
+                   ]}]}]}
+        out = mod.compare(fixture(), json.dumps(payload))
+        self.assertEqual(out["matchingDistinctCells"], 0)
+        self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 0)
+        self.assertGreaterEqual(out["publisherCellsContiguousWithinPdfRow"], 1)
+        self.assertEqual(out["formalV4Credit"], 0)
 
     def test_rejects_non_original_inspector_shape(self):
         with self.assertRaises(Exception):
