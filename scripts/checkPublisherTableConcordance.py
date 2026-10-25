@@ -110,24 +110,58 @@ def compare(jats, inspector):
     require(isinstance(pages, list) and len(pages) == 14)
     require(isinstance(tables, list) and len(tables) <= 100)
     observed = []
+    reconstructed_cell_texts = []
+    observed_row_texts = []
+    observed_table_texts = []
+    cell_text_word_disagreements = 0
     for table in tables:
         rows = table.get("rows", [])
         require(isinstance(rows, list) and len(rows) <= 2000)
+        table_row_texts = []
         for row in rows:
             cells = row.get("cells", [])
             require(isinstance(cells, list) and len(cells) <= 128)
+            row_cells = []
             for cell in cells:
                 words = cell.get("words", [])
                 require(isinstance(words, list) and len(words) <= 512)
-                value = " ".join(str(word.get("text", "")) for word in words)
-                if value.strip():
-                    observed.append(normalize(value))
+                value = normalize(" ".join(str(word.get("text", "")) for word in words))
+                own_text = normalize(str(cell.get("text") or ""))
+                if value:
+                    observed.append(value)
+                if own_text:
+                    reconstructed_cell_texts.append(own_text)
+                if value and own_text and value != own_text:
+                    cell_text_word_disagreements += 1
+                row_cells.append(own_text or value)
+            row_text = " ".join(row_cells)
+            observed_row_texts.append(row_text)
+            table_row_texts.append(row_text)
+        observed_table_texts.append(" ".join(table_row_texts))
     pub_values = [normalize(value) for table in publisher for value in table]
     # Only distinctive nontrivial cells count toward preliminary text overlap.
     # No identity is inferred from shared short numbers or blank cells.
     distinct = set(value for value in pub_values if len(value) >= 8
                    and any(char.isalpha() for char in value))
     matches = distinct.intersection(observed)
+    own_text_matches = distinct.intersection(reconstructed_cell_texts)
+    def compact(value):
+        # Punctuation and whitespace are only removed for diagnostic
+        # comparison; the actual downloaded cell text is never rewritten.
+        return "".join(c for c in normalize(value) if c.isalnum())
+    distinctive_compact = {compact(value) for value in distinct}
+    word_join_compact = {compact(value) for value in observed}
+    own_text_compact = {compact(value) for value in reconstructed_cell_texts}
+    normalized_word_matches = distinctive_compact & word_join_compact
+    normalized_own_matches = distinctive_compact & own_text_compact
+    # Source text spanning multiple separate extracted cells may be visible
+    # in a single observed row/table, but that is NOT a correctly aligned cell.
+    row_compact = [compact(value) for value in observed_row_texts]
+    table_compact = [compact(value) for value in observed_table_texts]
+    row_contiguous = sum(any(key in value for value in row_compact)
+                         for key in distinctive_compact if len(key) >= 8)
+    table_contiguous = sum(any(key in value for value in table_compact)
+                           for key in distinctive_compact if len(key) >= 8)
     # Secondary diagnostic: find substantial publisher words anywhere in the
     # PDF versus only inside automatically detected table cells. This does NOT
     # establish row/cell structure or document/page version correspondence.
@@ -149,6 +183,12 @@ def compare(jats, inspector):
         "pdfObservedNonemptyCells": len(observed),
         "distinctPublisherCells": len(distinct),
         "matchingDistinctCells": len(matches),
+        "matchingDistinctCellsUsingReconstructedCellText": len(own_text_matches),
+        "matchingDistinctCellsFormatInsensitiveWordJoin": len(normalized_word_matches),
+        "matchingDistinctCellsFormatInsensitiveCellText": len(normalized_own_matches),
+        "publisherCellsContiguousWithinPdfRow": row_contiguous,
+        "publisherCellsContiguousWithinPdfTable": table_contiguous,
+        "pdfCellTextWordJoinDisagreements": cell_text_word_disagreements,
         "distinctivePublisherTokens": len(publisher_tokens),
         "publisherTokensAnywhereInPdf": len(publisher_tokens & pdf_tokens),
         "publisherTokensInDetectedTables": len(publisher_tokens & detected_table_tokens),
