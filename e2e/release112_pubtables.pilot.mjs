@@ -89,7 +89,16 @@ for(const source of manifest.documents){
         publisherTables:4,pdfPages:14,sourceVersionAligned:false,
         cellStructureIndependentlyAdjudicated:false,formalV4Credit:0,
       });
-      expect(publisher.distinctPublisherCells).toBeGreaterThan(0);
+      expect(publisher.distinctPublisherCells).toBe(37);
+      expect(publisher.distinctivePublisherTokens).toBe(16);
+      // Reproducible numeric gates against the independently SHA-pinned
+      // original-publisher source. These are floors, NOT correctness claims.
+      expect(publisher.matchingDistinctCellsUsingReconstructedCellText)
+        .toBeGreaterThanOrEqual(2);
+      expect(publisher.publisherCellsContiguousWithinPdfRow)
+        .toBeGreaterThanOrEqual(19);
+      expect(publisher.publisherCellsContiguousWithinPdfTable)
+        .toBeGreaterThanOrEqual(20);
       // Content stays in memory/ephemeral runner. Report numeric counts only.
       console.log(JSON.stringify({type:"R178_PUBLISHER_JATS_TO_PDF_CONCORDANCE",
         ...publisher}));
