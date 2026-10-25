@@ -133,6 +133,11 @@ export async function createRasterRedactedPdf(
             ),
           );
 
+        // Flush this page now: PDFImage.embed releases the decoded RGB buffer.
+        // Deferring every image until output.save retains all page buffers and
+        // compresses them in one long main-thread task at the end of export.
+        await embedded.embed();
+
         // PDF.js clips CropBox to MediaBox and applies UserUnit as well as
         // rotation. Use that same physical viewport to avoid stretching pages.
         const visibleWidth = renderedPage.pageWidth;
@@ -157,6 +162,8 @@ export async function createRasterRedactedPdf(
         );
 
         renderedCount += 1;
+        // Give browser input and paint a turn between lossless page exports.
+        await new Promise<void>((resolve) => window.setTimeout(resolve, 0));
       } finally {
         canvas.width = 0;
         canvas.height = 0;
