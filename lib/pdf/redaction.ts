@@ -48,18 +48,12 @@ export async function createRasterRedactedPdf(
     file,
     {
       scale: 1.75,
-      quality: 0.92,
-      format: "jpeg",
+      // Lossy source encoding can spread sensitive edge colors outside the
+      // selected interval before the mask is painted. Keep both stages lossless.
+      format: "png",
       maxDimension: 3200,
     },
     async (renderedPage) => {
-      const index =
-        renderedPage.pageNumber -
-        1;
-
-      const sourcePage =
-        source.getPage(index);
-
       const image =
         await loadImage(
           renderedPage.dataUrl,
@@ -86,6 +80,10 @@ export async function createRasterRedactedPdf(
       }
 
       try {
+        // Flatten transparency before masking so the rebuilt PDF contains a
+        // single opaque raster, without a separate source alpha image.
+        context.fillStyle = "#FFFFFF";
+        context.fillRect(0, 0, canvas.width, canvas.height);
         context.drawImage(
           image,
           0,
@@ -123,45 +121,22 @@ export async function createRasterRedactedPdf(
           context.fillRect(pixels.x, pixels.y, pixels.width, pixels.height);
         }
 
-        const jpegDataUrl =
+        const pngDataUrl =
           canvas.toDataURL(
-            "image/jpeg",
-            0.93,
+            "image/png",
           );
 
         const embedded =
-          await output.embedJpg(
+          await output.embedPng(
             dataUrlToBytes(
-              jpegDataUrl,
+              pngDataUrl,
             ),
           );
 
-        const cropBox =
-          sourcePage.getCropBox();
-
-        const rotation =
-          ((
-            sourcePage
-              .getRotation()
-              .angle %
-            360
-          ) +
-            360) %
-          360;
-
-        const quarterTurn =
-          rotation === 90 ||
-          rotation === 270;
-
-        const visibleWidth =
-          quarterTurn
-            ? cropBox.height
-            : cropBox.width;
-
-        const visibleHeight =
-          quarterTurn
-            ? cropBox.width
-            : cropBox.height;
+        // PDF.js clips CropBox to MediaBox and applies UserUnit as well as
+        // rotation. Use that same physical viewport to avoid stretching pages.
+        const visibleWidth = renderedPage.pageWidth;
+        const visibleHeight = renderedPage.pageHeight;
 
         const outputPage =
           output.addPage([
