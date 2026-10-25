@@ -94,8 +94,6 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(out["pdfCellTextWordJoinDisagreements"], 1)
         self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 1)
         self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 0)
-        self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 1)
-        self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 0)
         self.assertEqual(out["formalV4Credit"], 0)
         self.assertNotIn("Specimen", json.dumps(out))
 
@@ -122,6 +120,8 @@ class PublisherConcordanceTests(unittest.TestCase):
         out = mod.compare(fixture(), json.dumps(payload))
         self.assertEqual(out["matchingDistinctCells"], 0)
         self.assertEqual(out["matchingDistinctCellsUsingReconstructedCellText"], 0)
+        self.assertEqual(out["publisherCellsSplitAcrossPdfCells"], 1)
+        self.assertEqual(out["publisherCellsWithinSinglePdfCell"], 0)
         self.assertGreaterEqual(out["publisherCellsContiguousWithinPdfRow"], 1)
         self.assertEqual(out["formalV4Credit"], 0)
 
