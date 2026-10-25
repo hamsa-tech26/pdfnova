@@ -18,6 +18,7 @@ ARTICLE_ID = "PMC1064098"
 DOI = "10.1186/bcr949"
 URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC1064098/fullTextXML"
 MAX_JATS = 2 * 1024 * 1024
+EXPECTED_PUBLISHER_JATS_SHA256 = "6ccae06bb8df38ae1d1a71119e700066202488b3417159e20e667c4ccf8c54bc"
 MAX_INSPECTOR = 15 * 1024 * 1024
 STAGE = "INITIAL"
 
@@ -216,6 +217,7 @@ def fetch(destination):
         require(length <= MAX_JATS)
         payload = response.read(MAX_JATS + 1)
     STAGE = "SOURCE_PARSE"
+    require(hashlib.sha256(payload).hexdigest() == EXPECTED_PUBLISHER_JATS_SHA256)
     inventory = parse_publisher(payload)
     output = Path(destination)
     require(output.name == "PMC1064098.publisher.xml")
@@ -236,7 +238,10 @@ def main(args):
             data = fetch(args[1])
         elif args[0] == "compare":
             require(len(args) == 3)
-            data = compare(bounded_file(args[1], MAX_JATS),
+            publisher_xml = bounded_file(args[1], MAX_JATS)
+            require(hashlib.sha256(publisher_xml).hexdigest() ==
+                    EXPECTED_PUBLISHER_JATS_SHA256)
+            data = compare(publisher_xml,
                            bounded_file(args[2], MAX_INSPECTOR))
         else:
             raise SourceRejected()
