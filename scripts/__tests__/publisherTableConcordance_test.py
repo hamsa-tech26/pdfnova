@@ -54,6 +54,12 @@ class PublisherConcordanceTests(unittest.TestCase):
             with self.assertRaises(Exception):
                 mod.parse_publisher(bad)
 
+    def test_source_digest_must_be_bound_to_independently_recorded_publisher_copy(self):
+        self.assertRegex(mod.EXPECTED_PUBLISHER_JATS_SHA256, r"^[0-9a-f]{64}$")
+        import hashlib
+        self.assertNotEqual(hashlib.sha256(fixture()).hexdigest(),
+                            mod.EXPECTED_PUBLISHER_JATS_SHA256)
+
     def test_comparison_is_diagnostic_and_never_logs_cells(self):
         payload = {"document": {"pages": [{"words": [{"text": "Specimen"}]}] + [{} for _ in range(13)]},
                    "tables": [{"rows": [{"cells": [
