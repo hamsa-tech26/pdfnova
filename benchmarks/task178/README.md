@@ -26,3 +26,20 @@ all existing source-safety, unit/OCR, browser and security checks.
 This does **not** change the production PDF engine or XLSX export code.
 No branch Vercel deployment; no merge or production action without separate
 owner approval. Keep original research drafts unchanged.
+
+## Task 179 reproducibility and accuracy-floor addendum
+
+Original publisher JATS identity is now pinned to SHA256 `6ccae06bb8df38ae1d1a71119e700066202488b3417159e20e667c4ccf8c54bc`,
+recorded from the first accepted PMC1064098 Europe PMC source fetch. Both
+actual fetch and the hosted compare CLI must match this hash; unexpected
+publisher versions fail closed. The 14-page original PDF is independently
+SHA-pinned by Release 112.
+
+The real-document pilot requires at least 2 source-authored distinct cells
+matching actual reconstructed PDF `cell.text`, at least 19 source cells
+remaining contiguous within an observed PDF row, and 20 within an observed
+table, with exactly 37 source cell candidates and 16 substantial publisher
+tokens. These source-compatible lower bounds prevent future extraction
+regressions, but do not establish correct cell structure or complete source
+alignment. Existing 3/6 published detection boxes remain unchanged; formal
+V4 Stable stays 0/20.
