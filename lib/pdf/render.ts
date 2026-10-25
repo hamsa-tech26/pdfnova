@@ -19,6 +19,9 @@ export type RenderPdfPagesOptions = {
   maxDimension?: number;
   /** Cooperative cancellation between render boundaries. */
   signal?: AbortSignal;
+  maxPages?: number;
+  /** Admission check before allocating a render canvas. */
+  beforePageRender?: (width: number, height: number) => void;
 };
 
 export function calculatePdfRenderScale({
@@ -128,9 +131,28 @@ export async function forEachRenderedPdfPage(
       ),
     });
 
+  // Interrupt loading without destroying a document whose page cleanup is in progress.
+  let loading = true;
+  let abortedLoading: Promise<void> | undefined;
+  const cancelLoading = () => {
+    if (loading && !abortedLoading) abortedLoading = loadingTask.destroy();
+    // A rejected destroy must still be observed if the loading promise rejects first.
+    void abortedLoading?.catch(() => {});
+  };
+  signal?.addEventListener("abort", cancelLoading, {once: true});
   try {
-    const pdf = await loadingTask.promise;
+    if (signal?.aborted) cancelLoading();
+    let pdf;
+    try { pdf = await loadingTask.promise; }
+    catch (error) {
+      if (signal) throwIfPdfOperationCancelled(signal);
+      throw error;
+    }
+    finally { loading = false; signal?.removeEventListener("abort", cancelLoading); }
     if (signal) throwIfPdfOperationCancelled(signal);
+    if (options.maxPages !== undefined && pdf.numPages > options.maxPages) {
+      throw new Error("PDF exceeds the rendering page budget. Export was withheld.");
+    }
     const pagesToRender =
       pageNumbers &&
       pageNumbers.length > 0
@@ -190,6 +212,7 @@ export async function forEachRenderedPdfPage(
           });
           if (signal) throwIfPdfOperationCancelled(signal);
 
+        options.beforePageRender?.(Math.ceil(viewport.width), Math.ceil(viewport.height));
         const canvas =
           document.createElement(
             "canvas",
@@ -201,6 +224,7 @@ export async function forEachRenderedPdfPage(
           );
 
         if (!context) {
+          canvas.width = canvas.height = 0;
           throw new Error(
             "Canvas is not supported in this browser.",
           );
@@ -217,7 +241,7 @@ export async function forEachRenderedPdfPage(
           );
 
         try {
-          await page.render({
+          const renderTask = page.render({
             canvas,
             canvasContext:
               context,
@@ -227,7 +251,18 @@ export async function forEachRenderedPdfPage(
               "jpeg"
                 ? "#FFFFFF"
                 : undefined,
-          }).promise;
+          });
+          const cancelRender = () => renderTask.cancel();
+          signal?.addEventListener("abort", cancelRender, {once: true});
+          try {
+            if (signal?.aborted) cancelRender();
+            await renderTask.promise;
+          } catch (error) {
+            if (signal) throwIfPdfOperationCancelled(signal);
+            throw error;
+          } finally {
+            signal?.removeEventListener("abort", cancelRender);
+          }
 
           const dataUrl =
             format === "png"
@@ -239,14 +274,16 @@ export async function forEachRenderedPdfPage(
                   quality,
                 );
 
+          const width = canvas.width;
+          const height = canvas.height;
+          // The callback consumes encoded bytes, so release this backing store first.
+          canvas.width = canvas.height = 0;
           if (signal) throwIfPdfOperationCancelled(signal);
           await onPage({
             pageNumber,
             dataUrl,
-            width:
-              canvas.width,
-            height:
-              canvas.height,
+            width,
+            height,
             scale:
               effectiveScale,
             pageWidth: baseViewport.width,
@@ -261,7 +298,8 @@ export async function forEachRenderedPdfPage(
       }
     }
   } finally {
-    await loadingTask.destroy();
+    signal?.removeEventListener("abort", cancelLoading);
+    await (abortedLoading ?? loadingTask.destroy());
   }
 }
 
