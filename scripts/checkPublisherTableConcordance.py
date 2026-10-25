@@ -19,6 +19,7 @@ DOI = "10.1186/bcr949"
 URL = "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC1064098/fullTextXML"
 MAX_JATS = 2 * 1024 * 1024
 MAX_INSPECTOR = 15 * 1024 * 1024
+STAGE = "INITIAL"
 
 
 class SourceRejected(Exception):
@@ -41,12 +42,15 @@ def text_of(element):
 
 
 def parse_publisher(xml):
+    global STAGE
+    STAGE = "XML_PARSE"
     require(0 < len(xml) <= MAX_JATS)
     require(b"<!DOCTYPE" not in xml.upper() and b"<!ENTITY" not in xml.upper())
     root = ET.fromstring(xml)
     require(tag(root) == "article")
     ids = [(element.attrib.get("pub-id-type", "").lower(), text_of(element).lower())
            for element in root.iter() if tag(element) == "article-id"]
+    STAGE = "ARTICLE_ID"
     require(("doi", DOI) in ids and ("pmc", "1064098") in ids)
     license_refs = [
         str(v).lower()
@@ -54,11 +58,14 @@ def parse_publisher(xml):
         for k, v in element.attrib.items()
         if k.rsplit("}", 1)[-1] in ("href", "license-type")
     ]
+    STAGE = "LICENSE"
     require(any("creativecommons.org/licenses/by/" in v for v in license_refs))
     wraps = [element for element in root.iter() if tag(element) == "table-wrap"]
+    STAGE = "TABLE_COUNT"
     require(len(wraps) == 4)
     output = []
     for wrap in wraps:
+        STAGE = "TABLE_SHAPE"
         tables = [t for t in wrap.iter() if tag(t) == "table"]
         require(len(tables) == 1)
         rows = [r for r in tables[0].iter() if tag(r) == "tr"]
@@ -129,6 +136,8 @@ def bounded_file(path, max_bytes):
 
 
 def fetch(destination):
+    global STAGE
+    STAGE = "NETWORK_FETCH"
     u = urllib.request.Request(URL, headers={"User-Agent": "KukurekuResearch/1.0 (source audit)"})
     with urllib.request.urlopen(u, timeout=30) as response:
         require(response.status == 200)
@@ -136,11 +145,13 @@ def fetch(destination):
         length = int(response.headers.get("Content-Length", "0"))
         require(length <= MAX_JATS)
         payload = response.read(MAX_JATS + 1)
+    STAGE = "SOURCE_PARSE"
     inventory = parse_publisher(payload)
     output = Path(destination)
     require(output.name == "PMC1064098.publisher.xml")
     require(output.parent.name == "private" and output.parent.parent.name == "release112")
     output.parent.mkdir(parents=True, exist_ok=True)
+    STAGE = "SAVE_PRIVATE"
     output.write_bytes(payload)
     return {"status": "SOURCE_DOWNLOADED", "publisherId": ARTICLE_ID,
             "publisherTables": len(inventory), "sourceSha256": hashlib.sha256(payload).hexdigest(),
@@ -161,9 +172,11 @@ def main(args):
             raise SourceRejected()
         print(json.dumps(data, sort_keys=True))
         return 0
-    except Exception:
-        # Fail closed with no URLs, cell text, XML, paths or parser exceptions.
+    except Exception as exc:
+        # Safe enum/class metadata only; never exception messages or values.
+        klass = type(exc).__name__[:64]
         print(json.dumps({"status": "SOURCE_BLOCKED_OR_INVALID",
+                          "stage": STAGE, "exceptionClass": klass,
                           "formalV4Credit": 0}, sort_keys=True))
         return 2
 
