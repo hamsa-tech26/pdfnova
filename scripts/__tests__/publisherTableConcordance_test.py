@@ -34,12 +34,12 @@ class PublisherConcordanceTests(unittest.TestCase):
     def test_bounded_external_jats_doctype_accepted_without_loading_entities(self):
         good = fixture()
         header = (b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS 1.4//EN" '
-                  b'"JATS-archivearticle1-4-mathml3.dtd">\\n')
+                  b'"JATS-archivearticle1-4-mathml3.dtd">\n')
         self.assertEqual(len(mod.parse_publisher(header + good)), 4)
         dangerous = [
-            b'<!DOCTYPE article [<!ENTITY ex SYSTEM "file:///etc/passwd">]>\\n',
-            b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS//EN" "https://x.test/a.dtd">\\n',
-            b'<!DOCTYPE article SYSTEM "random.dtd">\\n',
+            b'<!DOCTYPE article [<!ENTITY ex SYSTEM "file:///etc/passwd">]>\n',
+            b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS//EN" "https://x.test/a.dtd">\n',
+            b'<!DOCTYPE article SYSTEM "random.dtd">\n',
         ]
         for declaration in dangerous:
             with self.assertRaises(Exception):

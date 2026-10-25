@@ -49,7 +49,7 @@ def parse_publisher(xml):
     # Strip ONLY the bounded, syntactically restricted declaration: never
     # fetch a DTD, resolve entities, or permit an internal entity subset.
     require(b"<!ENTITY" not in xml.upper())
-    doctype = re.search(rb'<!DOCTYPE\\s+article\\s+PUBLIC\\s+"[^"<>\\[\\]]{1,250}"\\s+"[A-Za-z0-9._/-]{1,160}"\\s*>', xml, re.I)
+    doctype = re.search(rb'<!DOCTYPE\s+article\s+PUBLIC\s+"[^"<>\[\]]{1,250}"\s+"[A-Za-z0-9._/-]{1,160}"\s*>', xml, re.I)
     if b"<!DOCTYPE" in xml.upper():
         require(doctype is not None and xml.upper().count(b"<!DOCTYPE") == 1)
         xml = xml[:doctype.start()] + xml[doctype.end():]
