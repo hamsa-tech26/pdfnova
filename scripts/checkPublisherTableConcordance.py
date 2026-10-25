@@ -163,6 +163,23 @@ def compare(jats, inspector):
                          for key in distinctive_compact if len(key) >= 8)
     table_contiguous = sum(any(key in value for value in table_compact)
                            for key in distinctive_compact if len(key) >= 8)
+    # Distinguish a source cell embedded within one over-wide target cell
+    # from a source cell fragmented across several target cells. Neither is
+    # credited as a structurally correct, column-aligned match.
+    source_cells_in_any_single_cell = sum(
+        any(key in value for value in own_text_compact)
+        for key in distinctive_compact if len(key) >= 8
+    )
+    source_cells_split_across_pdf_cells = sum(
+        any(key in value for value in row_compact)
+        and not any(key in value for value in own_text_compact)
+        for key in distinctive_compact if len(key) >= 8
+    )
+    source_cells_embedded_in_larger_cell = sum(
+        key not in own_text_compact
+        and any(key in value for value in own_text_compact)
+        for key in distinctive_compact if len(key) >= 8
+    )
     # Secondary diagnostic: find substantial publisher words anywhere in the
     # PDF versus only inside automatically detected table cells. This does NOT
     # establish row/cell structure or document/page version correspondence.
@@ -188,6 +205,9 @@ def compare(jats, inspector):
         "matchingDistinctCellsFormatInsensitiveWordJoin": len(normalized_word_matches),
         "matchingDistinctCellsFormatInsensitiveCellText": len(normalized_own_matches),
         "publisherCellsContiguousWithinPdfRow": row_contiguous,
+        "publisherCellsWithinSinglePdfCell": source_cells_in_any_single_cell,
+        "publisherCellsSplitAcrossPdfCells": source_cells_split_across_pdf_cells,
+        "publisherCellsEmbeddedInLargerPdfCell": source_cells_embedded_in_larger_cell,
         "publisherCellsContiguousWithinPdfTable": table_contiguous,
         "pdfCellTextWordJoinDisagreements": cell_text_word_disagreements,
         "distinctivePublisherTokens": len(publisher_tokens),
