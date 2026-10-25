@@ -31,6 +31,20 @@ class PublisherConcordanceTests(unittest.TestCase):
         self.assertEqual(len(items), 4)
         self.assertTrue(all("Specimen 000123" in x for x in items))
 
+    def test_bounded_external_jats_doctype_accepted_without_loading_entities(self):
+        good = fixture()
+        header = (b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS 1.4//EN" '
+                  b'"JATS-archivearticle1-4-mathml3.dtd">\\n')
+        self.assertEqual(len(mod.parse_publisher(header + good)), 4)
+        dangerous = [
+            b'<!DOCTYPE article [<!ENTITY ex SYSTEM "file:///etc/passwd">]>\\n',
+            b'<!DOCTYPE article PUBLIC "-//NLM//DTD JATS//EN" "https://x.test/a.dtd">\\n',
+            b'<!DOCTYPE article SYSTEM "random.dtd">\\n',
+        ]
+        for declaration in dangerous:
+            with self.assertRaises(Exception):
+                mod.parse_publisher(declaration + good)
+
     def test_rejects_wrong_doi_missing_license_and_unbounded_xml(self):
         good = fixture()
         for bad in [good.replace(b"bcr949", b"WRONG"),
