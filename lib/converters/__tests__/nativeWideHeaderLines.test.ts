@@ -41,6 +41,30 @@ function source(words= [
 }
 
 describe("Release 103–105 native multi-baseline wide scientific header repair",()=>{
+  it("does not replace header characters merely because Unicode compatibility forms agree",()=>{
+    for(const [nativeText,existingText] of [
+      ["㎎","mg"],["Ω","Ω"],["ﬃ","ffi"],["Ａ","A"],["²","2"],["µ","μ"],
+    ]){
+      const {table,data}=source([native("Dose",690),native(nativeText,677)],"Dose "+existingText);
+      const original=JSON.stringify(data);
+      const repaired=preserveNativeWideHeaderLines(table,data);
+      expect(repaired.headerWrapped).toBe(false);
+      expect(repaired.rows).toBe(data);
+      expect(JSON.stringify(repaired.rows)).toBe(original);
+      const plan=preparePdfV4XlsxExport({document:{pages:[{}]},
+        nativePageTextExtraction:[{pageNumber:1,textExtraction:{status:"sufficient"}}],tables:[table]});
+      expect(plan.tables[0].rows[0][2]).toBe("Dose "+existingText);
+    }
+  });
+  it("retains existing tabs, nonbreaking spaces and source line endings during header reflow",()=>{
+    const words=[native("Dose",690),native("per",690),native("day",677)];
+    for(const label of ["Dose\tper day","Dose\u00a0per day","Dose per\r\nday","Dose  per day"," Dose per day "]){
+      const {table,data}=source(words,label);
+      const repaired=preserveNativeWideHeaderLines(table,data);
+      expect(repaired.headerWrapped).toBe(false);
+      expect(repaired.rows[0][2]).toBe(label);
+    }
+  });
   it("restores real physical line breaks in same column and conserves every token and data position",()=>{
     const {table,data}=source();const prior=JSON.stringify(data);
     const x=preserveNativeWideHeaderLines(table,data);

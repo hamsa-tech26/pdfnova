@@ -19,7 +19,6 @@ export function preserveNativeWideHeaderLines(
     };
   const result=[...rows[0]];
   let wrappedCells=0;
-  const normalized=(value:string)=>value.replace(/\s+/gu,"").normalize("NFKC");
   for(const cell of first.cells){
     if(!Number.isInteger(cell.columnIndex)||cell.columnIndex<0||
       cell.columnIndex>=11||!Array.isArray(cell.words)||
@@ -34,7 +33,10 @@ export function preserveNativeWideHeaderLines(
     const words=cell.words;
     const flat=words.map(word=>word.text).join(" ");
     const old=String(rows[0][cell.columnIndex]??"");
-    if(normalized(flat)!==normalized(old))continue;
+    // Only replace the exact joining spaces at physical line boundaries.
+    // Compatibility normalization (e.g. ㎎/mg, Ω/Ω) or whitespace folding
+    // cannot authorize overwriting an already distinct source-cell value.
+    if(flat!==old)continue;
     const heights=words.map(word=>word.bounds.height);
     const typical=Math.max(2,Math.min(7,
       [...heights].sort((a,b)=>a-b)[Math.floor(heights.length/2)]*0.48));
@@ -57,7 +59,6 @@ export function preserveNativeWideHeaderLines(
     if(!valid||meaningfulBreaks===0)continue;
     segments.push(current);
     const multiline=segments.join("\n");
-    if(normalized(multiline)!==normalized(old))continue;
     result[cell.columnIndex]=multiline;
     wrappedCells++;
   }
