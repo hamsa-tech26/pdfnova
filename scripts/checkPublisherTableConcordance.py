@@ -114,6 +114,8 @@ def compare(jats, inspector):
     reconstructed_cell_texts = []
     observed_row_texts = []
     observed_table_texts = []
+    observed_adjacent_cell_pairs = []
+    observed_close_adjacent_cell_pairs = []
     cell_text_word_disagreements = 0
     for table in tables:
         rows = table.get("rows", [])
@@ -138,6 +140,24 @@ def compare(jats, inspector):
             row_text = " ".join(row_cells)
             observed_row_texts.append(row_text)
             table_row_texts.append(row_text)
+            # This is a *proposal diagnostic*: joining two independently
+            # extracted output cells is NOT automatically a safe repair.
+            for left, right in zip(cells, cells[1:]):
+                lt = normalize(str(left.get("text") or ""))
+                rt = normalize(str(right.get("text") or ""))
+                if not (lt and rt):
+                    continue
+                joined = lt + " " + rt
+                observed_adjacent_cell_pairs.append(joined)
+                la, rb = left.get("bounds", {}), right.get("bounds", {})
+                if not isinstance(la, dict) or not isinstance(rb, dict):
+                    continue
+                try:
+                    gap = float(rb["x"]) - (float(la["x"]) + float(la["width"]))
+                except (ValueError, TypeError, KeyError):
+                    continue
+                if -3 <= gap <= 12:
+                    observed_close_adjacent_cell_pairs.append(joined)
         observed_table_texts.append(" ".join(table_row_texts))
     pub_values = [normalize(value) for table in publisher for value in table]
     # Only distinctive nontrivial cells count toward preliminary text overlap.
@@ -180,6 +200,12 @@ def compare(jats, inspector):
         and any(key in value for value in own_text_compact)
         for key in distinctive_compact if len(key) >= 8
     )
+    adjacent_pair_compact = {compact(value) for value in observed_adjacent_cell_pairs}
+    close_pair_compact = {compact(value) for value in observed_close_adjacent_cell_pairs}
+    # Exact values only, because substring matches overcount repairs by
+    # accepting accidental neighboring text or unrelated source suffixes.
+    adjacent_pair_exact = len(distinctive_compact & adjacent_pair_compact)
+    close_pair_exact = len(distinctive_compact & close_pair_compact)
     # Secondary diagnostic: find substantial publisher words anywhere in the
     # PDF versus only inside automatically detected table cells. This does NOT
     # establish row/cell structure or document/page version correspondence.
@@ -207,6 +233,8 @@ def compare(jats, inspector):
         "publisherCellsContiguousWithinPdfRow": row_contiguous,
         "publisherCellsWithinSinglePdfCell": source_cells_in_any_single_cell,
         "publisherCellsSplitAcrossPdfCells": source_cells_split_across_pdf_cells,
+        "publisherCellsExactlyRecoveredByAdjacentCellPair": adjacent_pair_exact,
+        "publisherCellsExactlyRecoveredByCloseAdjacentPair": close_pair_exact,
         "publisherCellsEmbeddedInLargerPdfCell": source_cells_embedded_in_larger_cell,
         "publisherCellsContiguousWithinPdfTable": table_contiguous,
         "pdfCellTextWordJoinDisagreements": cell_text_word_disagreements,
