@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vendored qpdf runtime; keep our worker wrapper linted.
     "public/qpdf/qpdf.js",
+    // Generated, lockfile-pinned OCR binaries and Tesseract worker are vendor assets.
+    "public/ocr-runtime/**",
   ]),
 ]);
 
