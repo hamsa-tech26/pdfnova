@@ -302,6 +302,7 @@ export function preparePdfV4XlsxExport(
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
     id.startsWith("native-rotated-invoice-grid-")||
+    id.startsWith("native-usda-panel-")||
     id.startsWith("native-captioned-text-grid-")||
     id.startsWith("native-caption-header-grid-")||
     id.startsWith("native-captioned-short-numeric-"));
@@ -362,6 +363,8 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-captioned-short-numeric-"));
     const rotatedInvoice=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-rotated-invoice-grid-"));
+    const usdaPanel=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-usda-panel-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
@@ -377,6 +380,14 @@ export function preparePdfV4XlsxExport(
       "First and last body columns contain NO observed source cells; " +
       "blank spreadsheet positions are not independently verified empties. " +
       "Check every UPC, amount and label against the original PDF before use.");
+    if(usdaPanel)notes.push("Table "+number+
+      ": SOURCE-BOUNDED USDA PANEL REVIEW: Only the original left report panel "+
+      "was reconstructed. Three adjacent right-hand charts and the footer "+
+      "are deliberately excluded. The 42 physical lines contain 10 section "+
+      "headings, 31 value rows and a header with no source label for the first "+
+      "column. Missing PDF cells are unobserved positions, not verified blanks. "+
+      "Compare ALL five columns, each range, section header and link text "+
+      "against the original PDF before using this worksheet.");
     if(shortNumeric)notes.push("Table "+number+
       ": A source-captioned short numeric grid was reconstructed from repeated "+
       "native PDF positions. Numeric body rows are source-position evidence, "+
