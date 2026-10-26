@@ -16,6 +16,7 @@ import {collectImageContentReview,type PdfV4ImageContentReview} from "../analysi
 import {recoverNativeRotatedInvoiceGrid} from "../analysis/nativeRotatedInvoiceGrid";
 import {recoverNativeUsdaReportPanel} from "../analysis/nativeUsdaReportPanel";
 import {recoverNativeFbiNicsGrid} from "../analysis/nativeFbiNicsGrid";
+import {recoverNativeNrelFuelSavingsTable} from "../analysis/nativeNrelFuelSavingsTable";
 import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
@@ -1968,6 +1969,57 @@ for(const sourcePage of rawDocument.pages){
     analysis:regionAnalysis,admittedAsContinuation:false,
     outcome:"confirmed",acceptedColumnCount:25,
   });
+}
+
+// NREL's published five-cycle table occupies a small ruled rectangle beneath
+// several unrelated paragraphs. The original generic region included prose.
+// Only surface the seven native columns after all source caption/header/body
+// positions prove the isolated rectangle; keep explicit XLSX review required.
+for(const sourcePage of rawDocument.pages){
+  const recovered=recoverNativeNrelFuelSavingsTable(sourcePage);
+  if(!recovered)continue;
+  const regionAnalysis=detectTableRegionsForPage([recovered.block]).regions[0]?.analysis;
+  if(!regionAnalysis)continue;
+  const headers=recovered.table.rows[1].cells;
+  const samples=Array.from({length:7},(_,col)=>
+    recovered.table.rows.flatMap(row=>row.cells.filter(c=>c.columnIndex===col)));
+  const centers=headers.map(c=>c.bounds.x+c.bounds.width/2);
+  const sourceColumns:StableColumnDetectionResult={
+    columns:samples.map((cells,index)=>({
+      id:`native-nrel-column-${index}`,x:centers[index],
+      minX:Math.min(...cells.map(c=>c.bounds.x)),
+      maxX:Math.max(...cells.map(c=>c.bounds.x+c.bounds.width)),
+      leftBoundary:index?(centers[index-1]+centers[index])/2:0,
+      rightBoundary:index<6?(centers[index]+centers[index+1])/2:sourcePage.width,
+      occurrences:cells.length,distinctLineCount:cells.length,
+      averageDeviation:0,stability:1,confidence:0.92,accepted:true,
+      reason:"Guarded NREL source caption, two-tier headers and seven physical columns.",
+    })),rejectedCandidates:[],adaptiveTolerance:0,confidence:0.92,
+  };
+  const sourceRows:AdaptiveRowDetectionResult={
+    rows:recovered.block.lines.map((line,index)=>({
+      id:`native-nrel-physical-row-${index}`,index,lines:[line],words:line.words,
+      startY:line.bounds.y+line.bounds.height,endY:line.bounds.y,
+      isNewRecord:true,score:92,confidence:0.92,
+      breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+        emptyLeadingColumns:0,wrappedText:0},
+      reason:"One guarded NREL source physical text line.",
+    })),confidence:0.92,
+  };
+  tableAnalyses.push({pageNumber:sourcePage.pageNumber,
+    blockId:recovered.block.id,regionAnalysis,
+    columnDetection:sourceColumns,rowDetection:sourceRows,
+    cellBuild:{table:recovered.table,confidence:0.92},cellRepair:null,
+    rowReliability:analyzeRowReliabilityV1(recovered.table),
+    table:recovered.table});
+  tables.push(recovered.table);
+  candidateTableRegionCount++;
+  analyzedTableRegionCount++;
+  candidateRegionDiagnostics.push({pageNumber:sourcePage.pageNumber,
+    blockId:recovered.block.id,blockType:"paragraph",
+    lineCount:recovered.block.lines.length,
+    analysis:regionAnalysis,admittedAsContinuation:false,
+    outcome:"confirmed",acceptedColumnCount:7});
 }
 
 const mergedTableResult =

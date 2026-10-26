@@ -1,4 +1,5 @@
 import type {PdfXlsxInput} from "./pdfToXlsx";
+import type {LogicalTable} from "../pdf-engine-v4/model/logicalTable";
 import {preparePdfV4XlsxExport,type PdfV4XlsxExportSource} from "./pdfToXlsxQuality";
 import {isScientificReviewOnlyTable} from "./pdfToXlsxStructuralEvidence";
 
@@ -8,6 +9,24 @@ export type PdfXlsxTableChoice={
   eligible:boolean;reason:string;
 };
 const MAX_CANDIDATES=100;
+const SOURCE_BOUNDED_PREFIXES=[
+  "native-rotated-invoice-grid-","native-usda-panel-",
+  "native-fbi-nics-grid-","native-nrel-fuel-savings-",
+] as const;
+function sourceBounded(table:LogicalTable):boolean{
+  return SOURCE_BOUNDED_PREFIXES.some(prefix=>table.id.startsWith(prefix)||
+    table.rows.some(row=>row.provenance?.blockId?.startsWith(prefix)));
+}
+function substantiallySameRegion(a:LogicalTable,b:LogicalTable):boolean{
+  if(a.pageNumber!==b.pageNumber)return false;
+  const A=a.bounds,B=b.bounds;
+  if([A.x,A.y,A.width,A.height,B.x,B.y,B.width,B.height]
+    .some(x=>!Number.isFinite(x))||
+    A.width<=0||A.height<=0||B.width<=0||B.height<=0)return false;
+  const width=Math.max(0,Math.min(A.x+A.width,B.x+B.width)-Math.max(A.x,B.x));
+  const height=Math.max(0,Math.min(A.y+A.height,B.y+B.height)-Math.max(A.y,B.y));
+  return width*height/Math.min(A.width*A.height,B.width*B.height)>=0.9;
+}
 function checkCandidateLimit(source:PdfV4XlsxExportSource){
   if(!source||!Array.isArray(source.tables)||source.tables.length<1||
     source.tables.length>MAX_CANDIDATES)
@@ -24,10 +43,20 @@ export function prepareSelectedPdfV4XlsxExport(
   checkCandidateLimit(source);
   if(!Number.isInteger(index)||index<0||index>=source.tables.length)
     throw new Error("Select a detected table from this PDF before exporting.");
+  // A generic captioned-grid candidate can collapse parent/group headings
+  // into data headers while covering exactly the same source rectangle as a
+  // later, stricter source-bounded recovery. Never offer both as independently
+  // eligible XLSX choices: explicit review cannot repair a known duplicate.
+  const selected=source.tables[index];
+  if(!sourceBounded(selected)&&source.tables.some((other,i)=>
+    i!==index&&sourceBounded(other)&&substantiallySameRegion(selected,other)))
+    throw new Error("A source-bounded table recovery covers this same PDF region. " +
+      "The overlapping candidate may contain merged headings or shifted " +
+      "values; select and review the source-bounded table instead.");
   const plan=preparePdfV4XlsxExport({
     document:source.document,
     nativePageTextExtraction:source.nativePageTextExtraction,
-    tables:[source.tables[index]],
+    tables:[selected],
   },{allowSelectedCompactGrid:true});
   return {
     ...plan,

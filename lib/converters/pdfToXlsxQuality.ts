@@ -304,6 +304,7 @@ export function preparePdfV4XlsxExport(
     id.startsWith("native-rotated-invoice-grid-")||
     id.startsWith("native-usda-panel-")||
     id.startsWith("native-fbi-nics-grid-")||
+    id.startsWith("native-nrel-fuel-savings-")||
     id.startsWith("native-captioned-text-grid-")||
     id.startsWith("native-caption-header-grid-")||
     id.startsWith("native-captioned-short-numeric-"));
@@ -368,6 +369,8 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-usda-panel-"));
     const fbiNics=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-fbi-nics-grid-"));
+    const nrelFuel=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-nrel-fuel-savings-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
@@ -399,6 +402,14 @@ export function preparePdfV4XlsxExport(
       "headings are placed by source position, NOT semantically certified. "+
       "Printed notes/disclaimers are excluded. Check every value and group "+
       "against the original PDF before using this XLSX.");
+    if(nrelFuel)notes.push("Table "+number+
+      ": NREL TABLE 2-1 SOURCE REVIEW: The five printed numeric rows and "+
+      "seven columns were recovered only from the ruled region below prose. "+
+      "Two physical native header lines are joined per column, with 14 "+
+      "source words preserved. The Percent Fuel Savings heading visually "+
+      "spans four columns but is placed in column four without a merge. "+
+      "Source prose, caption and following figure text are excluded. "+
+      "Verify heading semantics and every cell against the original PDF.");
     if(shortNumeric)notes.push("Table "+number+
       ": A source-captioned short numeric grid was reconstructed from repeated "+
       "native PDF positions. Numeric body rows are source-position evidence, "+
