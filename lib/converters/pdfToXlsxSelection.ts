@@ -62,7 +62,7 @@ export function inspectPdfV4XlsxChoices(
         "REVIEW ONLY: Native table may omit content in adjacent PDF images. "+
         "Inspect the original image regions and every Excel cell before use.":
         reviewOnly?
-          "REVIEW ONLY: Reconstructed scientific table is not independently "+
+          "REVIEW ONLY: Reconstructed source-position table is not independently "+
           "verified. Inspect source headings, row grouping and every cell.":
           "Passes automatic export checks. Review all cell values against the PDF.";
       return {index,pageLabel,rows:table.rows.length,columns:table.columnCount,

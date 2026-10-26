@@ -1046,8 +1046,8 @@ export default function PdfToExcelPage() {
                 <input type="checkbox" checked={scientificTableConfirmed}
                   onChange={event=>setScientificTableConfirmed(event.target.checked)}
                   aria-label="Acknowledge scientific table source review"/>
-                I understand this scientific table is reconstructed from
-                physical PDF text lines. Headings, row groups and blank
+                I understand this table is reconstructed from
+                physical PDF text positions. Headings, row groups and blank
                 positions are unverified; source notes may be omitted from
                 the data grid. I will check the original PDF before using it.
               </label>
