@@ -12,6 +12,7 @@ import { preparePdfV4XlsxExport } from "../../../converters/pdfToXlsxQuality";
 import { createPdfXlsxWorkbook } from "../../../converters/pdfToXlsx";
 import { isScientificReviewOnlyTable } from "../../../converters/pdfToXlsxStructuralEvidence";
 import { inspectPdfV4XlsxChoices, prepareSelectedPdfV4XlsxExport } from "../../../converters/pdfToXlsxSelection";
+import { buildPdfTablePreview, inspectPdfTableCell } from "../../../converters/pdfToXlsxPreview";
 
 const referenceDirectory = process.env.KUKUREKU_TABLE_REFERENCE_DIR;
 
@@ -48,11 +49,24 @@ describe.skipIf(!referenceDirectory)("real source-first table recovery (opt-in p
     expect(inspectPdfV4XlsxChoices(full)[0].reason).toContain("REVIEW ONLY");
     const reviewedPlan = prepareSelectedPdfV4XlsxExport(full, 0);
     expect(reviewedPlan.tables).toHaveLength(1);
+    const expectedHeader = [
+      "Cycle Name", "KI (1/km)", "Distance (mi)",
+      "Percent Fuel Savings / Improved Speed",
+      "Percent Fuel Savings / Decreased Accel",
+      "Percent Fuel Savings / Eliminate Stops",
+      "Percent Fuel Savings / Decreased Idle",
+    ];
+    expect(reviewedPlan.tables[0].rows[0]).toEqual(expectedHeader);
     expect(reviewedPlan.tables[0].rows.slice(1)).toEqual(actual.slice(1));
+    expect(buildPdfTablePreview(full, 0).rows[0]).toEqual(expectedHeader);
+    expect(inspectPdfTableCell(full, 0, 0, 5).value).toBe(expectedHeader[5]);
     expect(reviewedPlan.reviewNotes?.join(" ")).toContain("grouped/multilevel header");
-    const archive = await JSZip.loadAsync(await createPdfXlsxWorkbook(reviewedPlan));
+    expect(reviewedPlan.reviewNotes?.join(" ")).toContain("assigned to its four geometrically aligned child labels");
+    const downloaded = await createPdfXlsxWorkbook(reviewedPlan);
+    const archive = await JSZip.loadAsync(downloaded);
     const sheet = await archive.file("xl/worksheets/sheet1.xml")!.async("string");
     expect(sheet).toContain('<dimension ref="A1:G6"/>');
+    expect(sheet).toContain("Percent Fuel Savings / Eliminate Stops");
     expect(sheet).toContain('<c r="A2" t="inlineStr"><is><t xml:space="preserve">2012_2</t>');
     expect(sheet).toContain('<c r="G6" t="inlineStr"><is><t xml:space="preserve">0.5%</t>');
     expect(sheet).not.toContain("<f>");
