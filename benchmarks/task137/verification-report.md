@@ -32,6 +32,6 @@ The new detector only accepts an exact nine-header 90-degree rotated native-sour
 - Production npm dependency audit: **0 vulnerabilities**.
 - Browser: **NOT VERIFIED**. The isolated environment lacked a matching Chromium binary, and multiple downloads produced truncated ZIP archives. The source-pinned browser test is present but must pass later; do not count it as passed.
 
-The generic original candidate remains pending; overall analysisOutcome is **incomplete-analysis** even when this source-guarded table is reconstructed. Three other historical real-table export failures remain unresolved. The public source was known during development and is **not** independent blind adjudication. Engine V4 Stable remains **0/20**.
+The generic original candidate remains pending; overall analysisOutcome is **incomplete-analysis** even when this source-guarded table is reconstructed. Of the four original reference PDFs, NREL and this invoice have guarded draft recovery; FBI and USDA still have unresolved extraction refusals. The public source was known during development and is **not** independent blind adjudication. Engine V4 Stable remains **0/20**.
 
 **Decision:** draft only. No merge, no Vercel preview/production deployment, no paid service, no Android or Smart Scanner change. Gate release on a real Chromium upload-review-download pass, accepted independent references, and review of pending detector diagnostics.
