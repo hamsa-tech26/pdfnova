@@ -118,7 +118,8 @@ function inspectOverlappingCells(table: LogicalTable): void {
           // Only a caption-derived multi-level header can use the finer
           // word-level collision check. Keep ordinary and data-row guards.
           const isCaptionHeader = row.rowIndex === 0 &&
-            row.provenance?.blockId?.startsWith("caption-table-") === true &&
+            (row.provenance?.blockId?.startsWith("caption-table-") === true ||
+              row.provenance?.blockId?.startsWith("native-captioned-short-numeric-") === true) &&
             filled[i].words.length > 0 && filled[j].words.length > 0;
           const wordsOverlap = filled[i].words.some(first =>
             filled[j].words.some(second => {
@@ -298,7 +299,8 @@ export function preparePdfV4XlsxExport(
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
     id.startsWith("native-captioned-text-grid-")||
-    id.startsWith("native-caption-header-grid-"));
+    id.startsWith("native-caption-header-grid-")||
+    id.startsWith("native-captioned-short-numeric-"));
   const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
     needsExplicitReview(row.provenance?.blockId)));
   const excludedReviewCount=!options?.allowSelectedCompactGrid?
@@ -352,6 +354,8 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-captioned-text-grid-"));
     const scientificHeader=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-caption-header-grid-"));
+    const shortNumeric=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-captioned-short-numeric-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
@@ -361,6 +365,12 @@ export function preparePdfV4XlsxExport(
         "blank cells and values have NOT been independently verified. "+
         "Compare EVERY cell against the original PDF before using the export.");
     }
+    if(shortNumeric)notes.push("Table "+number+
+      ": A source-captioned short numeric grid was reconstructed from repeated "+
+      "native PDF positions. Numeric body rows are source-position evidence, "+
+      "but grouped/multilevel header meaning and merged cells are NOT "+
+      "independently verified. Confirm every header and cell against the "+
+      "original PDF before using this reviewed XLSX.");
     if(captionedText||scientificHeader)notes.push("Table "+number+
       ": Every retained source PDF header/body physical text line is a separate Excel row. "+
       "Wrapped physical lines, multi-tier scientific headings and sparse "+
