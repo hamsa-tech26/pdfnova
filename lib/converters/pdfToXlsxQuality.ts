@@ -1,5 +1,6 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
+import {projectNativePercentSavingsHeader} from "./nativePercentSavingsHeader";
 import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import {preserveNativeWideHeaderLines} from "./nativeWideHeaderLines";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
@@ -202,6 +203,8 @@ function projectNativeGroupedHeaders(
   }
   const cells = header.cells;
   const words = cells.flatMap(cell => cell.words);
+  const percentSavings = projectNativePercentSavingsHeader(table, rows);
+  if (percentSavings.note) return percentSavings;
   // A source captioned table with one explicit Month super-header can have its
   // Month word assigned to only the October cell by the flat table engine.
   if (header.provenance?.blockId?.startsWith("caption-table-")) {
