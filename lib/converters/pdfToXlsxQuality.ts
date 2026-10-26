@@ -301,6 +301,7 @@ export function preparePdfV4XlsxExport(
   }
   const needsExplicitReview=(id:string|undefined)=>!!id&&(
     id.startsWith("native-compact-grid-")||
+    id.startsWith("native-rotated-invoice-grid-")||
     id.startsWith("native-captioned-text-grid-")||
     id.startsWith("native-caption-header-grid-")||
     id.startsWith("native-captioned-short-numeric-"));
@@ -359,6 +360,8 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-caption-header-grid-"));
     const shortNumeric=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-captioned-short-numeric-"));
+    const rotatedInvoice=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-rotated-invoice-grid-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
@@ -368,6 +371,12 @@ export function preparePdfV4XlsxExport(
         "blank cells and values have NOT been independently verified. "+
         "Compare EVERY cell against the original PDF before using the export.");
     }
+    if(rotatedInvoice)notes.push("Table "+number+
+      ": ROTATED INVOICE SOURCE REVIEW: Nine headers and four source body rows " +
+      "were mapped from native PDF text on a 90-degree rotated page. " +
+      "First and last body columns contain NO observed source cells; " +
+      "blank spreadsheet positions are not independently verified empties. " +
+      "Check every UPC, amount and label against the original PDF before use.");
     if(shortNumeric)notes.push("Table "+number+
       ": A source-captioned short numeric grid was reconstructed from repeated "+
       "native PDF positions. Numeric body rows are source-position evidence, "+

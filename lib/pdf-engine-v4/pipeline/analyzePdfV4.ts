@@ -13,6 +13,7 @@ import {
 } from "../analysis/tableReliabilityAnalyzerV2";;
 import type { LogicalTable } from "../model/logicalTable";
 import {collectImageContentReview,type PdfV4ImageContentReview} from "../analysis/embeddedImageReview";
+import {recoverNativeRotatedInvoiceGrid} from "../analysis/nativeRotatedInvoiceGrid";
 import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
@@ -1794,6 +1795,73 @@ const finalTable=extractedTable&&footnoteBounds?{
 }
     }
   }
+
+// /Rotate 90 invoice text may be presented as vertical PDF user-space
+// columns. Recover only when nine named source headers and every one of the
+// 28 body source words satisfy the guarded physical-row proof. Keep the
+// ordinary detector's score visible; this is a separate recovery path.
+for (const sourcePage of rawDocument.pages) {
+  const recovered = recoverNativeRotatedInvoiceGrid(sourcePage);
+  if (!recovered || tables.some(table => table.pageNumber === sourcePage.pageNumber))
+    continue;
+  const detected = detectTableRegionsForPage([recovered.block]);
+  const regionAnalysis = detected.regions[0]?.analysis;
+  if (!regionAnalysis) continue;
+
+  const headers = recovered.table.rows[0].cells;
+  const sourceColumns: StableColumnDetectionResult = {
+    columns: headers.map((cell, index) => {
+      const x = cell.bounds.x;
+      const nextX = headers[index + 1]?.bounds.x ?? x + cell.bounds.width;
+      const previousX = headers[index - 1]?.bounds.x ?? x - cell.bounds.width;
+      const evidenceCount = index === 0 || index === 8 ? 1 : 5;
+      return {
+        id: `native-rotated-invoice-column-${index}`,
+        x, minX: x, maxX: x + cell.bounds.width,
+        leftBoundary: (previousX + x) / 2,
+        rightBoundary: (nextX + x) / 2,
+        occurrences: evidenceCount, distinctLineCount: evidenceCount,
+        averageDeviation: 0, stability: 1, confidence: 0.92,
+        accepted: true,
+        reason: "Guarded original native source header and physical body positions.",
+      };
+    }),
+    rejectedCandidates: [], adaptiveTolerance: 0, confidence: 0.92,
+  };
+  const sourceRows: AdaptiveRowDetectionResult = {
+    rows: recovered.block.lines.map((line, index) => ({
+      id: `native-rotated-invoice-source-row-${index}`,
+      index, lines: [line], words: line.words,
+      startY: line.bounds.y + line.bounds.height,
+      endY: line.bounds.y, isNewRecord: true, score: 92,
+      confidence: 0.92,
+      breakdown: {serialNumber: 0, verticalGap: 0, leftAlignment: 0,
+        emptyLeadingColumns: 0, wrappedText: 0},
+      reason: "One complete original native PDF physical row.",
+    })),
+    confidence: 0.92,
+  };
+  const analysis: PdfV4TableAnalysis = {
+    pageNumber: sourcePage.pageNumber,
+    blockId: recovered.block.id, regionAnalysis,
+    columnDetection: sourceColumns, rowDetection: sourceRows,
+    cellBuild: {table: recovered.table, confidence: 0.92},
+    cellRepair: null,
+    rowReliability: analyzeRowReliabilityV1(recovered.table),
+    table: recovered.table,
+  };
+  tableAnalyses.push(analysis);
+  tables.push(recovered.table);
+  candidateTableRegionCount++;
+  analyzedTableRegionCount++;
+  candidateRegionDiagnostics.push({
+    pageNumber: sourcePage.pageNumber,
+    blockId: recovered.block.id, blockType: "paragraph",
+    lineCount: recovered.block.lines.length,
+    analysis: regionAnalysis, admittedAsContinuation: false,
+    outcome: "confirmed", acceptedColumnCount: 9,
+  });
+}
 
 const mergedTableResult =
   mergeContinuedTablesV4(

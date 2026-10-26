@@ -44,6 +44,7 @@ export function isScientificReviewOnlyTable(table:LogicalTable):boolean{
   return table.rows.some(row=>{
     const id=row.provenance?.blockId??"";
     return id.startsWith("native-compact-grid-")||
+      id.startsWith("native-rotated-invoice-grid-")||
       id.startsWith("native-captioned-text-grid-")||
       id.startsWith("native-caption-header-grid-")||
       id.startsWith("native-captioned-short-numeric-");
