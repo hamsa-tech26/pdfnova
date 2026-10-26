@@ -3,6 +3,8 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/prepareLocalOcrAssets.mjs",
+    "prebuild": "node scripts/prepareLocalOcrAssets.mjs",
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
@@ -27,6 +29,7 @@
     "test:v4:blind-pair": "node --test scripts/__tests__/release85BlindAgreement.nodecheck.mjs"
   },
   "dependencies": {
+    "@tesseract.js-data/eng": "1.0.0",
     "@vercel/analytics": "^2.0.1",
     "docx": "^9.7.1",
     "file-saver": "^2.0.5",
