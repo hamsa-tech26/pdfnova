@@ -15,6 +15,7 @@ import type { LogicalTable } from "../model/logicalTable";
 import {collectImageContentReview,type PdfV4ImageContentReview} from "../analysis/embeddedImageReview";
 import {recoverNativeRotatedInvoiceGrid} from "../analysis/nativeRotatedInvoiceGrid";
 import {recoverNativeUsdaReportPanel} from "../analysis/nativeUsdaReportPanel";
+import {recoverNativeFbiNicsGrid} from "../analysis/nativeFbiNicsGrid";
 import { repairPdfV4TableOcrCells } from "../analysis/ocrTableCellRepair";
 import {
   readPdfDocumentV4,
@@ -1914,6 +1915,58 @@ for(const sourcePage of rawDocument.pages){
     blockType:"paragraph",lineCount:recovered.block.lines.length,
     analysis:regionAnalysis,admittedAsContinuation:false,
     outcome:"confirmed",acceptedColumnCount:5,
+  });
+}
+
+// The FBI NICS 2015 source has 25 visible columns and 56 numeric records.
+// Two Rentals columns have NO native text in the 55 state/territory rows;
+// generic row continuation currently merges the whole table into one row.
+// Add only the strictly source-matched physical grid as a review-only option.
+for(const sourcePage of rawDocument.pages){
+  const recovered=recoverNativeFbiNicsGrid(sourcePage);
+  if(!recovered)continue;
+  const regionAnalysis=detectTableRegionsForPage([recovered.block]).regions[0]?.analysis;
+  if(!regionAnalysis)continue;
+  const samples=Array.from({length:25},(_,col)=>
+    recovered.table.rows.flatMap(row=>row.cells.filter(c=>c.columnIndex===col)));
+  const headers=recovered.table.rows[1].cells;
+  const centers=headers.map(c=>c.bounds.x+c.bounds.width/2);
+  const sourceColumns:StableColumnDetectionResult={
+    columns:samples.map((cells,index)=>({
+      id:`native-fbi-nics-column-${index}`,x:centers[index],
+      minX:Math.min(...cells.map(c=>c.bounds.x)),
+      maxX:Math.max(...cells.map(c=>c.bounds.x+c.bounds.width)),
+      leftBoundary:index?(centers[index-1]+centers[index])/2:0,
+      rightBoundary:index<24?(centers[index]+centers[index+1])/2:sourcePage.width,
+      occurrences:cells.length,distinctLineCount:cells.length,
+      averageDeviation:0,stability:1,confidence:0.92,accepted:true,
+      reason:"25 guarded native header slots with original state/territory rows.",
+    })),rejectedCandidates:[],adaptiveTolerance:0,confidence:0.92,
+  };
+  const sourceRows:AdaptiveRowDetectionResult={
+    rows:recovered.block.lines.map((line,index)=>({
+      id:`native-fbi-nics-physical-row-${index}`,index,
+      lines:[line],words:line.words,startY:line.bounds.y+line.bounds.height,
+      endY:line.bounds.y,isNewRecord:true,score:92,confidence:0.92,
+      breakdown:{serialNumber:0,verticalGap:0,leftAlignment:0,
+        emptyLeadingColumns:0,wrappedText:0},
+      reason:"One of 58 guarded native physical FBI grid source lines.",
+    })),confidence:0.92,
+  };
+  tableAnalyses.push({pageNumber:sourcePage.pageNumber,
+    blockId:recovered.block.id,regionAnalysis,
+    columnDetection:sourceColumns,rowDetection:sourceRows,
+    cellBuild:{table:recovered.table,confidence:0.92},cellRepair:null,
+    rowReliability:analyzeRowReliabilityV1(recovered.table),
+    table:recovered.table});
+  tables.push(recovered.table);
+  candidateTableRegionCount++;
+  analyzedTableRegionCount++;
+  candidateRegionDiagnostics.push({
+    pageNumber:sourcePage.pageNumber,blockId:recovered.block.id,
+    blockType:"paragraph",lineCount:recovered.block.lines.length,
+    analysis:regionAnalysis,admittedAsContinuation:false,
+    outcome:"confirmed",acceptedColumnCount:25,
   });
 }
 

@@ -303,6 +303,7 @@ export function preparePdfV4XlsxExport(
     id.startsWith("native-compact-grid-")||
     id.startsWith("native-rotated-invoice-grid-")||
     id.startsWith("native-usda-panel-")||
+    id.startsWith("native-fbi-nics-grid-")||
     id.startsWith("native-captioned-text-grid-")||
     id.startsWith("native-caption-header-grid-")||
     id.startsWith("native-captioned-short-numeric-"));
@@ -365,6 +366,8 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-rotated-invoice-grid-"));
     const usdaPanel=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-usda-panel-"));
+    const fbiNics=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-fbi-nics-grid-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
     if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
@@ -388,6 +391,14 @@ export function preparePdfV4XlsxExport(
       "column. Missing PDF cells are unobserved positions, not verified blanks. "+
       "Compare ALL five columns, each range, section header and link text "+
       "against the original PDF before using this worksheet.");
+    if(fbiNics)notes.push("Table "+number+
+      ": FBI NICS DENSE GRID SOURCE REVIEW: 25 columns and 58 physical "+
+      "lines include six parent headings, 25 subheadings, 55 state/territory "+
+      "rows and a total row. Both Rentals positions have NO observed source "+
+      "text in the 55 body rows; they are NOT verified blanks. Parent "+
+      "headings are placed by source position, NOT semantically certified. "+
+      "Printed notes/disclaimers are excluded. Check every value and group "+
+      "against the original PDF before using this XLSX.");
     if(shortNumeric)notes.push("Table "+number+
       ": A source-captioned short numeric grid was reconstructed from repeated "+
       "native PDF positions. Numeric body rows are source-position evidence, "+
