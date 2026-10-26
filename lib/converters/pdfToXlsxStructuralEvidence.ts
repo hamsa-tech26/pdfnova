@@ -47,6 +47,7 @@ export function isScientificReviewOnlyTable(table:LogicalTable):boolean{
       id.startsWith("native-rotated-invoice-grid-")||
       id.startsWith("native-usda-panel-")||
       id.startsWith("native-fbi-nics-grid-")||
+      id.startsWith("native-nrel-fuel-savings-")||
       id.startsWith("native-captioned-text-grid-")||
       id.startsWith("native-caption-header-grid-")||
       id.startsWith("native-captioned-short-numeric-");
