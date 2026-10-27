@@ -144,7 +144,7 @@ export default function FileUploader({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group relative overflow-hidden rounded-3xl border-2 border-dashed px-6 py-14 text-center outline-none transition-all duration-300 sm:px-10 sm:py-16 ${
+        className={`group relative overflow-hidden rounded-3xl border-2 border-dashed px-4 py-5 text-center outline-none transition-all duration-300 sm:px-6 sm:py-6 xl:px-10 xl:py-16 ${
           disabled
             ? "border-gray-200 bg-gray-50 opacity-60 dark:border-slate-800 dark:bg-slate-900"
             : isDragging
@@ -156,7 +156,7 @@ export default function FileUploader({
 
         <div className="relative">
           <div
-            className={`mx-auto flex h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg transition duration-300 ${
+            className={`mx-auto hidden h-16 w-16 items-center justify-center rounded-2xl text-white shadow-lg transition duration-300 xl:flex ${
               isDragging
                 ? "scale-110 bg-blue-700 shadow-blue-200"
                 : "bg-gradient-to-br from-blue-600 to-cyan-400 shadow-blue-200 group-hover:scale-105"
@@ -171,7 +171,7 @@ export default function FileUploader({
             )}
           </div>
 
-          <h2 className="mt-6 text-2xl font-bold text-gray-900 dark:text-white">
+          <h2 className="text-xl font-bold text-gray-900 dark:text-white xl:mt-6 xl:text-2xl">
             {isDragging
               ? multiple
                 ? "Drop your files here"
@@ -179,13 +179,13 @@ export default function FileUploader({
               : title}
           </h2>
 
-          <p className="mx-auto mt-3 max-w-xl leading-7 text-gray-600 dark:text-slate-400">
+          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-600 dark:text-slate-400 xl:mt-3 xl:text-base xl:leading-7">
             {isDragging
               ? "Release now to add the selected file."
               : description}
           </p>
 
-          <div className="mt-5 flex items-center justify-center gap-3 text-sm font-medium text-gray-400 dark:text-slate-500">
+          <div className="mt-5 hidden items-center justify-center gap-3 text-sm font-medium text-gray-400 dark:text-slate-500 xl:flex">
             <span className="h-px w-12 bg-gray-300 dark:bg-slate-700" />
             or
             <span className="h-px w-12 bg-gray-300 dark:bg-slate-700" />

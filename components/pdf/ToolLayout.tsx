@@ -106,7 +106,7 @@ export default function ToolLayout({
   maxWidthClassName = "max-w-6xl",
 }: ToolLayoutProps) {
   return (
-    <main className="min-h-screen bg-slate-50 px-5 py-8 transition-colors dark:bg-slate-950 sm:px-7 lg:px-8 lg:py-10">
+    <main className="min-h-screen bg-slate-50 px-4 py-4 transition-colors dark:bg-slate-950 sm:px-7 lg:px-8 lg:py-10">
       <div className={`mx-auto ${maxWidthClassName}`}>
         <Link
           href="/dashboard"
@@ -116,24 +116,28 @@ export default function ToolLayout({
           Back to Dashboard
         </Link>
 
-        <section className="mt-5 overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-5 text-white shadow-2xl sm:p-7 md:p-10">
-          <div className="grid items-center gap-8 xl:grid-cols-[1.3fr_0.7fr]">
+        <section className="mt-3 overflow-hidden rounded-2xl bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 p-4 text-white shadow-2xl sm:p-6 xl:mt-5 xl:rounded-[2rem] xl:p-10">
+          <div className="grid items-center gap-4 xl:grid-cols-[1.3fr_0.7fr] xl:gap-8">
             <div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
+              <div className="hidden items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur xl:inline-flex">
                 <Sparkles size={16} />
                 {label}
               </div>
 
-              <h1 className="mt-6 max-w-3xl text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl">
+              <h1 className="max-w-3xl text-2xl font-extrabold tracking-tight sm:text-3xl xl:mt-6 xl:text-5xl">
                 {title}
               </h1>
 
-              <p className="mt-5 max-w-2xl text-base leading-7 text-blue-100 sm:text-lg sm:leading-8">
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-blue-100 sm:text-base xl:mt-5 xl:text-lg xl:leading-8">
                 {description}
+              </p>
+              <p className="mt-3 flex items-center gap-2 text-sm text-blue-100 xl:hidden">
+                <LockKeyhole size={16} aria-hidden="true" className="shrink-0 text-emerald-200" />
+                Files stay on your device
               </p>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
+            <div className="hidden grid-cols-2 gap-3 xl:grid">
               <div className="rounded-2xl border border-white/15 bg-white/10 p-4 backdrop-blur">
                 <LockKeyhole size={20} className="text-emerald-200" />
 
@@ -177,7 +181,7 @@ export default function ToolLayout({
           </div>
         </section>
 
-        <section className="mt-8 rounded-[2rem] border border-gray-200 bg-white p-5 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-7 md:p-9">
+        <section className="mt-4 rounded-2xl border border-gray-200 bg-white p-4 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:p-6 xl:mt-8 xl:rounded-[2rem] xl:p-9">
           {children}
         </section>
 

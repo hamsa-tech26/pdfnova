@@ -220,7 +220,7 @@ export default function JpgToPdfPage() {
     <ToolLayout
       label="JPG to PDF"
       title="Convert JPG images to PDF privately"
-      description="Combine JPG or PNG images into one PDF locally in your browser. Arrange image order and create the document without uploading your files."
+      description="Arrange JPG or PNG images and create one PDF in your browser. No uploads."
       howToTitle="How to convert JPG images to PDF"
       howToSteps={[
         {
