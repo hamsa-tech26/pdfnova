@@ -32,6 +32,12 @@ The owner cannot organize two reviewers; do not assign them recruitment. Existin
 
 ## Bounded next engineering move (Task 143)
 
+### Selective dataset API preflight — observed, not accepted
+
+Using Hugging Face's documented dataset-viewer `/splits` and `/rows` endpoints, a **single test-row preview** was retrieved from `docling-project/DocLayNet-v1.2`, `default/test`, offset 0, length 1. HTTP metadata reported revision `0daf93102e2efce76c3e11a274a5e0d0969391d3` and a 102,205-byte JSON response; **no archive or Parquet shard** was downloaded.
+
+That row contains a base64 single-page PDF, eight layout regions and their digital PDF text-cell groups, but **zero labelled table regions**. Its metadata says **page 9 of a 28-page original report** and exposes **no separate `precedence` / reviewer-pair identifier**. Therefore it is **not** a valid pilot table or complete original-PDF acceptance case. No reference content or decoded PDF was committed. The next pilot must either identify a small, externally labelled *table* with verifiable two-human annotation correspondence and original-source rights within the cap, or stop as `NOT_VERIFIED`. The formal count stays **0/20**.
+
 1. **Target region-detection accuracy, not V4 Stable certification.** Seek at most **two** DocLayNet pages with independently redundant human *table-region* annotations and publicly allowed local analysis. Before download, pin exact dataset revision, identify original document/page, verify applicable rights and confirm whether the two annotators' regions agree. Never count derived pages as separate full original documents.
 2. Attempt a **small, selective transfer capped at 50 MB total**. Do not fetch the 28 GB core ZIP, 7.5 GB extra ZIP, 39.8 GB v1.2 repository or hundreds-of-MB Parquet shards. If selective, lawful access to source and both annotations is unavailable, record `NOT_VERIFIED` and stop this pilot without spending or expanding the cap.
 3. Keep any original PDFs, human boxes and extracted words local/private. Publish only dataset provenance, source digest, numerical table-region IoU, unmatched/misleading region counts and bounded diagnostics. Any detection correction must show source-aligned improvement on held-out pages without weakening export safeguards.
