@@ -472,13 +472,23 @@ export function preparePdfV4XlsxExport(
       notes.push("Table " + number + ": multi-page continuation was determined by the PDF table engine; review the boundary and possible duplicated/missing header rows.");
     }
     for (const warning of diagnostics.warnings) notes.push("Table " + number + ": " + warning);
-    const inferredSymbols = table.rows.flatMap(row => row.cells)
-      .filter(cell => (cell.nativeTextAdjustmentReasons?.length ?? 0) > 0);
+    const nativeAdjusted = table.rows.flatMap(row => row.cells);
+    const inferredSymbols = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason => reason.startsWith("Ambiguous ")));
     if (inferredSymbols.length) {
       notes.push("Table " + number + ": " + inferredSymbols.length +
         " native scientific label cell(s) contain Greek symbols inferred " +
         "from ambiguous font glyphs. Original extracted strings were retained " +
         "for audit; compare every inferred symbol with the visual PDF before use.");
+    }
+    const decorativeLeaders = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason =>
+        reason.startsWith("Decorative trailing PDF dot leaders")));
+    if (decorativeLeaders.length) {
+      notes.push("Table " + number + ": " + decorativeLeaders.length +
+        " native label cell(s) omit trailing decorative PDF dot leaders. " +
+        "Original source text and source words are retained for audit. " +
+        "This presentation cleanup does not verify footnote positions or labels.");
     }
     if(table.columnCount===11 && table.rows.length>=11 &&
       table.rows[0]?.provenance?.blockId?.startsWith("dense-native-eleven-grid-")){

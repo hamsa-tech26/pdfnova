@@ -79,4 +79,22 @@ describe("Task149 dense native caption row recovery", () => {
     shifted.lines[12].words[5].bounds.x = 40;
     expect(recoverDenseNativeCaptionTenColumnRows(shifted, columns)).toBeNull();
   });
+
+  it("omits only long decorative label leaders and keeps original native words for review", () => {
+    const block = fixture();
+    block.lines[5].words[0].text += ". . . . . . . . . .";
+    block.lines[6].words[0].text += "...";
+    const result = detectAdaptiveRowsV4(block, columns);
+    const built = buildSmartTableV4(1, result.rows, columns, {
+      sourceBlockId: "native-caption-header-grid-dense-ten-test",
+    });
+    const first = built.table!.rows[1].cells[0];
+    expect(first.text).toBe("Record-0");
+    expect(first.originalNativeText).toContain(". . . .");
+    expect(first.nativeTextAdjustmentReasons?.[0]).toContain("Decorative trailing PDF dot leaders");
+    expect(first.words[0].text).toContain(". . . .");
+    expect(built.table!.rows[2].cells[0].text).toBe("Record-1...");
+    expect(built.table!.rows[1].cells[1].text).toBe("0");
+    expect(built.table!.rows[30].cells[9].text).toBe("2908");
+  });
 });
