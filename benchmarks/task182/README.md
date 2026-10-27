@@ -24,7 +24,9 @@ The new browser regressions check the user requirement independently of CSS
 classes: first-screen bounds, hit-testable centers, >=44px action heights, correct
 destinations and no horizontal overflow at 320x680, 390x844, 768x1024 and 1440x900.
 Keyboard Enter must navigate directly to each tool and open a working file picker
-with the original single/multiple selection behavior. Existing all-tool mobile,
+with the original single/multiple selection behavior. File-limit and browse-hint
+text must also meet 4.5:1 contrast in rendered light/dark screenshots, including
+the decorative hover state. Existing all-tool mobile,
 menu/focus, theme, privacy, safety and downloaded-document checks must still pass.
 
 Verification includes actual synthetic Merge, Low compression and JPG-to-PDF
@@ -37,10 +39,16 @@ separate work; this change does not claim a measured traffic/conversion increase
 
 Reproduce using the pinned package lock, unit/OCR/TypeScript/lint/build and
 registry/output checks, then the complete Playwright suite. Run
-`e2e/mobile-tool-entry.e2e.mjs` for the seven specific viewport/keyboard cases.
+`e2e/mobile-tool-entry.e2e.mjs` for nine viewport/keyboard/readability cases.
 Final exact-commit receipts and screenshots are linked from the draft PR.
 
 The branch's first pushed commit already disables its Vercel deployment in
 vercel.json. No merge, preview/production deployment, paid service, Android or
 Smart Scanner engineering, historical PR closure or weakening of Engine V4's
 independent qualification gate is authorized by this draft.
+
+Final review corrected low-contrast uploader labels: file-limit text measured
+4.44:1 and the smaller browse hint 2.39:1 against the light background. Both
+now use darker light-theme text and lighter dark-theme text. The decorative
+hover wash is hidden in dark mode to keep the background contrast stable.
+The correction changes no picker handlers or file-validation rules.

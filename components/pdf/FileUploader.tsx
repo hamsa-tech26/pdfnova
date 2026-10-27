@@ -152,7 +152,7 @@ export default function FileUploader({
               : "border-blue-300 bg-blue-50 hover:-translate-y-0.5 hover:border-blue-500 hover:bg-blue-100/70 hover:shadow-lg dark:border-blue-900 dark:bg-slate-900 dark:hover:border-blue-700 dark:hover:bg-blue-950/30"
         }`}
       >
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-cyan-100/30 opacity-0 transition group-hover:opacity-100" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-br from-white/50 via-transparent to-cyan-100/30 opacity-0 transition group-hover:opacity-100 dark:hidden" />
 
         <div className="relative">
           <div
@@ -204,11 +204,11 @@ export default function FileUploader({
             {buttonText}
           </button>
 
-          <p className="mt-5 text-sm leading-6 text-gray-500 dark:text-slate-400">
+          <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-slate-300">
             {helperText}
           </p>
 
-          <p className="mt-2 text-xs text-gray-400 dark:text-slate-500">
+          <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
             You can drag files here or use the browse button above.
           </p>
         </div>
