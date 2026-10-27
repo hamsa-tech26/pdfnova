@@ -46,7 +46,8 @@
       "fix/kukureku-backup-privacy": false,
       "test/task169-package-guard-save": false,
       "fix/kukureku-next-16-4-2-security": false,
-      "fix/task182-mobile-tool-entry": false
+      "fix/task182-mobile-tool-entry": false,
+      "evidence/task182-mobile-entry": false
     }
   }
 }
