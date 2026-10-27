@@ -490,6 +490,16 @@ export function preparePdfV4XlsxExport(
         "Original source text and source words are retained for audit. " +
         "This presentation cleanup does not verify footnote positions or labels.");
     }
+    const raisedFootnotes = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason =>
+        reason.startsWith("Native raised footnote position inferred")));
+    if (raisedFootnotes.length) {
+      notes.push("Table " + number + ": " + raisedFootnotes.length +
+        " label cell(s) present raised native footnote numerals after their " +
+        "geometrically attached word. This placement remains UNVERIFIED " +
+        "source interpretation. All original PDF words and unadjusted text " +
+        "are retained; compare superscripts and definitions visually before use.");
+    }
     if(table.columnCount===11 && table.rows.length>=11 &&
       table.rows[0]?.provenance?.blockId?.startsWith("dense-native-eleven-grid-")){
       notes.push("Table "+number+": A complex native eleven-column scientific "+
