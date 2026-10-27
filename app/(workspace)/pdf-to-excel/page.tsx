@@ -13,6 +13,7 @@ import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport,
   type PdfXlsxTableChoice} from "@/lib/converters/pdfToXlsxSelection";
 import { createPdfXlsxWorkbook } from "@/lib/converters/pdfToXlsx";
 import {validateLocalPdfInput} from "@/lib/converters/localPdfInputGate";
+import {selectPdfXlsxSourcePages} from "@/lib/converters/pdfToXlsxPageSelection";
 import {auditPdfPageCoverage,type PdfPageCoverageFlag} from "@/lib/converters/pdfPageCoverageAudit";
 import { csvDownloadBlob } from "@/lib/converters/tableExport";
 import {reviewEmbeddedImageRegions,type EmbeddedImageOcrReviewResult} from "@/lib/pdf-engine-v4/ocr/embeddedImageReviewOcr";
@@ -38,6 +39,10 @@ const XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.s
 export default function PdfToExcelPage() {
   const inputRef = useRef<HTMLInputElement>(null);
   const [file, setFile] = useState<File | null>(null);
+  const [activeFile,setActiveFile]=useState<File|null>(null);
+  const [pageStart,setPageStart]=useState("");
+  const [pageEnd,setPageEnd]=useState("");
+  const [sourcePageReviewNote,setSourcePageReviewNote]=useState("");
   const [busy, setBusy] = useState(false);
   const [output, setOutput] = useState<Blob | null>(null);
   const [outputName, setOutputName] = useState("");
@@ -106,6 +111,8 @@ export default function PdfToExcelPage() {
   function reset() {
     if (inputRef.current) inputRef.current.value = "";
     setFile(null);
+    setActiveFile(null);setPageStart("");setPageEnd("");
+    setSourcePageReviewNote("");
     setOutput(null);
     setOutputName("");
     setWarnings([]);
@@ -123,6 +130,8 @@ export default function PdfToExcelPage() {
     const selected = event.target.files?.[0];
     event.target.value = "";
     setOutput(null);
+    setActiveFile(null);setPageStart("");setPageEnd("");
+    setSourcePageReviewNote("");
     setOutputName("");
     setWarnings([]);
     setInspected(null);
@@ -142,15 +151,28 @@ export default function PdfToExcelPage() {
     setError("");
   }
 
+  /** An explicit range is optional; an unselected range retains old behavior. */
+  async function prepareProcessingSource(source:File){
+    await validateLocalPdfInput(source);
+    const from=pageStart.trim(),to=pageEnd.trim();
+    if(!from&&!to)return {file:source,reviewNote:""};
+    if(!/^[1-9]\d{0,3}$/.test(from)||!/^[1-9]\d{0,3}$/.test(to))
+      throw Error("Enter both original PDF page numbers as positive whole numbers.");
+    return selectPdfXlsxSourcePages(source,{
+      startPage:Number(from),endPage:Number(to),
+    });
+  }
+
 
   /** This is an explicit inspection step; no data is automatically downloaded. */
   async function inspectTables(){
     if(!file||busy)return;
     setBusy(true);setError("");setOutput(null);setWarnings([]);
     try{
-      await validateLocalPdfInput(file);
-      const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
+      const current=await prepareProcessingSource(file);
+      const analyzed=await analyzePdfV4(current.file,{enableControlledOcr:false,inspectImagePaints:true});
       const available=analyzed.tables.length?inspectPdfV4XlsxChoices(analyzed):[];
+      setActiveFile(current.file);setSourcePageReviewNote(current.reviewNote);
       setInspected(analyzed);setChoices(available);
       setPageCoverageFlags(auditPdfPageCoverage(analyzed.document.pages,analyzed.tables));
       setScientificImageTargets(findNativeScientificRasterReviewTargets(
@@ -172,8 +194,9 @@ export default function PdfToExcelPage() {
     setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
     clearReviewedEditHistory();
     try{
-      await validateLocalPdfInput(file);
-      const analyzed=await analyzePdfV4(file,{enableControlledOcr:false,inspectImagePaints:true});
+      const current=await prepareProcessingSource(file);
+      const analyzed=await analyzePdfV4(current.file,{enableControlledOcr:false,inspectImagePaints:true});
+      setActiveFile(current.file);setSourcePageReviewNote(current.reviewNote);
       setInspected(analyzed);
       setPageCoverageFlags(auditPdfPageCoverage(analyzed.document.pages,analyzed.tables));
       setImagePage(analyzed.imageContentReview.find(p=>p.imageReviewRecommended)?.pageNumber??
@@ -193,7 +216,7 @@ export default function PdfToExcelPage() {
     setReviewRegionIndex(null);setReviewedTsv("");setReviewedRows(null);setReviewConfirmed(false);
     clearReviewedEditHistory();
     try{
-      const reviewed=await reviewEmbeddedImageRegions(file,
+      const reviewed=await reviewEmbeddedImageRegions(activeFile??file,
         inspected.document.pages.filter(p=>p.pageNumber===imagePage),
         selectedImagePaint===""?undefined:{imagePaintIndex:Number(selectedImagePaint)});
       setImageReview(reviewed);
@@ -281,7 +304,7 @@ export default function PdfToExcelPage() {
       // Validate the exact currently edited grid again, not an old preview.
       if(JSON.stringify(plan.tables[0].rows)!==JSON.stringify(reviewedRows))
         throw Error("The reviewed cells changed. Preview and confirm the current values again.");
-      const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+"-user-reviewed-image.xlsx";
+      const name=((activeFile??file).name.replace(/\.pdf$/i,"")||"kukureku")+"-user-reviewed-image.xlsx";
       await finishWorkbook(plan,name);
     }catch(cause){
       setImageStatus(cause instanceof Error?cause.message:"Reviewed image table export was withheld.");
@@ -290,12 +313,15 @@ export default function PdfToExcelPage() {
 
   async function finishWorkbook(
     plan:Parameters<typeof createPdfXlsxWorkbook>[0],name:string,
+    scopeNote=sourcePageReviewNote,
   ){
-    const bytes=await createPdfXlsxWorkbook(plan);
+    const annotated={...plan,reviewNotes:[...(plan.reviewNotes??[]),
+      ...(scopeNote?[scopeNote]:[])]};
+    const bytes=await createPdfXlsxWorkbook(annotated);
     const safe=new Uint8Array(bytes.byteLength);safe.set(bytes);
     const blob=new Blob([safe.buffer],{type:XLSX_TYPE});
     saveAs(blob,name);
-    setOutput(blob);setOutputName(name);setWarnings([...(plan.reviewNotes??[])]);
+    setOutput(blob);setOutputName(name);setWarnings([...(annotated.reviewNotes??[])]);
     addRecentFile({fileName:name,toolName:"PDF to Excel"});
   }
 
@@ -365,7 +391,7 @@ export default function PdfToExcelPage() {
         !scientificTableConfirmed)throw new Error("Acknowledge and inspect the scientific source table before exporting.");
       // Validate the table AGAIN at actual export time, never trust a UI badge.
       const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
-      const stem=file.name.replace(/\.pdf$/i,"")||"kukureku";
+      const stem=(activeFile??file).name.replace(/\.pdf$/i,"")||"kukureku";
       await finishWorkbook(plan,stem+"-table-"+(selectedIndex+1)+".xlsx");
     }catch(cause){
       setError(cause instanceof Error?cause.message:"Selected-table export was withheld.");
@@ -386,12 +412,13 @@ export default function PdfToExcelPage() {
         !scientificTableConfirmed)throw new Error("Acknowledge and inspect the scientific source table before exporting.");
       const plan=prepareSelectedPdfV4XlsxExport(inspected,selectedIndex);
       if(plan.tables.length!==1)throw new Error("Expected exactly one selected table.");
-      const name=(file.name.replace(/\.pdf$/i,"")||"kukureku")+
+      const name=((activeFile??file).name.replace(/\.pdf$/i,"")||"kukureku")+
         "-table-"+(selectedIndex+1)+".csv";
       const blob=csvDownloadBlob(plan.tables[0].rows);
       saveAs(blob,name);
       setOutput(blob);setOutputName(name);
       setWarnings([...(plan.reviewNotes??[]),
+        ...(sourcePageReviewNote?[sourcePageReviewNote]:[]),
         "CSV FORMAT: No Excel review worksheet, source geometry, cell merges or formatting is included. Formula-like values are text-escaped. Inspect the PDF before using this file."]);
       addRecentFile({fileName:name,toolName:"PDF to Excel"});
     }catch(cause){
@@ -408,8 +435,10 @@ export default function PdfToExcelPage() {
     try {
       // V4 is intentionally used without scanned-page OCR. This MVP accepts
       // text-selectable source PDFs only; an image scan must fail clearly.
-      await validateLocalPdfInput(file);
-      const analyzed = inspected ?? await analyzePdfV4(file, { enableControlledOcr: false });
+      const current=inspected&&activeFile?
+        {file:activeFile,reviewNote:sourcePageReviewNote}:
+        await prepareProcessingSource(file);
+      const analyzed = inspected ?? await analyzePdfV4(current.file, { enableControlledOcr: false });
       // Centralized fail-closed quality checks preserve multi-page row
       // provenance, do not infer merged-cell formatting, and report omissions.
       // Only all-native, sufficiently selectable PDFs may enter the
@@ -424,11 +453,11 @@ export default function PdfToExcelPage() {
           !table.extractionProvenance ||
           table.extractionProvenance.source === "native-pdf");
       const recovered = nativeOnly && analyzed.document.pages.length > 1
-        ? await recoverEightColumnNativePdf(file)
+        ? await recoverEightColumnNativePdf(current.file)
         : null;
       const exportPlan = recovered ?? preparePdfV4XlsxExport(analyzed);
-      const name = (file.name.replace(/\.pdf$/i, "") || "kukureku") + "-tables.xlsx";
-      await finishWorkbook(exportPlan,name);
+      const name = (current.file.name.replace(/\.pdf$/i, "") || "kukureku") + "-tables.xlsx";
+      await finishWorkbook(exportPlan,name,current.reviewNote);
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : "PDF-to-Excel conversion failed.");
     } finally {
@@ -450,11 +479,12 @@ export default function PdfToExcelPage() {
       faqs={[
         { question: "Will my PDF be uploaded?", answer: "No. Extraction and XLSX generation happen in the browser." },
         { question: "Can I choose one table if another fails?", answer: "Yes. Inspect candidates, choose an eligible table, and review its extracted cell preview before exporting. Other tables stay excluded. All original safety checks still apply." },
+        { question: "What if my PDF exceeds 25 pages?", answer: "Choose a consecutive original-page range of 1–25 pages below before inspection. Other pages are excluded and the downloaded workbook carries an explicit source-page warning. Extraction remains unverified." },
         { question: "Does it convert scans or every table?", answer: "Automatic export accepts only structured selectable-text tables. An optional image-OCR review can create a separately labeled XLSX only after you manually correct, preview and confirm its cells. Fully scanned pages cannot be converted automatically; bounded embedded images may be reviewed manually when the PDF exposes them." },
       ]}
       howToTitle="How to convert a PDF table to Excel"
       howToSteps={[
-        { title: "Select a PDF", description: "Choose a selectable-text PDF up to 25 MB and 25 pages." },
+        { title: "Select a PDF", description: "Choose a selectable-text PDF up to 25 MB. For documents longer than 25 pages, enter a 1–25-page original-page range before inspection." },
         { title: "Choose which tables", description: "Convert all tables using the original safety gate, or inspect candidates and choose one eligible table." },
         { title: "Verify the XLSX", description: "Download the workbook and compare every table with the original PDF before using the result." },
       ]}
@@ -463,12 +493,45 @@ export default function PdfToExcelPage() {
       <FileUploader fileInputRef={inputRef} onFileSelection={chooseFile}
         accept=".pdf,application/pdf" multiple={false} title="Choose a selectable-text PDF"
         description="Automatic native tables, or optional browser-local image OCR with manual review. No cloud upload." buttonText="Choose PDF"
-        helperText="PDF · Up to 25 MB, 25 pages" disabled={busy} />
+        helperText="PDF · Up to 25 MB; process up to 25 pages per selection" disabled={busy} />
       {!file && error && <div className="mt-6"><ErrorCard title="Could not select PDF"
         description={error} reasons={[]} onReset={reset}/></div>}
       {file && <div className="mt-8 space-y-6">
         <FileCard file={file} onRemove={busy ? undefined : reset}
           statusText={busy ? "Analyzing tables locally" : output ? "Download ready" : "Ready to inspect tables"}/>
+        {!inspected&&!output&&(
+          <section aria-label="Optional original PDF page selection"
+            className="space-y-3 rounded-2xl border border-blue-300 p-4 dark:border-blue-800">
+            <h3 className="font-semibold">Optional: process selected original PDF pages</h3>
+            <p className="text-sm text-slate-700 dark:text-slate-300">
+              For PDFs over 25 pages, enter the first and last original page
+              number (for example, 9 and 10). Process no more than 25 consecutive
+              pages. Leave both fields empty for normal whole-document processing.
+              Only the chosen pages will be inspected; other pages will be omitted.
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label htmlFor="xlsx-page-start" className="space-y-1 text-sm font-medium">
+                <span>First original page</span>
+                <input id="xlsx-page-start" type="number" min="1" max="9999" step="1"
+                  value={pageStart} onChange={e=>setPageStart(e.target.value)}
+                  disabled={busy} placeholder="e.g. 9"
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-slate-900 dark:bg-slate-900 dark:text-white"/>
+              </label>
+              <label htmlFor="xlsx-page-end" className="space-y-1 text-sm font-medium">
+                <span>Last original page</span>
+                <input id="xlsx-page-end" type="number" min="1" max="9999" step="1"
+                  value={pageEnd} onChange={e=>setPageEnd(e.target.value)}
+                  disabled={busy} placeholder="e.g. 10"
+                  className="w-full rounded-lg border bg-white px-3 py-2 text-slate-900 dark:bg-slate-900 dark:text-white"/>
+              </label>
+            </div>
+          </section>
+        )}
+        {sourcePageReviewNote&&inspected&&(
+          <p role="status" className="rounded-xl border border-amber-400 p-3 text-sm text-amber-950 dark:text-amber-200">
+            {sourcePageReviewNote}
+          </p>
+        )}
         {!output && !error && <ActionButton isLoading={busy} loadingText="Converting tables..."
           buttonText="Convert to Excel (.xlsx)"
           subtitle="No upload. Unsupported or uncertain tables will not be exported."
