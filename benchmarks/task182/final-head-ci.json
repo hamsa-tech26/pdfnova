@@ -1,0 +1,48 @@
+{
+  "commit": "b70fb04d1b214d9002185350d9463b5edc32dca6",
+  "workflows": [
+    {
+      "name": "Validate",
+      "run": 40445347713,
+      "job": 121995186666,
+      "conclusion": "success",
+      "exactHeadLogLines": [
+        "2026-10-27T03:39:10.2789478Z   ref: b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:10.6917621Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:11.4006553Z  * branch            b70fb04d1b214d9002185350d9463b5edc32dca6 -> FETCH_HEAD",
+        "2026-10-27T03:39:11.4103512Z [command]/usr/bin/git checkout --progress --force b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:11.4678670Z Note: switching to 'b70fb04d1b214d9002185350d9463b5edc32dca6'.",
+        "2026-10-27T03:39:11.4699298Z HEAD is now at b70fb04 Make uploader limits and browse hints readable in both themes",
+        "2026-10-27T03:39:11.4761727Z b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:44.8695175Z ✖ 25 problems (0 errors, 25 warnings)",
+        "2026-10-27T03:39:58.1184986Z  Test Files  139 passed (139)",
+        "2026-10-27T03:39:58.1190886Z       Tests  714 passed (714)",
+        "2026-10-27T03:40:01.4186932Z  Test Files  34 passed (34)",
+        "2026-10-27T03:40:01.4187955Z       Tests  145 passed (145)",
+        "2026-10-27T03:40:38.5901505Z found 0 vulnerabilities",
+        "2026-10-27T03:40:39.2238981Z found 0 vulnerabilities"
+      ]
+    },
+    {
+      "name": "Browser Reliability Smoke",
+      "run": 40445347785,
+      "job": 121995187074,
+      "conclusion": "success",
+      "exactHeadLogLines": [
+        "2026-10-27T03:39:10.4016283Z   ref: b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:10.8622021Z [command]/usr/bin/git -c protocol.version=2 fetch --no-tags --prune --no-recurse-submodules --depth=1 origin b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:11.5864284Z  * branch            b70fb04d1b214d9002185350d9463b5edc32dca6 -> FETCH_HEAD",
+        "2026-10-27T03:39:11.6011260Z [command]/usr/bin/git checkout --progress --force b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:11.6600107Z Note: switching to 'b70fb04d1b214d9002185350d9463b5edc32dca6'.",
+        "2026-10-27T03:39:11.6616988Z HEAD is now at b70fb04 Make uploader limits and browse hints readable in both themes",
+        "2026-10-27T03:39:11.6688789Z b70fb04d1b214d9002185350d9463b5edc32dca6",
+        "2026-10-27T03:39:55.6281472Z Downloading Chromium 141.0.7390.37 (playwright build v1194) from https://cdn.playwright.dev/dbazure/download/playwright/builds/chromium/1194/chromium-linux.zip",
+        "2026-10-27T03:40:00.9960615Z Chromium 141.0.7390.37 (playwright build v1194) downloaded to /home/runner/.cache/ms-playwright/chromium-1194",
+        "2026-10-27T03:45:14.4533417Z \u001b[1A\u001b[2K  99 passed (4.8m)"
+      ]
+    }
+  ],
+  "optionalProbe": "skipped",
+  "externalReviews": 0,
+  "openReviewThreads": 0
+}
