@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "fix/task145-source-review-marker-consistency": false,
       "review/task144-reviewed-xlsx-preflight": false,
       "test/task141-source-pinned-browser": false,
       "fix/task140-nrel-table-region": false,
