@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "test/task141-source-pinned-browser": false,
       "fix/task140-nrel-table-region": false,
       "fix/task139-fbi-grid-boundaries": false,
       "fix/task138-usda-panel-boundaries": false,
