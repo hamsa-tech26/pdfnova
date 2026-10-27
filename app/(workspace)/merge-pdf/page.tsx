@@ -447,7 +447,7 @@ export default function MergePdfPage() {
     <ToolLayout
       label="Merge PDF"
       title="Merge PDF files online, privately"
-      description="Add two or more non-form PDFs, set their order, and combine them locally in your browser. Files are not uploaded, with a 25 MB limit per file and a 100 MB combined browser-processing limit."
+      description="Merge non-form PDFs locally. No uploads. Up to 25 MB per file, 100 MB combined."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
       howToTitle="How to merge PDF files online"

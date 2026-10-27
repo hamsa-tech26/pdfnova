@@ -334,7 +334,7 @@ export default function CompressPdfPage() {
     <ToolLayout
       label="Compress PDF"
       title="Compress PDF files in your browser"
-      description="Choose a PDF and an optimization level to reduce file size when possible. Compression runs locally in your browser without uploading the file."
+      description="Reduce PDF size when possible, in your browser. Your PDF is not uploaded."
       tips={compressionTips}
       faqs={compressionFaqs}
       guide={{
