@@ -575,6 +575,21 @@ function finalizeCell(
   const rawText =
     joinWords(cell.words);
 
+  // Dense caption tables often render long dot-leader decorations after the
+  // label. Remove only 8+ trailing dots in this strictly review-only mode;
+  // retain native words and exact originalNativeText for source inspection.
+  // A short ellipsis, internal punctuation and every numeric cell are intact.
+  const isDenseCaptionNativeLabel =
+    rowReason === "native-dense-caption-ten-body-review" &&
+    cell.columnIndex === 0 &&
+    cell.words.length > 0 &&
+    cell.words.every(word => word.extractionProvenance?.source === "native-pdf");
+  const decorativeLeader = isDenseCaptionNativeLabel &&
+    /(?:\s*\.\s*){8,}$/u.test(rawText);
+  const cleanLabelText = decorativeLeader
+    ? rawText.replace(/(?:\s*\.\s*){8,}$/u, "").trimEnd()
+    : rawText;
+
   const nativeLabel =
     rowReason === "parallel-native-scientific-physical-row" &&
     cell.columnIndex === 0 &&
@@ -584,7 +599,12 @@ function finalizeCell(
       word.extractionProvenance.source === "native-pdf",
     )
       ? inferNativeScientificSymbols(rawText)
-      : {text: rawText, reasons: [] as string[]};
+      : {
+          text: cleanLabelText,
+          reasons: decorativeLeader
+            ? ["Decorative trailing PDF dot leaders omitted from review-only native caption label."]
+            : [] as string[],
+        };
 
   const text =
     normalizeFinalSerialCellText(
