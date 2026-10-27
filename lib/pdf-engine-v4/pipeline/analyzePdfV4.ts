@@ -1677,6 +1677,13 @@ const rowDetection =
     columnDetection.columns,
   );
 
+// A reconstructed physical-row table must be explicitly reviewed; its
+// source-line grouping is not independently validated cell correspondence.
+const sourceBlockId = rowDetection.rows[0]?.reason ===
+  "native-dense-caption-ten-header-review"
+  ? "native-caption-header-grid-dense-ten-" + region.block.id
+  : region.block.id;
+
       if (
   rowDetection.rows.length === 0
 ) {
@@ -1695,7 +1702,7 @@ const rowDetection =
           page.pageNumber,
           rowDetection.rows,
           columnDetection.columns,
-          {sourceBlockId: region.block.id},
+          {sourceBlockId},
         );
 
       const builtTable =
@@ -1703,7 +1710,7 @@ const rowDetection =
     ? attachRowProvenance(
         cellBuild.table,
         page.pageNumber,
-        region.block.id,
+        sourceBlockId,
       )
     : null;
 
