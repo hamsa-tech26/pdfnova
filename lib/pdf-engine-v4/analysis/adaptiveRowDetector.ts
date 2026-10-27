@@ -4,6 +4,7 @@ import type {
   PdfWord,
 } from "../model/types";
 import type { ColumnCandidate } from "./stableColumnDetector";
+import { recoverDenseNativeCaptionTenColumnRows } from "./nativeDenseCaptionTenColumnRows";
 
 export type RowDecisionBreakdown = {
   serialNumber: number;
@@ -1672,6 +1673,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const denseTen = recoverDenseNativeCaptionTenColumnRows(block, columns);
+  if (denseTen) return denseTen;
 
   const interleaved=detectInterleavedThreePhysicalRows(block,columns);
   if(interleaved)return interleaved;

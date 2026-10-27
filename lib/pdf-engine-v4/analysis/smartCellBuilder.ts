@@ -494,9 +494,20 @@ function assignWordsToCells(
         createAnalysisWordsV4(line),
     );
 
+  const denseTenColumns = row.reason === "native-dense-caption-ten-body-review" &&
+    columns.length === 10
+    ? [...columns].sort((a, b) => a.x - b.x)
+    : null;
+
   for (const word of analysisWords) {
+    const denseTenLabelWord =
+      denseTenColumns !== null &&
+      word.bounds.x + word.bounds.width <
+        denseTenColumns[1].x - 8;
     const nearestColumn =
-      (row.reason==="parallel-native-scientific-physical-row"||
+      denseTenLabelWord
+        ? denseTenColumns![0]
+        : (row.reason==="parallel-native-scientific-physical-row"||
         row.reason==="captioned-native-text-physical-line")&&columns.length===2
         ? (word.bounds.x>=columns[1].x-10?columns[1]:columns[0])
         : findCellAssignmentColumn(word,columns);
