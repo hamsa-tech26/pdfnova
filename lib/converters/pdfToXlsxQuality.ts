@@ -4,7 +4,7 @@ import {projectNativePercentSavingsHeader} from "./nativePercentSavingsHeader";
 import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import {preserveNativeWideHeaderLines} from "./nativeWideHeaderLines";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
-import {inspectTableStructuralEvidence} from "./pdfToXlsxStructuralEvidence";
+import {inspectTableStructuralEvidence,isScientificReviewOnlyTable} from "./pdfToXlsxStructuralEvidence";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
 
@@ -299,17 +299,7 @@ export function preparePdfV4XlsxExport(
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
   }
-  const needsExplicitReview=(id:string|undefined)=>!!id&&(
-    id.startsWith("native-compact-grid-")||
-    id.startsWith("native-rotated-invoice-grid-")||
-    id.startsWith("native-usda-panel-")||
-    id.startsWith("native-fbi-nics-grid-")||
-    id.startsWith("native-nrel-fuel-savings-")||
-    id.startsWith("native-captioned-text-grid-")||
-    id.startsWith("native-caption-header-grid-")||
-    id.startsWith("native-captioned-short-numeric-"));
-  const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
-    needsExplicitReview(row.provenance?.blockId)));
+  const reviewOnlyTables=source.tables.filter(isScientificReviewOnlyTable);
   const excludedReviewCount=!options?.allowSelectedCompactGrid?
     reviewOnlyTables.length:0;
   if(excludedReviewCount){
@@ -373,7 +363,7 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-nrel-fuel-savings-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
-    if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
+    if(isScientificReviewOnlyTable(table)){
       notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
         "scientific or captioned two-column text grid using repeated source "+
         "word positions only. Source table semantics, row and column labels, "+

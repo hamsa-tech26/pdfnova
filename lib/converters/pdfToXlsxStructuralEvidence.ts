@@ -41,15 +41,15 @@ export function inspectTableStructuralEvidence(table:LogicalTable):TableStructur
 }
 /** A text-position based scientific grid requires explicit selection and review. */
 export function isScientificReviewOnlyTable(table:LogicalTable):boolean{
-  return table.rows.some(row=>{
-    const id=row.provenance?.blockId??"";
-    return id.startsWith("native-compact-grid-")||
-      id.startsWith("native-rotated-invoice-grid-")||
-      id.startsWith("native-usda-panel-")||
-      id.startsWith("native-fbi-nics-grid-")||
-      id.startsWith("native-nrel-fuel-savings-")||
-      id.startsWith("native-captioned-text-grid-")||
-      id.startsWith("native-caption-header-grid-")||
-      id.startsWith("native-captioned-short-numeric-");
-  });
+  // The selection layer recognizes either a table ID or its row provenance.
+  // The unattended export and UI-acknowledgement gates must classify exactly
+  // the same source-bounded table even if one source marker is unavailable.
+  const prefixes=[
+    "native-compact-grid-","native-rotated-invoice-grid-",
+    "native-usda-panel-","native-fbi-nics-grid-",
+    "native-nrel-fuel-savings-","native-captioned-text-grid-",
+    "native-caption-header-grid-","native-captioned-short-numeric-",
+  ];
+  return prefixes.some(prefix=>table.id.startsWith(prefix)||
+    table.rows.some(row=>row.provenance?.blockId?.startsWith(prefix)));
 }
