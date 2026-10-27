@@ -566,6 +566,44 @@ function normalizeFinalSerialCellText(
   return match?.[1] ?? text;
 }
 
+/**
+ * Reposition only native, geometrically attached raised superscript markers
+ * in an already review-only dense caption label. This is a presentation
+ * inference, not certification of the reference to which a footnote applies.
+ * The original source words and extracted string are retained by finalizeCell.
+ */
+function recoverDenseCaptionAttachedSuperscripts(words: PdfWord[]) {
+  const mainWords = words.filter(word =>
+    /[\p{L}]/u.test(word.text) &&
+    Number.isFinite(word.font?.size) && word.font.size > 0);
+  if (mainWords.length === 0) return null;
+  const bodyFont = Math.max(...mainWords.map(word => word.font!.size));
+  const raised = words.filter(word =>
+    /^\d+(?:,\s*\d+)*$/u.test(word.text.trim()) &&
+    Number.isFinite(word.font?.size) &&
+    word.font!.size >= bodyFont * 0.58 &&
+    word.font!.size <= bodyFont * 0.82);
+  if (raised.length < 1 || raised.length > 2) return null;
+  // A marker must attach to the RIGHT END of a full-size text word, on the
+  // same visual line, with a reproducible raised-baseline offset.
+  if (!raised.every(marker => mainWords.some(base => {
+    const xGap = marker.bounds.x - (base.bounds.x + base.bounds.width);
+    const yRise = marker.bounds.y - base.bounds.y;
+    return Math.abs(xGap) <= 1.25 && yRise >= 1.5 && yRise <= 5.5 &&
+      marker.bounds.height < base.bounds.height * 0.8;
+  }))) return null;
+  const otherSmallNumerals = words.filter(word =>
+    /^\d+(?:,\s*\d+)*$/u.test(word.text.trim()) &&
+    word.font?.size !== undefined && word.font.size < bodyFont * 0.82 &&
+    !raised.includes(word));
+  if (otherSmallNumerals.length) return null;
+  const mainText = joinWords(words.filter(word => !raised.includes(word)));
+  const referenceNumbers = raised.flatMap(marker =>
+    marker.text.match(/\d+/gu) ?? []);
+  if (referenceNumbers.length < 1 || referenceNumbers.length > 4) return null;
+  return { mainText, suffix: referenceNumbers.map(n => `(${n})`).join("") };
+}
+
 function finalizeCell(
   cell: LogicalCell,
   column: ColumnCandidate,
@@ -584,11 +622,22 @@ function finalizeCell(
     cell.columnIndex === 0 &&
     cell.words.length > 0 &&
     cell.words.every(word => word.extractionProvenance?.source === "native-pdf");
+  const attachedSuperscripts = isDenseCaptionNativeLabel
+    ? recoverDenseCaptionAttachedSuperscripts(cell.words)
+    : null;
+  const presentationBody = attachedSuperscripts?.mainText ?? rawText;
+  // A raised marker may interrupt the long visual leader run so the native
+  // extracted remainder contains only five printed dots. Require the fully
+  // anchored superscript evidence before accepting that shorter decoration.
+  const leaderPattern = attachedSuperscripts
+    ? /(?:\s*\.\s*){5,}$/u
+    : /(?:\s*\.\s*){8,}$/u;
   const decorativeLeader = isDenseCaptionNativeLabel &&
-    /(?:\s*\.\s*){8,}$/u.test(rawText);
-  const cleanLabelText = decorativeLeader
-    ? rawText.replace(/(?:\s*\.\s*){8,}$/u, "").trimEnd()
-    : rawText;
+    leaderPattern.test(presentationBody);
+  const cleanLabelBody = decorativeLeader
+    ? presentationBody.replace(leaderPattern, "").trimEnd()
+    : presentationBody;
+  const cleanLabelText = cleanLabelBody + (attachedSuperscripts?.suffix ?? "");
 
   const nativeLabel =
     rowReason === "parallel-native-scientific-physical-row" &&
@@ -602,8 +651,11 @@ function finalizeCell(
       : {
           text: cleanLabelText,
           reasons: decorativeLeader
-            ? ["Decorative trailing PDF dot leaders omitted from review-only native caption label."]
-            : [] as string[],
+            ? ["Decorative trailing PDF dot leaders omitted from review-only native caption label.",
+              ...(attachedSuperscripts ? ["Native raised footnote position inferred from source geometry; independently unverified."] : [])]
+            : attachedSuperscripts
+              ? ["Native raised footnote position inferred from source geometry; independently unverified."]
+              : [] as string[],
         };
 
   const text =

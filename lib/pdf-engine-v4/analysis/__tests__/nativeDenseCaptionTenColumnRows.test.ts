@@ -97,4 +97,34 @@ describe("Task149 dense native caption row recovery", () => {
     expect(built.table!.rows[1].cells[1].text).toBe("0");
     expect(built.table!.rows[30].cells[9].text).toBe("2908");
   });
+
+  it("repositions only visibly raised markers attached to a native label word endpoint", () => {
+    const block = fixture();
+    block.lines[5].words[0].text += " . . . . . .";
+    const raised = word("1, 2", 49, 653.24, "source-superscript");
+    raised.bounds.height = 4.99;
+    raised.font!.size = 6.4;
+    block.lines[5].words.push(raised);
+    const result = detectAdaptiveRowsV4(block, columns);
+    const table = buildSmartTableV4(1, result.rows, columns, {
+      sourceBlockId: "native-caption-header-grid-dense-ten-test",
+    }).table!;
+    const label = table.rows[1].cells[0];
+    expect(label.text).toBe("Record-0(1)(2)");
+    expect(label.originalNativeText).toContain("1, 2");
+    expect(label.words.some(w => w.id === "source-superscript")).toBe(true);
+    expect(label.nativeTextAdjustmentReasons?.join(" ")).toContain("Native raised footnote position inferred");
+    expect(label.nativeTextAdjustmentReasons?.join(" ")).toContain("Decorative trailing PDF dot leaders");
+    expect(table.rows[1].cells[1].text).toBe("0");
+
+    const shifted = fixture();
+    const displaced = word("1", 60, 653.24, "unattached-numeral");
+    displaced.bounds.height = 4.99;
+    displaced.font!.size = 6.4;
+    shifted.lines[5].words.push(displaced);
+    const refused = buildSmartTableV4(1, detectAdaptiveRowsV4(shifted, columns).rows,
+      columns, { sourceBlockId: "native-caption-header-grid-dense-ten-test" }).table!;
+    expect(refused.rows[1].cells[0].nativeTextAdjustmentReasons).toBeUndefined();
+    expect(refused.rows[1].cells[0].text).toContain("1");
+  });
 });
