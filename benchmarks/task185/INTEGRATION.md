@@ -26,3 +26,6 @@ Date: 2026-11-01
 
 ## No-go rule
 Any regression in privacy, file validation, review-only eligibility or browser downloads is a blocker. This integration candidate stays a **draft** until those issues and independent review gaps are documented.
+
+## CI routing on publication
+The repo's Validate and Browser Reliability Smoke workflows listen to PRs targeting `main` (or the legacy `fix/task169-vitest-security`), not the mobile PR branch. PR #152 is therefore **draft-targeted at main for CI only** while retaining the actual two-parent integration commit. The code remains blocked on PR #150 release review, full regression verification, and explicit deployment approval. This documentation update makes the CI trigger visible and does not relax any source gate.
