@@ -49,7 +49,8 @@
       "fix/task182-mobile-tool-entry": false,
       "fix/task183-mobile-uploader-hints": false,
       "test/task187-v1-live-acceptance": false,
-      "test/task189-browser-local-source-network": false
+      "test/task189-browser-local-source-network": false,
+      "test/task190-live-redaction-independent-reader": false
     }
   }
 }
