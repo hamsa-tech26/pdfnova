@@ -55,7 +55,8 @@
       "test/task192-live-workspace-backup-roundtrip": false,
       "test/task193-live-acroform-interop": false,
       "test/task194-form-visual-crop-rotation": false,
-      "research/task195-chrome-native-pdf-viewer": false
+      "research/task195-chrome-native-pdf-viewer": false,
+      "test/task197-live-checkbox-flatten": false
     }
   }
 }

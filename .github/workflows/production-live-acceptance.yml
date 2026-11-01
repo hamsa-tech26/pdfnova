@@ -4,6 +4,8 @@ on:
     branches: [main]
     paths:
       - "e2e/production-live-acceptance.live.mjs"
+      - "e2e/production-checkbox-flatten.live.mjs"
+      - "scripts/verifySyntheticCheckboxFlatten.py"
       - "playwright.live-production.config.mjs"
       - ".github/workflows/production-live-acceptance.yml"
   workflow_dispatch:

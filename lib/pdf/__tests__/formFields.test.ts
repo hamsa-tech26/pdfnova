@@ -424,4 +424,39 @@ describe("formFields", () => {
     );
   });
 
+  it("preserves unrelated page annotations when flattening checkboxes", async () => {
+    const pdf = await PDFDocument.create();
+    const page = pdf.addPage([612, 792]);
+    const form = pdf.getForm();
+
+    const left = form.createCheckBox("qa_left");
+    left.addToPage(page, { x: 125, y: 525, width: 34, height: 34 });
+    left.check();
+    const right = form.createCheckBox("qa_right");
+    right.addToPage(page, { x: 350, y: 525, width: 34, height: 34 });
+
+    const note = pdf.context.obj({
+      Type: PDFName.of("Annot"),
+      Subtype: PDFName.of("Text"),
+      Rect: [420, 600, 445, 625],
+      Contents: PDFString.of("Synthetic unrelated note"),
+    });
+    const noteRef = pdf.context.register(note);
+    page.node.addAnnot(noteRef);
+    expect(page.node.Annots()?.size()).toBe(3);
+
+    expect(flattenStandardPdfForm(pdf)).toBe(2);
+    expect(pdf.getForm().getFields()).toHaveLength(0);
+    const remaining = page.node.Annots()?.asArray() ?? [];
+    expect(remaining.map(ref => ref.toString())).toEqual([noteRef.toString()]);
+
+    // This is a structural assertion: no lingering refs to deleted
+    // widgets should appear in the serialized document's /Annots array.
+    const output = await pdf.save({ updateFieldAppearances: false });
+    const reopened = await PDFDocument.load(output);
+    expect(reopened.getForm().getFields()).toHaveLength(0);
+    expect(reopened.getPage(0).node.Annots()?.asArray().map(ref => ref.toString()))
+      .toEqual([noteRef.toString()]);
+  });
+
 });
