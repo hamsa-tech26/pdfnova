@@ -70,3 +70,47 @@ test("live converter safely refuses scanned-only or text-free input",async({page
   console.log(JSON.stringify({test:"LIVE_RELEASE142_SAFE_REFUSAL",result:"PASS",
     source:"SYNTHETIC_ONLY",sourceUpload:false}));
 });
+
+test("live PDF-to-Excel does not transmit original synthetic PDF bytes in request bodies",async({page})=>{
+  test.setTimeout(180000);
+  const source=await nativeTablePdf();
+  const originalPdfHeader=Buffer.from("%PDF-","utf8");
+  const sourceBase64=Buffer.from(source.toString("base64"),"utf8");
+  const sourceAsBytes=Buffer.from(source);
+  const violations=[];
+  let observedWriteRequests=0;
+
+  // Checks the exposed browser request payloads. This is intentionally
+  // narrower than a blanket assertion that no network traffic exists:
+  // loading assets and privacy-disclosed analytics can involve requests.
+  page.on("request",request=>{
+    if(!["POST","PUT","PATCH"].includes(request.method()))return;
+    observedWriteRequests++;
+    const body=request.postDataBuffer();
+    if(!body)return;
+    if(body.includes(sourceAsBytes)||body.includes(originalPdfHeader)||
+        body.includes(sourceBase64)){
+      let destination="unavailable";
+      try{destination=new URL(request.url()).hostname}catch{}
+      violations.push({method:request.method(),destination});
+    }
+  });
+
+  await page.goto("/pdf-to-excel",{waitUntil:"domcontentloaded"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK189_NO_PERSONAL_DATA.pdf",
+    mimeType:"application/pdf",
+    buffer:source,
+  });
+  await expect(page.getByRole("button",{name:/Convert to Excel/i})).toBeVisible();
+  const downloading=page.waitForEvent("download",{timeout:120000});
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const result=await downloading;
+  expect(result.suggestedFilename()).toMatch(/\\.xlsx$/);
+  expect(violations,"Original PDF bytes/header or direct base64 appeared in an outgoing write request").toEqual([]);
+  // Do not log request payload, source PDF contents, browser storage or identifiers.
+  console.log(JSON.stringify({check:"LIVE_V1_SYNTHETIC_SOURCE_NETWORK",
+    result:"PASS",source:"SYNTHETIC_ONLY",outboundWriteRequestCount:observedWriteRequests,
+    suspiciousRequestCount:violations.length,networkBodyDataLogged:false,
+    limitation:"Covers direct PDF/header/base64 payload bytes, not transformed or encrypted exfiltration"}));
+});
