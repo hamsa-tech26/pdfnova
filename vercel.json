@@ -52,7 +52,8 @@
       "test/task189-browser-local-source-network": false,
       "test/task190-live-redaction-independent-reader": false,
       "test/task191-live-pdf-encryption-integrity": false,
-      "test/task192-live-workspace-backup-roundtrip": false
+      "test/task192-live-workspace-backup-roundtrip": false,
+      "test/task193-live-acroform-interop": false
     }
   }
 }
