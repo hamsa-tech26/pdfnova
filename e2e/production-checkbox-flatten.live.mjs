@@ -54,6 +54,10 @@ test("live Flatten PDF preserves checked and unchecked visible appearances indep
       expect(diagnostics,"Independent PDF reader emitted warnings; review before acceptance").toEqual([]);
       expect(reportLine,"Independent reader did not return PASS JSON").toBeTruthy();
       const result=JSON.parse(reportLine);
+      if(Object.keys(result.readerWarnings||{}).length){
+        console.log("TASK197_STRUCTURAL_WARNINGS",JSON.stringify(result.readerWarnings));
+      }
+      expect(result.readerWarnings,"Missing cross-reference objects make form flattening unsafe to certify").toEqual({});
       expect(result.result).toBe("PASS");
       expect(result.flattenedWidgetCount).toBe(0);
       expect(result.checkboxAppearancePreserved).toBe(true);
