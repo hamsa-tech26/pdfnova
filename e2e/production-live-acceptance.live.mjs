@@ -179,3 +179,67 @@ print(json.dumps({"pageCount":len(doc),"extractableChars":0,"imageCount":len(pag
     pageCount:check.pageCount,extractableChars:0,pixelPlacementVerified:true,
     documentBytesLogged:false,limitation:"One bounded page and rectangle, not certification of all document structures"}));
 });
+
+test("live Protect and Unlock PDF enforce real password access and preserve content",async({page})=>{
+  test.setTimeout(240000);
+  const password="Task191-QA-Only-2026!";
+  const pdf=await PDFDocument.create();
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const first=pdf.addPage([612,792]);
+  first.drawText("TASK191_ALPHA_SOURCE",{x:72,y:660,size:18,font});
+  const second=pdf.addPage([612,792]);
+  second.drawText("TASK191_BRAVO_SOURCE",{x:72,y:660,size:18,font});
+  const input=Buffer.from(await pdf.save());
+
+  await page.goto("/protect-pdf",{waitUntil:"domcontentloaded"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK191.pdf",mimeType:"application/pdf",buffer:input
+  });
+  await page.locator("#protect-password").fill(password);
+  await page.locator("#protect-password-confirm").fill(password);
+  const protectedPending=page.waitForEvent("download",{timeout:120000});
+  await page.getByRole("button",{name:"Protect and Download PDF"}).click();
+  const protectedDownload=await protectedPending;
+  expect(protectedDownload.suggestedFilename()).toBe("SYNTHETIC_TASK191-protected.pdf");
+  const protectedPath=await protectedDownload.path();
+  expect(protectedPath).toBeTruthy();
+  const protectedCheck=JSON.parse(execFileSync("python",[
+    "scripts/verifySyntheticPdfEncryption.py","protected",protectedPath
+  ],{encoding:"utf8",env:{...process.env,KUKUREKU_QA_PASSWORD:password}}));
+  expect(protectedCheck.requiresPassword).toBe(true);
+  expect(protectedCheck.pageCount).toBe(2);
+  expect(protectedCheck.markerCount).toBe(2);
+
+  // This is a client-side file picker: wait for browser scripts to settle
+  // before selecting the file so hydration cannot discard the change event.
+  await page.goto("/unlock-pdf",{waitUntil:"networkidle"});
+  const protectedInput=page.locator('input[type="file"]').first();
+  await expect(protectedInput).toBeAttached();
+  await protectedInput.setInputFiles({
+    name:protectedDownload.suggestedFilename(),
+    mimeType:"application/pdf",buffer:await readFile(protectedPath)
+  });
+  await expect(page.locator("#pdf-password")).toBeVisible({timeout:15000});
+  await page.locator("#pdf-password").fill("incorrect-synthetic-password");
+  await page.getByRole("button",{name:"Unlock and Download PDF"}).click();
+  await expect(page.getByText("The PDF could not be unlocked. Check the password",{exact:false}).first()).toBeVisible();
+
+  await page.locator("#pdf-password").fill(password);
+  const unlockedPending=page.waitForEvent("download",{timeout:120000});
+  await page.getByRole("button",{name:"Unlock and Download PDF"}).click();
+  const unlockedDownload=await unlockedPending;
+  expect(unlockedDownload.suggestedFilename()).toBe("SYNTHETIC_TASK191-protected-unlocked.pdf");
+  const unlockedPath=await unlockedDownload.path();
+  expect(unlockedPath).toBeTruthy();
+  const unlockedCheck=JSON.parse(execFileSync("python",[
+    "scripts/verifySyntheticPdfEncryption.py","unlocked",unlockedPath
+  ],{encoding:"utf8",env:{...process.env,KUKUREKU_QA_PASSWORD:password}}));
+  expect(unlockedCheck.requiresPassword).toBe(false);
+  expect(unlockedCheck.pageCount).toBe(2);
+  expect(unlockedCheck.markerCount).toBe(2);
+  console.log(JSON.stringify({check:"LIVE_V1_PDF_PASSWORD_INDEPENDENT",result:"PASS",
+    source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF",
+    wrongPasswordRejected:true,correctPasswordAccepted:true,unlockedContentPreserved:true,
+    actualPasswordLogged:false,sourceBytesLogged:false,
+    limitation:"Two synthetic text pages; not arbitrary encryption interoperability or real-world certification"}));
+});
