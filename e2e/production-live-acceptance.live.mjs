@@ -1,8 +1,9 @@
+import {execFileSync} from "node:child_process";
 import {test,expect} from "@playwright/test";
 import {PDFDocument,StandardFonts} from "pdf-lib";
 import JSZip from "jszip";
 import {readFile} from "node:fs/promises";
-import {execFileSync} from "node:child_process";
+
 
 async function nativeTablePdf(){
   const pdf=await PDFDocument.create(),font=await pdf.embedFont(StandardFonts.Helvetica);
@@ -113,4 +114,68 @@ test("live PDF-to-Excel does not transmit original synthetic PDF bytes in reques
     result:"PASS",source:"SYNTHETIC_ONLY",outboundWriteRequestCount:observedWriteRequests,
     suspiciousRequestCount:violations.length,networkBodyDataLogged:false,
     limitation:"Covers direct PDF/header/base64 payload bytes, not transformed or encrypted exfiltration"}));
+});
+
+test("live redaction export independently removes selectable text but preserves raster marks",async({page})=>{
+  test.setTimeout(180000);
+  const document=await PDFDocument.create();
+  const font=await document.embedFont(StandardFonts.HelveticaBold);
+  const sheet=document.addPage([600,800]);
+  sheet.drawText("SYNTHETIC_REDACTION_SECRET_9137",{x:80,y:650,size:22,font});
+  sheet.drawText("PUBLIC_CONTROL_2026",{x:80,y:420,size:22,font});
+  const synthetic=Buffer.from(await document.save());
+  await page.goto("/redact-pdf",{waitUntil:"domcontentloaded"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK190_REDACTION.pdf",
+    mimeType:"application/pdf",buffer:synthetic,
+  });
+  await expect(page.getByAltText("PDF page 1 preview")).toBeVisible();
+  const controls=page.getByRole("group",{name:"Redaction area on page 1"});
+  await controls.getByLabel("Left %").fill("10");
+  await controls.getByLabel("Top %").fill("10");
+  await controls.getByLabel("Width %").fill("75");
+  await controls.getByLabel("Height %").fill("22");
+  await page.getByRole("button",{name:"Add redaction area"}).click();
+  await expect(page.getByText("Page 1: 1 redaction area marked.")).toBeVisible();
+  const downloadPending=page.waitForEvent("download",{timeout:120000});
+  await page.getByRole("button",{name:"Redact and Download PDF"}).click();
+  const download=await downloadPending;
+  expect(download.suggestedFilename()).toBe("SYNTHETIC_TASK190_REDACTION-redacted.pdf");
+  const outputPath=await download.path();
+  expect(outputPath).toBeTruthy();
+  const source=await readFile(outputPath);
+  expect(source.subarray(0,5).toString("ascii")).toBe("%PDF-");
+
+  // Independent PyMuPDF reader: requires the runner-pinned PyMuPDF dependency.
+  // Checks both non-extractability and the image pixel result, since a fully
+  // blank PDF could otherwise pass a simple "no text" assertion.
+  const python=String.raw`
+import json,sys,fitz
+doc=fitz.open(sys.argv[1])
+assert len(doc)==1, "Expected exactly one output page"
+page=doc[0]
+assert not page.get_text().strip(), "Original PDF text remains extractable"
+assert len(page.get_images(full=True))>=1, "Redacted PDF lacks image content"
+pix=page.get_pixmap(alpha=False)
+def rgb(x,y): return pix.pixel(int(pix.width*x),int(pix.height*y))[:3]
+black=rgb(.55,.20)
+white=rgb(.85,.83)
+assert max(black)<60, "Expected opaque dark redaction in source-sensitive region"
+assert min(white)>195, "Outside blank page region was unexpectedly dark"
+dark=0
+for y in range(int(pix.height*.45),int(pix.height*.52),2):
+  for x in range(int(pix.width*.13),int(pix.width*.60),2):
+    if max(pix.pixel(x,y)[:3])<155: dark+=1
+assert dark>=25, "Expected unredacted public control text to remain visually present"
+print(json.dumps({"pageCount":len(doc),"extractableChars":0,"imageCount":len(page.get_images(full=True)),"blackRedaction":True,"publicTextPixels":True}))
+`;
+  const check=JSON.parse(execFileSync("python",["-c",python,outputPath],{encoding:"utf8"}));
+  expect(check.pageCount).toBe(1);
+  expect(check.extractableChars).toBe(0);
+  expect(check.blackRedaction).toBe(true);
+  expect(check.publicTextPixels).toBe(true);
+  console.log(JSON.stringify({check:"LIVE_V1_REDACTION_OUTPUT_INDEPENDENT",
+    result:"PASS",source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF",
+    pageCount:check.pageCount,extractableChars:0,pixelPlacementVerified:true,
+    documentBytesLogged:false,limitation:"One bounded page and rectangle, not certification of all document structures"}));
 });
