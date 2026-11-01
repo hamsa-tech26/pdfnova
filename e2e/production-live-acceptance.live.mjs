@@ -210,11 +210,16 @@ test("live Protect and Unlock PDF enforce real password access and preserve cont
   expect(protectedCheck.pageCount).toBe(2);
   expect(protectedCheck.markerCount).toBe(2);
 
-  await page.goto("/unlock-pdf",{waitUntil:"domcontentloaded"});
-  await page.locator('input[type="file"]').first().setInputFiles({
+  // This is a client-side file picker: wait for browser scripts to settle
+  // before selecting the file so hydration cannot discard the change event.
+  await page.goto("/unlock-pdf",{waitUntil:"networkidle"});
+  const protectedInput=page.locator('input[type="file"]').first();
+  await expect(protectedInput).toBeAttached();
+  await protectedInput.setInputFiles({
     name:protectedDownload.suggestedFilename(),
     mimeType:"application/pdf",buffer:await readFile(protectedPath)
   });
+  await expect(page.locator("#pdf-password")).toBeVisible({timeout:15000});
   await page.locator("#pdf-password").fill("incorrect-synthetic-password");
   await page.getByRole("button",{name:"Unlock and Download PDF"}).click();
   await expect(page.getByText("The PDF could not be unlocked. Check the password",{exact:false}).first()).toBeVisible();
