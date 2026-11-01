@@ -56,7 +56,8 @@
       "test/task193-live-acroform-interop": false,
       "test/task194-form-visual-crop-rotation": false,
       "research/task195-chrome-native-pdf-viewer": false,
-      "test/task197-live-checkbox-flatten": false
+      "test/task197-live-checkbox-flatten": false,
+      "test/task198-postrelease-checkbox-live": false
     }
   }
 }
