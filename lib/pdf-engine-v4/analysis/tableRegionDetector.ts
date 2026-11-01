@@ -1,5 +1,6 @@
 import {splitParallelScientificTables} from "./parallelScientificTableRecovery";
 import {findNativeDenseGridSubregions} from "./nativeDenseGridSubregion";
+import {findNativeCaptionedShortNumericGrids} from "./nativeCaptionedShortNumericGrid";
 import {findNativeCompactScientificGrids} from "./nativeCompactScientificGrid";
 import {findCaptionedTwoColumnTextGrids} from "./captionedTwoColumnTextGrid";
 import {findNativeCaptionHeaderScientificGrids} from "./nativeScientificCaptionHeaderGrid";
@@ -1597,10 +1598,20 @@ export function detectTableRegionsForPage(
     .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
       ...captionedTextGrids].some(existing=>
       existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)));
+  // Strong source-anchored seven-column / five-row grids can be missed when
+  // the surrounding article prose is grouped as one long paragraph. Only
+  // accept a short native subregion with its own caption and repeated physical
+  // numeric row anchors; never promote the full prose candidate or weaken
+  // the default global thresholds.
+  const shortNumericGrids=findNativeCaptionedShortNumericGrids(splitNativeBlocks)
+    .filter(candidate=>![...previouslyAdmitted,...compactNativeGrids,
+      ...captionedTextGrids,...headerNativeGrids].some(existing=>
+      existing.sourceBlock===candidate.sourceBlock&&candidateOverlap(existing,candidate)))
+    .map(candidate=>({...candidate,analysis:analyzeBlock(candidate.block,resolvedOptions)}));
   // Admission comes from source caption + repeated native numeric anchors,
   // not generic prose scoring; downstream table building remains mandatory.
   const allAdmitted=[...previouslyAdmitted,...compactNativeGrids,...captionedTextGrids,
-    ...headerNativeGrids]
+    ...headerNativeGrids,...shortNumericGrids]
     .filter(candidate=>!interleavedSources.has(candidate.sourceBlock)||
       candidate.block.id.startsWith("interleaved-native-three-grid-"));
   const bySource=new Map<PdfVisualBlock,typeof allAdmitted>();

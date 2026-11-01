@@ -398,6 +398,9 @@ test("native numbered 8-column guide reconstructs 87 fictional rows over three p
 
 test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe XLSX",async({page})=>{
   test.setTimeout(300000);
+  // Offline/CDN-restricted browsers must still be able to perform local OCR.
+  await page.route(/^https?:\/\/(?:cdn\.jsdelivr\.net|tessdata\.projectnaptha\.com)\//,
+    route=>route.abort("blockedbyclient"));
   await page.goto("/pdf-to-excel");
   // Independent browser-rendered source bitmap: real embedded raster table
   // inside a page also containing enough selectable native explanatory text.
@@ -434,6 +437,8 @@ test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe
   await page.getByRole("button",{name:"Inspect embedded images for optional OCR"}).click();
   await expect(page.getByRole("heading",{name:"Optional embedded-image to Excel review"})).toBeVisible({timeout:90000});
   await page.getByRole("button",{name:"Run image OCR on selected page"}).click();
+  await expect(page.getByRole("status").filter({hasText:/OCR is unverified text/}))
+    .toBeVisible({timeout:90000});
   await expect(page.getByLabel(/Your corrected table/)).toBeVisible({timeout:180000});
   // R127: OCR table proposal is strictly optional. If the renderer/recognizer
   // produces stable row/column geometry, prefilling must NEVER preview,

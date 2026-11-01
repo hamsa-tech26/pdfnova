@@ -4,6 +4,7 @@ import type {
   PdfWord,
 } from "../model/types";
 import type { ColumnCandidate } from "./stableColumnDetector";
+import { recoverDenseNativeCaptionTenColumnRows } from "./nativeDenseCaptionTenColumnRows";
 
 export type RowDecisionBreakdown = {
   serialNumber: number;
@@ -1383,7 +1384,11 @@ function detectCaptionGridRows(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
 ): AdaptiveRowDetectionResult | null {
-  if (!block.id.startsWith("caption-table-") || columns.length < 4) return null;
+  if (
+    !(block.id.startsWith("caption-table-") ||
+      block.id.startsWith("native-captioned-short-numeric-")) ||
+    columns.length < 4
+  ) return null;
   const lines = getBlockLines(block);
   if (lines.length < 4) return null;
   const numeric = /^[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|\))?$/;
@@ -1668,6 +1673,9 @@ export function detectAdaptiveRowsV4(
       options?.wrappedTextPenalty ??
       DEFAULT_WRAPPED_TEXT_PENALTY,
   };
+
+  const denseTen = recoverDenseNativeCaptionTenColumnRows(block, columns);
+  if (denseTen) return denseTen;
 
   const interleaved=detectInterleavedThreePhysicalRows(block,columns);
   if(interleaved)return interleaved;

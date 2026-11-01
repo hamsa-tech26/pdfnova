@@ -144,7 +144,7 @@ export default function FileUploader({
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
-        className={`group relative overflow-hidden rounded-3xl border-2 border-dashed px-4 py-5 text-center outline-none transition-all duration-300 sm:px-6 sm:py-6 xl:px-10 xl:py-16 ${
+        className={`group relative overflow-hidden rounded-3xl border-2 border-dashed px-4 py-3 text-center outline-none transition-all duration-300 sm:px-6 sm:py-6 xl:px-10 xl:py-16 ${
           disabled
             ? "border-gray-200 bg-gray-50 opacity-60 dark:border-slate-800 dark:bg-slate-900"
             : isDragging
@@ -198,17 +198,17 @@ export default function FileUploader({
               openFilePicker();
             }}
             disabled={disabled}
-            className="mt-5 inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-200 outline-none transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-none dark:focus-visible:ring-blue-900"
+            className="mt-3 inline-flex min-h-11 xl:mt-5 items-center justify-center gap-2 rounded-xl bg-blue-600 px-6 py-3 font-semibold text-white shadow-lg shadow-blue-200 outline-none transition hover:-translate-y-0.5 hover:bg-blue-700 focus-visible:ring-4 focus-visible:ring-blue-200 disabled:cursor-not-allowed disabled:opacity-60 dark:shadow-none dark:focus-visible:ring-blue-900"
           >
             <FilePlus2 size={20} />
             {buttonText}
           </button>
 
-          <p className="mt-5 text-sm leading-6 text-gray-600 dark:text-slate-300">
+          <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-slate-300 xl:mt-5">
             {helperText}
           </p>
 
-          <p className="mt-2 text-xs text-gray-600 dark:text-slate-300">
+          <p className="mt-1 text-xs text-gray-600 dark:text-slate-300 xl:mt-2">
             You can drag files here or use the browse button above.
           </p>
         </div>

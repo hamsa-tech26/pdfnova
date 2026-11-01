@@ -139,6 +139,8 @@ export type PdfPageTextExtractionMetrics = {
 
 export type PdfPageModel = {
   pageNumber: number;
+  /** Original /Rotate metadata; source word coordinates remain PDF user space. */
+  rotation?: number;
   width: number;
   height: number;
   words: PdfWord[];
