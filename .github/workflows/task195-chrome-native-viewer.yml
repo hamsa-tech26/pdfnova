@@ -1,0 +1,45 @@
+name: Task 195 Chrome Native PDF Viewer Probe
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/task195-chrome-native-viewer.yml"
+      - "e2e/release195-chrome-native-viewer.probe.mjs"
+      - "playwright.chrome-native-probe.config.mjs"
+      - "scripts/checkChromeNativePdfPixels.py"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  chrome-pdf-viewer-probe:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chrome
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - name: Probe Chrome native PDF viewer with two synthetic PDFs
+        run: npx playwright test --config=playwright.chrome-native-probe.config.mjs
+      - name: Store synthetic viewer screenshots on success or failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: task195-synthetic-chrome-viewer-screenshots
+          path: test-results/chrome-native-probe/*.png
+          retention-days: 5
+          if-no-files-found: warn
