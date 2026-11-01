@@ -3,7 +3,8 @@ import JSZip from "jszip";
 import type {LogicalTable,LogicalCell} from "../../pdf-engine-v4/model/logicalTable";
 import {classifySourceCell,inspectTableStructuralEvidence,
   isScientificReviewOnlyTable} from "../pdfToXlsxStructuralEvidence";
-import {prepareSelectedPdfV4XlsxExport} from "../pdfToXlsxSelection";
+import {inspectPdfV4XlsxChoices,prepareSelectedPdfV4XlsxExport} from "../pdfToXlsxSelection";
+import {preparePdfV4XlsxExport} from "../pdfToXlsxQuality";
 import {buildPdfTablePreview,inspectPdfTableCell} from "../pdfToXlsxPreview";
 import {createPdfXlsxWorkbook} from "../pdfToXlsx";
 
@@ -73,5 +74,24 @@ describe("R151 source cell audit and untouched spreadsheet alignment",()=>{
     expect(isScientificReviewOnlyTable(t)).toBe(true);
     expect(inspectTableStructuralEvidence(t).firstRowUnverifiedPositions).toBe(1);
     expect(()=>inspectTableStructuralEvidence({...t,columnCount:300})).toThrow("Invalid bounded");
+  });
+  it("requires review even when only the guarded table ID survives row-provenance changes",()=>{
+    const sourceIds=[
+      "native-rotated-invoice-grid-2", "native-usda-panel-2",
+      "native-fbi-nics-grid-2", "native-nrel-fuel-savings-2",
+    ];
+    for(const id of sourceIds){
+      const t=fixture();
+      t.id=id; // Rows deliberately retain their unrelated 'regular-grid' block ID.
+      expect(isScientificReviewOnlyTable(t)).toBe(true);
+      const document=source(t);
+      expect(()=>preparePdfV4XlsxExport(document)).toThrow(/choose an individual table/);
+      const choice=inspectPdfV4XlsxChoices(document)[0];
+      expect(choice).toMatchObject({eligible:true});
+      expect(choice.reason).toContain("REVIEW ONLY");
+      const selected=prepareSelectedPdfV4XlsxExport(document,0);
+      expect(selected.reviewNotes?.join(" ")).toContain("HIGH REVIEW PRIORITY");
+    }
+    expect(isScientificReviewOnlyTable(fixture())).toBe(false);
   });
 });

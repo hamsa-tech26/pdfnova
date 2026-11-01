@@ -1,9 +1,10 @@
 import type { LogicalTable, LogicalRow } from "../pdf-engine-v4/model/logicalTable";
 import {describeNativePairedGroupHeaders} from "./nativeGroupedHeaderGuide";
+import {projectNativePercentSavingsHeader} from "./nativePercentSavingsHeader";
 import {estimatePdfTableColumnWidths} from "./pdfToXlsxReadability";
 import {preserveNativeWideHeaderLines} from "./nativeWideHeaderLines";
 import { inspectV4TableExport, tableToCsvRows } from "./v4TableExport";
-import {inspectTableStructuralEvidence} from "./pdfToXlsxStructuralEvidence";
+import {inspectTableStructuralEvidence,isScientificReviewOnlyTable} from "./pdfToXlsxStructuralEvidence";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 import { hasCollapsedSerialAndIdColumns, reconstructConsecutiveNativeTable } from "./pdfToXlsxStructure";
 
@@ -118,7 +119,8 @@ function inspectOverlappingCells(table: LogicalTable): void {
           // Only a caption-derived multi-level header can use the finer
           // word-level collision check. Keep ordinary and data-row guards.
           const isCaptionHeader = row.rowIndex === 0 &&
-            row.provenance?.blockId?.startsWith("caption-table-") === true &&
+            (row.provenance?.blockId?.startsWith("caption-table-") === true ||
+              row.provenance?.blockId?.startsWith("native-captioned-short-numeric-") === true) &&
             filled[i].words.length > 0 && filled[j].words.length > 0;
           const wordsOverlap = filled[i].words.some(first =>
             filled[j].words.some(second => {
@@ -201,6 +203,8 @@ function projectNativeGroupedHeaders(
   }
   const cells = header.cells;
   const words = cells.flatMap(cell => cell.words);
+  const percentSavings = projectNativePercentSavingsHeader(table, rows);
+  if (percentSavings.note) return percentSavings;
   // A source captioned table with one explicit Month super-header can have its
   // Month word assigned to only the October cell by the flat table engine.
   if (header.provenance?.blockId?.startsWith("caption-table-")) {
@@ -295,12 +299,7 @@ export function preparePdfV4XlsxExport(
   if (source.tables.length > 12) {
     throw new Error("This PDF exceeds the maximum of 12 detected tables.");
   }
-  const needsExplicitReview=(id:string|undefined)=>!!id&&(
-    id.startsWith("native-compact-grid-")||
-    id.startsWith("native-captioned-text-grid-")||
-    id.startsWith("native-caption-header-grid-"));
-  const reviewOnlyTables=source.tables.filter(table=>table.rows.some(row=>
-    needsExplicitReview(row.provenance?.blockId)));
+  const reviewOnlyTables=source.tables.filter(isScientificReviewOnlyTable);
   const excludedReviewCount=!options?.allowSelectedCompactGrid?
     reviewOnlyTables.length:0;
   if(excludedReviewCount){
@@ -352,15 +351,61 @@ export function preparePdfV4XlsxExport(
       row.provenance?.blockId?.startsWith("native-captioned-text-grid-"));
     const scientificHeader=table.rows.some(row=>
       row.provenance?.blockId?.startsWith("native-caption-header-grid-"));
+    const shortNumeric=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-captioned-short-numeric-"));
+    const rotatedInvoice=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-rotated-invoice-grid-"));
+    const usdaPanel=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-usda-panel-"));
+    const fbiNics=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-fbi-nics-grid-"));
+    const nrelFuel=table.rows.some(row=>
+      row.provenance?.blockId?.startsWith("native-nrel-fuel-savings-"));
     if((captionedText||scientificHeader)&&table.rows.length<8)
       throw new Error("Captioned native scientific grid has too few reconstructed physical lines; Excel export was withheld.");
-    if(table.rows.some(row=>needsExplicitReview(row.provenance?.blockId))){
+    if(isScientificReviewOnlyTable(table)){
       notes.push("Table "+number+": HIGH REVIEW PRIORITY: recovered native "+
         "scientific or captioned two-column text grid using repeated source "+
         "word positions only. Source table semantics, row and column labels, "+
         "blank cells and values have NOT been independently verified. "+
         "Compare EVERY cell against the original PDF before using the export.");
     }
+    if(rotatedInvoice)notes.push("Table "+number+
+      ": ROTATED INVOICE SOURCE REVIEW: Nine headers and four source body rows " +
+      "were mapped from native PDF text on a 90-degree rotated page. " +
+      "First and last body columns contain NO observed source cells; " +
+      "blank spreadsheet positions are not independently verified empties. " +
+      "Check every UPC, amount and label against the original PDF before use.");
+    if(usdaPanel)notes.push("Table "+number+
+      ": SOURCE-BOUNDED USDA PANEL REVIEW: Only the original left report panel "+
+      "was reconstructed. Three adjacent right-hand charts and the footer "+
+      "are deliberately excluded. The 42 physical lines contain 10 section "+
+      "headings, 31 value rows and a header with no source label for the first "+
+      "column. Missing PDF cells are unobserved positions, not verified blanks. "+
+      "Compare ALL five columns, each range, section header and link text "+
+      "against the original PDF before using this worksheet.");
+    if(fbiNics)notes.push("Table "+number+
+      ": FBI NICS DENSE GRID SOURCE REVIEW: 25 columns and 58 physical "+
+      "lines include six parent headings, 25 subheadings, 55 state/territory "+
+      "rows and a total row. Both Rentals positions have NO observed source "+
+      "text in the 55 body rows; they are NOT verified blanks. Parent "+
+      "headings are placed by source position, NOT semantically certified. "+
+      "Printed notes/disclaimers are excluded. Check every value and group "+
+      "against the original PDF before using this XLSX.");
+    if(nrelFuel)notes.push("Table "+number+
+      ": NREL TABLE 2-1 SOURCE REVIEW: The five printed numeric rows and "+
+      "seven columns were recovered only from the ruled region below prose. "+
+      "Two physical native header lines are joined per column, with 14 "+
+      "source words preserved. The Percent Fuel Savings heading visually "+
+      "spans four columns but is placed in column four without a merge. "+
+      "Source prose, caption and following figure text are excluded. "+
+      "Verify heading semantics and every cell against the original PDF.");
+    if(shortNumeric)notes.push("Table "+number+
+      ": A source-captioned short numeric grid was reconstructed from repeated "+
+      "native PDF positions. Numeric body rows are source-position evidence, "+
+      "but grouped/multilevel header meaning and merged cells are NOT "+
+      "independently verified. Confirm every header and cell against the "+
+      "original PDF before using this reviewed XLSX.");
     if(captionedText||scientificHeader)notes.push("Table "+number+
       ": Every retained source PDF header/body physical text line is a separate Excel row. "+
       "Wrapped physical lines, multi-tier scientific headings and sparse "+
@@ -427,13 +472,33 @@ export function preparePdfV4XlsxExport(
       notes.push("Table " + number + ": multi-page continuation was determined by the PDF table engine; review the boundary and possible duplicated/missing header rows.");
     }
     for (const warning of diagnostics.warnings) notes.push("Table " + number + ": " + warning);
-    const inferredSymbols = table.rows.flatMap(row => row.cells)
-      .filter(cell => (cell.nativeTextAdjustmentReasons?.length ?? 0) > 0);
+    const nativeAdjusted = table.rows.flatMap(row => row.cells);
+    const inferredSymbols = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason => reason.startsWith("Ambiguous ")));
     if (inferredSymbols.length) {
       notes.push("Table " + number + ": " + inferredSymbols.length +
         " native scientific label cell(s) contain Greek symbols inferred " +
         "from ambiguous font glyphs. Original extracted strings were retained " +
         "for audit; compare every inferred symbol with the visual PDF before use.");
+    }
+    const decorativeLeaders = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason =>
+        reason.startsWith("Decorative trailing PDF dot leaders")));
+    if (decorativeLeaders.length) {
+      notes.push("Table " + number + ": " + decorativeLeaders.length +
+        " native label cell(s) omit trailing decorative PDF dot leaders. " +
+        "Original source text and source words are retained for audit. " +
+        "This presentation cleanup does not verify footnote positions or labels.");
+    }
+    const raisedFootnotes = nativeAdjusted.filter(cell =>
+      cell.nativeTextAdjustmentReasons?.some(reason =>
+        reason.startsWith("Native raised footnote position inferred")));
+    if (raisedFootnotes.length) {
+      notes.push("Table " + number + ": " + raisedFootnotes.length +
+        " label cell(s) present raised native footnote numerals after their " +
+        "geometrically attached word. This placement remains UNVERIFIED " +
+        "source interpretation. All original PDF words and unadjusted text " +
+        "are retained; compare superscripts and definitions visually before use.");
     }
     if(table.columnCount===11 && table.rows.length>=11 &&
       table.rows[0]?.provenance?.blockId?.startsWith("dense-native-eleven-grid-")){

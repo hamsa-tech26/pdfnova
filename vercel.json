@@ -2,6 +2,17 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "fix/task148-safe-scoped-pdf-selection": false,
+      "fix/task145-source-review-marker-consistency": false,
+      "review/task144-reviewed-xlsx-preflight": false,
+      "test/task141-source-pinned-browser": false,
+      "fix/task140-nrel-table-region": false,
+      "fix/task139-fbi-grid-boundaries": false,
+      "fix/task138-usda-panel-boundaries": false,
+      "fix/task137-invoice-source-grid": false,
+      "fix/task136-local-ocr-assets": false,
+      "fix/task135-nrel-grouped-header": false,
+      "fix/kukureku-real-table-isolation-v1": false,
       "fix/task177-compact-native-provenance": false,
       "integration/task176-source-integrity-xlsx-review": false,
       "fix/task174-native-grid-provenance-guard": false,
@@ -47,7 +58,8 @@
       "test/task169-package-guard-save": false,
       "fix/kukureku-next-16-4-2-security": false,
       "fix/task182-mobile-tool-entry": false,
-      "fix/task183-mobile-uploader-hints": false
+      "fix/task183-mobile-uploader-hints": false,
+      "integration/task185-reviewed-xlsx-on-mobile-base": false
     }
   }
 }

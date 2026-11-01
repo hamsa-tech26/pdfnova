@@ -461,6 +461,7 @@ export async function readPdfDocumentV4(
 
       pages.push({
   pageNumber,
+  rotation:page.rotate,
   width: viewport.width,
   height: viewport.height,
   words,

@@ -32,6 +32,21 @@ function source(tables:LogicalTable[],pages=7){
 }
 
 describe("Release 81 selective native PDF table export",()=>{
+  it("blocks a duplicative generic region when a guarded recovery covers the same source",()=>{
+    const old=table(2,"native-captioned-short-numeric-2-mixed-heading");
+    const recovered=table(2,"native-nrel-fuel-savings-2");
+    const doc=source([old,recovered]);
+    expect(inspectPdfV4XlsxChoices(doc).map(c=>c.eligible)).toEqual([false,true]);
+    expect(()=>prepareSelectedPdfV4XlsxExport(doc,0)).toThrow(/overlapping candidate/);
+    expect(prepareSelectedPdfV4XlsxExport(doc,1).tables).toHaveLength(1);
+    const distinct=table(2,"native-nrel-fuel-savings-2");
+    distinct.bounds={...distinct.bounds,x:600};
+    expect(inspectPdfV4XlsxChoices(source([old,distinct])).map(c=>c.eligible))
+      .toEqual([true,true]);
+    const separatePage=table(3,"native-nrel-fuel-savings-3");
+    expect(inspectPdfV4XlsxChoices(source([old,separatePage])).map(c=>c.eligible))
+      .toEqual([true,true]);
+  });
   it("exports a good table while a one-row neighbor stays disabled and the all-table path refuses",async()=>{
     const good=table(4,"good");const invalid=table(5,"bad");
     invalid.rows=invalid.rows.slice(0,1);

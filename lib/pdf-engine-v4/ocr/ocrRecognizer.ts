@@ -1,7 +1,7 @@
 import {
-  createWorker,
   PSM,
 } from "tesseract.js";
+import {createLocalEnglishOcrWorker} from "./localOcrWorker";
 
 import {
   forEachRenderedPdfPage,
@@ -93,9 +93,9 @@ function extractPdfV4OcrWords(
         Awaited<
           ReturnType<
             Awaited<
-              ReturnType<
-                typeof createWorker
-              >
+      ReturnType<
+        typeof createLocalEnglishOcrWorker
+      >
             >["recognize"]
           >
         >["data"]["blocks"]
@@ -157,7 +157,7 @@ export type PdfV4OcrRecognitionOptions = {
 type PdfV4OcrWorker =
   Awaited<
     ReturnType<
-      typeof createWorker
+      typeof createLocalEnglishOcrWorker
     >
   >;
 
@@ -392,7 +392,7 @@ export async function recognizePdfV4OcrPages(
   }
 
   const worker =
-    await createWorker("eng");
+    await createLocalEnglishOcrWorker();
 
   try {
     const results:
@@ -444,7 +444,7 @@ export async function recognizePdfV4OcrFilePages(
   }
 
   const worker =
-    await createWorker("eng");
+    await createLocalEnglishOcrWorker();
 
   try {
     const results:
@@ -513,7 +513,7 @@ export async function recognizePdfV4OcrRegions(
   }
 
   const worker =
-    await createWorker("eng");
+    await createLocalEnglishOcrWorker();
 
   try {
     const results:
@@ -571,7 +571,7 @@ export async function recognizePdfV4PreparedOcrPages(
   }
 
   const worker =
-    await createWorker("eng");
+    await createLocalEnglishOcrWorker();
 
   await worker.setParameters({
     tessedit_pageseg_mode:
