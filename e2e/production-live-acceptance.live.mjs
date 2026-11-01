@@ -217,7 +217,7 @@ test("live Protect and Unlock PDF enforce real password access and preserve cont
   });
   await page.locator("#pdf-password").fill("incorrect-synthetic-password");
   await page.getByRole("button",{name:"Unlock and Download PDF"}).click();
-  await expect(page.getByText(/The PDF could not be unlocked\\. Check the password/).first()).toBeVisible();
+  await expect(page.getByText("The PDF could not be unlocked. Check the password",{exact:false}).first()).toBeVisible();
 
   await page.locator("#pdf-password").fill(password);
   const unlockedPending=page.waitForEvent("download",{timeout:120000});
