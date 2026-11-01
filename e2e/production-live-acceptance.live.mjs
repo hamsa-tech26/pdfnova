@@ -106,7 +106,7 @@ test("live PDF-to-Excel does not transmit original synthetic PDF bytes in reques
   const downloading=page.waitForEvent("download",{timeout:120000});
   await page.getByRole("button",{name:/Convert to Excel/i}).click();
   const result=await downloading;
-  expect(result.suggestedFilename()).toMatch(/\\.xlsx$/);
+  expect(result.suggestedFilename()).toMatch(/\.xlsx$/);
   expect(violations,"Original PDF bytes/header or direct base64 appeared in an outgoing write request").toEqual([]);
   // Do not log request payload, source PDF contents, browser storage or identifiers.
   console.log(JSON.stringify({check:"LIVE_V1_SYNTHETIC_SOURCE_NETWORK",
