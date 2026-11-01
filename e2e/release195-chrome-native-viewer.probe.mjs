@@ -89,6 +89,9 @@ test("Chrome Stable native PDF viewer visibly renders actual PDF content", async
       limitation: "Proves renderer access only; does not verify AcroForm clipping, edit-save, page 2 or Chrome plugin controls",
     }));
   } finally {
-    await new Promise(resolve => server.close(resolve));
+    // The native PDF component can keep the local server connection alive.
+    // Close this synthetic test's active connections before awaiting shutdown.
+    server.closeAllConnections();
+    await new Promise((resolve, reject) => server.close(error => error ? reject(error) : resolve()));
   }
 });
