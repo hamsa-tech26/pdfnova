@@ -44,7 +44,7 @@ test("live Flatten PDF preserves checked and unchecked visible appearances indep
         "scripts/verifySyntheticCheckboxFlatten.py",sourcePath,outputPath,"qa_"+side,
       ],{encoding:"utf8",timeout:30000});
       const readerLines=readerOutput.trim().split(String.fromCharCode(10)).map(s=>s.trim()).filter(Boolean);
-      const reportLine=readerLines.find(line=>line.startsWith('{"result":"PASS"'));
+      const reportLine=readerLines.find(line=>line.startsWith("{"));
       const diagnostics=readerLines.filter(line=>line!==reportLine);
       if(diagnostics.length){
         // Both files are fictional CI fixtures; diagnostics must be analyzed
