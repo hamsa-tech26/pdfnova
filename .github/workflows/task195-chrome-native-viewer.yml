@@ -6,6 +6,8 @@ on:
     paths:
       - ".github/workflows/task195-chrome-native-viewer.yml"
       - "e2e/release195-chrome-native-viewer.probe.mjs"
+      - "e2e/release196-chrome-form-clipping.probe.mjs"
+      - "scripts/checkChromeFormInk.py"
       - "playwright.chrome-native-probe.config.mjs"
       - "scripts/checkChromeNativePdfPixels.py"
   workflow_dispatch:
