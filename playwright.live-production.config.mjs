@@ -4,7 +4,7 @@ import {defineConfig} from "@playwright/test";
 // Never start a local development server or make a Vercel deployment here.
 export default defineConfig({
   testDir:"./e2e",
-  testMatch:["production-live-acceptance.live.mjs","production-v1-smoke.live.mjs","production-workspace-backup.live.mjs","production-form-interop.live.mjs"],
+  testMatch:["production-live-acceptance.live.mjs","production-v1-smoke.live.mjs","production-workspace-backup.live.mjs","production-form-interop.live.mjs","production-form-visual.live.mjs"],
   timeout:180000,
   retries:0,
   workers:1,
