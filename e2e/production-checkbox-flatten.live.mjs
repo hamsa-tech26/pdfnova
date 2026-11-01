@@ -40,9 +40,20 @@ test("live Flatten PDF preserves checked and unchecked visible appearances indep
       const outputPath=await downloaded.path();
       expect(outputPath).toBeTruthy();
 
-      const result=JSON.parse(execFileSync("python",[
+      const readerOutput=execFileSync("python",[
         "scripts/verifySyntheticCheckboxFlatten.py",sourcePath,outputPath,"qa_"+side,
-      ],{encoding:"utf8",timeout:30000}));
+      ],{encoding:"utf8",timeout:30000});
+      const readerLines=readerOutput.trim().split(/\\r?\\n/).filter(Boolean);
+      const reportLine=readerLines.find(line=>line.startsWith('{"result":"PASS"'));
+      const diagnostics=readerLines.filter(line=>line!==reportLine);
+      if(diagnostics.length){
+        // Both files are fictional CI fixtures; diagnostics must be analyzed
+        // before accepting a PDF with reader-level format warnings.
+        console.log("TASK197_READER_DIAGNOSTICS",JSON.stringify(diagnostics.map(s=>s.slice(0,200))));
+      }
+      expect(diagnostics,"Independent PDF reader emitted warnings; review before acceptance").toEqual([]);
+      expect(reportLine,"Independent reader did not return PASS JSON").toBeTruthy();
+      const result=JSON.parse(reportLine);
       expect(result.result).toBe("PASS");
       expect(result.flattenedWidgetCount).toBe(0);
       expect(result.checkboxAppearancePreserved).toBe(true);
