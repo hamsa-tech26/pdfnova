@@ -41,8 +41,12 @@ for index, spec in enumerate(expected):
 
     # A moderately small field must not save a huge appearance font.
     assert 0 < widget.text_fontsize <= 14, "Field appearance uses an oversized/invalid font"
-    assert fitz.get_text_length(spec["value"], fontname="helv", fontsize=widget.text_fontsize) < widget.rect.width - 6, (
-        "Field text cannot fit horizontally at its declared font size"
+    # Widget rectangles are unrotated; measure the *displayed* horizontal span
+    # after applying the page's rotation before judging text fit.
+    display = (widget.rect * after.rotation_matrix) & after.rect
+    assert display.is_valid and not display.is_empty, "Field not visible inside CropBox"
+    assert fitz.get_text_length(spec["value"], fontname="helv", fontsize=widget.text_fontsize) < display.width - 6, (
+        "Field text cannot fit horizontally in its displayed rectangle at its declared font size"
     )
 
     matrix = fitz.Matrix(1.5, 1.5)
@@ -52,9 +56,6 @@ for index, spec in enumerate(expected):
 
     # Annotation rectangles are in unrotated page coordinates in PyMuPDF;
     # transform into rendered page coordinates before sampling.
-    display = widget.rect * after.rotation_matrix
-    display = display & after.rect
-    assert display.is_valid and not display.is_empty, "Field not visible inside CropBox"
     assert display.width >= 24 and display.height >= 12, "Field too small or incorrectly rotated"
     left = max(0, int(display.x0 * 1.5) + 5)
     right = min(filled_pix.width, int(display.x1 * 1.5) - 5)
