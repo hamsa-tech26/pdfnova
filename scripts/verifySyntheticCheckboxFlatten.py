@@ -7,15 +7,32 @@ import fitz
 
 source_path, flat_path, expected_checked = sys.argv[1:4]
 assert expected_checked in ("qa_left", "qa_right")
-source, flat = fitz.open(source_path), fitz.open(flat_path)
+# Capture MuPDF structural warnings with a per-document attribution instead
+# of allowing warnings to corrupt the machine-readable acceptance report.
+fitz.TOOLS.mupdf_display_errors(False)
+fitz.TOOLS.reset_mupdf_warnings()
+warnings = {}
+def record(stage):
+    noted = fitz.TOOLS.mupdf_warnings().strip()
+    if noted:
+        warnings[stage] = noted.splitlines()[:12]
+    fitz.TOOLS.reset_mupdf_warnings()
+
+source = fitz.open(source_path)
+record("source_open")
+flat = fitz.open(flat_path)
+record("flatten_open")
 assert len(source) == len(flat) == 1, "Page count changed"
 src, dst = source[0], flat[0]
 assert abs(src.rect.width-dst.rect.width) < .1
 assert abs(src.rect.height-dst.rect.height) < .1
 assert "SYNTHETIC_TASK197_CONTROL" in dst.get_text(), "Original page text missing"
+record("flatten_text")
 widgets = {w.field_name:w for w in list(src.widgets() or [])}
+record("source_widgets")
 assert set(widgets) == {"qa_left","qa_right"}, "Source must have exactly two checkboxes"
 assert not list(dst.widgets() or []), "Flattened result retains editable form widgets"
+record("flatten_widgets")
 for name, widget in widgets.items():
     checked = widget.field_value not in (None, "", "Off")
     assert checked == (name == expected_checked), "Source checkbox state differs from fixture"
@@ -24,7 +41,9 @@ for name, widget in widgets.items():
 
 scale=3
 old_pix=src.get_pixmap(matrix=fitz.Matrix(scale,scale),alpha=False,annots=True)
+record("source_render")
 new_pix=dst.get_pixmap(matrix=fitz.Matrix(scale,scale),alpha=False,annots=True)
+record("flatten_render")
 assert old_pix.width==new_pix.width and old_pix.height==new_pix.height
 
 def interior_dark(pix, rect):
@@ -54,4 +73,5 @@ print(json.dumps({"result":"PASS","pageCount":1,"originalCheckboxes":2,
                   "sourceUncheckedDarkPixels":old[other],
                   "flattenedCheckedDarkPixels":new[expected_checked],
                   "flattenedUncheckedDarkPixels":new[other],
-                  "checkboxAppearancePreserved":True}))
+                  "checkboxAppearancePreserved":True,
+                  "readerWarnings":warnings}))
