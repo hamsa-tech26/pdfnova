@@ -1,0 +1,72 @@
+name: Task 185 BLS Original Source Replay
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - ".github/workflows/task185-bls-source-replay.yml"
+      - "lib/pdf-engine-v4/**"
+      - "lib/converters/**"
+      - "package.json"
+      - "package-lock.json"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  original-publisher-replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      KUKUREKU_TASK149_PUBLIC_DIR: ${{ runner.temp }}/kukureku-public-sources
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Download four original BLS publisher files and verify every SHA-256
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p "$KUKUREKU_TASK149_PUBLIC_DIR"
+          chmod 700 "$KUKUREKU_TASK149_PUBLIC_DIR"
+          fetch_public() {
+            curl --fail --location --silent --show-error \
+              --retry 1 --retry-delay 2 --connect-timeout 15 --max-time 90 \
+              --proto '=https' --proto-redir '=https' \
+              --output "$KUKUREKU_TASK149_PUBLIC_DIR/$2" "$1"
+          }
+          fetch_public "https://www.bls.gov/news.release/archives/cpi_10142026.pdf" "kukureku-task149-cpi-sep-2026.pdf"
+          fetch_public "https://www.bls.gov/cpi/tables/supplemental-files/news-release-table1-202609.xlsx" "kukureku-task149-bls-table1-202609.xlsx"
+          fetch_public "https://www.bls.gov/news.release/archives/cpi_09112026.pdf" "kukureku-task149-cpi-aug-2026.pdf"
+          fetch_public "https://www.bls.gov/cpi/tables/supplemental-files/news-release-table1-202608.xlsx" "kukureku-task149-bls-table1-202608.xlsx"
+          cd "$KUKUREKU_TASK149_PUBLIC_DIR"
+          printf '%s  %s\n' \
+            "d2fe7deb0ae83a869a37553c9d3934d3d5be4969cd3ca9763a4881df878bf66a" "kukureku-task149-cpi-sep-2026.pdf" \
+            "d991b4ce1b370d23c692c00f54d652cfb7d53ccdd018355cbdb226d8fdc0ef4b" "kukureku-task149-bls-table1-202609.xlsx" \
+            "658d7de6366114cb1638af490e14fe03cd1fab8faa8c9ce9aeba95c5b9a65e52" "kukureku-task149-cpi-aug-2026.pdf" \
+            "30afa35be3f1151d417a08a759952a212a998cd9420f7216ce2d2404349b6ed2" "kukureku-task149-bls-table1-202608.xlsx" \
+            | sha256sum --check --status
+          echo "Verified all four immutable publisher-file hashes; no source file will be uploaded."
+      - name: Fail-closed source-pinned BLS numeric and review-only gate replay
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$KUKUREKU_TASK149_PUBLIC_DIR/kukureku-task149-cpi-sep-2026.pdf"
+          test -s "$KUKUREKU_TASK149_PUBLIC_DIR/kukureku-task149-bls-table1-202609.xlsx"
+          test -s "$KUKUREKU_TASK149_PUBLIC_DIR/kukureku-task149-cpi-aug-2026.pdf"
+          test -s "$KUKUREKU_TASK149_PUBLIC_DIR/kukureku-task149-bls-table1-202608.xlsx"
+          npx vitest run \
+            lib/pdf-engine-v4/analysis/__tests__/publicBlsDenseCaptionRegression.test.ts \
+            lib/pdf-engine-v4/analysis/__tests__/nativeDenseCaptionTenColumnRows.test.ts
+      - name: Delete original publisher files from runner
+        if: always()
+        shell: bash
+        run: rm -rf -- "$KUKUREKU_TASK149_PUBLIC_DIR"
