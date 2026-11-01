@@ -5,6 +5,7 @@ import {
   PDFOptionList,
   PDFRadioGroup,
   PDFName,
+  PDFRef,
   PDFTextField,
 } from "pdf-lib";
 
@@ -327,10 +328,34 @@ export function flattenStandardPdfForm(
     );
   }
 
+  // pdf-lib 1.17.1 can leave original form-widget /Annots refs
+  // pointing to objects it deleted while flattening. Other PDF readers
+  // then report missing cross-reference objects in an otherwise visible PDF.
+  // Capture ONLY form widget refs before flattening, then remove any
+  // dangling references left on pages. Preserve all unrelated annotations.
+  const widgetRefs = new Set<string>();
+  for (const field of fields) {
+    for (const widget of field.acroField.getWidgets()) {
+      const ref = pdf.context.getObjectRef(widget.dict);
+      if (ref) widgetRefs.add(ref.toString());
+    }
+  }
+
   form.flatten({
     updateFieldAppearances:
       true,
   });
+
+  for (const page of pdf.getPages()) {
+    const annots = page.node.Annots();
+    if (!annots) continue;
+    for (let i = annots.size() - 1; i >= 0; i--) {
+      const entry = annots.get(i);
+      if (entry instanceof PDFRef && widgetRefs.has(entry.toString())) {
+        annots.remove(i);
+      }
+    }
+  }
 
   return fields.length;
 }
