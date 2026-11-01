@@ -53,7 +53,8 @@
       "test/task190-live-redaction-independent-reader": false,
       "test/task191-live-pdf-encryption-integrity": false,
       "test/task192-live-workspace-backup-roundtrip": false,
-      "test/task193-live-acroform-interop": false
+      "test/task193-live-acroform-interop": false,
+      "test/task194-form-visual-crop-rotation": false
     }
   }
 }
