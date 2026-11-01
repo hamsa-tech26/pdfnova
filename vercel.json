@@ -47,7 +47,8 @@
       "test/task169-package-guard-save": false,
       "fix/kukureku-next-16-4-2-security": false,
       "fix/task182-mobile-tool-entry": false,
-      "fix/task183-mobile-uploader-hints": false
+      "fix/task183-mobile-uploader-hints": false,
+      "test/task189-browser-local-source-network": false
     }
   }
 }
