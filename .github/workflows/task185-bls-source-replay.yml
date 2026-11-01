@@ -20,7 +20,7 @@ jobs:
     timeout-minutes: 15
     env:
       NEXT_TELEMETRY_DISABLED: "1"
-      KUKUREKU_TASK149_PUBLIC_DIR: ${{ runner.temp }}/kukureku-public-sources
+      KUKUREKU_TASK149_PUBLIC_DIR: /tmp/kukureku-public-sources
     steps:
       - uses: actions/checkout@v4
         with:
