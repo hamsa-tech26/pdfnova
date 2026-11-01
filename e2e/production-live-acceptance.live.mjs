@@ -20,13 +20,15 @@ async function nativeTablePdf(){
 }
 test("live Kukureku accepts a synthetic PDF and exports a real XLSX with source values",async({page})=>{
   test.setTimeout(180000);
-  await page.goto("/pdf-to-excel",{waitUntil:"domcontentloaded"});
+  // Wait for hydration before selecting this synthetic file so mounting
+  // does not discard the file input's change event.
+  await page.goto("/pdf-to-excel",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_RELEASE142_TABLE.pdf",mimeType:"application/pdf",
     buffer:await nativeTablePdf(),
   });
   // Converter action appears after a valid file is chosen, not at page load.
-  await expect(page.getByRole("button",{name:/Convert to Excel/i})).toBeVisible();
+  await expect(page.getByRole("button",{name:/Convert to Excel/i})).toBeVisible({timeout:15000});
   const pending=page.waitForEvent("download",{timeout:120000});
   await page.getByRole("button",{name:/Convert to Excel/i}).click();
   const download=await pending,path=await download.path();
