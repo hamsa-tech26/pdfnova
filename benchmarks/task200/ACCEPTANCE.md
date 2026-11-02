@@ -11,7 +11,7 @@ The published privacy policy instructs users to use the workspace removal contro
 - Add a **Delete all saved PDFs** action to Workspace Health, disabled when no PDFs exist or a backup operation is active.
 - Require a separate explicit **Confirm delete all saved PDFs** action; Cancel has no side effects.
 - Use existing `clearWorkspaceFiles()` to remove saved PDF versions, metadata, active selection and workflow-recipe progress; refresh the displayed inventory.
-- Explain that downloads/backups on the user's device are unaffected and indexed intelligence text must be cleared separately in Privacy Controls.
+- Explain that downloads/backups on the user's device, Dashboard recent activity and indexed intelligence text are unaffected and need separate cleanup.
 - Add one synthetic browser regression that checks cancellation, confirmed removal after reload and explicit restore from an earlier ZIP backup.
 - Deployments for this branch disabled in `vercel.json`; no research/XLSX/V4 modifications or real customer file use.
 
@@ -20,7 +20,7 @@ The published privacy policy instructs users to use the workspace removal contro
 - `npx eslint app/(workspace)/workspace-health/page.tsx e2e/workspace-saved-pdf-deletion.e2e.mjs`: PASS.
 - `npx tsc --noEmit --incremental false`: PASS.
 - `npm test -- --reporter=dot`: 715/715 PASS across 139 test files.
-- `npx playwright test e2e/workspace-saved-pdf-deletion.e2e.mjs`: **1/1 PASS** after correcting a test-only ambiguous alert selector. A fictional PDF was imported; cancel preserved it; explicit confirmation removed the saved record persistently across reload; an earlier ZIP was successfully restored by user action.
+- `npx playwright test e2e/workspace-saved-pdf-deletion.e2e.mjs`: **1/1 PASS** after correcting a test-only ambiguous alert selector. A fictional PDF was imported; cancel preserved it; explicit confirmation removed the saved record persistently across reload; an earlier ZIP was successfully restored by user action. A final 390-pixel/keyboard-confirmation variant requires a fresh run before credit.
 
 ## Still required before release
 

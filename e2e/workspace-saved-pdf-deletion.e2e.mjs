@@ -4,6 +4,7 @@ import {readFile} from "node:fs/promises";
 
 test("saved workspace PDF deletion requires confirmation, survives reload and permits explicit backup restore",async({page})=>{
   test.setTimeout(180000);
+  await page.setViewportSize({width:390,height:844});
   const document=await PDFDocument.create();
   const font=await document.embedFont(StandardFonts.Helvetica);
   document.addPage([612,792]).drawText("SYNTHETIC_WORKSPACE_DELETE_200",{
@@ -31,7 +32,8 @@ test("saved workspace PDF deletion requires confirmation, survives reload and pe
   await expect(page.getByText(filename,{exact:true})).toBeVisible();
 
   await page.getByRole("button",{name:"Delete all saved PDFs",exact:true}).click();
-  await page.getByRole("button",{name:"Confirm delete all saved PDFs"}).click();
+  await page.getByRole("button",{name:"Confirm delete all saved PDFs"}).focus();
+  await page.keyboard.press("Enter");
   await expect(page.getByText(/No stored documents yet/)).toBeVisible();
   await expect(page.getByText(/All saved workspace PDFs were removed/)).toBeVisible();
   await page.reload({waitUntil:"domcontentloaded"});
@@ -46,5 +48,6 @@ test("saved workspace PDF deletion requires confirmation, survives reload and pe
   console.log(JSON.stringify({check:"TASK200_WORKSPACE_DELETE_CONFIRMATION",
     result:"PASS",source:"SYNTHETIC_ONLY",cancelPreservesData:true,
     confirmedDeletionPersists:true,explicitBackupRestoreWorks:true,
+    mobileViewportWidth:390,keyboardConfirmation:true,
     privateDocumentBytesLogged:false}));
 });

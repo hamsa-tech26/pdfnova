@@ -161,7 +161,7 @@ export default function WorkspaceHealthPage() {
       setConfirmDeleteAll(false);
       setPendingRestore(null);
       await refresh();
-      setNotice("All saved workspace PDFs were removed from this browser. Downloaded files and backups are unchanged. Clear indexed text separately in Privacy Controls.");
+      setNotice("All saved workspace PDFs were removed from this browser. Downloaded files and backups are unchanged. Clear recent activity in Dashboard and indexed text in Privacy Controls separately.");
     } catch {
       setError("Unable to remove the saved workspace PDFs. Check browser storage permissions and try again.");
     } finally {
@@ -212,7 +212,7 @@ export default function WorkspaceHealthPage() {
         </div>
         {confirmDeleteAll && versions.length>0 && <section role="alert" className="mt-4 rounded-xl border-2 border-red-400 bg-red-50 p-4 text-sm text-red-950 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100">
           <p className="font-bold">Delete all {versions.length} saved PDF versions from this browser?</p>
-          <p className="mt-2 leading-6">This removes local workspace PDF copies, version history and active-document selection. It cannot be undone unless you already have a separate backup. Downloaded files are unaffected; indexed text must be cleared separately in Privacy Controls.</p>
+          <p className="mt-2 leading-6">This removes local workspace PDF copies, version history and active-document selection. It cannot be undone unless you already have a separate backup. Downloaded files, Dashboard recent activity and indexed text are unaffected; clear them separately.</p>
           <div className="mt-3 flex flex-wrap gap-3">
             <button type="button" onClick={()=>void deleteAllSavedFiles()} disabled={deletingSavedFiles}
               className="min-h-11 rounded-lg bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-40">Confirm delete all saved PDFs</button>
