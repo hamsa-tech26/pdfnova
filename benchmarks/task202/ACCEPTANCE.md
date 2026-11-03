@@ -11,7 +11,7 @@
 
 ## Required verification
 
-- Fresh exact-head Validate, Browser Reliability Smoke (now expected 102 browser tests), and production-dependency audit.
+- Fresh exact-head Validate, Browser Reliability Smoke (now expected 101 browser tests: 100 production-base checks plus this single new check), and production-dependency audit.
 - Inspect test-output receipt `TASK202_RETENTION_SURFACE_INDEPENDENCE`; **NOT VERIFIED** until the job passes.
 - Verify new branch produces no Vercel preview or production deploy, and current READY Release 194 remains available for rollback.
 
