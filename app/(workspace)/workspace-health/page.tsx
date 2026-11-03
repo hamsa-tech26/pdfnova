@@ -2,10 +2,10 @@
 
 import { downloadFile } from "@/lib/downloadFile";
 import { auditWorkspaceVersions } from "@/lib/storage/workspaceAudit";
-import { listWorkspaceFileSummaries, getWorkspaceFile, getActiveWorkspaceFileSummary, setActiveWorkspaceFile, readWorkspaceBackupEntries, appendWorkspaceBackupEntries, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
+import { listWorkspaceFileSummaries, getWorkspaceFile, getActiveWorkspaceFileSummary, setActiveWorkspaceFile, readWorkspaceBackupEntries, appendWorkspaceBackupEntries, clearWorkspaceFiles, WORKSPACE_CHANGE_EVENT, type WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { createWorkspaceBackupArchive, parseWorkspaceBackupArchive, WORKSPACE_BACKUP_MAX_ARCHIVE_BYTES, type WorkspaceBackupEntry } from "@/lib/storage/workspaceBackup";
 import type { ChangeEvent } from "react";
-import { Database, Download, RefreshCcw, ShieldCheck } from "lucide-react";
+import { Database, Download, RefreshCcw, ShieldCheck, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useState } from "react";
 
@@ -21,6 +21,8 @@ export default function WorkspaceHealthPage() {
   const [backupError, setBackupError] = useState("");
   const [backupNotice, setBackupNotice] = useState("");
   const [pendingRestore, setPendingRestore] = useState<WorkspaceBackupEntry[] | null>(null);
+  const [confirmDeleteAll, setConfirmDeleteAll] = useState(false);
+  const [deletingSavedFiles, setDeletingSavedFiles] = useState(false);
   const refresh = useCallback(async () => {
     try {
       const [summaries, active] = await Promise.all([listWorkspaceFileSummaries(),getActiveWorkspaceFileSummary()]);
@@ -44,7 +46,7 @@ export default function WorkspaceHealthPage() {
   },[refresh]);
   const health=useMemo(()=>auditWorkspaceVersions(versions),[versions]);
   async function activateStoredVersion(id: string) {
-    if (switching || id === activeId) return;
+    if (switching || deletingSavedFiles || id === activeId) return;
     setSwitching(true);
     setNotice("");
     try {
@@ -61,7 +63,7 @@ export default function WorkspaceHealthPage() {
   }
 
   async function downloadStoredVersion(id: string) {
-    if (switching || downloadingId) return;
+    if (switching || downloadingId || deletingSavedFiles) return;
     setDownloadingId(id);
     setError("");
     setNotice("");
@@ -81,7 +83,7 @@ export default function WorkspaceHealthPage() {
 
 
   async function downloadFullBackup() {
-    if (backupBusy || !versions.length) return;
+    if (backupBusy || deletingSavedFiles || !versions.length) return;
     setBackupBusy(true);
     setBackupError("");
     setBackupNotice("");
@@ -121,7 +123,7 @@ export default function WorkspaceHealthPage() {
   }
 
   async function confirmRestore() {
-    if (!pendingRestore || backupBusy) return;
+    if (!pendingRestore || backupBusy || deletingSavedFiles) return;
     setBackupBusy(true);
     setBackupError("");
     try {
@@ -149,6 +151,23 @@ export default function WorkspaceHealthPage() {
     downloadFile(new TextEncoder().encode(JSON.stringify(manifest,null,2)),
       "kukureku-workspace-manifest.json","application/json");
   }
+  async function deleteAllSavedFiles() {
+    if (!confirmDeleteAll || deletingSavedFiles || backupBusy || versions.length === 0) return;
+    setDeletingSavedFiles(true);
+    setError("");
+    setNotice("");
+    try {
+      await clearWorkspaceFiles();
+      setConfirmDeleteAll(false);
+      setPendingRestore(null);
+      await refresh();
+      setNotice("All saved workspace PDFs were removed from this browser. Downloaded files and backups are unchanged. Clear recent activity in Dashboard and indexed text in Privacy Controls separately.");
+    } catch {
+      setError("Unable to remove the saved workspace PDFs. Check browser storage permissions and try again.");
+    } finally {
+      setDeletingSavedFiles(false);
+    }
+  }
   return <main className="mx-auto w-full max-w-5xl px-4 py-7 text-slate-900 dark:text-white sm:px-7 lg:py-10">
     <section className="rounded-3xl bg-gradient-to-br from-slate-950 to-blue-800 p-6 text-white sm:p-9">
       <div className="flex items-center gap-2 text-sm font-bold uppercase tracking-wide text-blue-200"><Database size={20} aria-hidden="true"/> Workspace Health — Version History and Backup</div>
@@ -173,12 +192,12 @@ export default function WorkspaceHealthPage() {
         {versions.length===0?<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">No stored documents yet. Try Magic Drop to create a workspace version.</p>:
           <ol className="mt-4 space-y-2">{versions.slice(0,50).map(v=><li key={v.id} className="rounded-xl border border-slate-200 px-4 py-3 dark:border-slate-700">
             <p className="break-all font-semibold">{v.name}</p><p className="mt-1 text-xs text-slate-500 dark:text-slate-400">Version {v.version} · {v.relationKind} · {(v.size/1024/1024).toFixed(2)} MB</p>
-            <button type="button" onClick={() => void activateStoredVersion(v.id)} disabled={switching || Boolean(downloadingId) || v.id === activeId}
+            <button type="button" onClick={() => void activateStoredVersion(v.id)} disabled={switching || deletingSavedFiles || Boolean(downloadingId) || v.id === activeId}
               aria-label={v.id === activeId ? "Current version "+v.name : "Use stored version "+v.name}
               className="mt-3 min-h-11 rounded-lg border border-blue-300 bg-white px-4 py-2 text-sm font-semibold text-blue-800 disabled:opacity-50 dark:border-blue-800 dark:bg-slate-950 dark:text-blue-300">
               {v.id === activeId ? "Active version" : "Use this version"}
             </button>
-            <button type="button" onClick={() => void downloadStoredVersion(v.id)} disabled={switching || Boolean(downloadingId)}
+            <button type="button" onClick={() => void downloadStoredVersion(v.id)} disabled={switching || deletingSavedFiles || Boolean(downloadingId)}
               aria-label={"Download stored PDF "+v.name}
               className="ml-2 mt-3 min-h-11 rounded-lg border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-800 disabled:opacity-50 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200">
               Download this PDF
@@ -187,8 +206,20 @@ export default function WorkspaceHealthPage() {
         {versions.length>50&&<p className="mt-3 text-sm text-slate-600 dark:text-slate-300">Showing first 50 of {versions.length} versions. The export includes all version metadata.</p>}
         <div className="mt-6 flex flex-wrap gap-3">
           <button type="button" onClick={()=>void refresh()} className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-slate-300 px-4 py-2 font-semibold dark:border-slate-700"><RefreshCcw size={17}/> Refresh inventory</button>
-          <button type="button" onClick={exportManifest} disabled={versions.length===0} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-40"><Download size={17}/> Export metadata-only JSON</button>
+          <button type="button" onClick={exportManifest} disabled={versions.length===0 || deletingSavedFiles} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-40"><Download size={17}/> Export metadata-only JSON</button>
+          <button type="button" onClick={()=>setConfirmDeleteAll(true)} disabled={versions.length===0 || deletingSavedFiles || backupBusy}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-red-300 px-4 py-2 font-semibold text-red-800 disabled:opacity-40 dark:border-red-900 dark:text-red-300"><Trash2 size={17}/> Delete all saved PDFs</button>
         </div>
+        {confirmDeleteAll && versions.length>0 && <section role="alert" className="mt-4 rounded-xl border-2 border-red-400 bg-red-50 p-4 text-sm text-red-950 dark:border-red-800 dark:bg-red-950/30 dark:text-red-100">
+          <p className="font-bold">Delete all {versions.length} saved PDF versions from this browser?</p>
+          <p className="mt-2 leading-6">This removes local workspace PDF copies, version history and active-document selection. It cannot be undone unless you already have a separate backup. Downloaded files, Dashboard recent activity and indexed text are unaffected; clear them separately.</p>
+          <div className="mt-3 flex flex-wrap gap-3">
+            <button type="button" onClick={()=>void deleteAllSavedFiles()} disabled={deletingSavedFiles}
+              className="min-h-11 rounded-lg bg-red-700 px-4 py-2 font-semibold text-white disabled:opacity-40">Confirm delete all saved PDFs</button>
+            <button type="button" onClick={()=>setConfirmDeleteAll(false)} disabled={deletingSavedFiles}
+              className="min-h-11 rounded-lg border border-slate-300 px-4 py-2 font-semibold dark:border-slate-700">Cancel deletion</button>
+          </div>
+        </section>}
       </section>
       <p className="mt-5 flex items-start gap-2 text-sm leading-6 text-slate-600 dark:text-slate-300"><ShieldCheck size={18} className="mt-1 shrink-0"/> The export includes filenames and operation history, which may themselves be sensitive. It does not contain PDF bytes and <strong>cannot restore lost files</strong>. Keep your original PDFs backed up separately.</p>
     </>}
@@ -200,7 +231,7 @@ export default function WorkspaceHealthPage() {
         Limit: 60 stored versions / 64 MB of PDFs per backup.
       </p>
       <div className="mt-4 flex flex-wrap gap-3">
-        <button type="button" disabled={backupBusy || !versions.length}
+        <button type="button" disabled={backupBusy || deletingSavedFiles || !versions.length}
           onClick={() => void downloadFullBackup()}
           className="min-h-11 rounded-xl bg-blue-600 px-5 py-3 font-semibold text-white disabled:opacity-50">
           Download full workspace backup (ZIP)
@@ -208,7 +239,7 @@ export default function WorkspaceHealthPage() {
       </div>
       <label htmlFor="workspace-backup-upload" className="mt-6 block text-sm font-bold">Choose saved Kukureku backup ZIP to review</label>
       <input id="workspace-backup-upload" type="file" accept=".zip,application/zip"
-        disabled={backupBusy} onChange={e => void reviewRestoreFile(e)}
+        disabled={backupBusy || deletingSavedFiles} onChange={e => void reviewRestoreFile(e)}
         className="mt-2 block w-full max-w-xl text-sm file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-4 file:py-3 file:font-semibold dark:file:bg-slate-800"/>
       {backupBusy && <p role="status" className="mt-3 text-sm">Verifying or updating local workspace…</p>}
       {backupNotice && <p role="status" className="mt-3 text-sm font-semibold text-emerald-700 dark:text-emerald-200">{backupNotice}</p>}
@@ -217,7 +248,7 @@ export default function WorkspaceHealthPage() {
         <p className="text-sm font-semibold">Verified: {pendingRestore.length} saved PDF versions, {(pendingRestore.reduce((n,v)=>n+v.bytes.length,0)/1024/1024).toFixed(2)} MB.</p>
         <p className="mt-2 text-sm">Restore appends fresh copies with their parent relationships. Existing versions are not replaced; no file becomes active automatically.</p>
         <div className="mt-3 flex flex-wrap gap-3">
-          <button type="button" disabled={backupBusy} onClick={() => void confirmRestore()}
+          <button type="button" disabled={backupBusy || deletingSavedFiles} onClick={() => void confirmRestore()}
             className="min-h-11 rounded-xl bg-blue-600 px-4 py-2 font-semibold text-white disabled:opacity-50">Restore verified versions</button>
           <button type="button" onClick={() => {setPendingRestore(null);setBackupNotice("Restore cancelled. No files were changed.");}}
             className="min-h-11 rounded-xl border border-slate-300 px-4 py-2 font-semibold">Cancel restore</button>
