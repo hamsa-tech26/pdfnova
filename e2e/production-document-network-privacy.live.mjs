@@ -79,7 +79,8 @@ test("live redaction and password protection do not directly transmit synthetic 
   const source=await syntheticSource(marker);
   const audit=watchDirectOutboundDisclosure(page,source,marker);
 
-  await page.goto("/redact-pdf",{waitUntil:"domcontentloaded"});
+  // Wait for live hydration before selecting a file; an early change event can be lost.
+  await page.goto("/redact-pdf",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK199_REDACTION.pdf",mimeType:"application/pdf",buffer:source,
   });
