@@ -1,8 +1,6 @@
 import {test,expect} from "@playwright/test";
 import {PDFDocument,StandardFonts} from "pdf-lib";
 
-const CACHE_DB="kukureku-private-intelligence-v2";
-const CACHE_STORE="records";
 const HISTORY_KEY="kukureku-recent-files";
 
 async function cacheCount(page){
