@@ -4,14 +4,62 @@
  * Passing preflight is NOT an accuracy result; it only permits measurement.
  */
 import {PDFDocument,PDFDict,PDFName} from "pdf-lib";
-import {getDocument} from "pdfjs-dist/legacy/build/pdf.mjs";
+import {getDocument,OPS} from "pdfjs-dist/legacy/build/pdf.mjs";
 import {fileURLToPath} from "node:url";
+import {lstat} from "node:fs/promises";
 import path from "node:path";
-import {privateCorpus,readPrivatePdf} from "./privateGoldenLocal.mjs";
+import {privateCorpus,readPrivatePdf,PRIVATE_ROOT} from "./privateGoldenLocal.mjs";
 import {CATEGORIES,REALWORLD_POLICY} from "./privateGoldenScorer.mjs";
 
 const result=(status,reasonCode,pages=0)=>({status,reasonCode,pages});
 const blocked=reasonCode=>result("BLOCKED",reasonCode);
+// Resource dictionaries can contain unused images (or non-image XObjects).
+// Count image *paint operations* in the rendered page instead. Stencil masks
+// alone do not establish that a document contains scanned raster content.
+const RASTER_PAINT_OPS=new Set([
+  OPS.paintImageXObject,OPS.paintInlineImageXObject,OPS.paintJpegXObject,
+  OPS.paintImageXObjectRepeat
+].filter(Number.isInteger));
+
+async function auditPageContent(bytes,category){
+  const task=getDocument({data:new Uint8Array(bytes),disableFontFace:true,
+    useSystemFonts:true,isEvalSupported:false});
+  try{
+    const doc=await task.promise;
+    let anyRaster=false,allPagesRaster=true,anyText=false;
+    for(let n=1;n<=doc.numPages;n++){
+      const page=await doc.getPage(n);
+      try{
+        const content=await page.getTextContent();
+        const hasText=content.items.some(item=>typeof item.str==="string"&&item.str.trim());
+        anyText ||=hasText;
+        const operations=await page.getOperatorList();
+        if(operations.fnArray.length>300000)throw Error("SOURCE_OPERATOR_LIMIT");
+        const hasRaster=operations.fnArray.some(op=>RASTER_PAINT_OPS.has(op));
+        anyRaster ||=hasRaster;
+        allPagesRaster &&=hasRaster;
+      }finally{page.cleanup();}
+    }
+    if(category==="ocr-text"){
+      if(anyText)return blocked("SOURCE_ALREADY_HAS_SELECTABLE_TEXT");
+      if(!anyRaster)return blocked("NO_IMAGE_CONTENT_FOUND");
+      if(!allPagesRaster)return blocked("RASTER_PAGE_MISSING");
+    }else if(!anyText&&!anyRaster){
+      return blocked("SOURCE_TABLE_CONTENT_NOT_FOUND");
+    }
+    return null;
+  }finally{await task.destroy();}
+}
+
+function hasPageAttachedFormWidget(pdf){
+  const fields=pdf.getForm().getFields();
+  if(!fields.length)return false;
+  const widgets=new Set(fields.flatMap(field=>field.acroField.getWidgets().map(widget=>widget.dict)));
+  return pdf.getPages().some(page=>page.node.Annots()?.asArray().some(ref=>{
+    const annotation=pdf.context.lookup(ref,PDFDict);
+    return annotation.get(PDFName.of("Subtype"))?.toString()==="/Widget"&&widgets.has(annotation);
+  }));
+}
 
 export async function inspectPrivatePdfStructure(entry,bytes){
   let pdf;
@@ -22,35 +70,18 @@ export async function inspectPrivatePdfStructure(entry,bytes){
   }
   const count=pdf.getPageCount();
   if(count<1||count>150)return blocked("UNSUPPORTED_PAGE_COUNT");
-  if(entry.category==="form"&&pdf.getForm().getFields().length===0)
+  if(entry.category==="form"&&!hasPageAttachedFormWidget(pdf))
     return blocked("NO_INTERACTIVE_ACROFORM_FIELDS");
   if(entry.category==="layout"&&count!==entry.expected.pageCount)
     return blocked("SOURCE_PAGE_COUNT_MISMATCH");
 
-  if(entry.category==="ocr-text"){
-    // In this benchmark category, selectable source text is a confound:
-    // a TXT export may be valid without actually performing OCR.
-    let task;
+  if(entry.category==="ocr-text"||entry.category==="table"){
+    // A source with a PDF image resource but no actual paint would previously
+    // pass. The real-document benchmark must reject that false qualification.
     try{
-      task=getDocument({data:new Uint8Array(bytes),disableFontFace:true,
-        useSystemFonts:true,isEvalSupported:false});
-      const view=await task.promise;
-      let selectable=0;
-      for(let n=1;n<=view.numPages;n++){
-        const page=await view.getPage(n),content=await page.getTextContent();
-        selectable+=content.items.filter(item=>typeof item.str==="string"&&item.str.trim()).length;
-        page.cleanup();
-      }
-      if(selectable>0)return blocked("SOURCE_ALREADY_HAS_SELECTABLE_TEXT");
-    }catch{return blocked("SOURCE_TEXT_AUDIT_FAILED");}
-    finally{if(task)await task.destroy();}
-    // Every OCR sample must contain at least one rendered page image.
-    const images=pdf.getPages().reduce((total,page)=>{
-      const ref=page.node.Resources()?.get(PDFName.of("XObject"));
-      const objects=ref?pdf.context.lookup(ref,PDFDict):null;
-      return total+(objects?objects.keys().length:0);
-    },0);
-    if(images===0)return blocked("NO_IMAGE_CONTENT_FOUND");
+      const sourceAudit=await auditPageContent(bytes,entry.category);
+      if(sourceAudit)return sourceAudit;
+    }catch{return blocked("SOURCE_CONTENT_AUDIT_FAILED");}
   }
   return result("READY","SOURCE_STRUCTURALLY_VALID",count);
 }
@@ -59,11 +90,18 @@ export async function preflightPrivateCorpus(requireReady=false){
   let manifest;
   try{manifest=await privateCorpus();}
   catch{
-    const summary={schema:"kukureku-private-intake-v1",status:"NOT_RUN",
+    let folderExists=true;
+    try{await lstat(PRIVATE_ROOT);}
+    catch(error){folderExists=error?.code!=="ENOENT";}
+    // Invalid/private-in-progress data is a BLOCKER, not equivalent to an
+    // absent corpus. No filenames, annotations, or PDF text appear here.
+    const summary={schema:"kukureku-private-intake-v1",status:folderExists?"BLOCKED_INTAKE":"NOT_RUN",
       documents:0,ready:0,blocked:0,realWorldAccuracy:"NOT_MEASURED",
-      note:"No approved local real-document corpus was found."};
+      reasonCode:folderExists?"INVALID_OR_INCOMPLETE_PRIVATE_CORPUS":"NO_PRIVATE_CORPUS",
+      note:folderExists?"Local private intake is invalid or incomplete.":
+        "No approved local real-document corpus was found."};
     console.log(JSON.stringify(summary,null,2));
-    if(requireReady)process.exitCode=2;
+    if(requireReady||folderExists)process.exitCode=2;
     return summary;
   }
   const perCategory=Object.fromEntries(CATEGORIES.map(category=>[category,{

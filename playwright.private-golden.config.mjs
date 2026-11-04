@@ -7,7 +7,7 @@ export default defineConfig({
  fullyParallel:false,workers:1,retries:0,timeout:360000,reporter:"line",
  outputDir:path.join(folder,"runner-output"),
  use:{baseURL:"http://127.0.0.1:3000",headless:true,acceptDownloads:true,
-   trace:"off",screenshot:"off",video:"off"},
+   trace:"off",screenshot:"off",video:"off",serviceWorkers:"block"},
  webServer:{command:"npm run dev -- --hostname 127.0.0.1",url:"http://127.0.0.1:3000",
    timeout:120000,reuseExistingServer:false}
 });
