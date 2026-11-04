@@ -60,7 +60,8 @@
       "test/task198-postrelease-checkbox-live": false,
       "test/task199-v1-network-privacy-acceptance": false,
       "fix/task200-delete-saved-workspace-pdfs": false,
-      "integration/task201-v1-privacy-retention-batch": false
+      "integration/task201-v1-privacy-retention-batch": false,
+      "test/task202-retention-surface-independence": false
     }
   }
 }
