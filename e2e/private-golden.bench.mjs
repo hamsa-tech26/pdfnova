@@ -5,6 +5,7 @@ import {readFile} from "node:fs/promises";
 import {privateCorpus,readPrivatePdf,writePrivateResult} from "../scripts/privateGoldenLocal.mjs";
 import {scorePrivateCase} from "../scripts/privateGoldenScorer.mjs";
 import {inspectPrivatePdfStructure} from "../scripts/privateGoldenPreflight.mjs";
+import {allowPrivateGoldenRequest} from "../scripts/privateGoldenNetworkPolicy.mjs";
 // Runs only with explicit local config, never in GitHub CI.
 const manifest=await privateCorpus();
 async function pages(bytes){
@@ -42,15 +43,11 @@ for(const entry of manifest.cases){
   test("private Golden Document: "+entry.id,async({page})=>{
     test.setTimeout(360000);
     const possibleUploads=[];
-    const approvedAssetHosts=new Set([
-      "127.0.0.1","localhost","cdn.jsdelivr.net","tessdata.projectnaptha.com"
-    ]);
-    // Fail closed on mutating requests and unexpected outbound hosts.
-    await page.route("**/*",async route=>{
-      const req=route.request(),url=new URL(req.url());
-      if(!["GET","HEAD","OPTIONS"].includes(req.method())||
-        !["http:","https:"].includes(url.protocol)||
-        !approvedAssetHosts.has(url.hostname)){
+    // Context-wide route also covers worker requests; never allow arbitrary
+    // query strings or unrelated paths on an approved OCR asset host.
+    await page.context().route("**/*",async route=>{
+      const req=route.request();
+      if(!allowPrivateGoldenRequest(req.url(),req.method())){
         possibleUploads.push("UNEXPECTED_NETWORK_REQUEST");
         await route.abort();return;
       }

@@ -105,3 +105,28 @@ It contains case outcome codes, bounded numeric metrics, prioritized categories 
 **Acceptance policy:** Two valid, distinct PDFs per category, all passing the existing fixed metrics, no stale/hash-mismatched results, and no missing or failed cases. Otherwise the release-54 real-world certification gate **remains BLOCKED**; the CLI exits unsuccessfully when `--require-complete` is used. Synthetic evidence, placeholder drafts or fabricated ground truth never qualify.
 
 Known limitations: Only an internal, consent-based functional assessment; reviewer identity is an operator attestation, not independently authenticated. Browser OCR may download public language-model files; verify the trusted environment before processing confidential material. The existing separate Phase 10.14 V4 production freeze/accuracy gate is unchanged.
+
+## Task 205 — acceptance-source and network safety hardening
+
+The private preflight now verifies that OCR source pages **actually paint raster
+images**. Merely listing an unused image or other XObject in `/Resources` is not
+sufficient. All pages in an OCR benchmark case must paint a raster image and
+none may contain selectable text. For table cases, the PDF must paint an image
+or expose selectable text, and therefore an empty page does not count as an
+independently reviewable table sample. A form input needs at least one
+**page-attached** AcroForm widget belonging to its field tree, not simply a
+detached field dictionary. These are intake checks, not accuracy scores.
+
+The local real-document browser runner blocks service workers and intercepts
+requests at browser-context scope. Only local app GET/HEAD requests and exact
+known Tesseract engine or English-language model asset paths are allowed;
+mutations, unrelated third-party requests and CDN URLs with query strings are
+blocked. A new upstream OCR asset URL must be explicitly reviewed before it
+can be allowed. No document contents, browser traces or ground-truth answers
+are sent to CI by this runner.
+
+Missing private source data remains `NOT_RUN`; an existing but incomplete or
+invalid private corpus reports `BLOCKED_INTAKE` and fails the command. The
+`--require-ready` gate also fails for an absent corpus. Neither outcome can
+be described as V1 real-document acceptance. Test-only Task 205 has no public
+site release and does not alter the separate PDF-to-Excel research track.
