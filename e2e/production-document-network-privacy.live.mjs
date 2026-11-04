@@ -106,3 +106,52 @@ test("live redaction and password protection do not directly transmit synthetic 
   expect((await protectedFile).suggestedFilename()).toMatch(/protected\.pdf$/);
   audit.assertClean("LIVE_V1_REDACT_PROTECT_NETWORK_PRIVACY");
 });
+
+
+test("live saved-PDF deletion needs confirmation, survives reload, and restores from a prior backup",async({page})=>{
+  test.setTimeout(180000);
+  await page.setViewportSize({width:390,height:844});
+  const marker="KUKUREKU_TASK204_POSTRELEASE_DELETE";
+  const source=await syntheticSource(marker);
+  const filename="SYNTHETIC_TASK204_DELETE.pdf";
+
+  await page.goto("/magic-drop",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:filename,mimeType:"application/pdf",buffer:source,
+  });
+  await expect(page.getByText(/This source PDF is saved locally in this browser/)).toBeVisible();
+  await page.goto("/workspace-health",{waitUntil:"networkidle"});
+  await expect(page.getByText(filename,{exact:true})).toBeVisible();
+
+  const backupPending=page.waitForEvent("download",{timeout:60000});
+  await page.getByRole("button",{name:"Download full workspace backup (ZIP)"}).click();
+  const backupDownload=await backupPending;
+  const backup=Buffer.from(await readFile(await backupDownload.path()));
+  expect(backup.byteLength).toBeGreaterThan(source.byteLength);
+
+  await page.getByRole("button",{name:"Delete all saved PDFs",exact:true}).click();
+  const warning=page.locator('section[role="alert"]');
+  await expect(warning).toContainText("cannot be undone");
+  await expect(warning).toContainText("Downloaded files");
+  await page.getByRole("button",{name:"Cancel deletion"}).click();
+  await expect(page.getByText(filename,{exact:true})).toBeVisible();
+
+  await page.getByRole("button",{name:"Delete all saved PDFs",exact:true}).click();
+  await page.getByRole("button",{name:"Confirm delete all saved PDFs"}).focus();
+  await page.keyboard.press("Enter");
+  await expect(page.getByText(/No stored documents yet/)).toBeVisible();
+  await page.reload({waitUntil:"networkidle"});
+  await expect(page.getByText(/No stored documents yet/)).toBeVisible();
+
+  await page.locator("#workspace-backup-upload").setInputFiles({
+    name:"synthetic-task204-backup.zip",mimeType:"application/zip",buffer:backup,
+  });
+  await expect(page.getByText(/Backup verified locally/)).toBeVisible();
+  await page.getByRole("button",{name:"Restore verified versions"}).click();
+  await expect(page.getByText(filename,{exact:true})).toBeVisible();
+  console.log(JSON.stringify({check:"LIVE_V1_POSTRELEASE_SAVED_PDF_DELETE",
+    result:"PASS",source:"SYNTHETIC_ONLY",cancelPreservesData:true,
+    deletionPersistsAfterReload:true,explicitPriorBackupRestore:true,
+    mobileViewportWidth:390,keyboardConfirmation:true,
+    sourceBytesLogged:false,limitation:"One isolated browser context; not cross-device erasure or deletion of local downloads"}));
+});
