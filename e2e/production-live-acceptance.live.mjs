@@ -193,7 +193,8 @@ test("live Protect and Unlock PDF enforce real password access and preserve cont
   second.drawText("TASK191_BRAVO_SOURCE",{x:72,y:660,size:18,font});
   const input=Buffer.from(await pdf.save());
 
-  await page.goto("/protect-pdf",{waitUntil:"domcontentloaded"});
+  // Wait for live hydration before selecting a file; an early change event can be lost.
+  await page.goto("/protect-pdf",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK191.pdf",mimeType:"application/pdf",buffer:input
   });
