@@ -66,8 +66,16 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full bg-white text-gray-900 dark:bg-slate-950 dark:text-white">
+        <a
+          href="#main-content"
+          className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[100] focus:rounded-lg focus:bg-blue-700 focus:px-4 focus:py-3 focus:font-bold focus:text-white focus:outline-2 focus:outline-offset-2 focus:outline-white"
+        >
+          Skip to main content
+        </a>
         <ThemeProvider>
-          {children}
+          <div id="main-content" tabIndex={-1}>
+            {children}
+          </div>
 
           <Toaster
             position="top-right"

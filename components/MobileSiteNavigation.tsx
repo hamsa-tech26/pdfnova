@@ -1,12 +1,12 @@
 "use client";
 
-import { Menu, X, Sparkles } from "lucide-react";
+import { Menu, X } from "lucide-react";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 
 const links = [
   { href: "/#tools", label: "Tools" },
-  { href: "/#ai", label: "AI PDF", icon: Sparkles },
+  { href: "/#choose-task", label: "Choose a tool" },
   { href: "/trust", label: "Trust" },
   { href: "/guides", label: "Guides" },
   { href: "/about", label: "About" },
@@ -61,14 +61,13 @@ export default function MobileSiteNavigation() {
           aria-label="Mobile primary navigation"
           className="absolute inset-x-0 top-full z-50 border-b border-gray-200 bg-white p-3 shadow-xl dark:border-slate-700 dark:bg-slate-950"
         >
-          {links.map(({ href, label, icon: Icon }) => (
+          {links.map(({ href, label }) => (
             <Link
               href={href}
               key={label}
               onClick={() => setIsOpen(false)}
               className="flex min-h-12 items-center gap-3 rounded-xl px-4 py-3 text-base font-semibold text-gray-800 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-blue-600 dark:text-slate-100 dark:hover:bg-slate-800"
             >
-              {Icon && <Icon size={18} aria-hidden="true" />}
               {label}
             </Link>
           ))}

@@ -3,6 +3,7 @@ import {
   RefreshCcw,
   RotateCcw,
 } from "lucide-react";
+import Link from "next/link";
 
 type ErrorCardProps = {
   title?: string;
@@ -53,6 +54,10 @@ export default function ErrorCard({
             {description}
           </p>
 
+          <p className="mt-3 text-sm leading-6 text-gray-700 dark:text-slate-300">
+            Check the file type and size, then retry or choose another file. If your document is password-protected, use the appropriate unlock tool with the correct password first.
+          </p>
+
           {reasons.length > 0 && (
             <div className="mt-5 rounded-2xl border border-red-200 bg-white p-4 dark:border-red-900 dark:bg-slate-900">
               <p className="text-sm font-bold text-gray-950 dark:text-white">
@@ -98,6 +103,9 @@ export default function ErrorCard({
               )}
             </div>
           )}
+          <Link href="/guides/choose-pdf-tool" className="mt-4 inline-flex min-h-11 items-center text-sm font-semibold text-blue-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-300">
+            Find the right PDF tool
+          </Link>
         </div>
       </div>
     </section>

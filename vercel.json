@@ -61,7 +61,8 @@
       "test/task199-v1-network-privacy-acceptance": false,
       "fix/task200-delete-saved-workspace-pdfs": false,
       "integration/task201-v1-privacy-retention-batch": false,
-      "test/task202-retention-surface-independence": false
+      "test/task202-retention-surface-independence": false,
+      "feature/task206-user-journey": false
     }
   }
 }

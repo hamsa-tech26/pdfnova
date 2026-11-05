@@ -1,6 +1,5 @@
 import KukurekuBrandMark from "@/components/KukurekuBrandMark";
 import MobileSiteNavigation from "@/components/MobileSiteNavigation";
-import { Sparkles } from "lucide-react";
 import Link from "next/link";
 
 export default function Navbar() {
@@ -33,11 +32,10 @@ export default function Navbar() {
           </Link>
 
           <Link
-            href="/#ai"
-            className="flex items-center gap-2 text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
+            href="/#choose-task"
+            className="text-sm font-semibold text-gray-700 transition hover:text-blue-600 dark:text-slate-300 dark:hover:text-blue-400"
           >
-            <Sparkles size={16} />
-            AI PDF
+            Choose a tool
           </Link>
 
           <Link

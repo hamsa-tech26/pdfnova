@@ -61,6 +61,12 @@ const structuredData = {
 
 const guides = [
   {
+    title: "Which PDF tool should I use?",
+    description:
+      "Choose a tool by what you need to do, with practical limitations and a checklist for reviewing the downloaded result.",
+    href: "/guides/choose-pdf-tool",
+  },
+  {
     title: "How private PDF tools can work without uploads",
     description:
       "Understand browser-local processing, how to verify it yourself, and the trade-offs compared with server-based conversion.",

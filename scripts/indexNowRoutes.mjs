@@ -39,6 +39,7 @@ export const PUBLIC_ROUTES = [
   "/trust",
   "/trust/verification",
   "/guides",
+  "/guides/choose-pdf-tool",
   "/guides/private-pdf-tools",
   "/guides/compress-pdf-without-uploading",
   "/guides/watermark-pdf-without-uploading",

@@ -4,6 +4,7 @@ import {
   FileCheck2,
   RotateCcw,
 } from "lucide-react";
+import Link from "next/link";
 
 type SuccessCardProps = {
   title?: string;
@@ -60,6 +61,10 @@ export default function SuccessCard({
             </div>
           )}
 
+          <p className="mt-4 text-sm leading-6 text-emerald-900 dark:text-emerald-100">
+            <strong>Before you share:</strong> Open the downloaded copy and check its pages, text, and formatting. Your browser controls where downloads are saved.
+          </p>
+
           {(onDownloadAgain || onStartAgain) && (
             <div className="mt-6 flex flex-col gap-3 sm:flex-row">
               {onDownloadAgain && (
@@ -83,6 +88,9 @@ export default function SuccessCard({
                   {resetLabel}
                 </button>
               )}
+              <Link href="/dashboard#all-tools" className="inline-flex min-h-11 items-center justify-center rounded-xl px-4 py-3 text-sm font-semibold text-blue-700 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:text-blue-300">
+                Choose another PDF tool
+              </Link>
             </div>
           )}
         </div>
