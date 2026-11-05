@@ -12,7 +12,7 @@ test("mobile public navigation remains accessible and closes on selected page", 
   const menu = page.getByRole("navigation", { name: "Mobile primary navigation" });
   await expect(menu).toBeVisible();
   await expect(page.getByRole("button", { name: "Close site menu" })).toHaveAttribute("aria-expanded", "true");
-  await expect(menu.getByRole("link", { name: "AI PDF" })).toHaveAttribute("href", "/#ai");
+  await expect(menu.getByRole("link", { name: "Choose a tool" })).toHaveAttribute("href", "/#choose-task");
   await menu.getByRole("link", { name: "Trust" }).click();
   await expect(page).toHaveURL(/\/trust$/);
   await expect(page.getByRole("button", { name: "Open site menu" })).toBeVisible();
