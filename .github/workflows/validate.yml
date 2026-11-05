@@ -58,6 +58,6 @@ jobs:
       - name: Verify patched and pinned Vite development dependency
         if: always()
         run: node scripts/checkViteSecurityBaseline.mjs
-      - name: Audit complete dependency tree for high and critical advisories
+      - name: Audit complete dependency tree for moderate and higher advisories
         if: always()
-        run: npm audit --audit-level=high
+        run: npm audit --audit-level=moderate
