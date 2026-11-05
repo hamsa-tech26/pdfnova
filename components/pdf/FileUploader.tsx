@@ -10,6 +10,7 @@ import {
   ChangeEvent,
   DragEvent,
   RefObject,
+  useId,
   useState,
 } from "react";
 
@@ -37,6 +38,9 @@ export default function FileUploader({
   disabled = false,
 }: FileUploaderProps) {
   const [isDragging, setIsDragging] = useState(false);
+  const inputId = useId();
+  const descriptionId = useId();
+  const helperId = useId();
   const [, setDragDepth] = useState(0);
 
   function openFilePicker() {
@@ -128,6 +132,7 @@ export default function FileUploader({
   return (
     <>
       <input
+        id={inputId}
         ref={fileInputRef}
         type="file"
         accept={accept}
@@ -135,6 +140,8 @@ export default function FileUploader({
         className="hidden"
         onChange={onFileSelection}
         disabled={disabled}
+        aria-label={multiple ? "Select files" : "Select a file"}
+        aria-describedby={`${descriptionId} ${helperId}`}
       />
 
       <div
@@ -179,7 +186,7 @@ export default function FileUploader({
               : title}
           </h2>
 
-          <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-600 dark:text-slate-400 xl:mt-3 xl:text-base xl:leading-7">
+          <p id={descriptionId} className="mx-auto mt-2 max-w-xl text-sm leading-6 text-gray-600 dark:text-slate-400 xl:mt-3 xl:text-base xl:leading-7">
             {isDragging
               ? "Release now to add the selected file."
               : description}
@@ -204,7 +211,7 @@ export default function FileUploader({
             {buttonText}
           </button>
 
-          <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-slate-300 xl:mt-5">
+          <p id={helperId} className="mt-3 text-sm leading-6 text-gray-600 dark:text-slate-300 xl:mt-5">
             {helperText}
           </p>
 

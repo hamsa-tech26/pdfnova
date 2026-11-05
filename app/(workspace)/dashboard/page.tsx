@@ -366,31 +366,31 @@ export default function DashboardPage() {
             <div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-2 text-sm font-semibold text-blue-100 backdrop-blur">
                 <Zap size={16} />
-                Magic Drop
+                Quick start
               </div>
 
               <h2 className="mt-6 max-w-3xl text-4xl font-extrabold tracking-tight md:text-5xl">
-                Drop a PDF. Kukureku finds what matters first.
+                What would you like to do with your PDF?
               </h2>
 
               <p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">
-                Inspect supported document facts before choosing a tool. Magic Drop recommends only what the file evidence supports, and it never edits automatically.
+                Open a tool for a common task, or use Magic Drop if you want to inspect a document before choosing an action. No account is needed.
               </p>
 
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <Link
-                  href="/magic-drop"
+                  href="#all-tools"
                   className="inline-flex items-center justify-center gap-2 rounded-xl bg-slate-100 px-6 py-3.5 font-semibold text-blue-900 transition hover:-translate-y-0.5 hover:bg-slate-200"
                 >
-                  Magic Drop a PDF
+                  Browse all PDF tools
                   <ArrowRight size={18} />
                 </Link>
 
                 <Link
-                  href="/document-inspector"
+                  href="/magic-drop"
                   className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/25 bg-white/10 px-6 py-3.5 font-semibold text-white backdrop-blur transition hover:bg-white/20"
                 >
-                  Inspect a PDF
+                  Inspect a PDF first
                 </Link>
               </div>
             </div>

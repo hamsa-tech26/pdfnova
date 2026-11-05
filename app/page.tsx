@@ -1,8 +1,8 @@
-import AISection from "@/components/AISection";
 import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import ToolsSection from "@/components/ToolsSection";
+import TaskStartSection from "@/components/TaskStartSection";
 import {
   BRAND_NAME,
   PRODUCT_DESCRIPTION,
@@ -147,9 +147,9 @@ export default function Home() {
           </div>
         </section>
 
+        <TaskStartSection />
         <ToolsSection />
         <FeaturesSection />
-        <AISection />
       </main>
 
       <Footer />

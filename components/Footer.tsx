@@ -16,6 +16,9 @@ export default function Footer() {
         </div>
 
         <div className="flex flex-wrap items-center gap-x-6 gap-y-3 text-sm font-semibold text-gray-600 dark:text-slate-300">
+          <Link href="/#choose-task" className="transition hover:text-blue-600">
+            Choose a tool
+          </Link>
           <Link href="/#tools" className="transition hover:text-blue-600">
             PDF Tools
           </Link>
