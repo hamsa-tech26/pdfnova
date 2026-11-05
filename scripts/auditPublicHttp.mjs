@@ -126,8 +126,11 @@ export async function runPublicSiteAudit({
   const securityHeaders = root?.securityHeaders ?? {
     result: "NOT_VERIFIED", checks: [],
   };
-  const sanitizedProbes = probes.map(({securityHeaders: _headers, ...probe}) =>
-    probe);
+  const sanitizedProbes = probes.map(probe => {
+    const publicProbe = {...probe};
+    delete publicProbe.securityHeaders;
+    return publicProbe;
+  });
   const passed = sanitizedProbes.filter(x => x.result === "PASS").length;
   const result = passed === sanitizedProbes.length &&
     securityHeaders.result === "PASS" ? "PASS" : "ACCESS_NOT_VERIFIED";
