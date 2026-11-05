@@ -25,8 +25,8 @@ test("Task 206: skip link is the first keyboard stop and reaches main content",a
   const skip=page.getByRole("link",{name:"Skip to main content"});
   await expect(skip).toBeFocused();
   await skip.press("Enter");
-  await expect(page).toHaveURL(/#main-content$/);
-  await expect(page.locator("#main-content")).toHaveAttribute("tabindex","-1");
+  await expect(page.locator("main").first()).toBeFocused();
+  await expect(page.locator("main").first()).toHaveAttribute("tabindex","-1");
 });
 
 test("Task 206: mobile navigation offers chooser and useful guide",async({page})=>{
