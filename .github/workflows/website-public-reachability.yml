@@ -5,8 +5,13 @@ on:
     branches: [main]
     paths:
       - "scripts/auditPublicHttp.mjs"
+      - "scripts/indexNowRoutes.mjs"
+      - "lib/seo/__tests__/publicHttpAudit.test.ts"
       - ".github/workflows/website-public-reachability.yml"
   workflow_dispatch:
+  schedule:
+    # Daily at 07:13 India time (01:43 UTC); avoid the busy top of the hour.
+    - cron: "43 1 * * *"
 
 permissions:
   contents: read
@@ -14,20 +19,19 @@ permissions:
 jobs:
   independent-public-http:
     runs-on: ubuntu-latest
-    timeout-minutes: 4
+    timeout-minutes: 7
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: "22"
-      - name: Verify public page, robots and sitemap from outside Vercel
+      - name: Verify 31 tool pages, key public pages, and security headers
         run: node scripts/auditPublicHttp.mjs
-        continue-on-error: true
-      - name: Preserve only status codes and resource types
+      - name: Preserve only public route results and header names
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: website-public-http-status
           path: benchmarks/website/reports/public-http.json
-          retention-days: 14
+          retention-days: 7
           if-no-files-found: warn
