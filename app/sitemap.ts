@@ -40,6 +40,7 @@ const publicRoutes = [
   "/trust/verification",
   "/guides",
   "/guides/choose-pdf-tool",
+  "/guides/merge-pdf-without-uploading",
   "/guides/private-pdf-tools",
   "/guides/compress-pdf-without-uploading",
   "/guides/watermark-pdf-without-uploading",
