@@ -61,6 +61,12 @@ const structuredData = {
 
 const guides = [
   {
+    title: "How to merge PDFs without uploading them",
+    description:
+      "Combine PDFs privately, set the order of files, learn the limits, and review the result before sharing.",
+    href: "/guides/merge-pdf-without-uploading",
+  },
+  {
     title: "Which PDF tool should I use?",
     description:
       "Choose a tool by what you need to do, with practical limitations and a checklist for reviewing the downloaded result.",

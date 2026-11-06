@@ -1,4 +1,13 @@
+"use client";
+
 import Link from "next/link";
+import { useState } from "react";
+import {
+  filterToolCatalog,
+  getToolFinderCategory,
+  TOOL_FINDER_CATEGORIES,
+  type ToolFinderCategory,
+} from "@/lib/seo/toolFinder";
 import {
   Archive,
   ArrowRight,
@@ -194,33 +203,83 @@ const tools = [
 ];
 
 export default function ToolsSection() {
+  const [query, setQuery] = useState("");
+  const [category, setCategory] = useState<ToolFinderCategory>("all");
+  const filteredTools = filterToolCatalog(tools, query, category);
+
   return (
-    <section id="tools" className="bg-white px-5 py-20 sm:px-6 lg:py-24">
+    <section id="tools" aria-labelledby="tools-heading" className="scroll-mt-24 bg-white px-5 py-14 dark:bg-slate-950 sm:px-6 lg:py-20">
       <div className="mx-auto max-w-7xl">
         <div className="mx-auto max-w-2xl text-center">
           <p className="text-sm font-semibold uppercase tracking-[0.22em] text-blue-600">
             PDF Tools
           </p>
 
-          <h2 className="mt-3 text-4xl font-extrabold tracking-tight text-gray-900 md:text-5xl">
+          <h2 id="tools-heading" className="mt-3 text-4xl font-extrabold tracking-tight text-gray-900 dark:text-white md:text-5xl">
             Free PDF tools that keep files on your device
           </h2>
 
-          <p className="mt-5 text-lg leading-8 text-gray-600">
+          <p className="mt-5 text-lg leading-8 text-gray-600 dark:text-slate-300">
             Merge, split, compress, convert, organize, OCR, reorder, number, fill forms, redact, edit metadata, crop, resize, add images and stamps, create fillable forms, sign, protect, watermark, and unlock PDFs
             in your browser with no account required.
           </p>
         </div>
 
-        <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
-          {tools.map((tool) => {
+        <div className="mt-8 rounded-3xl border border-blue-100 bg-blue-50/60 p-4 dark:border-slate-800 dark:bg-slate-900 sm:p-6">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="find-pdf-tool" className="block text-base font-bold text-slate-950 dark:text-white">
+                Find the right PDF tool
+              </label>
+              <p id="tool-finder-description" className="mt-1 text-sm leading-6 text-slate-600 dark:text-slate-300">
+                Search by task, such as “sign”, “reduce size”, or “scanned text”. Searches stay in this browser.
+              </p>
+              <input id="find-pdf-tool" type="search" value={query} onChange={event => setQuery(event.target.value)}
+                autoComplete="off" aria-describedby="tool-finder-description tool-finder-count"
+                placeholder="What do you need to do?"
+                className="mt-3 min-h-12 w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base text-slate-950 placeholder:text-slate-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-950 dark:text-white" />
+            </div>
+            {(query || category !== "all") && (
+              <button type="button" onClick={() => { setQuery(""); setCategory("all"); }}
+                className="min-h-11 rounded-xl border border-blue-200 bg-white px-4 py-2 text-sm font-semibold text-blue-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-800 dark:text-blue-200">
+                Clear filters
+              </button>
+            )}
+          </div>
+
+          <div className="mt-4 flex flex-wrap gap-2" role="group" aria-label="Filter tools by category">
+            {TOOL_FINDER_CATEGORIES.map(item => (
+              <button key={item.id} type="button" aria-pressed={category === item.id}
+                onClick={() => setCategory(item.id)}
+                className={"min-h-11 rounded-full border px-4 py-2 text-sm font-semibold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 " +
+                  (category === item.id
+                    ? "border-blue-700 bg-blue-700 text-white"
+                    : "border-slate-300 bg-white text-slate-700 hover:border-blue-400 dark:border-slate-700 dark:bg-slate-950 dark:text-slate-200")}
+              >{item.label}</button>
+            ))}
+          </div>
+          <p id="tool-finder-count" role="status" aria-live="polite" className="mt-4 text-sm font-medium text-slate-600 dark:text-slate-300">
+            Showing {filteredTools.length} of {tools.length} tools
+          </p>
+        </div>
+
+        {filteredTools.length === 0 && (
+          <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-6 text-slate-800 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-100">
+            <p className="font-bold">No matching PDF tool found.</p>
+            <p className="mt-2 text-sm leading-6">Try a simpler term like “merge”, “form”, or “image”, or clear the filters to see all available tools. Some tasks are not supported.</p>
+          </div>
+        )}
+
+        <div className="mt-7 grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+          {filteredTools.map((tool) => {
             const Icon = tool.icon;
 
             return (
               <Link
                 key={tool.title}
                 href={tool.href}
-                className="group rounded-3xl border border-gray-200 bg-white p-6 text-left shadow-sm transition-all duration-300 hover:-translate-y-2 hover:border-blue-200 hover:shadow-2xl"
+                data-tool-category={getToolFinderCategory(tool.href)}
+                className="group rounded-3xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-900 sm:p-6"
               >
                 <div
                   className={
@@ -231,11 +290,11 @@ export default function ToolsSection() {
                   <Icon size={28} strokeWidth={2.2} />
                 </div>
 
-                <h3 className="mt-6 text-xl font-bold text-gray-900">
+                <h3 className="mt-6 text-xl font-bold text-gray-900 dark:text-white">
                   {tool.title}
                 </h3>
 
-                <p className="mt-3 text-sm leading-6 text-gray-600">
+                <p className="mt-3 text-sm leading-6 text-gray-600 dark:text-slate-300">
                   {tool.description}
                 </p>
 
@@ -254,7 +313,7 @@ export default function ToolsSection() {
         <div className="mt-12 text-center">
           <Link
             href="/dashboard#all-tools"
-            className="inline-flex items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 transition hover:border-blue-300 hover:text-blue-600"
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-gray-300 bg-white px-6 py-3 font-semibold text-gray-800 transition hover:border-blue-300 hover:text-blue-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100"
           >
             Open full workspace
             <ArrowRight size={17} />
