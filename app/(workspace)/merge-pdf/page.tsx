@@ -450,6 +450,12 @@ export default function MergePdfPage() {
       description="Merge non-form PDFs locally. No uploads. Up to 25 MB per file, 100 MB combined."
       tips={mergePdfTips}
       faqs={mergePdfFaqs}
+      guide={{
+        href: "/guides/merge-pdf-without-uploading",
+        title: "How to merge PDFs without uploading them",
+        description:
+          "Learn how file order, PDF form fields, limits, and document checks affect a safe merge.",
+      }}
       howToTitle="How to merge PDF files online"
       howToSteps={[
         {

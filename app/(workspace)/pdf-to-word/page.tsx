@@ -29,7 +29,7 @@ const pdfToWordTips = [
   {
     title: "Scanned PDFs need OCR",
     description:
-      "Image-only and scanned documents cannot be converted until OCR support is added.",
+      "Image-only and scanned documents need a separate OCR step before text-based conversion can work.",
   },
   {
     title: "Review the Word document",
@@ -263,6 +263,12 @@ export default function PdfToWordPage() {
       description="Convert a selectable-text PDF into an editable DOCX file locally in your browser. Your document is not uploaded, and files can be up to 25 MB."
       tips={pdfToWordTips}
       faqs={pdfToWordFaqs}
+      guide={{
+        href: "/guides/pdf-to-word-without-uploading",
+        title: "How to convert a PDF to editable Word text",
+        description:
+          "Check whether your PDF contains selectable text, learn what formatting may change, and review the downloaded DOCX.",
+      }}
       howToTitle="How to convert PDF to Word"
       howToSteps={[
         {
