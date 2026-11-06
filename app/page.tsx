@@ -73,13 +73,14 @@ export default function Home() {
                   </h1>
 
                   <p className="mt-3 max-w-2xl text-sm leading-6 text-blue-100 sm:mt-6 sm:text-lg sm:leading-8">
-                    Merge, compress or turn images into PDFs in your browser. No document uploads or account required.
+                    Merge or compress PDFs, convert text-based PDFs to Word, and turn images into PDFs in your browser. No document uploads or account required.
                   </p>
 
-                  <nav aria-label="Popular PDF tools" className="mt-4 grid gap-2 sm:mt-6 sm:grid-cols-3">
+                  <nav aria-label="Popular PDF tools" className="mt-4 grid gap-2 sm:mt-6 sm:grid-cols-2 xl:grid-cols-4">
                     {[
                       {href: "/merge-pdf", label: "Merge PDF"},
                       {href: "/compress-pdf", label: "Compress PDF"},
+                      {href: "/pdf-to-word", label: "PDF to Word"},
                       {href: "/jpg-to-pdf", label: "JPG to PDF"},
                     ].map(tool => (
                       <Link key={tool.href} href={tool.href}

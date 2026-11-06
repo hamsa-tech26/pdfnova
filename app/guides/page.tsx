@@ -67,6 +67,12 @@ const guides = [
     href: "/guides/merge-pdf-without-uploading",
   },
   {
+    title: "How to convert a PDF to Word without uploading it",
+    description:
+      "Convert selectable text to an editable DOCX, understand what may change, and learn why scanned PDFs need OCR first.",
+    href: "/guides/pdf-to-word-without-uploading",
+  },
+  {
     title: "Which PDF tool should I use?",
     description:
       "Choose a tool by what you need to do, with practical limitations and a checklist for reviewing the downloaded result.",

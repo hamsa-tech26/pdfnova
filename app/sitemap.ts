@@ -41,6 +41,7 @@ const publicRoutes = [
   "/guides",
   "/guides/choose-pdf-tool",
   "/guides/merge-pdf-without-uploading",
+  "/guides/pdf-to-word-without-uploading",
   "/guides/private-pdf-tools",
   "/guides/compress-pdf-without-uploading",
   "/guides/watermark-pdf-without-uploading",

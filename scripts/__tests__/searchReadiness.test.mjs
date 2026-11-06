@@ -22,10 +22,30 @@ function html(pathname, {
 }
 
 describe("technical search readiness (not indexing evidence)", () => {
-  it("includes all six public guides in the submission route list", () => {
-    expect(PUBLIC_ROUTES.filter(route => route.startsWith("/guides/"))).toHaveLength(6);
+  it("includes all seven public guides in the submission route list", () => {
+    expect(PUBLIC_ROUTES.filter(route => route.startsWith("/guides/"))).toHaveLength(7);
     expect(PUBLIC_ROUTES).toContain("/guides/merge-pdf-without-uploading");
+    expect(PUBLIC_ROUTES).toContain("/guides/pdf-to-word-without-uploading");
     expect(new Set(PUBLIC_ROUTES).size).toBe(PUBLIC_ROUTES.length);
+  });
+
+  it("connects high-intent tools to real guides and offers PDF to Word from the homepage", () => {
+    const source = path => readFileSync(new URL("../../" + path, import.meta.url), "utf8");
+    const home = source("app/page.tsx");
+    const merge = source("app/(workspace)/merge-pdf/page.tsx");
+    const compress = source("app/(workspace)/compress-pdf/page.tsx");
+    const word = source("app/(workspace)/pdf-to-word/page.tsx");
+    const guideIndex = source("app/guides/page.tsx");
+    expect(home).toContain('href: "/pdf-to-word"');
+    expect(merge).toContain('href: "/guides/merge-pdf-without-uploading"');
+    expect(compress).toContain('href: "/guides/compress-pdf-without-uploading"');
+    expect(word).toContain('href: "/guides/pdf-to-word-without-uploading"');
+    expect(guideIndex).toContain('href: "/guides/pdf-to-word-without-uploading"');
+    const guide = source("app/guides/pdf-to-word-without-uploading/page.tsx");
+    for (const route of ["/pdf-to-word", "/ocr-pdf", "/word-to-pdf"]) {
+      expect(guide).toContain(`href="${route}"`);
+    }
+    expect(guide).toContain('canonical: guidePath');
   });
 
   it("keeps the source sitemap list and IndexNow list synchronized", () => {
