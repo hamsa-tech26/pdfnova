@@ -9,6 +9,7 @@ import {
   PRODUCT_NAME,
   SITE_URL,
 } from "@/lib/site";
+import { PUBLIC_TOOL_COUNT } from "@/lib/seo/tools";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -107,6 +108,7 @@ export default function Home() {
                   </div>
 
                   <div className="mt-4 flex flex-wrap gap-x-6 gap-y-3 text-sm font-medium text-blue-100 sm:mt-7">
+                    <span className="font-semibold text-white lg:hidden">{PUBLIC_TOOL_COUNT} working tools</span>
                     <span>No installation</span>
                     <span>No account required</span>
                     <span>Browser-based processing</span>
@@ -137,7 +139,7 @@ export default function Home() {
                   </div>
 
                   <div className="rounded-3xl border border-white/15 bg-white/10 p-5 backdrop-blur">
-                    <p className="font-bold">31 working tools</p>
+                    <p className="font-bold">{PUBLIC_TOOL_COUNT} working tools</p>
                     <p className="mt-2 text-sm leading-6 text-blue-100">
                       Ready for common PDF workflows.
                     </p>

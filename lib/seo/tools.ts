@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL } from "../site";
 
 export const TOOL_SEO = {
   "merge-pdf": {
     name: "Merge PDF",
-    title: "Merge PDF Online Free - Private, No Upload",
+    title: "Merge PDF Online Free - Combine Files Privately",
     description:
-      "Merge PDF files online for free with no upload. Reorder multiple PDFs and combine them in your browser so your files stay on your device.",
+      "Merge PDF files free in your browser. Choose two or more PDFs, set their order, and download one file. No uploads or account; 25 MB per file.",
   },
   "split-pdf": {
     name: "Split PDF",
@@ -16,15 +16,15 @@ export const TOOL_SEO = {
   },
   "compress-pdf": {
     name: "Compress PDF",
-    title: "Compress PDF Online - Private PDF Compressor",
+    title: "Compress PDF Online Free - No File Uploads",
     description:
-      "Compress PDF files online in your browser with no upload. Choose an optimization level, reduce file size when possible, and keep files on your device.",
+      "Compress PDF online using Low, Medium, or High optimization. Reduce file size when possible, without uploading your document. Free; 25 MB limit.",
   },
   "pdf-to-word": {
     name: "PDF to Word",
-    title: "PDF to Word - Private Browser Converter",
+    title: "PDF to Word Converter Online - Free, Private DOCX",
     description:
-      "Convert selectable-text PDF files to editable DOCX documents in your browser. No upload or account required; your PDF stays on your device.",
+      "Convert text-based PDFs to editable Word (DOCX) in your browser. No uploads or account; scanned PDFs need OCR. Free; 25 MB limit.",
   },
   "word-to-pdf": {
     name: "Word to PDF",
@@ -139,6 +139,14 @@ export const TOOL_SEO = {
       "Unlock a PDF you own or are authorized to modify using the correct password. Processing happens locally in your browser and the file is not uploaded.",
   },
 } as const;
+
+// Public product pages share one source of truth for the live tool count and links.
+// Keep historical launch milestones separately labelled as historical.
+export const PUBLIC_TOOL_LIST = Object.entries(TOOL_SEO).map(([slug, tool]) => ({
+  href: `/${slug}`,
+  name: tool.name,
+}));
+export const PUBLIC_TOOL_COUNT = PUBLIC_TOOL_LIST.length;
 
 export type ToolSlug = keyof typeof TOOL_SEO;
 
