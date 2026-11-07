@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { PRODUCT_NAME, SITE_URL } from "@/lib/site";
+import { PUBLIC_TOOL_COUNT } from "@/lib/seo/tools";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -243,9 +244,10 @@ export default function PrivatePdfToolsGuide() {
               </h2>
 
               <p className="mt-4 leading-7 text-gray-600 dark:text-slate-300">
-                Kukureku currently provides ten focused tools. Each tool page
-                explains its supported format, practical limits, and local
-                processing behavior.
+                Kukureku currently provides {PUBLIC_TOOL_COUNT} browser-based PDF
+                tools. Start with these common workflows, or browse the complete
+                catalog. Each tool page explains its supported inputs, limits,
+                and local processing behavior.
               </p>
 
               <div className="mt-6 flex flex-wrap gap-2">
@@ -259,6 +261,13 @@ export default function PrivatePdfToolsGuide() {
                   </Link>
                 ))}
               </div>
+
+              <Link
+                href="/#tools"
+                className="mt-5 inline-flex min-h-11 items-center font-semibold text-blue-600 underline underline-offset-4 hover:text-blue-700 dark:text-blue-400"
+              >
+                Browse all {PUBLIC_TOOL_COUNT} PDF tools
+              </Link>
             </section>
 
             <section className="rounded-3xl border border-blue-100 bg-blue-50 p-7 dark:border-blue-950 dark:bg-blue-950/20">

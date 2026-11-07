@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { PRODUCT_NAME, SITE_URL } from "@/lib/site";
+import { PUBLIC_TOOL_COUNT } from "@/lib/seo/tools";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -40,7 +41,7 @@ const structuredData = {
         name: PRODUCT_NAME,
         url: SITE_URL,
       },
-      dateModified: "2026-10-04",
+      dateModified: "2026-11-07",
     },
     {
       "@type": "BreadcrumbList",
@@ -69,7 +70,7 @@ const directoryDescription =
   "Kukureku PDF is a free browser-based PDF workspace for merging, splitting, compressing, converting, organizing, watermarking, and unlocking PDFs. Current supported workflows process files locally on the user's device rather than uploading document contents for server-side conversion, and no Kukureku account is required.";
 
 const longDescription =
-  "Kukureku PDF is a free, privacy-first browser workspace for common document tasks. Its current public launch has 30 PDF tools, alongside private workspace experiences for inspection, version tracking, local document comparison, and submission-preparation checks. Supported workflows are designed to process files locally in the browser instead of uploading document contents to Kukureku servers for conversion. The site publishes a Trust Center, a private-processing verification guide, and a controlled launch verification report documenting practical limits and observed test results.";
+  `Kukureku PDF is a free, privacy-first browser workspace for common document tasks. Its current public catalog has ${PUBLIC_TOOL_COUNT} PDF tools, alongside private workspace experiences for inspection, version tracking, local document comparison, and submission-preparation checks. Supported workflows are designed to process files locally in the browser instead of uploading document contents to Kukureku servers for conversion. The site publishes a Trust Center, a private-processing verification guide, and a controlled launch verification report documenting practical limits and observed test results.`;
 
 const tags = [
   "PDF",
@@ -115,7 +116,7 @@ export default function PressPage() {
             {[
               ["Product", "Kukureku PDF"],
               ["Website", "kukureku.com"],
-              ["Current tools", "30"],
+              ["Current tools", String(PUBLIC_TOOL_COUNT)],
               ["Account required", "No"],
             ].map(([label, value]) => (
               <div
@@ -272,11 +273,12 @@ export default function PressPage() {
             </h2>
 
             <p className="mt-4 leading-7 text-amber-900/80 dark:text-amber-200/80">
-              Please describe Kukureku&apos;s current launch as 10 browser-based PDF
-              tools. Planned AI functionality is labeled as coming soon and should
-              not be listed as an available feature. Likewise, the public GitHub
-              repository is inspectable source code, but this page does not claim
-              an open-source software license.
+              Please describe Kukureku&apos;s current public catalog as {PUBLIC_TOOL_COUNT}{" "}
+              browser-based PDF tools. Use the individual tool pages to verify
+              supported inputs and limitations. Planned AI functionality is
+              labeled as coming soon and should not be listed as available.
+              The public GitHub repository is inspectable source code, but this
+              page does not claim an open-source software license.
             </p>
           </section>
         </div>

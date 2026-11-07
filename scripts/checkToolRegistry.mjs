@@ -129,6 +129,20 @@ function assertToolLayouts(routes) {
 
 function assertHomepageCount(expectedCount) {
   const homepage = read("app/page.tsx");
+
+  // Preferred path: the homepage renders the count directly from the same SEO
+  // registry whose routes were checked against the live workspace above.
+  if (homepage.includes("{PUBLIC_TOOL_COUNT} working tools")) {
+    const registry = read("lib/seo/tools.ts");
+    if (!homepage.includes('import { PUBLIC_TOOL_COUNT } from "@/lib/seo/tools";') ||
+        !registry.includes("export const PUBLIC_TOOL_COUNT = PUBLIC_TOOL_LIST.length;") ||
+        !registry.includes("Object.entries(TOOL_SEO)")) {
+      throw new Error("Homepage tool count is not derived from the checked SEO registry.");
+    }
+    return;
+  }
+
+  // Legacy pages with a literal count must still match the live tool set.
   const match = homepage.match(/(\d+) working tools/);
 
   if (!match) {

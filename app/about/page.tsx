@@ -1,6 +1,7 @@
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import { PRODUCT_NAME, SITE_URL } from "@/lib/site";
+import { PUBLIC_TOOL_COUNT, PUBLIC_TOOL_LIST } from "@/lib/seo/tools";
 import type { Metadata } from "next";
 import Link from "next/link";
 
@@ -60,16 +61,6 @@ const structuredData = {
     },
   ],
 };
-
-const currentTools = [
-  "Merge PDF", "Split PDF", "Compress PDF", "PDF to Word", "Word to PDF", "JPG to PDF",
-  "PDF to JPG", "Organize PDF", "Rotate PDF", "Extract PDF Pages", "Delete PDF Pages",
-  "PDF to Text", "Flatten PDF", "OCR PDF", "Reorder PDF Pages", "Reverse PDF",
-  "Remove PDF Metadata", "Add Page Numbers", "Crop PDF", "Resize PDF Pages",
-  "Header and Footer PDF", "Sign PDF", "PDF Form Filler", "Redact PDF",
-  "Edit PDF Metadata", "Add Image / Stamp", "Create Fillable PDF",
-  "Watermark PDF", "Protect PDF", "Unlock PDF",
-];
 
 export default function AboutPage() {
   return (
@@ -141,17 +132,19 @@ export default function AboutPage() {
             </h2>
 
             <p className="mt-4 max-w-3xl leading-7 text-gray-600 dark:text-slate-300">
-              The launch workspace currently includes ten working PDF tools:
+              Explore all {PUBLIC_TOOL_COUNT} currently available browser-based PDF
+              tools. Each tool page explains its supported inputs and limitations:
             </p>
 
             <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-              {currentTools.map((tool) => (
-                <div
-                  key={tool}
-                  className="rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-800 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200"
+              {PUBLIC_TOOL_LIST.map((tool) => (
+                <Link
+                  key={tool.href}
+                  href={tool.href}
+                  className="flex min-h-11 items-center rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-semibold text-gray-800 transition hover:border-blue-300 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-950 dark:text-slate-200 dark:hover:bg-slate-800"
                 >
-                  {tool}
-                </div>
+                  {tool.name}
+                </Link>
               ))}
             </div>
 
@@ -170,8 +163,9 @@ export default function AboutPage() {
 
             <div className="mt-4 space-y-3 leading-7 text-amber-900/80 dark:text-amber-200/80">
               <p>
-                Current tools use a 25 MB file limit, and very large or complex
-                documents can also be limited by the memory available in your browser.
+                Most tools accept PDFs up to 25 MB, while some workflows have
+                additional or different limits listed on their own pages. Very
+                large or complex files may also exceed available browser memory.
               </p>
               <p>
                 PDF-to-Word works best with selectable text rather than scanned pages,

@@ -1,4 +1,5 @@
 import { ImageResponse } from "next/og";
+import { PUBLIC_TOOL_COUNT } from "@/lib/seo/tools";
 
 export const alt = "Kukureku PDF - Free private browser-based PDF tools";
 export const size = {
@@ -89,7 +90,7 @@ export default function OpenGraphImage() {
         </div>
 
         <div style={{ display: "flex", gap: 36, fontSize: 18, color: "#a5f3fc" }}>
-          <span>10 working tools</span>
+          <span>{PUBLIC_TOOL_COUNT} working tools</span>
           <span>Browser-based processing</span>
           <span>No installation</span>
         </div>
