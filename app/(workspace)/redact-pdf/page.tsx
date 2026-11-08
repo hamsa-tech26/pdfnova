@@ -24,11 +24,15 @@ import { Eraser, ShieldCheck, TriangleAlert } from "lucide-react";
 import {
   ChangeEvent,
   PointerEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
 import { PDFDocument } from "pdf-lib";
 import { toast } from "sonner";
+
+import { throwIfPdfOperationCancelled } from "@/lib/pdf/operationCancellation";
+import { validateRedactionInput, validateRedactionSourceImages } from "@/lib/pdf/redactionBudget";
 
 const MAX_FILE_SIZE = 25 * 1024 * 1024;
 
@@ -53,6 +57,9 @@ function pointRatio(event: PointerEvent<HTMLDivElement>, element: HTMLDivElement
 }
 
 export default function RedactPdfPage() {
+  const exportControllerRef = useRef<AbortController | null>(null);
+  const [cancelled, setCancelled] = useState(false);
+  useEffect(() => () => exportControllerRef.current?.abort(), []);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const previewRequestRef = useRef(0);
@@ -75,6 +82,7 @@ export default function RedactPdfPage() {
   const totalRedactions = Object.values(redactions).reduce((sum, rects) => sum + rects.length, 0);
 
   function resetResult() {
+    setCancelled(false);
     setOutputBytes(null);
     setOutputFileName("");
     setErrorMessage("");
@@ -121,7 +129,8 @@ export default function RedactPdfPage() {
     try {
       const pdf = await PDFDocument.load(await selectedFile.arrayBuffer());
       const count = pdf.getPageCount();
-      if (!count) throw new Error("The PDF has no pages.");
+      validateRedactionInput(selectedFile.size, count);
+      validateRedactionSourceImages(pdf);
       setFile(selectedFile);
       setPageCount(count);
       setSelectedPage(1);
@@ -131,9 +140,10 @@ export default function RedactPdfPage() {
       resetResult();
       void renderSelectedPreview(selectedFile, 1);
       toast.success(String(count) + " pages ready for redaction.");
-    } catch {
+    } catch (error) {
       setFile(null);
-      setErrorMessage("Unable to open this PDF. It may be damaged or password-protected.");
+      setErrorMessage(error instanceof Error && error.message.includes("Export was withheld")
+        ? error.message : "Unable to open this PDF. It may be damaged or password-protected.");
     }
   }
 
@@ -255,13 +265,19 @@ export default function RedactPdfPage() {
   }
 
   async function createRedactedPdf() {
-    if (!file || totalRedactions === 0) return;
+    if (!file || totalRedactions === 0 || exportControllerRef.current) return;
+    const controller = new AbortController();
+    exportControllerRef.current = controller;
+    setCancelled(false);
     setIsProcessing(true);
     setErrorMessage("");
     try {
-      const bytes = await createRasterRedactedPdf(file, redactions);
+      const bytes = await createRasterRedactedPdf(file, redactions, {signal: controller.signal});
+      throwIfPdfOperationCancelled(controller.signal);
       const baseName = file.name.replace(/\.pdf$/i, "") || "kukureku";
       const generatedFileName = baseName + "-redacted.pdf";
+      // Commit point: cancellation has been checked and the download starts synchronously.
+      exportControllerRef.current = null;
       downloadFile(bytes, generatedFileName, "application/pdf");
       setOutputBytes(bytes);
       setOutputFileName(generatedFileName);
@@ -277,9 +293,14 @@ export default function RedactPdfPage() {
       );
       toast.success("Redacted PDF created successfully.");
     } catch (error) {
+      if (controller.signal.aborted) {
+        setCancelled(true);
+        return;
+      }
       console.error(error);
       setErrorMessage(error instanceof Error ? error.message : "The PDF could not be redacted.");
     } finally {
+      exportControllerRef.current = null;
       setIsProcessing(false);
     }
   }
@@ -323,9 +344,14 @@ export default function RedactPdfPage() {
         title="Select one PDF"
         description="Choose or drag the PDF you want to redact."
         buttonText="Choose PDF"
-        helperText="PDF · Maximum file size: 25 MB"
+        helperText="PDF · Maximum file size: 25 MB · Up to 100 pages; large images may exceed processing limits"
         disabled={isProcessing}
       />
+
+      {!file && errorMessage && (
+        <ErrorCard title="PDF redaction needs attention" description={errorMessage}
+          onReset={startAgain} resetLabel="Choose Another PDF" />
+      )}
 
       {file && (
         <div className="mt-8 space-y-6">
@@ -425,6 +451,14 @@ export default function RedactPdfPage() {
               </div>
             </section>
           )}
+
+          {isProcessing && (
+            <button type="button" onClick={() => exportControllerRef.current?.abort()}
+              className="min-h-11 rounded-xl border px-4 py-2 font-semibold">
+              Cancel redaction
+            </button>
+          )}
+          {cancelled && <p role="status">Redaction cancelled. No new PDF was downloaded. Your selections are available to retry.</p>}
 
           {!outputBytes && totalRedactions > 0 && !errorMessage && (
             <ActionButton
