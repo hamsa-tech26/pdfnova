@@ -1,0 +1,291 @@
+{
+  "independentCompleteReferenceReview": "MISSING: certification blocker",
+  "cases": [
+    {
+      "source": "background-checks.pdf",
+      "sha256": "4f0ae6e017b0e97de211da8fd97316e55bd927af5740d6ce95e1b7b1539f9407",
+      "default": {
+        "statistics": {
+          "pageCount": 1,
+          "wordCount": 1332,
+          "lineCount": 67,
+          "blockCount": 2,
+          "candidateTableRegionCount": 1,
+          "continuationAdmissionCount": 0,
+          "analyzedTableRegionCount": 1,
+          "confirmedTableRegionCount": 0,
+          "rejectedForInsufficientColumns": 0,
+          "rejectedWithZeroColumns": 0,
+          "rejectedWithOneColumn": 0,
+          "rejectedForNoRows": 0,
+          "rejectedForTableBuildFailure": 0,
+          "rejectedColumnTooFewLines": 0,
+          "rejectedColumnLowSupport": 0,
+          "rejectedColumnUnstableAlignment": 0,
+          "logicalTableCount": 0,
+          "detectedColumnCount": 0,
+          "detectedRowCount": 0,
+          "populatedCellCount": 0
+        },
+        "candidates": [
+          {
+            "score": 47.877658540045715,
+            "isTable": false,
+            "outcome": "pending",
+            "columns": null,
+            "lines": 66
+          }
+        ],
+        "tables": [],
+        "quality": {
+          "accepted": false,
+          "reason": "No reliable selectable-text table was detected. No empty XLSX was created."
+        },
+        "downloads": []
+      },
+      "nonShippedPossibleTableExperiment": {
+        "tables": [
+          {
+            "rows": 1,
+            "columns": 23,
+            "bounds": {
+              "x": 43.2,
+              "y": 65.784,
+              "width": 930.5625599999998,
+              "height": 504.456
+            }
+          }
+        ],
+        "quality": {
+          "accepted": false,
+          "reason": "One or more tables have uncertain row or column structure. Export was withheld to prevent misleading XLSX data."
+        },
+        "rowReasons": [
+          [
+            "Merged as wrapped or continuation content."
+          ]
+        ]
+      }
+    },
+    {
+      "source": "ag-energy-round-up-2017-02-24.pdf",
+      "sha256": "4b9774416291f79421a85fac7ecbb8bf2bc625df9a7207d9dcd3ba845f3146fb",
+      "default": {
+        "statistics": {
+          "pageCount": 1,
+          "wordCount": 362,
+          "lineCount": 77,
+          "blockCount": 1,
+          "candidateTableRegionCount": 1,
+          "continuationAdmissionCount": 0,
+          "analyzedTableRegionCount": 1,
+          "confirmedTableRegionCount": 1,
+          "rejectedForInsufficientColumns": 0,
+          "rejectedWithZeroColumns": 0,
+          "rejectedWithOneColumn": 0,
+          "rejectedForNoRows": 0,
+          "rejectedForTableBuildFailure": 0,
+          "rejectedColumnTooFewLines": 0,
+          "rejectedColumnLowSupport": 0,
+          "rejectedColumnUnstableAlignment": 0,
+          "logicalTableCount": 1,
+          "detectedColumnCount": 8,
+          "detectedRowCount": 1,
+          "populatedCellCount": 8
+        },
+        "candidates": [
+          {
+            "score": 60,
+            "isTable": true,
+            "outcome": "confirmed",
+            "columns": 8,
+            "lines": 17
+          }
+        ],
+        "tables": [
+          {
+            "rows": 1,
+            "columns": 8,
+            "bounds": {
+              "x": 16.92,
+              "y": 445.18,
+              "width": 758.0101599999999,
+              "height": 147.26000000000005
+            }
+          }
+        ],
+        "quality": {
+          "accepted": false,
+          "reason": "One or more tables have uncertain row or column structure. Export was withheld to prevent misleading XLSX data."
+        },
+        "downloads": []
+      },
+      "nonShippedPossibleTableExperiment": {
+        "tables": [
+          {
+            "rows": 1,
+            "columns": 8,
+            "bounds": {
+              "x": 16.92,
+              "y": 445.18,
+              "width": 758.0101599999999,
+              "height": 147.26000000000005
+            }
+          }
+        ],
+        "quality": {
+          "accepted": false,
+          "reason": "One or more tables have uncertain row or column structure. Export was withheld to prevent misleading XLSX data."
+        },
+        "rowReasons": [
+          [
+            "Merged as wrapped or continuation content."
+          ]
+        ]
+      }
+    },
+    {
+      "source": "issue-140-example.pdf",
+      "sha256": "0b5accf5702d12b9a58eba9f4d11295c9e268c8c6333b4cd4ac07e46768b023b",
+      "default": {
+        "statistics": {
+          "pageCount": 1,
+          "wordCount": 62,
+          "lineCount": 27,
+          "blockCount": 13,
+          "candidateTableRegionCount": 1,
+          "continuationAdmissionCount": 0,
+          "analyzedTableRegionCount": 1,
+          "confirmedTableRegionCount": 0,
+          "rejectedForInsufficientColumns": 0,
+          "rejectedWithZeroColumns": 0,
+          "rejectedWithOneColumn": 0,
+          "rejectedForNoRows": 0,
+          "rejectedForTableBuildFailure": 0,
+          "rejectedColumnTooFewLines": 0,
+          "rejectedColumnLowSupport": 0,
+          "rejectedColumnUnstableAlignment": 0,
+          "logicalTableCount": 0,
+          "detectedColumnCount": 0,
+          "detectedRowCount": 0,
+          "populatedCellCount": 0
+        },
+        "candidates": [
+          {
+            "score": 49.64984133429617,
+            "isTable": false,
+            "outcome": "pending",
+            "columns": null,
+            "lines": 11
+          }
+        ],
+        "tables": [],
+        "quality": {
+          "accepted": false,
+          "reason": "No reliable selectable-text table was detected. No empty XLSX was created."
+        },
+        "downloads": []
+      },
+      "nonShippedPossibleTableExperiment": {
+        "tables": [
+          {
+            "rows": 2,
+            "columns": 5,
+            "bounds": {
+              "x": 43.639999999999986,
+              "y": 303.93,
+              "width": 286.13,
+              "height": 227.71999999999997
+            }
+          }
+        ],
+        "quality": {
+          "accepted": true,
+          "tables": [
+            {
+              "rows": 2,
+              "columns": 5
+            }
+          ]
+        },
+        "rowReasons": [
+          [
+            "Merged as wrapped or continuation content.",
+            "Started a new logical row."
+          ]
+        ]
+      }
+    },
+    {
+      "source": "foo.pdf",
+      "sha256": "7d6c24e45b38375e322419281cee1335ddb97e00fc86abe9f22afcd8b42e6d82",
+      "default": {
+        "statistics": {
+          "pageCount": 1,
+          "wordCount": 89,
+          "lineCount": 41,
+          "blockCount": 1,
+          "candidateTableRegionCount": 1,
+          "continuationAdmissionCount": 0,
+          "analyzedTableRegionCount": 1,
+          "confirmedTableRegionCount": 0,
+          "rejectedForInsufficientColumns": 0,
+          "rejectedWithZeroColumns": 0,
+          "rejectedWithOneColumn": 0,
+          "rejectedForNoRows": 0,
+          "rejectedForTableBuildFailure": 0,
+          "rejectedColumnTooFewLines": 0,
+          "rejectedColumnLowSupport": 0,
+          "rejectedColumnUnstableAlignment": 0,
+          "logicalTableCount": 0,
+          "detectedColumnCount": 0,
+          "detectedRowCount": 0,
+          "populatedCellCount": 0
+        },
+        "candidates": [
+          {
+            "score": 54.39221120680793,
+            "isTable": false,
+            "outcome": "pending",
+            "columns": null,
+            "lines": 41
+          }
+        ],
+        "tables": [],
+        "quality": {
+          "accepted": false,
+          "reason": "No reliable selectable-text table was detected. No empty XLSX was created."
+        },
+        "downloads": []
+      },
+      "nonShippedPossibleTableExperiment": {
+        "tables": [
+          {
+            "rows": 6,
+            "columns": 9,
+            "bounds": {
+              "x": 71.99545999999992,
+              "y": 52.5602,
+              "width": 465.48419000000007,
+              "height": 668.4599999999999
+            }
+          }
+        ],
+        "quality": {
+          "accepted": false,
+          "reason": "Overlapping table cells suggest ambiguous layout or merged cells; XLSX export was withheld."
+        },
+        "rowReasons": [
+          [
+            "Started a new logical row.",
+            "Started a new logical row.",
+            "Started a new logical row.",
+            "Started a new logical row.",
+            "Started a new logical row.",
+            "Started a new logical row."
+          ]
+        ]
+      }
+    }
+  ]
+}
