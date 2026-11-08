@@ -32,14 +32,27 @@ function checkHref(html, href) {
   return tags.some(tag => attribute(tag, "href") === href);
 }
 
-export function summarizePublicPage(pathname, html, sitemapPaths, listedRoutes) {
+function googleIndexingDirectives(html, xRobotsTag = "") {
+  // Google honors both the generic robots tag and its googlebot-specific tag,
+  // including tags placed in the document body. Response headers can also
+  // block indexing, even when the HTML metadata looks valid.
+  const tags = html.match(/<meta\b[^>]*>/gi) ?? [];
+  const metaDirectives = tags
+    .filter(tag => ["robots", "googlebot"].includes(
+      attribute(tag, "name").toLowerCase()))
+    .map(tag => attribute(tag, "content"));
+  return [...metaDirectives, xRobotsTag].join(", ");
+}
+
+export function summarizePublicPage(pathname, html, sitemapPaths, listedRoutes,
+  xRobotsTag = "") {
   const head = html.split(/<\/head\s*>/i)[0] ?? "";
   const title = /<title\b[^>]*>([^<]*)<\/title>/i.exec(head)?.[1]?.trim() ?? "";
   const descriptionTag = findHeadTag(head, "meta", "name", "description");
   const description = attribute(descriptionTag, "content").trim();
   const canonicalTag = findHeadTag(head, "link", "rel", "canonical");
   const canonical = attribute(canonicalTag, "href");
-  const robots = attribute(findHeadTag(head, "meta", "name", "robots"), "content");
+  const robots = googleIndexingDirectives(html, xRobotsTag);
   const expectedCanonical = ORIGIN + (pathname === "/" ? "" : pathname);
   const checks = {
     title: title.length >= 10,
@@ -117,7 +130,8 @@ async function fetchPublic(pathname, fetchImpl, retryDelayMs) {
         lastError = "HTML_SIZE_LIMIT";
         break;
       }
-      return {ok: true, body};
+      return {ok: true, body,
+        xRobotsTag: response.headers.get("x-robots-tag") ?? ""};
     } catch {
       lastError = "NETWORK_FAILURE";
       if (attempt < MAX_ATTEMPTS) {
@@ -146,10 +160,9 @@ export async function runSearchReadinessAudit({
 
   const sitemap = responses.get("/sitemap.xml");
   const robots = responses.get("/robots.txt");
-  const sitemapPaths = new Set(
-    sitemap?.ok ?
-      [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]) : [],
-  );
+  const sitemapEntries = sitemap?.ok ?
+    [...sitemap.body.matchAll(/<loc>([^<]+)<\/loc>/g)].map(m => m[1]) : [];
+  const sitemapPaths = new Set(sitemapEntries);
   const listedRoutes = new Set(PUBLIC_ROUTES);
   const pages = paths.map(route => {
     const response = responses.get(route);
@@ -157,7 +170,8 @@ export async function runSearchReadinessAudit({
       return {path: route, result: "NOT_VERIFIED",
         reason: response?.error ?? "NOT_FETCHED"};
     }
-    return summarizePublicPage(route, response.body, sitemapPaths, listedRoutes);
+    return summarizePublicPage(route, response.body, sitemapPaths, listedRoutes,
+      response.xRobotsTag);
   });
   const homepage = responses.get("/");
   const guides = responses.get("/guides");
@@ -172,6 +186,7 @@ export async function runSearchReadinessAudit({
       !/^disallow:\s*\/\s*$/im.test(robots.body)),
     sitemapCoverage: paths.every(route =>
       sitemapPaths.has(ORIGIN + (route === "/" ? "" : route))),
+    sitemapUnique: sitemapEntries.length === sitemapPaths.size,
     sitemapNoExtraneousUrls: sitemapPaths.size === paths.length,
     routeListCoverage: paths.every(route => listedRoutes.has(route)),
     homepageToolLinks: links.homepageToolLinks.found === links.homepageToolLinks.expected,

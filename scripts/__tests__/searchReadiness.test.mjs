@@ -79,6 +79,61 @@ describe("technical search readiness (not indexing evidence)", () => {
     expect(result.checks.singleH1).toBe(false);
   });
 
+  it("detects Googlebot-specific noindex tags, including those in the body", () => {
+    const route = "/merge-pdf";
+    const page = html(route).replace("</body>",
+      '<meta name="googlebot" content="noindex, follow"></body>');
+    const result = summarizePublicPage(route, page,
+      new Set(["https://kukureku.com/merge-pdf"]), new Set([route]));
+    expect(result.checks.indexable).toBe(false);
+    expect(result.result).toBe("REGRESSION");
+    expect(summarizePublicPage(route, html(route),
+      new Set(["https://kukureku.com/merge-pdf"]), new Set([route]),
+      "googlebot: noindex").checks.indexable).toBe(false);
+  });
+
+  it("rejects duplicate sitemap URLs even when every route is present", async () => {
+    const site = "https://kukureku.com";
+    const fetchImpl = async input => {
+      const pathname = new URL(input).pathname;
+      const body = pathname === "/sitemap.xml" ?
+        `<urlset><url><loc>${site}</loc></url><url><loc>${site}</loc></url></urlset>` :
+        pathname === "/robots.txt" ?
+          `User-agent: *\nAllow: /\nSitemap: ${site}/sitemap.xml` : html("/");
+      return new Response(body, {status: 200, headers: {
+        "content-type": pathname === "/sitemap.xml" ? "application/xml" :
+          pathname === "/robots.txt" ? "text/plain" : "text/html",
+      }});
+    };
+    const report = await runSearchReadinessAudit({
+      fetchImpl, routes: ["/"], retryDelayMs: 0,
+    });
+    expect(report.counts).toEqual({total: 1, passed: 1, failed: 0});
+    expect(report.discovery.sitemapUnique).toBe(false);
+    expect(report.result).toBe("READINESS_NOT_VERIFIED");
+  });
+
+  it("passes response X-Robots-Tag restrictions into page verification", async () => {
+    const route = "/merge-pdf";
+    const fetchImpl = async input => {
+      const pathname = new URL(input).pathname;
+      const isPage = pathname === route;
+      const body = isPage ? html(route) : pathname === "/robots.txt" ?
+        "User-agent: *\nAllow: /\nSitemap: https://kukureku.com/sitemap.xml" :
+        `<urlset><url><loc>https://kukureku.com${route}</loc></url></urlset>`;
+      return new Response(body, {status: 200, headers: {
+        "content-type": isPage ? "text/html" : pathname === "/robots.txt" ?
+          "text/plain" : "application/xml",
+        ...(isPage ? {"x-robots-tag": "googlebot: noindex"} : {}),
+      }});
+    };
+    const report = await runSearchReadinessAudit({
+      fetchImpl, routes: [route], retryDelayMs: 0,
+    });
+    expect(report.pages[0].checks.indexable).toBe(false);
+    expect(report.result).toBe("READINESS_NOT_VERIFIED");
+  });
+
   it("catches missing discoverable links in public navigation", () => {
     const links = summarizeDiscoveryLinks(
       '<a href="/merge-pdf">Merge</a>',
