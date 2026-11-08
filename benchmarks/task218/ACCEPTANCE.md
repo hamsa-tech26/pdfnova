@@ -11,7 +11,7 @@ The `R123 public opt-in image OCR` browser test reached the optional embedded-im
 - Stage the exact lockfile-installed Tesseract.js worker, three LSTM WASM variants, English trained-data archive and accompanying licenses in `/ocr-runtime/` before development or production builds. Fail the build if an expected asset is missing or empty.
 - Fail the build if those ten runtime and license files exceed a reviewed **25 MiB** aggregate size budget; a dependency upgrade must undergo a fresh transfer-cost review rather than silently increasing CDN usage.
 - Use `createLocalEnglishOcrWorker` for all four existing PDF V4 OCR worker call sites, with same-origin worker/core/language paths and `workerBlobURL: false`.
-- Include one pinned MIT-licensed English data package (`@tesseract.js-data/eng@1.0.0`). Generated binaries are excluded from Git, not from the final website build.
+- Include one pinned English data package (`@tesseract.js-data/eng@1.0.0`). Its installed `package.json` declares MIT, but the linked [upstream data repository](https://github.com/naptha/tessdata/blob/gh-pages/LICENSE) displays Apache-2.0 and the installed package does not contain a standalone license file. The exact model redistribution notice must be independently resolved before deployment. Generated binaries are excluded from Git, not from the final website build.
 - Test that every required static asset is accessible and that the real OCR-to-Excel browser flow requests no external OCR worker/model/WASM URLs.
 - Keep optional image OCR, unverified table suggestions, manual cell correction, preview and explicit approval separate from automatic native-table export. No quality threshold or unsupported scan refusal was weakened.
 - Disable Vercel branch deployments for `fix/task218-same-origin-ocr`.
@@ -38,7 +38,7 @@ The same PDF-to-Excel R123 test that timed out on the previous baseline complete
 
 1. Hosted exact-head Validate, Browser Reliability, PDF-to-Excel source/roundtrip and production build must pass. Do not count a skipped source-pin test as a pass.
 2. Same-origin models increase static build output by about 23 MB. Review transfer/bandwidth impact before deployment; no paid resource changes in this task.
-3. English only. Hindi/Bengali accuracy and real-world recognition remain unmeasured. The model license is included, but broader intellectual-property and independent security reviews are not claimed.
+3. English only. Hindi/Bengali accuracy and real-world recognition remain unmeasured. Apache-2.0 notices for Tesseract.js and its core are staged. **English trained-data license provenance is unresolved** (package MIT metadata versus upstream Apache-2.0), and the language-data notice is not yet staged. Verify its applicable terms and notice requirements before release; broader intellectual-property and independent security reviews are not claimed.
 4. Formal Engine V4 Stable remains **BLOCKED 0/20** independently accepted documents. Source-recovery PR #152 and paused GSC OAuth Release 216 are not part of this branch.
 5. No user PDF or credential was uploaded to any new service. Tests use generated synthetic data only.
 
