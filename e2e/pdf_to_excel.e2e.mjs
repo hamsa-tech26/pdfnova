@@ -398,6 +398,13 @@ test("native numbered 8-column guide reconstructs 87 fictional rows over three p
 
 test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe XLSX",async({page})=>{
   test.setTimeout(300000);
+  const unexpectedOcrUrls=[];
+  page.on("request",request=>{
+    const url=request.url();
+    if(/(?:tesseract|traineddata|\.wasm|cdn\.jsdelivr|unpkg)/i.test(url)
+      && !url.startsWith("http://127.0.0.1:3000/"))
+      unexpectedOcrUrls.push(url);
+  });
   await page.goto("/pdf-to-excel");
   // Independent browser-rendered source bitmap: real embedded raster table
   // inside a page also containing enough selectable native explanatory text.
@@ -435,6 +442,7 @@ test("R123 public opt-in image OCR: explicit reviewed rows produce separate safe
   await expect(page.getByRole("heading",{name:"Optional embedded-image to Excel review"})).toBeVisible({timeout:90000});
   await page.getByRole("button",{name:"Run image OCR on selected page"}).click();
   await expect(page.getByLabel(/Your corrected table/)).toBeVisible({timeout:180000});
+  expect(unexpectedOcrUrls,"OCR runtime assets must load only from Kukureku").toEqual([]);
   // R127: OCR table proposal is strictly optional. If the renderer/recognizer
   // produces stable row/column geometry, prefilling must NEVER preview,
   // confirm or download by itself. On irregular images show refusal instead.
