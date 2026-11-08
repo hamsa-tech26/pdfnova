@@ -9,6 +9,7 @@ The `R123 public opt-in image OCR` browser test reached the optional embedded-im
 ## Scoped remedy
 
 - Stage the exact lockfile-installed Tesseract.js worker, three LSTM WASM variants, English trained-data archive and accompanying licenses in `/ocr-runtime/` before development or production builds. Fail the build if an expected asset is missing or empty.
+- Fail the build if those ten runtime and license files exceed a reviewed **25 MiB** aggregate size budget; a dependency upgrade must undergo a fresh transfer-cost review rather than silently increasing CDN usage.
 - Use `createLocalEnglishOcrWorker` for all four existing PDF V4 OCR worker call sites, with same-origin worker/core/language paths and `workerBlobURL: false`.
 - Include one pinned MIT-licensed English data package (`@tesseract.js-data/eng@1.0.0`). Generated binaries are excluded from Git, not from the final website build.
 - Test that every required static asset is accessible and that the real OCR-to-Excel browser flow requests no external OCR worker/model/WASM URLs.
@@ -19,7 +20,7 @@ The `R123 public opt-in image OCR` browser test reached the optional embedded-im
 
 | Check | Result | Boundary |
 | --- | --- | --- |
-| Same-origin model staging | **PASS** | Ten files, about 23 MB combined |
+| Same-origin model staging | **PASS** | Ten files, 22.26 MiB of OCR binary/model assets, within 25 MiB guard |
 | Local worker unit test | **1/1 PASS** | Option paths and blob-worker prohibition |
 | Playwright same-origin asset availability | **1/1 PASS** | Worker, English language archive and selected WASM variants |
 | Playwright image OCR → reviewed XLSX | **1/1 PASS** | Synthetic hybrid PDF; no external OCR runtime requests; manual review and explicit export |
