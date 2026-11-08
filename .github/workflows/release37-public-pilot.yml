@@ -20,6 +20,8 @@ on:
       - "e2e/redaction-public.pilot.mjs"
       - "e2e/helpers/redactionRaster.mjs"
       - "scripts/checkRedactionRasterFidelity.py"
+      - "scripts/checkRedactionOutputPoppler.mjs"
+      - "scripts/__tests__/redactionPoppler.nodecheck.mjs"
       # Any OCR/table detection/export change must rerun actual publisher PDFs.
       - "lib/pdf-engine-v4/ocr/**"
       - "lib/pdf-engine-v4/analysis/**"
@@ -57,6 +59,10 @@ jobs:
         run: python -m pip install --disable-pip-version-check openpyxl==3.1.5
       - name: Install independent redaction raster reader
         run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - name: Install independent Poppler output parser for redaction verification
+        run: sudo apt-get update -qq && sudo apt-get install -y --no-install-recommends poppler-utils
+      - name: Test the independent Poppler verifier against positive and negative synthetic PDFs
+        run: node --test scripts/__tests__/redactionPoppler.nodecheck.mjs
       - run: npm install --no-save @playwright/test@1.56.1
       - run: npx playwright install --with-deps chromium
 

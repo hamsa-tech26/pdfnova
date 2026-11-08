@@ -1,6 +1,7 @@
 import {expect} from "@playwright/test";
 import {writeFile} from "node:fs/promises";
 import {spawnSync} from "node:child_process";
+import {verifyRedactionWithPoppler} from "../../scripts/checkRedactionOutputPoppler.mjs";
 
 export async function verifyRasterDownload({page, bytes, masks, download, testInfo}) {
   // Test-only local routes expose the unmodified PDF.js renderer, never an app API.
@@ -55,5 +56,8 @@ export async function verifyRasterDownload({page, bytes, masks, download, testIn
   expect(result).toMatchObject({status: "PASS", pages: masks.length, mismatchedPixels: 0});
   expect(result.selectedPixels).toBeGreaterThan(0);
   console.log("REDACTION_RASTER_FIDELITY " + JSON.stringify(result));
+  const secondReader = verifyRedactionWithPoppler(outputPath, masks.length);
+  expect(secondReader).toMatchObject({status: "PASS", pages: masks.length, images: masks.length});
+  console.log("REDACTION_POPPLER_SECOND_READER " + JSON.stringify(secondReader));
   return result;
 }
