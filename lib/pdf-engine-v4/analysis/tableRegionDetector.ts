@@ -6,6 +6,7 @@ import {findNativeCaptionHeaderScientificGrids} from "./nativeScientificCaptionH
 import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
+import {findCaptionedNativeFourColumnGrids} from "./captionedNativeFourColumnGrid";
 import type {
   PdfLine,
   PdfVisualBlock,
@@ -1493,7 +1494,15 @@ export function detectTableRegionsForPage(
   };
 
   const splitNativeBlocks = splitParallelScientificTables(blocks);
-  const crossBlockCandidates = createCrossBlockCandidates(splitNativeBlocks);
+  const captionedFourGrids=findCaptionedNativeFourColumnGrids(splitNativeBlocks);
+  const captionedFourRows=new Set(captionedFourGrids.flatMap(grid=>
+    grid.block.lines));
+  // An earlier broad cross-block run may swallow two independently anchored
+  // tables; once their source rows are recovered, never offer that merged run
+  // as a competing possible/confirmed region.
+  const crossBlockCandidates = createCrossBlockCandidates(splitNativeBlocks)
+    .filter(block=>block.type!=="paragraph"||
+      !block.lines.some(line=>captionedFourRows.has(line)));
   const ocrCrossBlockCandidates = createOcrCrossBlockCandidates(splitNativeBlocks);
 
   // Never discard a source paragraph merely because it contains a caption.
@@ -1659,20 +1668,31 @@ export function detectTableRegionsForPage(
 
   const candidateBlocks = [
     ...splitBlocks,
+    ...captionedFourGrids.map(grid=>grid.block),
     ...crossBlockCandidates,
     ...ocrCrossBlockCandidates,
   ];
+  const captionedFourAnalyses=new Map<PdfVisualBlock,TableRegionAnalysis>(
+    captionedFourGrids.map(grid=>{
+      const analysis=analyzeBlock(grid.block,resolvedOptions);
+      return [grid.block,{
+        ...analysis,isTable:true,
+        totalScore:Math.max(resolvedOptions.tableThreshold,analysis.totalScore),
+      }] as const;
+    }),
+  );
   const regions = candidateBlocks.map(block => ({
     block,
-    analysis: block.id.startsWith("parallel-native-prose-")
+    analysis: captionedFourAnalyses.get(block) ?? (
+      block.id.startsWith("parallel-native-prose-")
       ? createZeroAnalysis()
       : block.id.startsWith("native-two-col-grid-")
         ? {...analyzeBlock(block,resolvedOptions),isTable:true,
             totalScore:Math.max(resolvedOptions.tableThreshold,
               analyzeBlock(block,resolvedOptions).totalScore)}
     : proseFragments.has(block)
-      ? createZeroAnalysis() // never reclassify a retained prose fragment as a table
-      : captionAnalyses.get(block) ?? analyzeBlock(block, resolvedOptions),
+      ? createZeroAnalysis()
+      : captionAnalyses.get(block) ?? analyzeBlock(block,resolvedOptions)),
   }));
 
   const scoredTableRegions = regions.filter(region =>
