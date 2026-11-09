@@ -1,3 +1,5 @@
+import { readPdfJsNativeTextContent } from "../../pdf-engine-v4/reader/pdfJsTextContentCompat";
+
 export type PdfPageContentSignal = {
   pageNumber: number;
   text: string;
@@ -291,7 +293,7 @@ export async function createPdfContentSignal(
           pageNumber,
         );
       const content =
-        await page.getTextContent();
+        await readPdfJsNativeTextContent(page);
       const fragments: string[] =
         [];
 
