@@ -6,6 +6,9 @@
 const norm = value => String(value ?? "").normalize("NFKC").trim().replace(/\s+/gu," ").toLowerCase();
 const percent = (ok,total) => total ? 100*ok/total : null;
 const key = (t,r,c) => t+":"+r+":"+c;
+// Real reviewed references include the original PDF page. A table with an
+// identical grid on a different page must not receive false cell credit.
+const sourceCellKey = (t,page,r,c) => t+":"+(page??"unlisted")+":"+r+":"+c;
 
 function assertIndex(n,label) {
   if (!Number.isSafeInteger(n) || n < 0 || n > 10000) throw new Error("Invalid "+label+": "+n);
@@ -15,6 +18,7 @@ const MAX_REFERENCE_SLOTS = 100_000;
 function expectedTables(reference) {
   if (!Array.isArray(reference?.tables)) throw new Error("Reference must have tables[]");
   return reference.tables.map((table,t) => {
+    if (table.pageNumber!==undefined) assertIndex(table.pageNumber,"reference pageNumber");
     assertIndex(table.rowCount,"reference rowCount");
     assertIndex(table.columnCount,"reference columnCount");
     if (!Array.isArray(table.cells)) throw new Error("Reference table "+t+" needs cells[]");
@@ -48,12 +52,13 @@ function expectedTables(reference) {
     if (slots.size !== table.rowCount * table.columnCount) {
       throw new Error("Incomplete reference: every table slot must have a reviewed cell, including blanks");
     }
-    return {rowCount:table.rowCount,columnCount:table.columnCount,cells};
+    return {pageNumber:table.pageNumber??null,rowCount:table.rowCount,columnCount:table.columnCount,cells};
   });
 }
 function observedTables(observed) {
   if (!Array.isArray(observed?.tables)) throw new Error("Observed actual V4 Inspector JSON must have tables[]");
   return observed.tables.map((table,t)=>{
+    if (table.pageNumber!==undefined) assertIndex(table.pageNumber,"observed pageNumber");
     if(!Array.isArray(table?.rows))throw new Error("Observed table missing rows[]");
     assertIndex(table.columnCount,"observed columnCount");
     const cells=new Map();
@@ -82,14 +87,16 @@ function observedTables(observed) {
         cells.set(id,{text:norm(cell.text),rowSpan,columnSpan,rowIndex,columnIndex,tableIndex:t});
       }
     });
-    return {rowCount:table.rows.length,columnCount:table.columnCount,cells,duplicates,malformed};
+    return {pageNumber:table.pageNumber??null,rowCount:table.rows.length,columnCount:table.columnCount,cells,duplicates,malformed};
   });
 }
 export function scoreRelease37Case(reference,observed){
   const expected=expectedTables(reference),actual=observedTables(observed);
   const expectedCellMap=new Map(),actualCellMap=new Map();
-  expected.forEach(x=>x.cells.forEach((v,k)=>expectedCellMap.set(k,v)));
-  actual.forEach(x=>x.cells.forEach((v,k)=>actualCellMap.set(k,v)));
+  expected.forEach((x,t)=>x.cells.forEach(v=>
+    expectedCellMap.set(sourceCellKey(t,x.pageNumber,v.rowIndex,v.columnIndex),v)));
+  actual.forEach((x,t)=>x.cells.forEach(v=>
+    actualCellMap.set(sourceCellKey(t,x.pageNumber,v.rowIndex,v.columnIndex),v)));
   const additional=[...actualCellMap.keys()].filter(k=>!expectedCellMap.has(k)).length+
     actual.reduce((n,t)=>n+t.duplicates+t.malformed,0);
   let textCorrect=0,geometryCorrect=0;
@@ -107,7 +114,7 @@ export function scoreRelease37Case(reference,observed){
     if(!e){extraRows+=a?.rowCount??0;continue;}
     if(a&&a.rowCount>e.rowCount)extraRows+=a.rowCount-e.rowCount;
     for(let r=0;r<e.rowCount;r++){
-      if(!a||r>=a.rowCount)continue;
+    if(!a||a.pageNumber!==e.pageNumber||r>=a.rowCount)continue;
       // Count row correctness only when every occupying source cell, including
       // cells anchored in a previous row by rowSpan, is represented faithfully.
       const expectedRow=[...e.cells.values()].filter(c=>c.rowIndex<=r && c.rowIndex+c.rowSpan>r);
@@ -120,7 +127,8 @@ export function scoreRelease37Case(reference,observed){
   }
   let tableGeometryCorrect=0;
   for(let t=0;t<expected.length;t++){
-    if(actual[t]?.rowCount===expected[t].rowCount&&
+    if(actual[t]?.pageNumber===expected[t].pageNumber&&
+       actual[t]?.rowCount===expected[t].rowCount&&
        actual[t]?.columnCount===expected[t].columnCount) tableGeometryCorrect++;
   }
   const extras=additional+Math.max(actual.length-expected.length,0);

@@ -35,6 +35,29 @@ export function validateRelease37Entry(entry) {
   }
   return errors;
 }
+/**
+ * Reject a pilot excerpt, partial run, or shuffled page model presented as
+ * the Inspector result of the complete original PDF. This is a coverage
+ * consistency check, NOT cryptographic proof that the Inspector was run on
+ * those bytes; source-first provenance still requires independent audit.
+ */
+export function validateRelease37InspectorPageCoverage(result,originalPageCount){
+  const pages=result?.document?.pages;
+  if(!Number.isSafeInteger(originalPageCount)||originalPageCount<1||
+     !Array.isArray(pages)||pages.length!==originalPageCount)
+    return ["Inspector page count differs from complete original PDF; partial excerpts cannot be scored"];
+  const errors=[];
+  if(pages.some((page,index)=>page?.pageNumber!==index+1))
+    errors.push("Inspector pages must cover every original page exactly once in source order");
+  if(result?.statistics?.pageCount!==undefined&&
+     result.statistics.pageCount!==originalPageCount)
+    errors.push("Inspector reported page count differs from original PDF");
+  if(!Array.isArray(result?.tables)||result.tables.some(table=>
+       !Number.isSafeInteger(table?.pageNumber)||
+       table.pageNumber<1||table.pageNumber>originalPageCount))
+    errors.push("Inspector tables must retain valid original PDF page numbers");
+  return errors;
+}
 async function readPrivateFile(filename,allowedExt){
   if(typeof filename!=="string")throw new Error("File path missing.");
   const candidate=path.resolve(filename);
@@ -139,6 +162,8 @@ export async function collectRelease37Corpus(manifest){
     // Requiring a full Inspector result discourages fabricated CSV-only metrics.
     if(!Array.isArray(result.document?.pages)||!Array.isArray(result.tables)||
        !result.processingTimes || !result.ocrDecision)throw new Error(entry.id+": incomplete V4 Inspector output");
+    const pageErrors=validateRelease37InspectorPageCoverage(result,originalPageCount);
+    if(pageErrors.length)throw new Error(entry.id+": "+pageErrors.join("; "));
     const score=scoreRelease37Case(gold,result);
     records.push({
       id:entry.id,usageRights:entry.usageRights,rightsUrl:entry.rightsUrl,sourceUrl:entry.sourceUrl,

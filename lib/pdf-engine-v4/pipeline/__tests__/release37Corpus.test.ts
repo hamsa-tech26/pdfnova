@@ -1,5 +1,5 @@
 import {describe,it,expect} from "vitest";
-import {validateRelease37Entry,buildRelease37CorpusReport} from "../../../../scripts/collectRelease37Corpus.mjs";
+import {validateRelease37Entry,validateRelease37InspectorPageCoverage,buildRelease37CorpusReport} from "../../../../scripts/collectRelease37Corpus.mjs";
 
 const entry=()=>({
  id:"usgs-001",origin:"real-world",usageRights:"public-domain",rightsUrl:"https://pubs.usgs.gov/documentation/faq",
@@ -50,5 +50,16 @@ describe("Release 37 rights-checked local-only real corpus intake",()=>{
   const r=buildRelease37CorpusReport([]);
   expect(r.corpus.documents).toHaveLength(0);
   expect((r.metrics as Record<string, { status: string; cellPct: number | null; actualOcrAttempted: boolean }>).native.status).toBe("NOT_VERIFIED");
+ });
+ it("rejects excerpt and shuffled Inspector runs for a complete reviewed PDF",()=>{
+  const original={document:{pages:[{pageNumber:1},{pageNumber:2},{pageNumber:3}]},
+    tables:[{pageNumber:2}],statistics:{pageCount:3}};
+  expect(validateRelease37InspectorPageCoverage(original,3)).toEqual([]);
+  expect(validateRelease37InspectorPageCoverage({...original,document:{pages:original.document.pages.slice(0,2)}},3))
+    .toContain("Inspector page count differs from complete original PDF; partial excerpts cannot be scored");
+  expect(validateRelease37InspectorPageCoverage({...original,document:{pages:[{pageNumber:1},{pageNumber:3},{pageNumber:2}]}},3))
+    .toContain("Inspector pages must cover every original page exactly once in source order");
+  expect(validateRelease37InspectorPageCoverage({...original,tables:[{pageNumber:4}]},3))
+    .toContain("Inspector tables must retain valid original PDF page numbers");
  });
 });
