@@ -58,6 +58,22 @@ export function validateRelease37InspectorPageCoverage(result,originalPageCount)
     errors.push("Inspector tables must retain valid original PDF page numbers");
   return errors;
 }
+/**
+ * SHA-256 of the exact browser File object retained until the Inspector JSON
+ * was downloaded. This prevents accidentally pairing an export with a
+ * different PDF, but is not a tamper-proof/human-attested chain of custody.
+ */
+export function validateRelease37InspectorSourceIdentity(result,originalPdfSha256,originalPdfByteLength){
+  const proof=result?.sourceIdentity;
+  if(proof?.schema!=="kukureku-v4-browser-original-source-v1"||
+     proof?.algorithm!=="SHA-256"||
+     proof?.provenance!=="INSPECTOR_FILE_OBJECT_AT_JSON_EXPORT"||
+     !/^[a-f0-9]{64}$/.test(String(proof?.sha256??""))||
+     proof.sha256!==originalPdfSha256.toLowerCase()||
+     proof.fileSizeBytes!==originalPdfByteLength)
+    return ["Inspector JSON original-file SHA-256/size fingerprint missing or mismatched"];
+  return [];
+}
 async function readPrivateFile(filename,allowedExt){
   if(typeof filename!=="string")throw new Error("File path missing.");
   const candidate=path.resolve(filename);
@@ -164,6 +180,8 @@ export async function collectRelease37Corpus(manifest){
        !result.processingTimes || !result.ocrDecision)throw new Error(entry.id+": incomplete V4 Inspector output");
     const pageErrors=validateRelease37InspectorPageCoverage(result,originalPageCount);
     if(pageErrors.length)throw new Error(entry.id+": "+pageErrors.join("; "));
+    const sourceErrors=validateRelease37InspectorSourceIdentity(result,pdfSha,pdf.length);
+    if(sourceErrors.length)throw new Error(entry.id+": "+sourceErrors.join("; "));
     const score=scoreRelease37Case(gold,result);
     records.push({
       id:entry.id,usageRights:entry.usageRights,rightsUrl:entry.rightsUrl,sourceUrl:entry.sourceUrl,
