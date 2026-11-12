@@ -32,6 +32,7 @@ import {detectParallelNativeColumns} from "../analysis/parallelScientificTableRe
 import {detectNativeElevenColumns} from "../analysis/nativeElevenColumnGrid";
 import {detectInterleavedNativeThreeColumns} from "../analysis/interleavedNativeThreeColumnGrid";
 import {findNativeScientificTableFootnoteBounds} from "../analysis/nativeScientificCaptionHeaderGrid";
+import {restoreCaptionedFourColumnHeader} from "../analysis/captionedNativeFourColumnGrid";
 import {recoverSparseLeftNativeCaptionColumn} from "../analysis/scopedDenseCaptionGridRecovery";
 import {
   detectAdaptiveRowsV4,
@@ -1697,7 +1698,7 @@ const rowDetection =
       const builtTable =
   cellBuild.table
     ? attachRowProvenance(
-        cellBuild.table,
+        restoreCaptionedFourColumnHeader(cellBuild.table,region.block),
         page.pageNumber,
         region.block.id,
       )
