@@ -13,12 +13,23 @@ export const metadata: Metadata = {
   },
 };
 
+/**
+ * Temporary *unmerged* mobile-test branch ONLY.
+ * Never enable the internal Inspector on a production deployment.
+ * For previews, enable only this exact one-off testing branch.
+ * Vercel deployment authentication stays enabled.
+ */
 export default function EngineInspectorGuard({
   children,
 }: Readonly<{
   children: ReactNode;
 }>) {
-  if (process.env.NODE_ENV === "production") {
+  const localDevelopment = process.env.NODE_ENV !== "production";
+  const controlledPreview =
+    process.env.VERCEL_ENV === "preview" &&
+    process.env.VERCEL_GIT_COMMIT_REF === "test/v4-fingerprint-mobile-inspector";
+
+  if (!localDevelopment && !controlledPreview) {
     notFound();
   }
 
