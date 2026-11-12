@@ -13,6 +13,7 @@ import {
   detectPdfTable,
   type PdfPositionedTextItem,
 } from "./pdfTableDetection";
+import { readPdfJsNativeTextContent } from "../pdf-engine-v4/reader/pdfJsTextContentCompat";
 
 type PdfTextItem = {
   str: string;
@@ -251,7 +252,7 @@ export async function convertPdfToWord(
         await pdf.getPage(pageNumber);
 
             const textContent =
-        await page.getTextContent();
+        await readPdfJsNativeTextContent(page);
 
       const extractedItems = textContent.items.reduce<
         {

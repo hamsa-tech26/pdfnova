@@ -3,6 +3,8 @@
  * text layer can be missing, stale, hidden, or in an unexpected order.
  * The caller labels this separately and only when substantial text exists.
  */
+import { readPdfJsNativeTextContent } from "../reader/pdfJsTextContentCompat";
+
 export type EmbeddedPdfTextItem = {
   text: string;
   x: number;
@@ -107,7 +109,7 @@ export async function extractEmbeddedPdfTextPreviews(
       if (!Number.isInteger(pageNumber) || pageNumber < 1 || pageNumber > doc.numPages) continue;
       const page = await doc.getPage(pageNumber);
       try {
-        const content = await page.getTextContent();
+        const content = await readPdfJsNativeTextContent(page);
         const height = page.getViewport({ scale: 1 }).height;
         const width = page.getViewport({ scale: 1 }).width;
         const items: EmbeddedPdfTextItem[] = content.items.flatMap((item) => {

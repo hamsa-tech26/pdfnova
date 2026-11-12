@@ -1,5 +1,6 @@
 import { PDFDocument } from "pdf-lib";
 import { forEachRenderedPdfPage } from "@/lib/pdf/render";
+import { readPdfJsNativeTextContent } from "@/lib/pdf-engine-v4/reader/pdfJsTextContentCompat";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
@@ -183,7 +184,7 @@ async function isImageOnlyPdf(
 
       const [textContent, annotations] =
         await Promise.all([
-          page.getTextContent(),
+          readPdfJsNativeTextContent(page),
           page.getAnnotations(),
         ]);
 
