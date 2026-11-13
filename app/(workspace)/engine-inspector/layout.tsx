@@ -27,7 +27,7 @@ export default function EngineInspectorGuard({
   const localDevelopment = process.env.NODE_ENV !== "production";
   const controlledPreview =
     process.env.VERCEL_ENV === "preview" &&
-    process.env.VERCEL_GIT_COMMIT_REF === "test/v4-fingerprint-mobile-inspector";
+    process.env.VERCEL_GIT_COMMIT_REF === "test/v4-three-column-mobile";
 
   if (!localDevelopment && !controlledPreview) {
     notFound();
