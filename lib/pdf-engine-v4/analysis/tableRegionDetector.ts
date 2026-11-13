@@ -7,6 +7,7 @@ import {findPairedNativeCaptionGrids} from "./pairedNativeCaptionGrid";
 import {findNativeElevenColumnGrids} from "./nativeElevenColumnGrid";
 import {findInterleavedNativeThreeColumnGrids,remainingInterleavedNativeProse} from "./interleavedNativeThreeColumnGrid";
 import {findCaptionedNativeFourColumnGrids} from "./captionedNativeFourColumnGrid";
+import {findCaptionedNativeThreeColumnGrids} from "./captionedNativeThreeColumnGrid";
 import type {
   PdfLine,
   PdfVisualBlock,
@@ -1495,14 +1496,16 @@ export function detectTableRegionsForPage(
 
   const splitNativeBlocks = splitParallelScientificTables(blocks);
   const captionedFourGrids=findCaptionedNativeFourColumnGrids(splitNativeBlocks);
-  const captionedFourRows=new Set(captionedFourGrids.flatMap(grid=>
+  const captionedThreeGrids=findCaptionedNativeThreeColumnGrids(splitNativeBlocks);
+  const captionedAllGrids=[...captionedFourGrids,...captionedThreeGrids];
+  const captionedRecoveredRows=new Set(captionedAllGrids.flatMap(grid=>
     grid.block.lines));
   // An earlier broad cross-block run may swallow two independently anchored
   // tables; once their source rows are recovered, never offer that merged run
   // as a competing possible/confirmed region.
   const crossBlockCandidates = createCrossBlockCandidates(splitNativeBlocks)
     .filter(block=>block.type!=="paragraph"||
-      !block.lines.some(line=>captionedFourRows.has(line)));
+      !block.lines.some(line=>captionedRecoveredRows.has(line)));
   const ocrCrossBlockCandidates = createOcrCrossBlockCandidates(splitNativeBlocks);
 
   // Never discard a source paragraph merely because it contains a caption.
@@ -1668,12 +1671,12 @@ export function detectTableRegionsForPage(
 
   const candidateBlocks = [
     ...splitBlocks,
-    ...captionedFourGrids.map(grid=>grid.block),
+    ...captionedAllGrids.map(grid=>grid.block),
     ...crossBlockCandidates,
     ...ocrCrossBlockCandidates,
   ];
-  const captionedFourAnalyses=new Map<PdfVisualBlock,TableRegionAnalysis>(
-    captionedFourGrids.map(grid=>{
+  const captionedGridAnalyses=new Map<PdfVisualBlock,TableRegionAnalysis>(
+    captionedAllGrids.map(grid=>{
       const analysis=analyzeBlock(grid.block,resolvedOptions);
       return [grid.block,{
         ...analysis,isTable:true,
@@ -1683,7 +1686,7 @@ export function detectTableRegionsForPage(
   );
   const regions = candidateBlocks.map(block => ({
     block,
-    analysis: captionedFourAnalyses.get(block) ?? (
+    analysis: captionedGridAnalyses.get(block) ?? (
       block.id.startsWith("parallel-native-prose-")
       ? createZeroAnalysis()
       : block.id.startsWith("native-two-col-grid-")
