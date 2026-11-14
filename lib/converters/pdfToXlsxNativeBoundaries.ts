@@ -1,4 +1,5 @@
 import { loadPdfJs } from "../pdf-engine-v4/reader/pdfJsLoader";
+import { readPdfJsNativeTextContent } from "../pdf-engine-v4/reader/pdfJsTextContentCompat";
 import type { PdfXlsxInput } from "./pdfToXlsx";
 
 /**
@@ -285,7 +286,7 @@ export async function recoverEightColumnNativePdf(
     if (doc.numPages<2||doc.numPages>MAX_PAGES) return null;
     for (let pageNumber=1;pageNumber<=doc.numPages;pageNumber++) {
       const page=await doc.getPage(pageNumber);
-      const text=await page.getTextContent();
+      const text=await readPdfJsNativeTextContent(page);
       const styles=text.styles as Record<string,{fontFamily?:string}>;
       const tokens=tokenizeNativeItems(text.items,styles,context);
       if (!tokens || tokens.length<30) return null;

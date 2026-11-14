@@ -89,6 +89,20 @@ describe("Release 37 independent positional and structural document scoring",()=
     expect(scoreRelease37Case(ref(),bad).structure.pct).toBeLessThan(100);
   });
 
+  it("does not reward a matching table grid extracted from the wrong original page",()=>{
+    const expected={tables:[{...ref().tables[0],pageNumber:14}]};
+    const actual={...observed(),tables:[{...observed().tables[0],pageNumber:15}]};
+    const mismatch=scoreRelease37Case(expected,actual);
+    expect(mismatch.cells.pct).toBe(0);
+    expect(mismatch.rows.pct).toBe(0);
+    expect(mismatch.structure.pct).toBe(0);
+    actual.tables[0].pageNumber=14;
+    const matched=scoreRelease37Case(expected,actual);
+    expect(matched.cells.pct).toBe(100);
+    expect(matched.rows.pct).toBe(100);
+    expect(matched.structure.pct).toBe(100);
+  });
+
   it("computes aggregate micro-averages from raw counts, not averages of percentages",()=>{
     const a=scoreRelease37Case(ref(),observed());
     const b=scoreRelease37Case(ref(),{tables:[]});
