@@ -54,6 +54,7 @@ next-env.d.ts
 
 # Engine V4 real-world qualification: never commit source PDFs, annotations or raw outputs
 /benchmarks/release37/private/
+/public/ocr-runtime/
 /benchmarks/release37/reports/
 /test-fixtures/release37/
 

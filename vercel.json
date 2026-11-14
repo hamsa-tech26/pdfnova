@@ -66,7 +66,8 @@
       "fix/task208-development-audit": false,
       "feature/task209-production-monitoring": false,
       "feature/task210-discovery-journey": false,
-      "feature/task211-search-readiness": false
+      "feature/task211-search-readiness": false,
+      "fix/task218-same-origin-ocr": false
     }
   }
 }

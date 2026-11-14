@@ -14,6 +14,8 @@ const eslintConfig = defineConfig([
     "next-env.d.ts",
     // Vendored qpdf runtime; keep our worker wrapper linted.
     "public/qpdf/qpdf.js",
+    // Tesseract worker and WASM loaders are pinned upstream-generated binaries.
+    "public/ocr-runtime/**",
   ]),
 ]);
 
