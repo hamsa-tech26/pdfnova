@@ -21,6 +21,7 @@ import { addRecentFile } from "@/lib/storage/recentFiles";
 import { saveDerivedPdfToWorkspace } from "@/lib/storage/workspaceContinuity";
 import type { WorkspaceFileSummary } from "@/lib/storage/workspaceFiles";
 import { Eraser, ShieldCheck, TriangleAlert } from "lucide-react";
+import Link from "next/link";
 import {
   ChangeEvent,
   PointerEvent,
@@ -421,7 +422,10 @@ export default function RedactPdfPage() {
 
               <div className="mt-5 flex gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900 dark:border-amber-900 dark:bg-amber-950/30 dark:text-amber-200">
                 <TriangleAlert size={19} className="shrink-0" />
-                <p>The redacted output rasterizes every page. Selectable text, links, interactive forms, and annotations are removed from the rebuilt PDF. Review the downloaded result before sharing it.</p>
+                <div className="space-y-2">
+                  <p>The redacted output rasterizes every page. Selectable text, links, interactive forms, and annotations are removed from the rebuilt PDF. Review the downloaded result before sharing it.</p>
+                  <p>The generated copy may also be saved in this browser&apos;s workspace. Remove saved PDFs from <Link className="font-semibold underline" href="/workspace-health">Workspace Health</Link> when no longer needed. Downloaded files and backups must be deleted separately.</p>
+                </div>
               </div>
             </section>
           )}
