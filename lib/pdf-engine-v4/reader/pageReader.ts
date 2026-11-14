@@ -13,6 +13,7 @@ import {
   loadPdfJs,
   type PdfJsModule,
 } from "./pdfJsLoader";
+import { readPdfJsNativeTextContent } from "./pdfJsTextContentCompat";
 import {inspectPdfImagePaints} from "./imagePaintGeometry";
 
 type PdfJsTextItem = {
@@ -394,7 +395,7 @@ export async function readPdfDocumentV4(
         });
 
       const textContent =
-        await page.getTextContent();
+        await readPdfJsNativeTextContent(page);
 
       const words: PdfWord[] = [];
 

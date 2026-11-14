@@ -3,6 +3,7 @@ import type {
   PdfPageLayout,
   PdfWord,
 } from "./types";
+import { readPdfJsNativeTextContent } from "../pdf-engine-v4/reader/pdfJsTextContentCompat";
 
 type PdfJsTextItem = {
   str: string;
@@ -166,7 +167,7 @@ export async function readPdfPages(
         await pdf.getPage(pageNumber);
 
       const textContent =
-        await page.getTextContent();
+        await readPdfJsNativeTextContent(page);
 
       const words: PdfWord[] =
         textContent.items.reduce<PdfWord[]>(

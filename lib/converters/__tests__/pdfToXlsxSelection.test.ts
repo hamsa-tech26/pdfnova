@@ -71,6 +71,34 @@ describe("Release 81 selective native PDF table export",()=>{
     expect(plan.tables[0].rows[1][2]).toBe("=HYPERLINK(1)");
   });
 
+  it("uses the selected source table number throughout XLSX Review Notes",async()=>{
+    const first=table(1,"first");
+    const second=table(1,"second");
+    for(const cell of second.rows[0].cells){
+      cell.words=[{
+        id:"native-head-"+cell.columnIndex,
+        text:cell.text,pageNumber:1,bounds:{...cell.bounds},
+        font:{size:10},rotation:0,
+        extractionProvenance:{source:"native-pdf",wordCount:1,
+          nativeWordCount:1,ocrWordCount:0,unknownWordCount:0,pageNumbers:[1]},
+      } as (typeof cell.words)[number]];
+    }
+    const doc=source([first,second]);
+    const plan=prepareSelectedPdfV4XlsxExport(doc,1);
+    expect(plan.tables[0].name).toBe("Selected Table 2");
+    expect(plan.reviewNotes).toContainEqual(expect.stringContaining("detected table 2 of 2"));
+    expect(plan.reviewNotes).toContainEqual(expect.stringMatching(/^Table 2 \(Page 1\):/));
+    expect(plan.reviewNotes).toContainEqual(expect.stringMatching(/^Table 2: Source-native first row was frozen/));
+    expect(plan.reviewNotes?.some(note=>/^Table 1(?: \(|:)/.test(note))).toBe(false);
+    const zip=await JSZip.loadAsync(await createPdfXlsxWorkbook(plan));
+    const review=await zip.file("xl/worksheets/sheet2.xml")!.async("string");
+    expect(review).toContain("Table 2 (Page 1):");
+    expect(review).toContain("Table 2: Source-native first row was frozen");
+    expect(review).not.toContain("Table 1 (Page 1):");
+    const originalFirst=prepareSelectedPdfV4XlsxExport(doc,0);
+    expect(originalFirst.reviewNotes).toContainEqual(expect.stringMatching(/^Table 1 \(Page 1\):/));
+  });
+
   it("never marks a weak or duplicated-cell candidate eligible",()=>{
     const weak=table(1,"weak");weak.confidence=0.2;
     const duplicate=table(2,"dup");

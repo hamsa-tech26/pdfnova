@@ -29,6 +29,9 @@ export function prepareSelectedPdfV4XlsxExport(
     nativePageTextExtraction:source.nativePageTextExtraction,
     tables:[source.tables[index]],
   },{allowSelectedCompactGrid:true});
+  // The quality checker sees only the chosen table and numbers its notes "Table 1".
+  // Preserve the candidate's original number in the exported review sheet, too.
+  const selectedNumber="Table "+(index+1);
   return {
     ...plan,
     tables:plan.tables.map(t=>({...t,name:"Selected Table "+(index+1)})),
@@ -38,7 +41,8 @@ export function prepareSelectedPdfV4XlsxExport(
         " other candidate(s) were deliberately not exported.",
       "Other source tables and pages may contain omitted data. "+
         "Neither this table nor its contents are independently verified.",
-      ...(plan.reviewNotes??[]),
+      ...(plan.reviewNotes??[]).map(note=>
+        note.replace(/^Table 1(?= \(|:)/,selectedNumber)),
     ],
   };
 }

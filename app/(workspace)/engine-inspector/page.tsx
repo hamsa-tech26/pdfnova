@@ -12,6 +12,7 @@ import {
   type PdfEngineV4Result,
   type PdfV4TableAnalysis,
 } from "@/lib/pdf-engine-v4/pipeline/analyzePdfV4";
+import {createInspectorSourceIdentity} from "@/lib/pdf-engine-v4/pipeline/inspectorSourceIdentity";
 
 import type {
   PdfV4ControlledOcrResult,
@@ -2414,8 +2415,19 @@ candidate.columnIndex
             <button
   type="button"
   className="mt-5 rounded-xl bg-cyan-400 px-4 py-3 text-sm font-bold text-slate-950 hover:bg-cyan-300"
-  onClick={() => {
-    const json = JSON.stringify(result, null, 2);
+  onClick={async () => {
+    if (!file) {
+      toast.error("Original PDF is unavailable; evidence export is withheld.");
+      return;
+    }
+    let json: string;
+    try {
+      const sourceIdentity = await createInspectorSourceIdentity(file);
+      json = JSON.stringify({...result, sourceIdentity}, null, 2);
+    } catch {
+      toast.error("Could not verify the original PDF fingerprint; evidence export is withheld.");
+      return;
+    }
     const blob = new Blob([json], {
       type: "application/json",
     });
