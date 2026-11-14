@@ -1,14 +1,14 @@
 # Task 219 — Local English OCR provenance and bandwidth release review
 
 **Status: engineering evidence; NOT legal sign-off, NOT production authorization.**
-Source candidate: PR #181, \`14d70d568b6bc651b8cc7e3fea8455588581f711\`.
+Source candidate: PR #181, `14d70d568b6bc651b8cc7e3fea8455588581f711`.
 
 ## Exact source trace
-- English trained-data package \`@tesseract.js-data/eng@1.0.0\` metadata says MIT; its default English model is byte-matched to \`naptha/tessdata\`, branch \`gh-pages\`, \`4.0.0_best_int/eng.traineddata.gz\`.
-- Upstream model Git blob: \`730a6a59010b9440e38dd85f9fe6b6bf0637e6eb\`.
-- Model SHA-256: \`45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91\` (already checked before build).
-- Upstream \`naptha/tessdata\` repository root \`LICENSE\`: Apache License 2.0, Git blob \`261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64\`. No root \`NOTICE\` file was found in the audited \`gh-pages\` snapshot. A new build-time Git-blob SHA-1 check rejects changed vendored license text.
-- Upstream \`README.md\` expressly describes self-hosting the language data. This does not solve every licensing question: npm package metadata and upstream content licensing remain inconsistent.
+- English trained-data package `@tesseract.js-data/eng@1.0.0` metadata says MIT; its default English model is byte-matched to `naptha/tessdata`, branch `gh-pages`, `4.0.0_best_int/eng.traineddata.gz`.
+- Upstream model Git blob: `730a6a59010b9440e38dd85f9fe6b6bf0637e6eb`.
+- Model SHA-256: `45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91` (already checked before build).
+- Upstream `naptha/tessdata` repository root `LICENSE`: Apache License 2.0, Git blob `261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64`. No root `NOTICE` file was found in the audited `gh-pages` snapshot. A new build-time Git-blob SHA-1 check rejects changed vendored license text.
+- Upstream `README.md` expressly describes self-hosting the language data. This does not solve every licensing question: npm package metadata and upstream content licensing remain inconsistent.
 
 ## Release checklist (all mandatory)
 1. Validate model and license byte provenance and include Apache-2.0 license alongside trained data. Review any notices accompanying the particular Tesseract packages and their dependencies.
@@ -20,7 +20,7 @@ Source candidate: PR #181, \`14d70d568b6bc651b8cc7e3fea8455588581f711\`.
 7. Preserve production rollback and record exact deployed SHA. Do not treat Engine V4 as Stable while 0/20 independently reviewed originals are accepted.
 
 ## Bounded transfer projection (not live usage)
-Eleven locally staged OCR worker, WASM and English language/notice files total **22.29 MiB** in the documented candidate. A *worst-case complete transfer per first-time visitor* gives approximately 4,593 full-bundle deliveries for 100 GiB transfer, or about 4,486 if the platform counts 100 decimal GB. Actual transfer can be much lower (browser chooses just one WASM variant, conditional OCR, caching) or include other website traffic. No claim about the actual plan or current quota utilization.
+Eleven locally staged OCR worker, WASM and English language/notice files total **22.29 MiB** in the documented candidate. A *worst-case complete transfer per first-time visitor* gives approximately 4,593 full-bundle deliveries for 100 GiB transfer, or about 4,278 if the platform counts 100 decimal GB. Actual transfer can be much lower (browser chooses just one WASM variant, conditional OCR, caching) or include other website traffic. No claim about the actual plan or current quota utilization. Vercel Hobby is explicitly restricted to personal non-commercial use; whether Kukureku's current operation qualifies depends on its actual account and business model.
 
 ## Public-source references
 - https://github.com/naptha/tessdata/blob/gh-pages/README.md
