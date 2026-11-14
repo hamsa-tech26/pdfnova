@@ -18,6 +18,8 @@ const modelSource = join(packages, "@tesseract.js-data", "eng", "4.0.0_best_int"
 // the npm package metadata says MIT. Distribute the exact upstream license and
 // keep the contradictory metadata flagged for separate release/legal review.
 const expectedModelSha256 = "45b4cb346724ac1774f1c36f42f182b887bcdb28ebe63e6fff90ac41f3fcff91";
+// Pin the exact upstream Apache-2.0 LICENSE to prevent accidental replacement.
+const expectedApacheLicenseGitBlob = "261eeb9e9f8b2b4b0d119366dda99c6fd7d35c64";
 // Keep the runtime package within a reviewed CDN-transfer budget. A dependency
 // update that increases this footprint must receive a fresh size/cost review.
 const maxRuntimeBytes = 25 * 1024 * 1024;
@@ -33,6 +35,19 @@ const copies = [
     [join(packages, "tesseract.js-core", `tesseract-core-${variant}.wasm`), `tesseract-core-${variant}.wasm`],
   ]),
 ];
+
+const licenseBytes = await readFile(join(projectRoot, "vendor", "naptha-tessdata", "LICENSE"));
+const licenseHeader = Buffer.concat([
+  Buffer.from("blob " + licenseBytes.byteLength),
+  Buffer.from([0]),
+]);
+const licenseGitBlob = createHash("sha1")
+  .update(licenseHeader)
+  .update(licenseBytes)
+  .digest("hex");
+if (licenseGitBlob !== expectedApacheLicenseGitBlob) {
+  throw Error("Vendored English OCR Apache-2.0 license differs from its verified upstream Git blob.");
+}
 
 const actualModelSha256 = createHash("sha256").update(await readFile(modelSource)).digest("hex");
 if (actualModelSha256 !== expectedModelSha256) {
