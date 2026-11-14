@@ -272,9 +272,9 @@ test("live 390px mobile viewport exports the full synthetic source table through
   // Compare EVERY one of the 13 source rows and five columns, including
   // zero-prefixed identifiers, string fidelity, ordering and absence of formulas.
   const independentReader=[
-    "import sys",
+    "import sys, io",
     "from openpyxl import load_workbook",
-    "w=load_workbook(sys.argv[1], read_only=False, data_only=False)",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), read_only=False, data_only=False)",
     "assert w.sheetnames==['Table 1','Review Notes'], w.sheetnames",
     "rows=list(w['Table 1'].values)",
     "expected=[('Sl No','Code','Name','Amount','Remarks')]+[(str(i+1),str(i+71).zfill(5),'Station '+str(i+1),str(1000+i*11),'Reviewed '+str(i+1)) for i in range(12)]",
