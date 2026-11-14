@@ -29,6 +29,8 @@ for (const width of [320, 390]) {
     }
     await page.getByRole("button", {name: "Add redaction area", exact: true}).click();
     await expect(page.getByText(/1 redaction area marked/)).toBeVisible();
+    await expect(page.getByText(/The generated copy may also be saved in this browser/)).toBeVisible();
+    await expect(page.getByRole("link", {name: "Workspace Health"})).toHaveAttribute("href", "/workspace-health");
 
     // Check the actual narrow viewport, then follow the visible mobile export path.
     const overflow = await page.evaluate(() =>
