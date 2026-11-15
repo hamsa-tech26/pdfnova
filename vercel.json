@@ -73,7 +73,8 @@
       "test/task235-live-text-and-word-output": false,
       "test/task239-live-page-output-integrity": false,
       "test/task242-live-compress-metadata": false,
-      "test/task243-live-image-conversions": false
+      "test/task243-live-image-conversions": false,
+      "research/task245-webkit-page-integrity": false
     }
   }
 }
