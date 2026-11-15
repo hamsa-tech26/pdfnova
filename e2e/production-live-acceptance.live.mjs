@@ -99,7 +99,9 @@ test("live PDF-to-Excel does not transmit original synthetic PDF bytes in reques
     }
   });
 
-  await page.goto("/pdf-to-excel",{waitUntil:"domcontentloaded"});
+  // Wait for browser hydration before selecting the synthetic source.
+  // Otherwise the file-change event may be lost on a cold production page.
+  await page.goto("/pdf-to-excel",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK189_NO_PERSONAL_DATA.pdf",
     mimeType:"application/pdf",
@@ -294,4 +296,84 @@ test("live 390px mobile viewport exports the full synthetic source table through
     result:"PASS",source:"SYNTHETIC_ONLY",viewportWidth:390,
     sourceRowsVerified:13,sourceColumnsVerified:5,independentReader:"openpyxl",
     physicalIOSVerified:false,privateDocumentsUsed:false}));
+});
+
+
+async function task235SourcePdf(){
+  const document=await PDFDocument.create();
+  const font=await document.embedFont(StandardFonts.Helvetica);
+  const page=document.addPage([612,792]);
+  page.drawText("KUKUREKU_TASK235_ALPHA",{x:72,y:700,size:15,font});
+  page.drawText("KUKUREKU_TASK235_MIDDLE",{x:72,y:620,size:15,font});
+  page.drawText("KUKUREKU_TASK235_OMEGA",{x:72,y:540,size:15,font});
+  return Buffer.from(await document.save());
+}
+
+test("live PDF-to-Word independently opens a downloaded DOCX with the original source markers",async({page})=>{
+  test.setTimeout(120000);
+  await page.goto("/pdf-to-word",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK235_READABLE.pdf",
+    mimeType:"application/pdf",buffer:await task235SourcePdf(),
+  });
+  const conversion=page.getByRole("button",{name:"Convert and Download Word"});
+  await expect(conversion).toBeVisible({timeout:15000});
+  const pending=page.waitForEvent("download",{timeout:90000});
+  await conversion.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe("SYNTHETIC_TASK235_READABLE.docx");
+  const saved=await download.path();expect(saved).toBeTruthy();
+  // Independent OOXML reader: standard Python zipfile and XML parser inspect
+  // the real downloaded DOCX (Playwright temporary path is extensionless).
+  const python=[
+    "import sys,io,zipfile,xml.etree.ElementTree as ET",
+    "z=zipfile.ZipFile(io.BytesIO(open(sys.argv[1],'rb').read()))",
+    "assert z.testzip() is None,'Damaged DOCX ZIP'",
+    "assert '[Content_Types].xml' in z.namelist()",
+    "root=ET.fromstring(z.read('word/document.xml'))",
+    "ns={'w':'http://schemas.openxmlformats.org/wordprocessingml/2006/main'}",
+    "text=' '.join((e.text or '') for e in root.findall('.//w:t',ns))",
+    "a=text.index('KUKUREKU_TASK235_ALPHA')",
+    "b=text.index('KUKUREKU_TASK235_MIDDLE')",
+    "c=text.index('KUKUREKU_TASK235_OMEGA')",
+    "assert 0 <= a < b < c,'Source ordering lost'",
+    "assert text.count('KUKUREKU_TASK235_ALPHA')==1",
+    "assert text.count('KUKUREKU_TASK235_OMEGA')==1",
+    "print('LIVE_TASK235_DOCX_SOURCE_PARSED_OK')"
+  ].join("\n");
+  const report=execFileSync("python",["-c",python,saved],{
+    encoding:"utf8",timeout:30000,
+  });
+  expect(report).toContain("LIVE_TASK235_DOCX_SOURCE_PARSED_OK");
+  await expect(page.getByRole("button",{name:"Download Word Again"})).toBeVisible();
+  console.log(JSON.stringify({check:"LIVE_TASK235_PDF_TO_DOCX",
+    status:"PASS",source:"SYNTHETIC_ONLY",independentReader:"Python zipfile/ElementTree",
+    sourceMarkerCount:3,sourceOrderPreserved:true,privateDocumentsUsed:false,
+    complexLayoutCertified:false}));
+});
+
+test("live PDF-to-Text actual TXT download preserves all synthetic source markers",async({page})=>{
+  test.setTimeout(120000);
+  await page.goto("/pdf-to-text",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK235_READABLE.pdf",
+    mimeType:"application/pdf",buffer:await task235SourcePdf(),
+  });
+  const action=page.getByRole("button",{name:"Convert and Download TXT"});
+  await expect(action).toBeVisible({timeout:15000});
+  const pending=page.waitForEvent("download",{timeout:60000});
+  await action.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe("SYNTHETIC_TASK235_READABLE.txt");
+  const txt=(await readFile(await download.path())).toString("utf8");
+  const markers=["KUKUREKU_TASK235_ALPHA","KUKUREKU_TASK235_MIDDLE",
+    "KUKUREKU_TASK235_OMEGA"];
+  for(const value of markers)expect(txt).toContain(value);
+  expect(markers.map(m=>txt.indexOf(m))).toEqual(
+    [...markers.map(m=>txt.indexOf(m))].sort((a,b)=>a-b));
+  await expect(page.getByText("Your text file is ready")).toBeVisible();
+  console.log(JSON.stringify({check:"LIVE_TASK235_PDF_TO_TXT",
+    status:"PASS",source:"SYNTHETIC_ONLY",sourceMarkerCount:3,
+    actualDownloadedFileParsed:true,privateDocumentsUsed:false,
+    OCRNotTested:true}));
 });
