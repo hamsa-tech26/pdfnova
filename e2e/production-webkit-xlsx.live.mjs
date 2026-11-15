@@ -83,3 +83,96 @@ test("WebKit visibly refuses a text-free source without an XLSX download",async(
     status:"PASS",engine:"Playwright WebKit",source:"SYNTHETIC_ONLY",
     actualIPhoneTested:false}));
 });
+
+
+test("WebKit does not silently corrupt captioned 4-column and 3-column native tables",async({page,browserName})=>{
+  expect(browserName).toBe("webkit");
+  test.setTimeout(180000);
+  const pdf=await PDFDocument.create();
+  const font=await pdf.embedFont(StandardFonts.Helvetica);
+  const bold=await pdf.embedFont(StandardFonts.HelveticaBold);
+  const [p1,p2,p3]=[pdf.addPage([595,842]),pdf.addPage([595,842]),pdf.addPage([595,842])];
+  const draw=(p,t,x,y,strong=false)=>
+    p.drawText(t,{x,y,size:10,font:strong?bold:font});
+  draw(p1,"Two columns of explanatory prose",48,780,true);
+  for(let k=0;k<6;k++){
+    draw(p1,"Routine explanation and service review.",48,700-k*21);
+    draw(p1,"These lines must not be spreadsheet rows.",310,700-k*21);
+  }
+  const drawFour=(caption,headers,rows,captionY)=>{
+    const x=[66,247,338,437];
+    draw(p2,caption,57,captionY,true);
+    headers.forEach((v,i)=>draw(p2,v,x[i],captionY-30,true));
+    rows.forEach((row,k)=>row.forEach((v,i)=>{
+      const px=i===1?321-font.widthOfTextAtSize(v,10):
+        i===2?419-font.widthOfTextAtSize(v,10):x[i];
+      draw(p2,v,px,captionY-61-k*31.5);
+    }));
+  };
+  drawFour("TABLE A - Supply Summary",
+    ["Scheme","Homes","Target KLD","Status"],
+    [["Alpha","120","8.40","Active"],["Beta","80","5.60","Active"],
+     ["Gamma","60","4.20","Review"],["TOTAL","260","18.20","-"]],686);
+  drawFour("TABLE B - Material Summary",
+    ["Material","Quantity","Rate INR","Amount INR"],
+    [["Pipe 32 mm","20","150","3000"],["Valve","4","250","1000"],
+     ["Coupler","10","60","600"],["TOTAL","34","-","4600"]],494);
+  draw(p3,"TABLE C - Service Requests",48,710,true);
+  ["Service","Requests","Result"].forEach((v,i)=>
+    draw(p3,v,[59,363.5,500][i],655,true));
+  const three=[["Repair call","12","Closed"],["Meter reading","8","Pending"],
+    ["Water testing","5","Closed"],["TOTAL","25","-"]];
+  three.forEach((row,k)=>row.forEach((v,i)=>{
+    const x=i===0?59:i===1?413-font.widthOfTextAtSize(v,10):
+      534-font.widthOfTextAtSize(v,10);
+    draw(p3,v,x,607-k*48,k===3);
+  }));
+  await page.goto("/pdf-to-excel",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK230_CAPTIONED_MIXED_TABLES.pdf",
+    mimeType:"application/pdf",buffer:Buffer.from(await pdf.save())
+  });
+  await expect(page.getByRole("button",{name:/Convert to Excel/i})).toBeVisible();
+  const downloaded=page.waitForEvent("download",{timeout:100000})
+    .then(d=>({kind:"download",download:d}));
+  const withheld=page.getByRole("heading",{name:"Excel conversion withheld"})
+    .waitFor({state:"visible",timeout:100000})
+    .then(()=>({kind:"withheld"}));
+  await page.getByRole("button",{name:/Convert to Excel/i}).click();
+  const result=await Promise.any([downloaded,withheld]);
+  if(result.kind==="withheld"){
+    await expect(page.getByText(/uncertain|review|reliable|overlap|unsupported|select/i).first()).toBeVisible();
+    console.log(JSON.stringify({check:"LIVE_TASK230_WEBKIT_MIXED_NATIVE",
+      result:"SAFE_REFUSAL",source:"SYNTHETIC_ONLY",
+      sourceTableCount:3,sourcePages:3,sourceCellCount:55,
+      corruptionObserved:false,fullConversionNotProven:true}));
+    return;
+  }
+  const path=await result.download.path();
+  expect(path).toBeTruthy();
+  const reader=[
+    "import sys,io",
+    "from openpyxl import load_workbook",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1],'rb').read()),read_only=True,data_only=False)",
+    "sheets=[s for s in w if s.title!='Review Notes']",
+    "assert len(sheets)==3,('Expected three source tables',w.sheetnames)",
+    "norm=lambda v:'' if v is None else str(v)",
+    "rows=[[[norm(v) for v in row] for row in s.values] for s in sheets]",
+    "expected=[",
+    "[['Scheme','Homes','Target KLD','Status'],['Alpha','120','8.40','Active'],['Beta','80','5.60','Active'],['Gamma','60','4.20','Review'],['TOTAL','260','18.20','-']],",
+    "[['Material','Quantity','Rate INR','Amount INR'],['Pipe 32 mm','20','150','3000'],['Valve','4','250','1000'],['Coupler','10','60','600'],['TOTAL','34','-','4600']],",
+    "[['Service','Requests','Result'],['Repair call','12','Closed'],['Meter reading','8','Pending'],['Water testing','5','Closed'],['TOTAL','25','-']]]",
+    "assert rows==expected, 'Truncated, invented, reordered or transformed source cells'",
+    "assert 'Review Notes' in w.sheetnames",
+    "assert w['Review Notes']['A1'].value.startswith('EXTRACTION NOT VERIFIED')",
+    "print('TASK230_WEBKIT_3_TABLES_55_CELLS_OK')"
+  ].join("\n");
+  expect(execFileSync("python",["-c",reader,path],{
+    encoding:"utf8",timeout:30000
+  })).toContain("TASK230_WEBKIT_3_TABLES_55_CELLS_OK");
+  console.log(JSON.stringify({check:"LIVE_TASK230_WEBKIT_MIXED_NATIVE",
+    result:"PASS",source:"SYNTHETIC_ONLY",
+    sourcePages:3,sourceTablesVerified:3,sourceCellsVerified:55,
+    independentWorkbookReader:"openpyxl",physicalIPhoneTested:false,
+    independentRealDocumentCertified:false}));
+});
