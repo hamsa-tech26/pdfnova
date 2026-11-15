@@ -68,7 +68,12 @@
       "feature/task210-discovery-journey": false,
       "feature/task211-search-readiness": false,
       "integration/task227-quality-gates": false,
-      "test/task230-mixed-native-table-webkit": false
+      "test/task230-mixed-native-table-webkit": false,
+      "integration/task244-output-integrity-gates": false,
+      "test/task235-live-text-and-word-output": false,
+      "test/task239-live-page-output-integrity": false,
+      "test/task242-live-compress-metadata": false,
+      "test/task243-live-image-conversions": false
     }
   }
 }
