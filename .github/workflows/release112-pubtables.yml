@@ -33,6 +33,7 @@ jobs:
       - name: Validate annotation-box scorer and fail-closed native prose continuity
         run: |
           node --test scripts/__tests__/release112Detection.nodecheck.mjs
+          node --test scripts/__tests__/release112CoordinateFrame.nodecheck.mjs
           node --test scripts/__tests__/release144UncaptionedPairs.nodecheck.mjs
       - name: Verify V4 Stable remains BLOCKED
         run: |
