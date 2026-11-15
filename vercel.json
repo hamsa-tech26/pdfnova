@@ -67,7 +67,8 @@
       "feature/task209-production-monitoring": false,
       "feature/task210-discovery-journey": false,
       "feature/task211-search-readiness": false,
-      "integration/task227-quality-gates": false
+      "integration/task227-quality-gates": false,
+      "test/task232-current-pubtables-source-replay": false
     }
   }
 }
