@@ -108,14 +108,20 @@ test("live Edit PDF Metadata saves requested fields and preserves document pages
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"TASK242_METADATA.pdf",mimeType:"application/pdf",buffer:await sourcePdf(),
   });
-  await expect(page.getByLabel("Title",{exact:true})).toBeVisible({timeout:15000});
-  const edits={
-    Title:"TASK242_PUBLIC_TITLE",Author:"TASK242_PUBLIC_AUTHOR",
-    Subject:"TASK242_PUBLIC_SUBJECT",Keywords:"TASK242_PUBLIC_KEYWORD",
-    Creator:"TASK242_PUBLIC_CREATOR",Producer:"TASK242_PUBLIC_PRODUCER",
-  };
-  for(const [key,value] of Object.entries(edits)){
-    await page.getByLabel(key,{exact:true}).fill(value);
+  // Stable placeholder selectors also cover wrapped textarea labels;
+  // getByLabel("Subject") is not reliably exposed by the current live page.
+  const edits=[
+    ['input[placeholder="Document title"]',"TASK242_PUBLIC_TITLE"],
+    ['input[placeholder="Author or organization"]',"TASK242_PUBLIC_AUTHOR"],
+    ['textarea[placeholder="Document subject"]',"TASK242_PUBLIC_SUBJECT"],
+    ['textarea[placeholder="Comma-separated keywords"]',"TASK242_PUBLIC_KEYWORD"],
+    ['input[placeholder="Creating application or person"]',"TASK242_PUBLIC_CREATOR"],
+    ['input[placeholder="PDF producer"]',"TASK242_PUBLIC_PRODUCER"],
+  ];
+  for(const [selector,value] of edits){
+    const field=page.locator(selector);
+    await expect(field).toBeVisible({timeout:15000});
+    await field.fill(value);
   }
   const action=page.getByRole("button",{name:"Save Metadata and Download"});
   const pending=page.waitForEvent("download",{timeout:90000});
