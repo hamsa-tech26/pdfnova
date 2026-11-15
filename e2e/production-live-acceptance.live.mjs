@@ -126,7 +126,9 @@ test("live redaction export independently removes selectable text but preserves 
   sheet.drawText("SYNTHETIC_REDACTION_SECRET_9137",{x:80,y:650,size:22,font});
   sheet.drawText("PUBLIC_CONTROL_2026",{x:80,y:420,size:22,font});
   const synthetic=Buffer.from(await document.save());
-  await page.goto("/redact-pdf",{waitUntil:"domcontentloaded"});
+  // Wait for hydration before the synthetic upload; a cold page can
+  // mount its React input handler after domcontentloaded.
+  await page.goto("/redact-pdf",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK190_REDACTION.pdf",
     mimeType:"application/pdf",buffer:synthetic,
