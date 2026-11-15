@@ -126,7 +126,9 @@ test("live redaction export independently removes selectable text but preserves 
   sheet.drawText("SYNTHETIC_REDACTION_SECRET_9137",{x:80,y:650,size:22,font});
   sheet.drawText("PUBLIC_CONTROL_2026",{x:80,y:420,size:22,font});
   const synthetic=Buffer.from(await document.save());
-  await page.goto("/redact-pdf",{waitUntil:"domcontentloaded"});
+  // Wait for hydration before the synthetic upload; a cold page can
+  // mount its React input handler after domcontentloaded.
+  await page.goto("/redact-pdf",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK190_REDACTION.pdf",
     mimeType:"application/pdf",buffer:synthetic,
@@ -245,4 +247,51 @@ test("live Protect and Unlock PDF enforce real password access and preserve cont
     wrongPasswordRejected:true,correctPasswordAccepted:true,unlockedContentPreserved:true,
     actualPasswordLogged:false,sourceBytesLogged:false,
     limitation:"Two synthetic text pages; not arbitrary encryption interoperability or real-world certification"}));
+});
+
+
+test("live 390px mobile viewport exports the full synthetic source table through real XLSX",async({page})=>{
+  test.setTimeout(180000);
+  // Chromium at an iPhone-sized viewport verifies responsive production flow;
+  // this is NOT physical iPhone/WebKit certification.
+  await page.setViewportSize({width:390,height:844});
+  const source=await nativeTablePdf();
+  await page.goto("/pdf-to-excel",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"SYNTHETIC_TASK223_MOBILE_NATIVE_TABLE.pdf",
+    mimeType:"application/pdf",buffer:source,
+  });
+  const action=page.getByRole("button",{name:/Convert to Excel/i});
+  await expect(action).toBeVisible({timeout:15000});
+  const pending=page.waitForEvent("download",{timeout:120000});
+  await action.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toMatch(/\.xlsx$/);
+  const output=await download.path();
+  expect(output).toBeTruthy();
+
+  // A different implementation (openpyxl) reads the actual downloaded XLSX.
+  // Compare EVERY one of the 13 source rows and five columns, including
+  // zero-prefixed identifiers, string fidelity, ordering and absence of formulas.
+  const independentReader=[
+    "import sys, io",
+    "from openpyxl import load_workbook",
+    "w=load_workbook(io.BytesIO(open(sys.argv[1], 'rb').read()), read_only=False, data_only=False)",
+    "assert w.sheetnames==['Table 1','Review Notes'], w.sheetnames",
+    "rows=list(w['Table 1'].values)",
+    "expected=[('Sl No','Code','Name','Amount','Remarks')]+[(str(i+1),str(i+71).zfill(5),'Station '+str(i+1),str(1000+i*11),'Reviewed '+str(i+1)) for i in range(12)]",
+    "assert rows==expected, 'One or more source row/column/cell values differ'",
+    "assert w['Review Notes']['A1'].value.startswith('EXTRACTION NOT VERIFIED'), 'Missing non-certification warning'",
+    "assert all(cell.data_type!='f' for row in w['Table 1'] for cell in row), 'Unexpected spreadsheet formula'",
+    "print('MOBILE_390_XLSX_FULL_TABLE_OK')",
+  ].join("\n");
+  const parsed=execFileSync("python",["-c",independentReader,output],{
+    encoding:"utf8",timeout:30000,
+  });
+  expect(parsed).toContain("MOBILE_390_XLSX_FULL_TABLE_OK");
+  await expect(page.getByRole("heading",{name:"Excel workbook created"})).toBeVisible();
+  console.log(JSON.stringify({check:"LIVE_TASK223_MOBILE_390_FULL_XLSX",
+    result:"PASS",source:"SYNTHETIC_ONLY",viewportWidth:390,
+    sourceRowsVerified:13,sourceColumnsVerified:5,independentReader:"openpyxl",
+    physicalIOSVerified:false,privateDocumentsUsed:false}));
 });
