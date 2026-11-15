@@ -68,7 +68,11 @@
       "feature/task210-discovery-journey": false,
       "feature/task211-search-readiness": false,
       "integration/task227-quality-gates": false,
-      "test/task230-mixed-native-table-webkit": false
+      "test/task230-mixed-native-table-webkit": false,
+      "integration/task249-visual-output-gates": false,
+      "research/task246-watermark-output": false,
+      "research/task247-signature-visual-output": false,
+      "research/task248-webkit-visual-outputs": false
     }
   }
 }
