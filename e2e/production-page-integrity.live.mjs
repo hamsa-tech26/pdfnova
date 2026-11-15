@@ -171,3 +171,51 @@ test("live Rotate PDF persists 90 degree rotation for every source page",async({
     status:"PASS",pages:3,persistedRotation:90,
     source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF"}));
 });
+
+
+test("live Organize PDF combines reorder, single-page rotation and deletion",async({page})=>{
+  test.setTimeout(180000);
+  await page.goto("/organize-pdf",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"TASK239_ORGANIZE_SOURCE.pdf",mimeType:"application/pdf",
+    buffer:await sourcePdf("ORGANIZE",4),
+  });
+  await expect(page.getByRole("heading",{name:"PDF Pages (4)"})).toBeVisible({timeout:45000});
+  const cards=page.locator("article").filter({
+    has:page.locator('img[alt^="PDF page"]'),
+  });
+  await expect(cards).toHaveCount(4);
+  // Starting source sequence [1,2,3,4]: swap first two -> [2,1,3,4].
+  await cards.nth(0).getByRole("button",{name:"Move Down"}).click();
+  // Rotate only the new first page (original source page 2).
+  await cards.nth(0).getByRole("button",{name:"Rotate",exact:true}).click();
+  // Delete the third page (original source page 3).
+  await cards.nth(2).getByRole("button",{name:"Delete",exact:true}).click();
+  await expect(cards).toHaveCount(3);
+  await expect(page.getByRole("heading",{name:"PDF Pages (3)"})).toBeVisible();
+  const pending=page.waitForEvent("download",{timeout:90000});
+  await page.getByRole("button",{name:"Save PDF",exact:true}).click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe("TASK239_ORGANIZE_SOURCE-organized.pdf");
+  const path=await download.path();expect(path).toBeTruthy();
+  const py=[
+    "import sys,fitz",
+    "pdf=fitz.open(stream=open(sys.argv[1],'rb').read(),filetype='pdf')",
+    "assert len(pdf)==3,'Page deletion incorrect'",
+    "expected=['TASK239_ORGANIZE_PAGE_2','TASK239_ORGANIZE_PAGE_1','TASK239_ORGANIZE_PAGE_4']",
+    "actual=[p.get_text('text').strip() for p in pdf]",
+    "assert actual==expected,'Page reordering or deletion incorrect'",
+    "assert [p.rotation for p in pdf]==[90,0,0],'Single-page rotation incorrect'",
+    "assert abs(pdf[0].rect.width-842)<1 and abs(pdf[0].rect.height-595)<1",
+    "assert all(abs(p.rect.width-595)<1 and abs(p.rect.height-842)<1 for p in list(pdf)[1:])",
+    "print('TASK239_ORGANIZE_INDEPENDENT_INTEGRITY_OK')",
+  ].join("\n");
+  const result=execFileSync("python",["-c",py,path],{
+    encoding:"utf8",timeout:30000,maxBuffer:128*1024,
+  });
+  expect(result).toContain("TASK239_ORGANIZE_INDEPENDENT_INTEGRITY_OK");
+  console.log(JSON.stringify({check:"TASK239_LIVE_ORGANIZE_PDF",
+    status:"PASS",source:"SYNTHETIC_ONLY",finalPages:3,
+    reordered:true,singlePageRotation:true,sourcePageDeleted:3,
+    independentReader:"PyMuPDF"}));
+});
