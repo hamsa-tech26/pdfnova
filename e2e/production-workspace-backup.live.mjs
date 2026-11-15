@@ -15,13 +15,14 @@ test("live workspace ZIP hashes original PDF and restores safely in a clean brow
   const source=Buffer.from(await pdf.save());
   const name="SYNTHETIC_TASK192_WORKSPACE.pdf";
 
-  await page.goto("/magic-drop",{waitUntil:"domcontentloaded"});
+  // Ensure the live client-side upload handler is hydrated before file selection.
+  await page.goto("/magic-drop",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name,mimeType:"application/pdf",buffer:source
   });
   await expect(page.getByText(/This source PDF is saved locally in this browser/)).toBeVisible();
 
-  await page.goto("/workspace-health",{waitUntil:"domcontentloaded"});
+  await page.goto("/workspace-health",{waitUntil:"networkidle"});
   await expect(page.getByText(name,{exact:true})).toBeVisible();
   const zipPending=page.waitForEvent("download",{timeout:60000});
   await page.getByRole("button",{name:"Download full workspace backup (ZIP)"}).click();
@@ -47,7 +48,7 @@ test("live workspace ZIP hashes original PDF and restores safely in a clean brow
   const isolated=await browser.newContext({acceptDownloads:true});
   try {
     const fresh=await isolated.newPage();
-    await fresh.goto("/workspace-health",{waitUntil:"domcontentloaded"});
+    await fresh.goto("/workspace-health",{waitUntil:"networkidle"});
     await expect(fresh.getByText(/No stored documents yet/)).toBeVisible();
     await fresh.locator("#workspace-backup-upload").setInputFiles({
       name:"tampered-synthetic-backup.zip",mimeType:"application/zip",buffer:tampered
