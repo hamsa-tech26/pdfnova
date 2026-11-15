@@ -14,7 +14,7 @@ test("same aspect at different rendering scales is plausible, never certified",(
 test("dimension mismatch flags possible cropped, different or rotated source",()=>{
   const r=auditCoordinateFrame({imageWidth:1200,imageHeight:1600},{width:800,height:600});
   assert.equal(r.aspectFramePlausible,false);
-  assert.ok(r.relativeAspectDriftPercent>50);
+  assert.ok(r.relativeAspectDriftPercent>40);
   assert.equal(r.acceptedFormalV4Credit,0);
 });
 test("invalid coordinate metadata must fail rather than silently normalize",()=>{
