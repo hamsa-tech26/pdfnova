@@ -4,9 +4,12 @@
  * This verifies the existing security-header baseline, not total CSP hardening.
  */
 import assert from "node:assert/strict";
+import {TOOL_ROUTES} from "./indexNowRoutes.mjs";
 
 const origin = new URL("https://kukureku.com");
-const paths = ["/", "/redact-pdf", "/pdf-to-excel", "/workspace-health"];
+assert.equal(TOOL_ROUTES.length, 31, "Public tool count changed — review audit coverage");
+const paths = ["/", ...TOOL_ROUTES, "/workspace-health"];
+assert.equal(new Set(paths).size, paths.length, "Duplicate security-header audit route");
 const requirements = new Map([
   ["frame-ancestors", "'none'"],
   ["base-uri", "'self'"],
