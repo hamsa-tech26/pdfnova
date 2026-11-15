@@ -1,0 +1,27 @@
+name: Production Security Header Baseline
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "scripts/checkProductionSecurityHeaders.mjs"
+      - ".github/workflows/production-security-headers.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-security-headers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  live-header-baseline:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Verify public security headers with no document transmission
+        run: node scripts/checkProductionSecurityHeaders.mjs
