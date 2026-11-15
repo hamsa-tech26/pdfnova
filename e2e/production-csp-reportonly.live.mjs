@@ -30,10 +30,25 @@ test("passive CSP violation inventory on synthetic PDF-to-Excel flow",async({pag
       } catch {
         if(event.blockedURI==="inline"||event.blockedURI==="eval"||event.blockedURI==="data") host=event.blockedURI;
       }
+      // Record bounded, non-personal script location category. URLs/query
+      // strings and document names must never enter CI output.
+      let category="unknown";
+      try{
+        const source=new URL(event.sourceFile);
+        if(source.protocol==="blob:") category="blob-worker-or-script";
+        else if(source.hostname===window.location.hostname){
+          if(source.pathname.startsWith("/_next/static/")) category="next-static";
+          else if(source.pathname==="/pdf-to-excel") category="page-inline";
+          else if(source.pathname.startsWith("/_next/")) category="next-runtime";
+          else category="other-same-origin";
+        } else category="external-script";
+      }catch{}
       window.__kukurekuSyntheticCspViolations.push({
         directive:event.effectiveDirective,
         origin:host,
         disposition:event.disposition,
+        sourceCategory:category,
+        sourceLine:Number.isFinite(event.lineNumber)?event.lineNumber:0
       });
     });
   });
@@ -62,7 +77,7 @@ test("passive CSP violation inventory on synthetic PDF-to-Excel flow",async({pag
   const events=await page.evaluate(()=>window.__kukurekuSyntheticCspViolations||[]);
   const counts=new Map();
   for(const item of events){
-    const key=item.directive+"|"+item.origin+"|"+item.disposition;
+    const key=item.directive+"|"+item.origin+"|"+item.disposition+"|"+item.sourceCategory+"|line:"+item.sourceLine;
     counts.set(key,(counts.get(key)||0)+1);
   }
   console.log(JSON.stringify({
