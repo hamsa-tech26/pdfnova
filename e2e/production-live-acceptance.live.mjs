@@ -99,7 +99,9 @@ test("live PDF-to-Excel does not transmit original synthetic PDF bytes in reques
     }
   });
 
-  await page.goto("/pdf-to-excel",{waitUntil:"domcontentloaded"});
+  // Wait for browser hydration before selecting the synthetic source.
+  // Otherwise the file-change event may be lost on a cold production page.
+  await page.goto("/pdf-to-excel",{waitUntil:"networkidle"});
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"SYNTHETIC_TASK189_NO_PERSONAL_DATA.pdf",
     mimeType:"application/pdf",
