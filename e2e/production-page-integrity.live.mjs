@@ -108,3 +108,66 @@ test("live Extract PDF Pages preserves exactly selected pages 1,3,6",async({page
     status:"PASS",selected:"1,3,6",expectedPages:3,
     source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF"}));
 });
+
+
+test("live Delete PDF Pages removes selected pages while retaining every other source page",async({page})=>{
+  test.setTimeout(120000);
+  await page.goto("/delete-pdf-pages",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"TASK239_DELETE_SOURCE.pdf",mimeType:"application/pdf",
+    buffer:await sourcePdf("DELETE",6),
+  });
+  const input=page.locator("#pages");
+  await expect(input).toBeVisible({timeout:15000});
+  await input.fill("2,4");
+  const action=page.getByRole("button",{name:"Delete Pages and Download"});
+  await expect(action).toBeEnabled();
+  const pending=page.waitForEvent("download",{timeout:90000});
+  await action.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe("TASK239_DELETE_SOURCE-pages-removed.pdf");
+  const path=await download.path();expect(path).toBeTruthy();
+  verifyDownloadedPdf(path,[
+    "TASK239_DELETE_PAGE_1","TASK239_DELETE_PAGE_3",
+    "TASK239_DELETE_PAGE_5","TASK239_DELETE_PAGE_6",
+  ]);
+  console.log(JSON.stringify({check:"TASK239_LIVE_DELETE_PDF",
+    status:"PASS",removed:"2,4",retainedPages:4,
+    source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF"}));
+});
+
+test("live Rotate PDF persists 90 degree rotation for every source page",async({page})=>{
+  test.setTimeout(120000);
+  await page.goto("/rotate-pdf",{waitUntil:"networkidle"});
+  await page.locator('input[type="file"]').first().setInputFiles({
+    name:"TASK239_ROTATE_SOURCE.pdf",mimeType:"application/pdf",
+    buffer:await sourcePdf("ROTATE",3),
+  });
+  const choose=page.getByRole("button",{name:"90° clockwise",exact:true});
+  await expect(choose).toBeVisible({timeout:15000});
+  await choose.click();
+  const action=page.getByRole("button",{name:"Rotate and Download PDF"});
+  await expect(action).toBeEnabled();
+  const pending=page.waitForEvent("download",{timeout:90000});
+  await action.click();
+  const download=await pending;
+  expect(download.suggestedFilename()).toBe("TASK239_ROTATE_SOURCE-rotated.pdf");
+  const path=await download.path();expect(path).toBeTruthy();
+  const py=[
+    "import sys,fitz",
+    "doc=fitz.open(stream=open(sys.argv[1],'rb').read(),filetype='pdf')",
+    "expected=['TASK239_ROTATE_PAGE_'+str(i) for i in range(1,4)]",
+    "assert len(doc)==3",
+    "assert [p.get_text('text').strip() for p in doc]==expected",
+    "assert all(p.rotation==90 for p in doc),'Rotation not saved'",
+    "assert all(abs(p.rect.width-842)<1 and abs(p.rect.height-595)<1 for p in doc),'Rotated visible geometry wrong'",
+    "print('TASK239_ROTATION_INDEPENDENT_OK')",
+  ].join("\n");
+  const report=execFileSync("python",["-c",py,path],{
+    encoding:"utf8",timeout:30000,maxBuffer:128*1024,
+  });
+  expect(report).toContain("TASK239_ROTATION_INDEPENDENT_OK");
+  console.log(JSON.stringify({check:"TASK239_LIVE_ROTATE_PDF",
+    status:"PASS",pages:3,persistedRotation:90,
+    source:"SYNTHETIC_ONLY",independentReader:"PyMuPDF"}));
+});
