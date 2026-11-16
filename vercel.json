@@ -73,7 +73,8 @@
       "test/task253-production-security-headers": false,
       "research/task257-csp-reportonly": false,
       "test/task257-csp-reportonly": false,
-      "research/task257-csp-reportonly-browser": false
+      "research/task257-csp-reportonly-browser": false,
+      "research/task245-webkit-page-integrity": false
     }
   }
 }
