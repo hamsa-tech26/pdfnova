@@ -1,5 +1,6 @@
 import {test,expect} from "@playwright/test";
 import {PDFDocument,StandardFonts} from "pdf-lib";
+import {TOOL_ROUTES} from "../scripts/indexNowRoutes.mjs";
 
 // Passive candidate CSP: browser REPORT-ONLY, never enforce.
 // No report-uri/report-to endpoint, so no violation reports leave the browser.
@@ -90,5 +91,76 @@ test("passive CSP violation inventory on synthetic PDF-to-Excel flow",async({pag
     observedViolationSummary:[...counts].map(([key,count])=>({key,count})).slice(0,40),
     totalEvents:events.length,
     limitations:"A single synthetic Chromium flow does not cover every route, all worker paths or production CSP enforcement"
+  }));
+});
+
+
+test("passive CSP directive inventory across all 31 public tool entry pages",async({page})=>{
+  // Public entry-page audit only. No user files, synthetic PDF content,
+  // credentials, or network payloads are read or persisted.
+  test.setTimeout(360000);
+  expect(TOOL_ROUTES.length).toBe(31);
+  const origin="https://kukureku.com";
+  const audited=new Set(TOOL_ROUTES);
+  let injected=0;
+  await page.addInitScript(()=>{
+    window.__kukurekuEntryCspEvents=[];
+    document.addEventListener("securitypolicyviolation",event=>{
+      let destination="inline-or-unknown";
+      if(["inline","eval","data","blob"].includes(event.blockedURI))
+        destination=event.blockedURI;
+      else{
+        try{destination=new URL(event.blockedURI).origin;}catch{}
+      }
+      window.__kukurekuEntryCspEvents.push({
+        directive:event.effectiveDirective,
+        destination,
+        disposition:event.disposition
+      });
+    });
+  });
+  await page.route("https://kukureku.com/**",async route=>{
+    if(route.request().resourceType()!=="document"){
+      await route.continue();
+      return;
+    }
+    const requestUrl=new URL(route.request().url());
+    if(!audited.has(requestUrl.pathname)){
+      await route.continue();
+      return;
+    }
+    const response=await route.fetch();
+    const headers={...response.headers(),"content-security-policy-report-only":policy};
+    await route.fulfill({response,headers});
+    injected++;
+  });
+  const perRoute=[];
+  let total=0;
+  for(const route of TOOL_ROUTES){
+    const response=await page.goto(route,{waitUntil:"load",timeout:45000});
+    expect(response?.status(),"Public route "+route+" must be accessible").toBe(200);
+    await page.waitForTimeout(350);
+    const events=await page.evaluate(()=>window.__kukurekuEntryCspEvents||[]);
+    const byDirective={};
+    for(const item of events){
+      // Data-free summary only. Never log source URLs, paths, or file data.
+      const key=item.directive+"|"+item.destination+"|"+item.disposition;
+      byDirective[key]=(byDirective[key]||0)+1;
+    }
+    total+=events.length;
+    perRoute.push({route,events:events.length,byDirective});
+  }
+  expect(injected,"Candidate report-only CSP injected into each HTML route").toBe(31);
+  expect(perRoute).toHaveLength(31);
+  console.log(JSON.stringify({
+    task:263,
+    scope:"PUBLIC_TOOL_ENTRY_PAGES",
+    policyMode:"report-only",
+    testedRoutes:perRoute.length,
+    injectedDocuments:injected,
+    totalEvents:total,
+    results:perRoute,
+    customerPdfCount:0,
+    limitation:"Entry-page-only Chromium observations; no user uploads, tool processing, physical iOS, CSP enforcement, or malware exploit test"
   }));
 });

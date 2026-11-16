@@ -7,3 +7,11 @@ A scoped Playwright Chromium synthetic PDF-to-Excel test inserts a **report-only
 The candidate policy constrains scripts/connect to self and permits blob workers and data/blob images. Output is grouped directive/origin/count only, without request paths, PDF bytes, cookies, or raw URLs. This evidence is **not** approval for production CSP; Next.js inline scripts, analytics, PDF.js workers, OCR and other tools need broader verification. A single successful synthetic Chromium route is not all-31-tool or physical-iPhone certification.
 
 Require exact-head `Production CSP Report-Only Observation`, `Validate`, `Browser Reliability Smoke`. If the test fails, investigate without weakening existing privacy controls. Engine V4 Stable remains 0/20; Release 216 remains paused; automatic Vercel builds and previews stay held.
+
+## Task 263 — 31-tool entry-page inventory
+
+Extended the original report-only test to **all 31 registered public tool entry routes**, checking that the static candidate policy is inserted into each HTML document in a synthetic Chromium browser. The test only observes each route's initial scripts/resources, not file conversion or actual user documents. It records **route, aggregate directive/destination/count** and deliberately omits full URLs, query strings, cookies, PDF bytes, personal identifiers and stored customer data. Insertion of policy remains **browser-only and report-only**, with no external reporting endpoint.
+
+Original Task 257 PDF-to-Excel synthetic-input run: **4 inline script events and 1 Next.js static-chunk eval event** under `script-src 'self'`. These are evidence that the exact strict candidate is **not ready for enforcement**, not a security breach. Do not blindly add `unsafe-inline`/`unsafe-eval` to production. New entry-page observations will distinguish which routes require nonce/hash or bundled worker investigation. Results are diagnostic only; further document-processing and WebKit coverage remain before any proposed policy change.
+
+Run `Production CSP Report-Only Observation`, `Validate` and `Browser Reliability Smoke` at the exact new head. No runtime modifications, merge, previews or Release 216 deployment.
