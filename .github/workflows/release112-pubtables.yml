@@ -33,6 +33,7 @@ jobs:
       - name: Validate annotation-box scorer and fail-closed native prose continuity
         run: |
           node --test scripts/__tests__/release112Detection.nodecheck.mjs
+          node --test scripts/__tests__/release112CoordinateFrame.nodecheck.mjs
           node --test scripts/__tests__/release144UncaptionedPairs.nodecheck.mjs
       - name: Verify V4 Stable remains BLOCKED
         run: |
@@ -46,6 +47,13 @@ jobs:
           '
       - name: Download SHA-pinned original PDFs and annotation archive ephemerally
         run: node scripts/downloadRelease112TablePilot.mjs
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Verify independent source-PDF page geometry and annotation frames
+        run: |
+          python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+          python benchmarks/release112/inspectSourcePageFrames.py
       - name: Prepare Chromium
         run: |
           npm install --no-save @playwright/test@1.56.1

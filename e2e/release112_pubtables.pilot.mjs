@@ -3,6 +3,7 @@ import {readFile,writeFile,mkdir} from "node:fs/promises";
 import {join,resolve} from "node:path";
 import {annotationToPdfBox,parseDetectionXml,scoreDetectionPage,rectangleIoU}
   from "../benchmarks/release112/scoreTableRegions.mjs";
+import {auditCoordinateFrame} from "../benchmarks/release112/auditCoordinateFrame.mjs";
 import {assessUncaptionedPairedNativeStream}
   from "../benchmarks/release112/assessUncaptionedNativePairs.mjs";
 
@@ -89,6 +90,7 @@ for(const source of manifest.documents){
       const annot=parseDetectionXml(xml);
       expect(annot.boxes.length).toBe(ref.boxes);
       const viewport=result.document.pages[ref.page-1];
+      const coordinateFrame=auditCoordinateFrame(annot,viewport);
       const expected=annot.boxes.map(box=>annotationToPdfBox(box,annot,viewport));
       // Score actual logical tables only: no paragraph-block proxies.
       const detected=allTables.filter(table=>table.pageNumber===ref.page)
@@ -200,6 +202,7 @@ for(const source of manifest.documents){
         expect(check.sourcePromotable).toBe(false);
       }
       pageResults.push({originalPage:ref.page,...metrics,
+        coordinateFrame,
         imagePaintCount:imageReview.imagePaintCount,
         imageRegionsDetected:nativeImageRects.length,
         publishedImageBestIoU,
