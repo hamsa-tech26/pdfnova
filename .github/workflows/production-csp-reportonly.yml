@@ -1,0 +1,32 @@
+name: Production CSP Report-Only Observation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "e2e/production-csp-reportonly.live.mjs"
+      - "playwright.csp-reportonly-production.config.mjs"
+      - ".github/workflows/production-csp-reportonly.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-csp-reportonly-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-passive-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Observe browser-only CSP report-only signals
+        run: npx playwright test --config=playwright.csp-reportonly-production.config.mjs
