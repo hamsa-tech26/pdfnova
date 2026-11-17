@@ -24,3 +24,12 @@ Extended the 31-entry-page observation to classify each report-only event using 
 This distinguishes Next.js page bootstrap from same-origin static/runtime script events without turning CSP diagnostics into a URL or document-content log. The candidate policy remains browser-injected **report-only**; this task does not add a production header, collector, nonce, hash, exemption, or enforcement change.
 
 Require exact-head `Production CSP Report-Only Observation`, `Validate`, and `Browser Reliability Smoke`. Task 264 remains diagnostic only: it does not prove processing-time worker/connect compatibility or Linux WebKit compatibility. Release 216 remains paused and Engine V4 Stable remains 0/20.
+
+
+## Task 265 — Linux WebKit report-only entry-page parity
+
+Added a second Playwright configuration using Linux WebKit at a 390×844 viewport. It reuses the same synthetic-only report-only suite as Chromium: one PDF-to-Excel page initialization with a synthetic PDF upload, followed by the registered public entry-page inventory. Each page must return HTTP 200 and receive the browser-intercepted candidate `Content-Security-Policy-Report-Only` header. Event output retains only the Task 264 allowlisted source category, directive, disposition, destination class and numeric line; no raw source URL, request body, PDF bytes or user document is recorded.
+
+The workflow uses the already-deployed `https://kukureku.com`; it does not create a Vercel preview or deploy. Linux Playwright WebKit at a mobile-sized viewport is **not** a physical iPhone. This is startup/entry-page coverage only: it does not certify all 31 tools' processing-time worker/connect paths, real customer PDFs, or strict CSP enforcement. Task 266 remains the next priority for bounded synthetic PDF-to-Excel processing-time worker/connect observation.
+
+Require exact-head `Production CSP Report-Only WebKit Observation`, Chromium `Production CSP Report-Only Observation`, `Validate` and `Browser Reliability Smoke`. Release 216 remains paused; Engine V4 Stable remains 0/20.
