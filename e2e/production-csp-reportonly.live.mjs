@@ -112,10 +112,25 @@ test("passive CSP directive inventory across all 31 public tool entry pages",asy
       else{
         try{destination=new URL(event.blockedURI).origin;}catch{}
       }
+      // Source attribution is a fixed category only. Never retain or print
+      // sourceFile, raw URLs, query strings, or document-derived values.
+      let sourceCategory="unknown";
+      try{
+        const source=new URL(event.sourceFile,window.location.href);
+        if(source.protocol==="blob:") sourceCategory="blob-worker-or-script";
+        else if(source.origin===window.location.origin){
+          if(source.pathname.startsWith("/_next/static/")) sourceCategory="next-static";
+          else if(source.pathname===window.location.pathname) sourceCategory="page-inline";
+          else if(source.pathname.startsWith("/_next/")) sourceCategory="next-runtime";
+          else sourceCategory="same-origin-other";
+        }else sourceCategory="external";
+      }catch{}
       window.__kukurekuEntryCspEvents.push({
         directive:event.effectiveDirective,
         destination,
-        disposition:event.disposition
+        disposition:event.disposition,
+        sourceCategory,
+        sourceLine:Number.isFinite(event.lineNumber)?event.lineNumber:0
       });
     });
   });
@@ -144,7 +159,7 @@ test("passive CSP directive inventory across all 31 public tool entry pages",asy
     const byDirective={};
     for(const item of events){
       // Data-free summary only. Never log source URLs, paths, or file data.
-      const key=item.directive+"|"+item.destination+"|"+item.disposition;
+      const key=item.directive+"|"+item.destination+"|"+item.disposition+"|"+item.sourceCategory+"|line:"+item.sourceLine;
       byDirective[key]=(byDirective[key]||0)+1;
     }
     total+=events.length;

@@ -15,3 +15,12 @@ Extended the original report-only test to **all 31 registered public tool entry 
 Original Task 257 PDF-to-Excel synthetic-input run: **4 inline script events and 1 Next.js static-chunk eval event** under `script-src 'self'`. These are evidence that the exact strict candidate is **not ready for enforcement**, not a security breach. Do not blindly add `unsafe-inline`/`unsafe-eval` to production. New entry-page observations will distinguish which routes require nonce/hash or bundled worker investigation. Results are diagnostic only; further document-processing and WebKit coverage remain before any proposed policy change.
 
 Run `Production CSP Report-Only Observation`, `Validate` and `Browser Reliability Smoke` at the exact new head. No runtime modifications, merge, previews or Release 216 deployment.
+
+
+## Task 264 — privacy-safe CSP source attribution
+
+Extended the 31-entry-page observation to classify each report-only event using a fixed source-category allowlist: `page-inline`, `next-static`, `next-runtime`, `same-origin-other`, `external`, `blob-worker-or-script`, or `unknown`. A numeric source line is retained only as a diagnostic. Raw `sourceFile` values, source URLs, host/path/query strings, request payloads and document content are never written to the report.
+
+This distinguishes Next.js page bootstrap from same-origin static/runtime script events without turning CSP diagnostics into a URL or document-content log. The candidate policy remains browser-injected **report-only**; this task does not add a production header, collector, nonce, hash, exemption, or enforcement change.
+
+Require exact-head `Production CSP Report-Only Observation`, `Validate`, and `Browser Reliability Smoke`. Task 264 remains diagnostic only: it does not prove processing-time worker/connect compatibility or Linux WebKit compatibility. Release 216 remains paused and Engine V4 Stable remains 0/20.
