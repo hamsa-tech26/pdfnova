@@ -33,3 +33,12 @@ Added a second Playwright configuration using Linux WebKit at a 390×844 viewpor
 The workflow uses the already-deployed `https://kukureku.com`; it does not create a Vercel preview or deploy. Linux Playwright WebKit at a mobile-sized viewport is **not** a physical iPhone. This is startup/entry-page coverage only: it does not certify all 31 tools' processing-time worker/connect paths, real customer PDFs, or strict CSP enforcement. Task 266 remains the next priority for bounded synthetic PDF-to-Excel processing-time worker/connect observation.
 
 Require exact-head `Production CSP Report-Only WebKit Observation`, Chromium `Production CSP Report-Only Observation`, `Validate` and `Browser Reliability Smoke`. Release 216 remains paused; Engine V4 Stable remains 0/20.
+
+
+## Task 266 — bounded processing-time worker/connect observation
+
+Added one synthetic native-table PDF-to-Excel conversion under the browser-injected report-only candidate policy. The same test runs in Chromium and Linux WebKit, waits for a real XLSX download, checks the ZIP signature and records only directive, destination class, source category and numeric source line. It counts `worker-src`/`connect-src` reports separately.
+
+The test also scans outgoing POST/PUT/PATCH request bodies for the synthetic PDF's exact bytes, base64 and PDF header, but logs only the count and HTTP method if a match occurs. It never prints request URLs, headers, bodies, PDF contents or source URLs. This is a bounded check for direct/raw-byte transmission, not proof against transformed or encrypted exfiltration.
+
+It covers one synthetic PDF-to-Excel flow per browser only. It does not certify every tool's processing workers/connect paths, physical iPhone behavior, real customer documents, or CSP enforcement. Require exact-head Chromium CSP, WebKit CSP, Validate and Browser Reliability Smoke.

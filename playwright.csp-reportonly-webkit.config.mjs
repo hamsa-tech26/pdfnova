@@ -13,7 +13,7 @@ export default defineConfig({
     baseURL:"https://kukureku.com",
     browserName:"webkit",
     headless:true,
-    acceptDownloads:false,
+    acceptDownloads:true,
     viewport:{width:390,height:844},
     actionTimeout:20000,
     navigationTimeout:45000,
