@@ -1,0 +1,40 @@
+name: Prepare Next.js security lockfile
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "package.json"
+      - ".github/workflows/prepare-next-security-lock.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: prepare-next-security-lock-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  refresh-and-verify-lock:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Regenerate lockfile for the pinned patched Next.js version
+        run: npm install --package-lock-only --ignore-scripts --no-audit --no-fund
+      - name: Verify clean lockfile installation
+        run: npm ci --no-audit --no-fund
+      - name: Verify patched Next.js dependency tree
+        run: |
+          npm ls next eslint-config-next @next/env @next/eslint-plugin-next
+          npm audit --audit-level=moderate
+      - uses: actions/upload-artifact@v4
+        with:
+          name: nextjs-16.4.6-security-lockfile
+          path: package-lock.json
+          retention-days: 3
+          if-no-files-found: error
