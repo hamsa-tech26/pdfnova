@@ -204,8 +204,19 @@ test("Task 266 observes report-only CSP during synthetic PDF-to-Excel processing
   const pdfHeader=Buffer.from("%PDF-","utf8");
   const suspiciousWriteMethods=[];
   let writeRequestCount=0;
+  const resourceCounts=new Map();
 
   page.on("request",request=>{
+    const resourceType=request.resourceType();
+    if(["worker","serviceworker","fetch","xhr"].includes(resourceType)){
+      let originCategory="unknown";
+      try{
+        const requestOrigin=new URL(request.url()).origin;
+        originCategory=requestOrigin==="https://kukureku.com"?"same-origin":"external";
+      }catch{}
+      const key=resourceType+"|"+request.method()+"|"+originCategory;
+      resourceCounts.set(key,(resourceCounts.get(key)||0)+1);
+    }
     if(!["POST","PUT","PATCH"].includes(request.method())) return;
     writeRequestCount++;
     const body=request.postDataBuffer();
@@ -301,6 +312,7 @@ test("Task 266 observes report-only CSP during synthetic PDF-to-Excel processing
     outboundWriteRequestCount:writeRequestCount,
     originalPdfBytesInWriteRequests:0,
     workerConnectEventCount:workerConnectEvents,
+    processingResourceRequests:[...resourceCounts].map(([key,count])=>({key,count})),
     totalEvents:events.length,
     observedViolationSummary:[...counts].map(([key,count])=>({key,count})).slice(0,50),
     rawUrlsLogged:false,

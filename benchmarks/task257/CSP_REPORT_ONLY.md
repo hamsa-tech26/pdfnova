@@ -37,7 +37,7 @@ Require exact-head `Production CSP Report-Only WebKit Observation`, Chromium `Pr
 
 ## Task 266 — bounded processing-time worker/connect observation
 
-Added one synthetic native-table PDF-to-Excel conversion under the browser-injected report-only candidate policy. The same test runs in Chromium and Linux WebKit, waits for a real XLSX download, checks the ZIP signature and records only directive, destination class, source category and numeric source line. It counts `worker-src`/`connect-src` reports separately.
+Added one synthetic native-table PDF-to-Excel conversion under the browser-injected report-only candidate policy. The same test runs in Chromium and Linux WebKit, waits for a real XLSX download, checks the ZIP signature and records only directive, destination class, source category and numeric source line. It counts `worker-src`/`connect-src` reports separately and aggregates Playwright `worker`, `serviceworker`, `fetch` and `xhr` resource requests by type, method and same-origin/external category (never URL/path).
 
 The test also scans outgoing POST/PUT/PATCH request bodies for the synthetic PDF's exact bytes, base64 and PDF header, but logs only the count and HTTP method if a match occurs. It never prints request URLs, headers, bodies, PDF contents or source URLs. This is a bounded check for direct/raw-byte transmission, not proof against transformed or encrypted exfiltration.
 
