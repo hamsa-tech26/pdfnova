@@ -1,0 +1,39 @@
+name: Production CSP Report-Only WebKit Observation
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "e2e/production-csp-reportonly.live.mjs"
+      - "playwright.csp-reportonly-webkit.config.mjs"
+      - ".github/workflows/production-csp-reportonly-webkit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: production-csp-reportonly-webkit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-passive-csp-webkit:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps webkit
+      - name: Observe 31 public tool entry pages under candidate CSP in Linux WebKit
+        run: npx playwright test --config=playwright.csp-reportonly-webkit.config.mjs
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: task265-csp-webkit-failure
+          path: test-results/
+          retention-days: 3
+          if-no-files-found: ignore
