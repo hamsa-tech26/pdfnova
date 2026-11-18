@@ -2,6 +2,7 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "git": {
     "deploymentEnabled": {
+      "feature/kukureku-smart-scanner-v01": false,
       "fix/task177-compact-native-provenance": false,
       "integration/task176-source-integrity-xlsx-review": false,
       "fix/task174-native-grid-provenance-guard": false,

@@ -17,6 +17,7 @@ const INTERNAL_ROUTES = new Set([
   "workspace-privacy",
   "evidence-viewer",
   "magic-drop",
+  "smart-scan",
   "workflow-recipes",
   "workflow-planner",
   "workspace-health",
