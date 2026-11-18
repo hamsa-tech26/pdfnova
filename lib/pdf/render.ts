@@ -6,6 +6,9 @@ export type RenderedPdfPage = {
   width: number;
   height: number;
   scale: number;
+  /** Visible physical page size after PDF.js crop clipping, UserUnit and rotation. */
+  pageWidth: number;
+  pageHeight: number;
 };
 
 export type RenderPdfPagesOptions = {
@@ -246,6 +249,8 @@ export async function forEachRenderedPdfPage(
               canvas.height,
             scale:
               effectiveScale,
+            pageWidth: baseViewport.width,
+            pageHeight: baseViewport.height,
           });
         } finally {
           canvas.width = 0;

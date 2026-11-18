@@ -1,6 +1,6 @@
 import {defineConfig} from "@playwright/test";
 export default defineConfig({
-  testDir:"./e2e",testMatch:"**/release37_public.pilot.mjs",timeout:300000,
+  testDir:"./e2e",testMatch:["**/release37_public.pilot.mjs", "**/redaction-public.pilot.mjs"],timeout:300000,
   fullyParallel:false,workers:1,retries:0,reporter:"line",
   use:{baseURL:"http://127.0.0.1:3000",headless:true,acceptDownloads:true,
     viewport:{width:1440,height:1000},trace:"retain-on-failure"},
