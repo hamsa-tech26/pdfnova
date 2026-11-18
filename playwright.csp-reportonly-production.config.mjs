@@ -11,7 +11,7 @@ export default defineConfig({
     baseURL:"https://kukureku.com",
     browserName:"chromium",
     headless:true,
-    acceptDownloads:false,
+    acceptDownloads:true,
     trace:"off",
     screenshot:"off",
   },
