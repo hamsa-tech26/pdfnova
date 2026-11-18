@@ -47,6 +47,9 @@ next-env.d.ts
 # CI-only public HTTP and local mobile diagnostic metadata
 /benchmarks/website/reports/
 
+# Owner-only Google Search Console snapshots and tokens stay off GitHub
+/.local/gsc/
+
 # Release 51: generated PDFs and locally held private golden data
 /test-fixtures/golden/
 /benchmarks/golden/reports/
