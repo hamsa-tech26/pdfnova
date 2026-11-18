@@ -5,6 +5,8 @@ on:
     paths:
       - "benchmarks/release112/**"
       - "scripts/downloadRelease112TablePilot.mjs"
+      - "scripts/checkPublisherTableConcordance.py"
+      - "scripts/__tests__/publisherTableConcordance_test.py"
       - "scripts/__tests__/release112Detection.nodecheck.mjs"
       - "e2e/release112_pubtables.pilot.mjs"
       - "playwright.release112.config.mjs"
@@ -46,6 +48,10 @@ jobs:
           '
       - name: Download SHA-pinned original PDFs and annotation archive ephemerally
         run: node scripts/downloadRelease112TablePilot.mjs
+      - name: Test bounded publisher-JATS parser and fail-closed diagnostics
+        run: python3 -m unittest discover -s scripts/__tests__ -p publisherTableConcordance_test.py -v
+      - name: Fetch complete original publisher JATS privately (under 2 MiB)
+        run: python3 scripts/checkPublisherTableConcordance.py fetch benchmarks/release112/private/PMC1064098.publisher.xml
       - name: Prepare Chromium
         run: |
           npm install --no-save @playwright/test@1.56.1
