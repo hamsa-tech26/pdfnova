@@ -1383,7 +1383,11 @@ function detectCaptionGridRows(
   block: PdfVisualBlock,
   columns: ColumnCandidate[],
 ): AdaptiveRowDetectionResult | null {
-  if (!block.id.startsWith("caption-table-") || columns.length < 4) return null;
+  if (
+    !(block.id.startsWith("caption-table-") ||
+      block.id.startsWith("native-captioned-short-numeric-")) ||
+    columns.length < 4
+  ) return null;
   const lines = getBlockLines(block);
   if (lines.length < 4) return null;
   const numeric = /^[-+]?(?:\d{1,3}(?:,\d{3})+|\d+)(?:\.\d+)?(?:%|\))?$/;

@@ -131,6 +131,32 @@ describe("Release 60 XLSX quality and coverage gates", () => {
     expect(()=>preparePdfV4XlsxExport(source([overlapping]))).toThrow("Overlapping table cells");
   });
 
+  it("allows only source-word-separated short numeric headers in explicit review", () => {
+    const recovered=table([1]);
+    const header=recovered.rows[0];
+    header.provenance!.blockId="native-captioned-short-numeric-1-source-1";
+    header.cells[0].bounds={x:50,y:10,width:190,height:12};
+    header.cells[1].bounds={x:200,y:10,width:80,height:12};
+    for(const cell of header.cells.slice(0,2)){
+      cell.words=[{
+        id:"native-header-word-"+cell.columnIndex,text:cell.text,pageNumber:1,
+        bounds:{x:cell.bounds.x,y:10,width:20,height:12},
+        font:{size:9},rotation:0,
+        extractionProvenance:{source:"native-pdf"},
+      }];
+    }
+    expect(()=>preparePdfV4XlsxExport(source([recovered])))
+      .toThrow("Only unverified new grid candidates");
+    const reviewed=preparePdfV4XlsxExport(source([recovered]),
+      {allowSelectedCompactGrid:true});
+    expect(reviewed.reviewNotes?.join(" ")).toContain("grouped/multilevel header");
+    // The bounding boxes still overlap. If actual source words collide,
+    // even explicitly reviewed XLSX export must refuse the data.
+    header.cells[1].words[0].bounds.x=50;
+    expect(()=>preparePdfV4XlsxExport(source([recovered]),
+      {allowSelectedCompactGrid:true})).toThrow("Overlapping table cells");
+  });
+
   it("blocks scanned or mixed source pages and even OCR-labeled cells on sufficient pages", () => {
     const mixed=source([table([1])]);
     mixed.nativePageTextExtraction[0].textExtraction.status="low";
