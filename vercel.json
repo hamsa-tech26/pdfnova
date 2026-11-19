@@ -70,7 +70,8 @@
       "integration/task227-quality-gates": false,
       "test/task230-mixed-native-table-webkit": false,
       "fix/kukureku-next-16-4-6-security": false,
-      "research/task267-pdf-to-word-csp": false
+      "research/task267-pdf-to-word-csp": false,
+      "research/task268-pdf-to-jpg-csp": false
     }
   }
 }
