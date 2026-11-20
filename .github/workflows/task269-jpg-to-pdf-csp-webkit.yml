@@ -1,0 +1,32 @@
+name: Task 269 JPG-to-PDF CSP Observation (WebKit)
+on:
+  pull_request:
+    branches: [main, research/task268-pdf-to-jpg-csp]
+    paths:
+      - "e2e/production-csp-task269-jpg-to-pdf.live.mjs"
+      - "playwright.task269-csp-webkit.config.mjs"
+      - ".github/workflows/task269-jpg-to-pdf-csp-webkit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: task269-jpg-to-pdf-csp-webkit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-jpg-to-pdf-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps webkit
+      - name: Verify synthetic JPG-to-PDF output, ordering, page sizes and direct egress under report-only CSP
+        run: npx playwright test --config=playwright.task269-csp-webkit.config.mjs
