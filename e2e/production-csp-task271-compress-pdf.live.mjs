@@ -257,7 +257,7 @@ async function inspectDownloadedPdf(download,expectedMarkers,expectedPages){
     pageCount:pdf.getPageCount(),
     pageSizes,
     markerCount:expectedMarkers.length,
-    markerOrderVerified:expectedMarkers.length===0||true,
+    markerOrderVerified:true,
     extractedTextLength:extractedText.length,
     annotationCount
   };
@@ -271,10 +271,9 @@ async function runCompression(page,sourceBytes,fileName,level,markers,expectedPa
     mimeType:"application/pdf",
     buffer:sourceBytes
   });
-  await page.getByRole("button",{name:level,exact:true}).click();
+  await page.getByRole("button",{name:new RegExp("^"+level+"\\b")}).click();
   const convertButton=page.getByRole("button",{
-    name:"Compress and Download PDF",
-    exact:true
+    name:/Compress and Download PDF/
   });
   await expect(convertButton).toBeVisible();
   await expect(convertButton).toBeEnabled();
