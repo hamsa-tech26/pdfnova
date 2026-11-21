@@ -191,7 +191,7 @@ test("Task 270 converts a synthetic DOCX with paragraphs and a basic table into 
 
   const privacy=observePrivacy(page,sourceBytes);
   await openWordToPdfWithReportOnly(page);
-  await expect(page.getByRole("heading",{name:/Convert Word to PDF/i})).toBeVisible();
+  await expect(page.getByRole("heading",{name:"Convert Word to PDF in your browser",exact:true})).toBeVisible();
 
   await page.locator('input[type="file"]').first().setInputFiles({
     name:"synthetic-task270.docx",
