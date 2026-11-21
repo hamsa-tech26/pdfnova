@@ -1,4 +1,5 @@
 import { PDFDocument } from "pdf-lib";
+import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
 import { forEachRenderedPdfPage } from "@/lib/pdf/render";
 import { readPdfJsNativeTextContent } from "@/lib/pdf-engine-v4/reader/pdfJsTextContentCompat";
 import {
@@ -230,12 +231,8 @@ async function compressVisualPdf(
       maxDimension: 2800,
     },
     async (renderedPage) => {
-      const response = await fetch(
+      const jpegBytes = dataUrlToBytes(
         renderedPage.dataUrl,
-      );
-
-      const jpegBytes = new Uint8Array(
-        await response.arrayBuffer(),
       );
 
       const image =
