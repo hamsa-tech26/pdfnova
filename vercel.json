@@ -69,7 +69,8 @@
       "feature/task211-search-readiness": false,
       "integration/task227-quality-gates": false,
       "test/task230-mixed-native-table-webkit": false,
-      "fix/kukureku-next-16-4-6-security": false
+      "fix/kukureku-next-16-4-6-security": false,
+      "fix/task275-local-dataurl-decode": false
     }
   }
 }

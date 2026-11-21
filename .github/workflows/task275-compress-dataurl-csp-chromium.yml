@@ -1,0 +1,51 @@
+name: Task 275 Compression Data URL CSP Remediation (Chromium)
+on:
+  pull_request:
+    branches: [main, fix/kukureku-next-16-4-6-security]
+    paths:
+      - "lib/pdf/compress.ts"
+      - "lib/pdf/dataUrlBytes.ts"
+      - "lib/pdf/__tests__/dataUrlBytes.test.ts"
+      - "e2e/production-csp-task275-compress-dataurl.live.mjs"
+      - "playwright.task275-csp-chromium.config.mjs"
+      - ".github/workflows/task275-compress-dataurl-csp-chromium.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: task275-compress-dataurl-chromium-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-compression-dataurl-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - name: Build the exact PR application bundle
+        run: NEXT_TELEMETRY_DISABLED=1 npm run build
+      - name: Start local production server
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/kukureku-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/compress-pdf >/dev/null; then
+              echo "Local Next.js production server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/kukureku-next.log
+          exit 1
+      - name: Unit-test local data URL decoding
+        run: npx vitest run lib/pdf/__tests__/dataUrlBytes.test.ts
+      - run: npx playwright install --with-deps chromium
+      - name: Verify PR-local text/image compression and zero data URL connect-src reports under report-only CSP
+        run: npx playwright test --config=playwright.task275-csp-chromium.config.mjs
