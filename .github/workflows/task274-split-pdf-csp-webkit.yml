@@ -1,0 +1,32 @@
+name: Task 274 Split PDF CSP Observation (WebKit)
+on:
+  pull_request:
+    branches: [main, research/task273-merge-pdf-csp]
+    paths:
+      - "e2e/production-csp-task274-split-pdf.live.mjs"
+      - "playwright.task274-csp-webkit.config.mjs"
+      - ".github/workflows/task274-split-pdf-csp-webkit.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: task274-split-pdf-csp-webkit-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-split-pdf-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps webkit
+      - name: Verify invalid page range rejection, extracted PDF order and direct egress under report-only CSP
+        run: npx playwright test --config=playwright.task274-csp-webkit.config.mjs
