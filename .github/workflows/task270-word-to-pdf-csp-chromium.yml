@@ -1,0 +1,32 @@
+name: Task 270 Word-to-PDF CSP Observation (Chromium)
+on:
+  pull_request:
+    branches: [main, research/task269-jpg-to-pdf-csp]
+    paths:
+      - "e2e/production-csp-task270-word-to-pdf.live.mjs"
+      - "playwright.task270-csp-chromium.config.mjs"
+      - ".github/workflows/task270-word-to-pdf-csp-chromium.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: task270-word-to-pdf-csp-chromium-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-word-to-pdf-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Verify synthetic DOCX-to-PDF text, table and direct egress under report-only CSP
+        run: npx playwright test --config=playwright.task270-csp-chromium.config.mjs
