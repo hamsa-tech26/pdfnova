@@ -1,0 +1,32 @@
+name: Task 272 Protect and Unlock PDF CSP Observation (Chromium)
+on:
+  pull_request:
+    branches: [main, research/task271-compress-pdf-csp]
+    paths:
+      - "e2e/production-csp-task272-protect-unlock.live.mjs"
+      - "playwright.task272-csp-chromium.config.mjs"
+      - ".github/workflows/task272-protect-unlock-csp-chromium.yml"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: task272-protect-unlock-csp-chromium-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  inspect-protect-unlock-csp:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: npx playwright install --with-deps chromium
+      - name: Verify AES-256 protection, password rejection, local unlock and direct egress under report-only CSP
+        run: npx playwright test --config=playwright.task272-csp-chromium.config.mjs
