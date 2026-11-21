@@ -1,0 +1,20 @@
+import {defineConfig} from "@playwright/test";
+
+export default defineConfig({
+  testDir:"./e2e",
+  testMatch:"production-csp-task273-merge-pdf.live.mjs",
+  fullyParallel:false,
+  workers:1,
+  retries:0,
+  timeout:240000,
+  use:{
+    baseURL:"https://kukureku.com",
+    browserName:"webkit",
+    headless:true,
+    viewport:{width:390,height:844},
+    acceptDownloads:true,
+    trace:"off",
+    screenshot:"off"
+  },
+  reporter:"line"
+});

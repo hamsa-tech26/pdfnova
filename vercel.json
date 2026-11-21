@@ -75,7 +75,8 @@
       "research/task269-jpg-to-pdf-csp": false,
       "research/task270-word-to-pdf-csp": false,
       "research/task271-compress-pdf-csp": false,
-      "research/task272-protect-unlock-csp": false
+      "research/task272-protect-unlock-csp": false,
+      "research/task273-merge-pdf-csp": false
     }
   }
 }
