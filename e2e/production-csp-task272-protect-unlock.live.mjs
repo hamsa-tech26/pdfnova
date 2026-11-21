@@ -333,4 +333,4 @@ async function inspectReadablePdfWithPassword(bytes,correctPassword,expectedMark
     expect(positions[index]).toBeGreaterThan(positions[index-1]);
   }
   return {pageCount:pdf.numPages,pageSizes,markerCount:expectedMarkers.length,markerOrderVerified:true};
-});
+}
