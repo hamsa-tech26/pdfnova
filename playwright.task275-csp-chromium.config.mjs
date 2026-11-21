@@ -8,7 +8,7 @@ export default defineConfig({
   retries:0,
   timeout:240000,
   use:{
-    baseURL:"https://kukureku.com",
+    baseURL:"http://127.0.0.1:3000",
     browserName:"chromium",
     headless:true,
     viewport:{width:390,height:844},

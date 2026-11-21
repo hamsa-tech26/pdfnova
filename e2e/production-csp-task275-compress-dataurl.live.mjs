@@ -4,7 +4,7 @@ import {getDocument} from "pdfjs-dist/legacy/build/pdf.mjs";
 import {readFile} from "node:fs/promises";
 import {deflateSync} from "node:zlib";
 
-const origin="https://kukureku.com";
+const origin="http://127.0.0.1:3000";
 const reportOnlyPolicy=[
   "default-src 'self'",
   "script-src 'self'",
@@ -303,6 +303,7 @@ async function runCompression(page,sourceBytes,fileName,level,markers,expectedPa
   }
   console.log(JSON.stringify({
     task:275,
+    testEnvironment:"local-production-build",
     case:caseName,
     result:expectRasterized?"IMAGE_ONLY_VISUAL_COMPRESSION_VERIFIED":"TEXT_PDF_COMPRESSION_PRESERVED",
     browser:browserName,

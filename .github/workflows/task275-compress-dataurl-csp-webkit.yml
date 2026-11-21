@@ -30,8 +30,22 @@ jobs:
           cache: npm
       - run: npm ci --no-audit --no-fund
       - run: npm install --no-save @playwright/test@1.56.1
+      - name: Build the exact PR application bundle
+        run: NEXT_TELEMETRY_DISABLED=1 npm run build
+      - name: Start local production server
+        run: |
+          npm run start -- --hostname 127.0.0.1 > /tmp/kukureku-next.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl -fsS http://127.0.0.1:3000/compress-pdf >/dev/null; then
+              echo "Local Next.js production server is ready"
+              exit 0
+            fi
+            sleep 2
+          done
+          cat /tmp/kukureku-next.log
+          exit 1
       - name: Unit-test local data URL decoding
         run: npx vitest run lib/pdf/__tests__/dataUrlBytes.test.ts
       - run: npx playwright install --with-deps webkit
-      - name: Verify text/image compression and zero data URL connect-src reports under report-only CSP
+      - name: Verify PR-local text/image compression and zero data URL connect-src reports under report-only CSP
         run: npx playwright test --config=playwright.task275-csp-webkit.config.mjs
