@@ -160,7 +160,7 @@ async function inspectDownloadedPdf(download){
       .join(" "));
   }
   const extractedText=pageText.join(" ");
-  await parsed.destroy();
+  await loadingTask.destroy();
 
   for(const marker of markers){
     expect(extractedText.split(marker).length-1).toBe(1);
