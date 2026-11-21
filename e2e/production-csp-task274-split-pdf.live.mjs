@@ -187,7 +187,8 @@ test("Task 274 rejects invalid page ranges and extracts the requested pages loca
   const extractButton=page.getByRole("button",{name:/Extract and Download PDF/});
   await expect(extractButton).toBeVisible();
   await extractButton.click();
-  await expect(page.getByText(/Page 5 is outside the available 1-4 pages/)).toBeVisible();
+  await expect(page.getByRole("heading",{name:"PDF page extraction failed",exact:true})).toBeVisible();
+  await expect(page.getByText(/Page 5 is outside the available 1-4 pages/).first()).toBeVisible();
   expect(downloadCount).toBe(0);
 
   await page.locator("#page-range").fill("1,3-4");
