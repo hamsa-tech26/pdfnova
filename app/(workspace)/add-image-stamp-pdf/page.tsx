@@ -8,6 +8,7 @@ import PositionControls from "@/components/pdf/PositionControls";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
@@ -43,15 +44,6 @@ const faqs = [
   { question: "Can I create a text stamp?", answer: "Yes. Type stamp text such as APPROVED, DRAFT, or CONFIDENTIAL and choose its color." },
   { question: "Is my PDF or image uploaded?", answer: "No. Previewing and PDF updates are performed locally in your browser." },
 ];
-
-function dataUrlToBytes(dataUrl: string) {
-  const comma = dataUrl.indexOf(",");
-  if (comma < 0) throw new Error("The image data is invalid.");
-  const binary = window.atob(dataUrl.slice(comma + 1));
-  const bytes = new Uint8Array(binary.length);
-  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
-  return bytes;
-}
 
 function readFileAsDataUrl(file: File) {
   return new Promise<string>((resolve, reject) => {

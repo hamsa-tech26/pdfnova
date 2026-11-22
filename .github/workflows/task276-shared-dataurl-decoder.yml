@@ -1,0 +1,39 @@
+name: Task 276 Shared Data URL Decoder
+on:
+  pull_request:
+    branches: [fix/task275-local-dataurl-decode]
+    paths:
+      - "app/(workspace)/pdf-to-jpg/page.tsx"
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "lib/pdf/dataUrlBytes.ts"
+      - "lib/pdf/__tests__/dataUrlBytes.test.ts"
+      - "lib/pdf/__tests__/dataUrlConsumers.test.ts"
+      - "vercel.json"
+      - ".github/workflows/task276-shared-dataurl-decoder.yml"
+permissions:
+  contents: read
+concurrency:
+  group: task276-shared-dataurl-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-shared-decoder:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify shared decoder behavior and all three consumers
+        run: npx vitest run lib/pdf/__tests__/dataUrlBytes.test.ts lib/pdf/__tests__/dataUrlConsumers.test.ts
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1

@@ -5,6 +5,7 @@ import ErrorCard from "@/components/pdf/ErrorCard";
 import PdfPageCard from "@/components/pdf/PdfPageCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
 import {
   forEachRenderedPdfPage,
   renderPdfPages,
@@ -25,18 +26,6 @@ import {
 } from "lucide-react";
 import { ChangeEvent, useRef, useState } from "react";
 import { toast } from "sonner";
-
-function dataUrlToBytes(dataUrl: string) {
-  const base64 = dataUrl.split(",")[1];
-  const binary = window.atob(base64);
-  const bytes = new Uint8Array(binary.length);
-
-  for (let index = 0; index < binary.length; index += 1) {
-    bytes[index] = binary.charCodeAt(index);
-  }
-
-  return bytes;
-}
 
 export default function PdfToJpgPage() {
   const fileInputRef = useRef<HTMLInputElement>(null);

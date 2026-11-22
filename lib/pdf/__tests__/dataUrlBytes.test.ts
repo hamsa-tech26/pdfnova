@@ -25,4 +25,21 @@ describe("dataUrlToBytes",()=>{
   it("rejects malformed base64 data URL payloads",()=>{
     expect(()=>dataUrlToBytes("data:image/jpeg;base64,%%%")).toThrow();
   });
+
+  it("recognizes base64 metadata when charset parameters are present",()=>{
+    expect(
+      dataUrlToBytes("data:image/png;charset=utf-8;base64,AQID"),
+    ).toEqual(new Uint8Array([1,2,3]));
+  });
+
+  it("preserves literal plus signs in non-base64 data URL payloads",()=>{
+    expect(
+      dataUrlToBytes("data:text/plain,A+B"),
+    ).toEqual(new TextEncoder().encode("A+B"));
+  });
+
+  it("rejects malformed percent-encoded payloads",()=>{
+    expect(()=>dataUrlToBytes("data:text/plain,%E0%A4%A")).toThrow();
+  });
+
 });
