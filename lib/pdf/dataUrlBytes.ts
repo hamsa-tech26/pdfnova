@@ -20,6 +20,17 @@ function decodePercentEncodedPayload(payload: string): Uint8Array {
     outputLength = requiredLength;
   }
 
+  function appendByte(byte: number) {
+    if (outputLength + 1 > output.length) {
+      const expanded = new Uint8Array(output.length * 2);
+      expanded.set(output.subarray(0, outputLength));
+      output = expanded;
+    }
+
+    output[outputLength] = byte;
+    outputLength += 1;
+  }
+
   let cursor = 0;
   while (cursor < payload.length) {
     const percentIndex = payload.indexOf("%", cursor);
@@ -38,16 +49,7 @@ function decodePercentEncodedPayload(payload: string): Uint8Array {
       throw new Error("Malformed percent escape in data URL payload.");
     }
 
-    outputLength = outputLength + 1 > output.length
-      ? (() => {
-          const expanded = new Uint8Array(output.length * 2);
-          expanded.set(output.subarray(0, outputLength));
-          output = expanded;
-          return outputLength;
-        })()
-      : outputLength;
-    output[outputLength] = Number.parseInt(escape, 16);
-    outputLength += 1;
+    appendByte(Number.parseInt(escape, 16));
     cursor = percentIndex + 3;
   }
 
