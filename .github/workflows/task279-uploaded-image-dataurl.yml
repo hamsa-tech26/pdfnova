@@ -1,0 +1,53 @@
+name: Task 279 Uploaded Image Data URL Consumer Acceptance
+on:
+  push:
+    branches: [research/task279-uploaded-image-dataurl-acceptance]
+    paths:
+      - "e2e/task279-uploaded-image-dataurl.local.mjs"
+      - "playwright.task279-uploaded-image-dataurl.config.mjs"
+      - ".github/workflows/task279-uploaded-image-dataurl.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [research/task278-dataurl-consumer-integrity]
+    paths:
+      - "e2e/task279-uploaded-image-dataurl.local.mjs"
+      - "playwright.task279-uploaded-image-dataurl.config.mjs"
+      - ".github/workflows/task279-uploaded-image-dataurl.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task279-uploaded-image-dataurl-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - name: Inspect uploaded-image data URL consumers in local production build
+        run: npx playwright test --config=playwright.task279-uploaded-image-dataurl.config.mjs
+        env:
+          TASK279_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1
