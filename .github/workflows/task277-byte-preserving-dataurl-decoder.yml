@@ -1,0 +1,35 @@
+name: Task 277 Byte-Preserving Data URL Decoder
+on:
+  pull_request:
+    branches: [fix/task276-shared-dataurl-decoder]
+    paths:
+      - "lib/pdf/dataUrlBytes.ts"
+      - "lib/pdf/__tests__/dataUrlBytes.test.ts"
+      - "vercel.json"
+      - ".github/workflows/task277-byte-preserving-dataurl-decoder.yml"
+permissions:
+  contents: read
+concurrency:
+  group: task277-dataurl-bytes-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify-byte-preserving-decoder:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - name: Verify byte-preserving data URL decoding
+        run: npx vitest run lib/pdf/__tests__/dataUrlBytes.test.ts
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
