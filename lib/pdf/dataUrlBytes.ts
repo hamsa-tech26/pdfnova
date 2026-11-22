@@ -88,13 +88,15 @@ export function dataUrlToBytes(dataUrl: string): Uint8Array {
   const isBase64 = metadata
     .split(";")
     .some((part) => part.toLowerCase() === "base64");
-  const decodedPayload = decodePercentEncodedPayload(payload);
 
   if (!isBase64) {
-    return decodedPayload;
+    return decodePercentEncodedPayload(payload);
   }
 
-  const binary = atob(bytesToAscii(decodedPayload));
+  const base64Payload = payload.includes("%")
+    ? bytesToAscii(decodePercentEncodedPayload(payload))
+    : payload;
+  const binary = atob(base64Payload);
   const bytes = new Uint8Array(binary.length);
 
   for (let index = 0; index < binary.length; index += 1) {
