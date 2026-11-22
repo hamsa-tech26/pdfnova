@@ -71,7 +71,8 @@
       "test/task230-mixed-native-table-webkit": false,
       "fix/kukureku-next-16-4-6-security": false,
       "fix/task275-local-dataurl-decode": false,
-      "fix/task276-shared-dataurl-decoder": false
+      "fix/task276-shared-dataurl-decoder": false,
+      "fix/task277-byte-preserving-dataurl-decoder": false
     }
   }
 }
