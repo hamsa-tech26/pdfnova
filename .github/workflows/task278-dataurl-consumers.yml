@@ -1,0 +1,53 @@
+name: Task 278 Data URL Consumer Output and Privacy Acceptance
+on:
+  push:
+    branches: [research/task278-dataurl-consumer-integrity]
+    paths:
+      - "e2e/task278-dataurl-consumer-integrity.local.mjs"
+      - "playwright.task278-dataurl-consumers.config.mjs"
+      - ".github/workflows/task278-dataurl-consumers.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [fix/task277-byte-preserving-dataurl-decoder]
+    paths:
+      - "e2e/task278-dataurl-consumer-integrity.local.mjs"
+      - "playwright.task278-dataurl-consumers.config.mjs"
+      - ".github/workflows/task278-dataurl-consumers.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task278-dataurl-consumers-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - name: Inspect local production build outputs and direct egress
+        run: npx playwright test --config=playwright.task278-dataurl-consumers.config.mjs
+        env:
+          TASK278_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1

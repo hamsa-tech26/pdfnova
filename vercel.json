@@ -72,7 +72,8 @@
       "fix/kukureku-next-16-4-6-security": false,
       "fix/task275-local-dataurl-decode": false,
       "fix/task276-shared-dataurl-decoder": false,
-      "fix/task277-byte-preserving-dataurl-decoder": false
+      "fix/task277-byte-preserving-dataurl-decoder": false,
+      "research/task278-dataurl-consumer-integrity": false
     }
   }
 }
