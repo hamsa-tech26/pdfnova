@@ -9,6 +9,7 @@ import SignaturePad from "@/components/pdf/SignaturePad";
 import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
+import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
@@ -87,43 +88,6 @@ const faqs = [
       "No. The PDF preview, signature creation, and PDF update run locally inside your browser.",
   },
 ];
-
-function dataUrlToBytes(
-  dataUrl: string,
-) {
-  const commaIndex =
-    dataUrl.indexOf(",");
-
-  if (commaIndex < 0) {
-    throw new Error(
-      "The signature image is invalid.",
-    );
-  }
-
-  const base64 =
-    dataUrl.slice(
-      commaIndex + 1,
-    );
-
-  const binary =
-    window.atob(base64);
-
-  const bytes =
-    new Uint8Array(
-      binary.length,
-    );
-
-  for (
-    let index = 0;
-    index < binary.length;
-    index += 1
-  ) {
-    bytes[index] =
-      binary.charCodeAt(index);
-  }
-
-  return bytes;
-}
 
 function readFileAsDataUrl(
   file: File,
