@@ -73,7 +73,8 @@
       "fix/task275-local-dataurl-decode": false,
       "fix/task276-shared-dataurl-decoder": false,
       "fix/task277-byte-preserving-dataurl-decoder": false,
-      "research/task278-dataurl-consumer-integrity": false
+      "research/task278-dataurl-consumer-integrity": false,
+      "research/task279-uploaded-image-dataurl-acceptance": false
     }
   }
 }
