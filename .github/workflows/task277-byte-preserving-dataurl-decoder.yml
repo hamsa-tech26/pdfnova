@@ -1,5 +1,12 @@
 name: Task 277 Byte-Preserving Data URL Decoder
 on:
+  push:
+    branches: [fix/task277-byte-preserving-dataurl-decoder]
+    paths:
+      - "lib/pdf/dataUrlBytes.ts"
+      - "lib/pdf/__tests__/dataUrlBytes.test.ts"
+      - "vercel.json"
+      - ".github/workflows/task277-byte-preserving-dataurl-decoder.yml"
   pull_request:
     branches: [fix/task276-shared-dataurl-decoder]
     paths:
