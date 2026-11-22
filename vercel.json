@@ -74,7 +74,8 @@
       "fix/task276-shared-dataurl-decoder": false,
       "fix/task277-byte-preserving-dataurl-decoder": false,
       "research/task278-dataurl-consumer-integrity": false,
-      "research/task279-uploaded-image-dataurl-acceptance": false
+      "research/task279-uploaded-image-dataurl-acceptance": false,
+      "research/task280-uploaded-jpeg-dataurl-acceptance": false
     }
   }
 }
