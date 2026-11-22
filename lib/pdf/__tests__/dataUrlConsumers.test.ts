@@ -16,7 +16,7 @@ describe("shared browser-local data URL decoder consumers", () => {
       expect(source).toContain(
         'import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";',
       );
-      expect(source).not.toMatch(/function\\s+dataUrlToBytes\\s*\\(/);
+      expect(source).not.toMatch(/function\s+dataUrlToBytes\s*\(/);
     });
   }
 });
