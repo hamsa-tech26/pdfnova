@@ -76,7 +76,7 @@ function inspectPdfWithPyMuPDF(path,script,args=[]){
   });
 }
 
-const orientationCheck = (marker, topColor, bottomColor) => [
+const orientationCheck = (marker) => [
   "import sys,fitz",
   "doc=fitz.open(stream=open(sys.argv[1],'rb').read(),filetype='pdf')",
   "assert len(doc)==1",
@@ -86,7 +86,7 @@ const orientationCheck = (marker, topColor, bottomColor) => [
   "candidate=next((img for img in images if img[2]==16 and img[3]==32),None)",
   "assert candidate is not None, 'EXIF-rotated image dimensions were not normalized to 16x32'",
   "extracted=doc.extract_image(candidate[0])['image']",
-  "assert b'Exif\\x00\\x00' not in extracted, 'EXIF orientation metadata remained in embedded image'",
+  "assert b'Exif\x00\x00' not in extracted, 'EXIF orientation metadata remained in embedded image'",
   "pix=fitz.Pixmap(extracted)",
   "assert (pix.width,pix.height)==(16,32)",
   "def sample(x,y):",
@@ -129,7 +129,7 @@ test("Add Image Stamp normalizes EXIF orientation 6 before embedding the uploade
   expect(download.suggestedFilename()).toBe("TASK281_EXIF_6_STAMP_SOURCE-image-stamp.pdf");
   const outputPath=await download.path();
   expect(outputPath).toBeTruthy();
-  const verified=inspectPdfWithPyMuPDF(outputPath,orientationCheck(markers[0],"red","green"),[markers[0],"red"]);
+  const verified=inspectPdfWithPyMuPDF(outputPath,orientationCheck(markers[0]),[markers[0],"red"]);
   expect(verified).toContain("TASK281_EXIF_ORIENTATION_NORMALIZED_OK");
   expect(privacy.getWriteRequestCount()).toBe(0);
   expect(privacy.suspiciousWriteMethods).toEqual([]);
@@ -182,7 +182,7 @@ test("Sign PDF normalizes EXIF orientation 8 and embeds the uploaded JPEG only o
     "candidate=next((img for img in images if img[2]==16 and img[3]==32),None)",
     "assert candidate is not None, 'EXIF-rotated signature dimensions were not normalized to 16x32'",
     "extracted=doc.extract_image(candidate[0])['image']",
-    "assert b'Exif\\x00\\x00' not in extracted, 'EXIF orientation metadata remained in embedded signature'",
+    "assert b'Exif\x00\x00' not in extracted, 'EXIF orientation metadata remained in embedded signature'",
     "pix=fitz.Pixmap(extracted)",
     "assert (pix.width,pix.height)==(16,32)",
     "def sample(x,y):",
