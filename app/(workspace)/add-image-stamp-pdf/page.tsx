@@ -9,6 +9,7 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
+import { normalizeImageOrientationDataUrl } from "@/lib/pdf/normalizeImageOrientation";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
@@ -51,15 +52,6 @@ function readFileAsDataUrl(file: File) {
     reader.onload = () => typeof reader.result === "string" ? resolve(reader.result) : reject(new Error("Unable to read the image."));
     reader.onerror = () => reject(new Error("Unable to read the image."));
     reader.readAsDataURL(file);
-  });
-}
-
-function getImageAspect(dataUrl: string) {
-  return new Promise<number>((resolve, reject) => {
-    const image = new Image();
-    image.onload = () => image.naturalWidth > 0 && image.naturalHeight > 0 ? resolve(image.naturalWidth / image.naturalHeight) : reject(new Error("The image has invalid dimensions."));
-    image.onerror = () => reject(new Error("Unable to decode the image."));
-    image.src = dataUrl;
   });
 }
 
@@ -215,8 +207,10 @@ export default function AddImageStampPdfPage() {
     }
     try {
       const dataUrl = await readFileAsDataUrl(selected);
-      setImageDataUrl(dataUrl);
-      setImageAspect(await getImageAspect(dataUrl));
+      const mimeType = selected.type === "image/png" || /\.png$/i.test(selected.name) ? "image/png" : "image/jpeg";
+      const normalized = await normalizeImageOrientationDataUrl(dataUrl, mimeType);
+      setImageDataUrl(normalized.dataUrl);
+      setImageAspect(normalized.aspectRatio);
       setImageName(selected.name);
       resetPlacement();
     } catch (error) {
