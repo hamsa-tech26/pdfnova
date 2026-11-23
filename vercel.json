@@ -76,7 +76,8 @@
       "research/task278-dataurl-consumer-integrity": false,
       "research/task279-uploaded-image-dataurl-acceptance": false,
       "research/task280-uploaded-jpeg-dataurl-acceptance": false,
-      "fix/task281-jpeg-exif-orientation-normalization": false
+      "fix/task281-jpeg-exif-orientation-normalization": false,
+      "test/task282-png-transparency-preservation": false
     }
   }
 }
