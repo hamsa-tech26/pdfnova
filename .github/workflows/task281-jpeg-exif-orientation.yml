@@ -1,0 +1,59 @@
+name: Task 281 JPEG EXIF Orientation Acceptance
+on:
+  push:
+    branches: [fix/task281-jpeg-exif-orientation-normalization]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task281-jpeg-exif-orientation.local.mjs"
+      - "playwright.task281-jpeg-exif-orientation.config.mjs"
+      - ".github/workflows/task281-jpeg-exif-orientation.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [research/task280-uploaded-jpeg-dataurl-acceptance]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task281-jpeg-exif-orientation.local.mjs"
+      - "playwright.task281-jpeg-exif-orientation.config.mjs"
+      - ".github/workflows/task281-jpeg-exif-orientation.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task281-jpeg-exif-orientation-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - name: Verify EXIF orientation normalization in uploaded JPEG consumers
+        run: npx playwright test --config=playwright.task281-jpeg-exif-orientation.config.mjs
+        env:
+          TASK281_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1
