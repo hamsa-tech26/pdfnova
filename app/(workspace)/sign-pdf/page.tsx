@@ -10,6 +10,7 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
+import { normalizeImageOrientationDataUrl } from "@/lib/pdf/normalizeImageOrientation";
 import {
   loadPdfWithoutMetadataMutation,
   savePdfWithoutFormAppearanceMutation,
@@ -120,44 +121,6 @@ function readFileAsDataUrl(
         );
 
       reader.readAsDataURL(file);
-    },
-  );
-}
-
-function getImageAspect(
-  dataUrl: string,
-) {
-  return new Promise<number>(
-    (resolve, reject) => {
-      const image =
-        new Image();
-
-      image.onload = () => {
-        if (
-          image.naturalWidth > 0 &&
-          image.naturalHeight > 0
-        ) {
-          resolve(
-            image.naturalWidth /
-              image.naturalHeight,
-          );
-        } else {
-          reject(
-            new Error(
-              "The signature image has invalid dimensions.",
-            ),
-          );
-        }
-      };
-
-      image.onerror = () =>
-        reject(
-          new Error(
-            "Unable to decode the signature image.",
-          ),
-        );
-
-      image.src = dataUrl;
     },
   );
 }
@@ -678,10 +641,15 @@ export default function SignPdfPage() {
         await readFileAsDataUrl(
           selected,
         );
-
-      const aspectRatio =
-        await getImageAspect(
+      const mimeType =
+        selected.type === "image/png" ||
+        selected.name.toLowerCase().endsWith(".png")
+          ? "image/png"
+          : "image/jpeg";
+      const normalized =
+        await normalizeImageOrientationDataUrl(
           dataUrl,
+          mimeType,
         );
 
       setUploadedSignatureName(
@@ -689,11 +657,11 @@ export default function SignPdfPage() {
       );
 
       setSignatureDataUrl(
-        dataUrl,
+        normalized.dataUrl,
       );
 
       setSignatureAspect(
-        aspectRatio,
+        normalized.aspectRatio,
       );
 
       resetPlacement();
