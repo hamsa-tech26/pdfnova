@@ -1,0 +1,59 @@
+name: Task 283 EXIF Eight-Orientation Matrix
+on:
+  push:
+    branches: [test/task283-exif-eight-orientation-matrix]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task283-exif-eight-orientations.local.mjs"
+      - "playwright.task283-exif-orientation-matrix.config.mjs"
+      - ".github/workflows/task283-exif-orientation-matrix.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [test/task282-png-transparency-preservation]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task283-exif-eight-orientations.local.mjs"
+      - "playwright.task283-exif-orientation-matrix.config.mjs"
+      - ".github/workflows/task283-exif-orientation-matrix.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task283-exif-eight-orientations-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  browser-acceptance:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 65
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - name: Verify all eight EXIF orientations in uploaded JPEG consumers
+        run: npx playwright test --config=playwright.task283-exif-orientation-matrix.config.mjs
+        env:
+          TASK283_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1
