@@ -1,0 +1,57 @@
+name: Task 284 Decoded Image Pixel Safety
+on:
+  push:
+    branches: [fix/task284-image-decoded-pixel-limit]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "lib/pdf/__tests__/normalizeImageOrientation.test.ts"
+      - "e2e/task284-image-pixel-limit.local.mjs"
+      - "playwright.task284-image-pixel-limit.config.mjs"
+      - ".github/workflows/task284-image-pixel-limit.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [test/task283-exif-eight-orientation-matrix]
+    paths:
+      - "lib/pdf/normalizeImageOrientation.ts"
+      - "lib/pdf/__tests__/normalizeImageOrientation.test.ts"
+      - "e2e/task284-image-pixel-limit.local.mjs"
+      - "playwright.task284-image-pixel-limit.config.mjs"
+      - ".github/workflows/task284-image-pixel-limit.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task284-image-pixel-limit-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - name: Run image-header and decoded-pixel unit tests
+        run: npx vitest run lib/pdf/__tests__/normalizeImageOrientation.test.ts
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Verify oversized images are rejected before browser decoding
+        run: npx playwright test --config=playwright.task284-image-pixel-limit.config.mjs
+        env:
+          TASK284_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1
