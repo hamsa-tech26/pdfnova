@@ -97,7 +97,7 @@ test("Add Image Stamp rejects an oversized PNG before browser image decoding",as
     name:"TASK284_OVERSIZED.png",mimeType:"image/png",buffer:imageBytes
   });
 
-  await expect(page.getByText(
+  await expect(page.locator("#main-content").getByText(
     "This image is too large to process safely. Please use an image up to 16 megapixels and 8,192 pixels per side.",
     {exact:true}
   )).toBeVisible({timeout:30000});
@@ -129,7 +129,7 @@ test("Sign PDF rejects an oversized JPEG before browser image decoding",async({p
     name:"TASK284_OVERSIZED.jpg",mimeType:"image/jpeg",buffer:imageBytes
   });
 
-  await expect(page.getByText(
+  await expect(page.locator("#main-content").getByText(
     "This image is too large to process safely. Please use an image up to 16 megapixels and 8,192 pixels per side.",
     {exact:true}
   )).toBeVisible({timeout:30000});
