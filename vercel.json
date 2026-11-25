@@ -78,7 +78,8 @@
       "research/task280-uploaded-jpeg-dataurl-acceptance": false,
       "fix/task281-jpeg-exif-orientation-normalization": false,
       "test/task282-png-transparency-preservation": false,
-      "test/task283-exif-eight-orientation-matrix": false
+      "test/task283-exif-eight-orientation-matrix": false,
+      "fix/task284-image-decoded-pixel-limit": false
     }
   }
 }
