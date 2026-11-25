@@ -1,4 +1,4 @@
-import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
+import { dataUrlToBytes } from "./dataUrlBytes";
 
 export type NormalizableImageMimeType = "image/png" | "image/jpeg";
 
