@@ -87,6 +87,7 @@ export default function AddImageStampPdfPage() {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const previewRef = useRef<HTMLDivElement>(null);
   const previewRequestRef = useRef(0);
+  const imageUploadRequestRef = useRef(0);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const draggingRef = useRef(false);
 
@@ -151,6 +152,7 @@ export default function AddImageStampPdfPage() {
   }
 
   function refreshStamp(text = stampText, color = stampColor) {
+    imageUploadRequestRef.current += 1;
     try {
       const generated = createTextStamp(text, color);
       setImageDataUrl(generated?.dataUrl ?? null);
@@ -165,6 +167,7 @@ export default function AddImageStampPdfPage() {
   async function handleFileSelection(event: ChangeEvent<HTMLInputElement>) {
     const selectedFile = event.target.files?.[0];
     event.target.value = "";
+    imageUploadRequestRef.current += 1;
     if (!selectedFile || (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf"))) {
       setErrorMessage("Please select a valid PDF file.");
       return;
@@ -196,6 +199,7 @@ export default function AddImageStampPdfPage() {
     const selected = event.target.files?.[0];
     event.target.value = "";
     if (!selected) return;
+    const requestId = ++imageUploadRequestRef.current;
     const valid = selected.type === "image/png" || selected.type === "image/jpeg" || /\.(png|jpe?g)$/i.test(selected.name);
     if (!valid) {
       setErrorMessage("Please choose a PNG, JPG, or JPEG image.");
@@ -209,17 +213,20 @@ export default function AddImageStampPdfPage() {
       const dataUrl = await readFileAsDataUrl(selected);
       const mimeType = selected.type === "image/png" || /\.png$/i.test(selected.name) ? "image/png" : "image/jpeg";
       const normalized = await normalizeImageOrientationDataUrl(dataUrl, mimeType);
+      if (requestId !== imageUploadRequestRef.current) return;
       setImageDataUrl(normalized.dataUrl);
       setImageAspect(normalized.aspectRatio);
       setImageName(selected.name);
       resetPlacement();
     } catch (error) {
+      if (requestId !== imageUploadRequestRef.current) return;
       setErrorMessage(error instanceof Error ? error.message : "Unable to load the image.");
     }
   }
 
   function startAgain() {
     previewRequestRef.current += 1;
+    imageUploadRequestRef.current += 1;
     setFile(null);
     setPageCount(0);
     setSelectedPage(1);
@@ -411,8 +418,8 @@ export default function AddImageStampPdfPage() {
             <>
               <section className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900">
                 <div className="grid gap-3 sm:grid-cols-2">
-                  <button type="button" aria-pressed={mode === "stamp"} onClick={() => { setMode("stamp"); refreshStamp(); }} className={mode === "stamp" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><Stamp className="mr-2 inline" size={18} />Text stamp</button>
-                  <button type="button" aria-pressed={mode === "image"} onClick={() => { setMode("image"); setImageDataUrl(null); setImageName(""); resetResult(); }} className={mode === "image" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><ImagePlus className="mr-2 inline" size={18} />Upload image</button>
+                  <button type="button" aria-pressed={mode === "stamp"} onClick={() => { imageUploadRequestRef.current += 1; setMode("stamp"); refreshStamp(); }} className={mode === "stamp" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><Stamp className="mr-2 inline" size={18} />Text stamp</button>
+                  <button type="button" aria-pressed={mode === "image"} onClick={() => { imageUploadRequestRef.current += 1; setMode("image"); setImageDataUrl(null); setImageName(""); resetResult(); }} className={mode === "image" ? "min-h-14 rounded-2xl border border-blue-500 bg-blue-50 p-4 font-bold text-blue-700 outline-none focus-visible:ring-4 focus-visible:ring-blue-100 dark:bg-blue-950/40 dark:text-blue-300 dark:focus-visible:ring-blue-950" : "min-h-14 rounded-2xl border border-gray-200 p-4 font-bold text-gray-800 outline-none hover:border-blue-300 focus-visible:ring-4 focus-visible:ring-blue-100 dark:border-slate-700 dark:text-slate-200 dark:focus-visible:ring-blue-950"}><ImagePlus className="mr-2 inline" size={18} />Upload image</button>
                 </div>
 
                 {mode === "stamp" ? (
