@@ -232,6 +232,9 @@ export default function SignPdfPage() {
   const previewRequestRef =
     useRef(0);
 
+  const signatureImageUploadRequestRef =
+    useRef(0);
+
   const dragOffsetRef =
     useRef({
       x: 0,
@@ -416,6 +419,7 @@ export default function SignPdfPage() {
   }
 
   function resetSignature() {
+    signatureImageUploadRequestRef.current += 1;
     setSignatureMode("draw");
     setSignatureDataUrl(
       null,
@@ -435,6 +439,7 @@ export default function SignPdfPage() {
       event.target.files?.[0];
 
     event.target.value = "";
+    signatureImageUploadRequestRef.current += 1;
 
     if (
       !selectedFile ||
@@ -531,6 +536,7 @@ export default function SignPdfPage() {
   function chooseMode(
     mode: SignatureMode,
   ) {
+    signatureImageUploadRequestRef.current += 1;
     setSignatureMode(mode);
     setSignatureDataUrl(
       null,
@@ -547,6 +553,7 @@ export default function SignPdfPage() {
     dataUrl: string | null,
     aspectRatio: number,
   ) {
+    signatureImageUploadRequestRef.current += 1;
     setSignatureDataUrl(
       dataUrl,
     );
@@ -559,6 +566,7 @@ export default function SignPdfPage() {
   function handleTypedSignature(
     value: string,
   ) {
+    signatureImageUploadRequestRef.current += 1;
     setTypedSignature(value);
 
     try {
@@ -599,6 +607,9 @@ export default function SignPdfPage() {
     if (!selected) {
       return;
     }
+
+    const requestId =
+      ++signatureImageUploadRequestRef.current;
 
     const validType =
       selected.type ===
@@ -652,6 +663,13 @@ export default function SignPdfPage() {
           mimeType,
         );
 
+      if (
+        requestId !==
+        signatureImageUploadRequestRef.current
+      ) {
+        return;
+      }
+
       setUploadedSignatureName(
         selected.name,
       );
@@ -670,6 +688,13 @@ export default function SignPdfPage() {
         "Signature image ready.",
       );
     } catch (error) {
+      if (
+        requestId !==
+        signatureImageUploadRequestRef.current
+      ) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
