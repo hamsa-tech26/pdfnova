@@ -66,3 +66,14 @@
 ## Next release gate
 
 Keep PR #244 draft/unmerged. Next: (1) resolve the Vercel team overdue-balance block so a preview can be created for iPhone visual acceptance; (2) review the moderate Next.js advisory and update Next.js plus its matching ESLint config/lockfile through a reproducible install, then rerun the full checks; (3) test the hosted preview on iPhone Safari at narrow and landscape widths, with reduced-motion enabled; (4) retain the separate production release hold until all gates pass.
+
+
+## Dependency remediation follow-up — 2026-11-27
+
+- Updated the pinned `next` and `eslint-config-next` versions together from 16.4.2 to 16.4.6 on the feature branch.
+- Regenerated `package-lock.json` using Node.js 22 and `npm install --package-lock-only --ignore-scripts --no-audit --no-fund` in GitHub Actions. The lockfile now resolves both packages to 16.4.6.
+- Added `.github/workflows/refresh-next-security-lockfile.yml` to reproduce the lockfile refresh and run `npm ci`, the complete moderate-and-higher audit, lint, unit tests, tool-registry checks, output-evidence checks and production build. No package lifecycle scripts run during lockfile generation; normal CI install is then used for validation.
+- Exact dependency refresh workflow run: https://github.com/hamsa-tech26/pdfnova/actions/runs/46078443613 — success.
+- Validation for the lockfile commit was marked `action_required` because the commit was produced by the GitHub Actions bot token; this is not a passing validation receipt.
+- A follow-up validation workflow is running from the workflow update commit `ff91730d4076f02e27c36f3c9335be6f30194721`. Do not mark the security gate complete until its npm audit and full test/build steps finish successfully.
+- The hosted Vercel preview remains unavailable due to the previously confirmed team-level HTTP 402 overdue-balance restriction. No production deployment, merge, or billing change was made.
