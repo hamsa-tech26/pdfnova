@@ -279,7 +279,7 @@ export default function ToolsSection() {
                 key={tool.title}
                 href={tool.href}
                 data-tool-category={getToolFinderCategory(tool.href)}
-                className="group rounded-3xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-900 sm:p-6"
+                className="motion-interactive group rounded-3xl border border-gray-200 bg-white p-5 text-left shadow-sm transition hover:border-blue-300 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-900 sm:p-6"
               >
                 <div
                   className={

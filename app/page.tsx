@@ -2,6 +2,7 @@ import FeaturesSection from "@/components/FeaturesSection";
 import Footer from "@/components/Footer";
 import Navbar from "@/components/Navbar";
 import ToolsSection from "@/components/ToolsSection";
+import Reveal from "@/components/motion/Reveal";
 import TaskStartSection from "@/components/TaskStartSection";
 import {
   BRAND_NAME,
@@ -60,7 +61,7 @@ export default function Home() {
           }}
         />
 
-        <section className="bg-slate-50 px-4 py-4 dark:bg-slate-950 sm:px-6 sm:py-12 lg:py-16">
+        <Reveal><section className="bg-slate-50 px-4 py-4 dark:bg-slate-950 sm:px-6 sm:py-12 lg:py-16">
           <div className="mx-auto max-w-7xl">
             <div className="overflow-hidden rounded-[2rem] bg-gradient-to-br from-slate-950 via-blue-950 to-blue-700 text-white shadow-2xl">
               <div className="grid items-center gap-6 p-5 sm:p-9 lg:grid-cols-[1.2fr_0.8fr] lg:gap-10 lg:p-12 xl:p-14">
@@ -148,11 +149,11 @@ export default function Home() {
               </div>
             </div>
           </div>
-        </section>
+        </section></Reveal>
 
-        <TaskStartSection />
-        <ToolsSection />
-        <FeaturesSection />
+        <Reveal delayMs={50}><TaskStartSection /></Reveal>
+        <Reveal delayMs={90}><ToolsSection /></Reveal>
+        <Reveal delayMs={130}><FeaturesSection /></Reveal>
       </main>
 
       <Footer />

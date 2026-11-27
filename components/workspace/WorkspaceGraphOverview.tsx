@@ -205,7 +205,7 @@ export default function WorkspaceGraphOverview({
                               node.name
                             }
                             className={
-                              "block w-full rounded-2xl border p-4 text-left transition " +
+                              "motion-interactive block w-full rounded-2xl border p-4 text-left transition " +
                               (isActive
                                 ? "border-emerald-300 bg-emerald-50 shadow-sm dark:border-emerald-800 dark:bg-emerald-950/20"
                                 : "border-gray-200 bg-white hover:border-violet-300 hover:bg-violet-50/40 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-violet-800")

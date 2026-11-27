@@ -70,7 +70,7 @@ export default function TaskStartSection() {
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {tasks.map(({ title, description, href, icon: Icon }) => (
             <Link key={href} href={href}
-              className="group flex min-h-32 items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-slate-800 sm:p-5">
+              className="motion-interactive group flex min-h-32 items-start gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-blue-400 hover:bg-blue-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-600 dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-600 dark:hover:bg-slate-800 sm:p-5">
               <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-blue-100 text-blue-700 dark:bg-blue-950 dark:text-blue-200">
                 <Icon size={22} aria-hidden="true" />
               </span>

@@ -317,7 +317,7 @@ export default function ActiveWorkspaceFileCard() {
   }
 
   return (
-    <div className="rounded-3xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950/20">
+    <div className="motion-interactive rounded-3xl border border-blue-200 bg-blue-50 p-6 dark:border-blue-900 dark:bg-blue-950/20">
       <div className="flex flex-col justify-between gap-5 sm:flex-row sm:items-start">
         <div className="flex min-w-0 gap-4">
           <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl bg-blue-600 text-white">
@@ -496,7 +496,7 @@ export default function ActiveWorkspaceFileCard() {
         </section>
       )}
 
-      <section className="mt-6 rounded-2xl border border-blue-200 bg-white/80 p-5 dark:border-blue-900 dark:bg-slate-950/40">
+      <section className="motion-interactive mt-6 rounded-2xl border border-blue-200 bg-white/80 p-5 dark:border-blue-900 dark:bg-slate-950/40">
         <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-blue-600 dark:text-blue-300">
           Continue with current version
         </p>

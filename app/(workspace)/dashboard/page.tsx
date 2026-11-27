@@ -469,7 +469,7 @@ export default function DashboardPage() {
                 <Link
                   key={action.title}
                   href={action.href}
-                  className="group flex items-center gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800"
+                  className="motion-interactive group flex items-center gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800"
                 >
                   <div
                     className={`flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl ${action.accent}`}
@@ -568,7 +568,7 @@ export default function DashboardPage() {
                   <Link
                     key={tool.title}
                     href={tool.href}
-                    className="group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800"
+                    className="motion-interactive group rounded-3xl border border-gray-200 bg-white p-6 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-xl dark:border-slate-800 dark:bg-slate-900 dark:hover:border-blue-800"
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div

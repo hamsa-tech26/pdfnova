@@ -47,7 +47,7 @@ export default function ActionButton({
         onClick={onClick}
         disabled={isDisabled}
         aria-busy={isLoading}
-        className={`group relative min-h-16 w-full overflow-hidden rounded-2xl px-5 py-4 text-left text-white shadow-lg outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-blue-200 sm:px-6 ${
+        className={`motion-pressable group relative min-h-16 w-full overflow-hidden rounded-2xl px-5 py-4 text-left text-white shadow-lg outline-none transition-all duration-300 focus-visible:ring-4 focus-visible:ring-blue-200 sm:px-6 ${
           success
             ? "bg-emerald-600 hover:bg-emerald-700"
             : "bg-gradient-to-r from-slate-950 via-blue-900 to-blue-600 hover:-translate-y-0.5 hover:shadow-xl"
