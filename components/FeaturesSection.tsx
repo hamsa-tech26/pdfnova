@@ -80,7 +80,7 @@ export default function FeaturesSection() {
               return (
                 <div
                   key={feature.title}
-                  className="rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
+                  className="motion-interactive rounded-3xl border border-gray-200 bg-white p-6 shadow-sm"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-2xl bg-blue-50 text-blue-600">
                     <Icon size={23} />
