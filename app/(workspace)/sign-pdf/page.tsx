@@ -235,6 +235,9 @@ export default function SignPdfPage() {
   const signatureImageUploadRequestRef =
     useRef(0);
 
+  const pdfSelectionRequestRef =
+    useRef(0);
+
   const dragOffsetRef =
     useRef({
       x: 0,
@@ -440,6 +443,10 @@ export default function SignPdfPage() {
 
     event.target.value = "";
     signatureImageUploadRequestRef.current += 1;
+    const requestId = ++pdfSelectionRequestRef.current;
+    previewRequestRef.current += 1;
+    setIsRenderingPreview(false);
+    setErrorMessage("");
 
     if (
       !selectedFile ||
@@ -484,6 +491,10 @@ export default function SignPdfPage() {
         );
       }
 
+      if (requestId !== pdfSelectionRequestRef.current) {
+        return;
+      }
+
       setFile(selectedFile);
       setPageCount(count);
       setSelectedPage(1);
@@ -498,6 +509,10 @@ export default function SignPdfPage() {
         `${count} ${count === 1 ? "page" : "pages"} ready for signing.`,
       );
     } catch {
+      if (requestId !== pdfSelectionRequestRef.current) {
+        return;
+      }
+
       const message =
         "Unable to open this PDF. It may be damaged or password-protected.";
 
@@ -511,6 +526,7 @@ export default function SignPdfPage() {
 
   function startAgain() {
     previewRequestRef.current += 1;
+    pdfSelectionRequestRef.current += 1;
     setIsRenderingPreview(false);
     setFile(null);
     setPageCount(0);
