@@ -1,0 +1,73 @@
+name: Cloudflare Static Export Compatibility Probe
+
+on:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-export-probe:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.head.ref == 'research/cloudflare-zero-cost-hosting-audit'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Checkout audited PR head
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - name: Install locked dependencies
+        run: npm ci --no-audit --no-fund
+      - name: Enable static export in the ephemeral CI checkout only
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = 'next.config.ts';
+          const source = fs.readFileSync(path, 'utf8');
+          const marker = 'const nextConfig: NextConfig = {';
+          if (!source.includes(marker)) {
+            throw new Error('Expected Next.js config object was not found; probe cannot safely patch it.');
+          }
+          if (source.includes('output: "export"')) {
+            throw new Error('Static export is already configured; refusing to alter the probe target.');
+          }
+          fs.writeFileSync(path, source.replace(marker, marker + '\\n  output: "export",'));
+          NODE
+      - name: Build the full application as a static export
+        run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - name: Verify representative routes and browser PDF assets
+        run: |
+          node <<'NODE'
+          const fs = require('node:fs');
+          const path = require('node:path');
+          const required = [
+            'out/index.html',
+            'out/compress-pdf.html',
+            'out/merge-pdf.html',
+            'out/engine-inspector.html',
+            'out/guides/index.html',
+            'out/privacy.html',
+            'out/terms.html',
+            'out/qpdf/qpdf.js',
+            'out/qpdf/qpdf.wasm',
+            'out/qpdf/worker.js',
+            'out/robots.txt',
+            'out/sitemap.xml'
+          ];
+          const missing = required.filter(file => !fs.existsSync(path.resolve(file)));
+          if (missing.length) {
+            console.error('Static export is missing required outputs:', missing.join(', '));
+            process.exit(1);
+          }
+          console.log('Static export output verification passed:', required.length, 'required files present.');
+          NODE
