@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import type { CSSProperties, HTMLAttributes } from "react";
 
 type RevealProps = HTMLAttributes<HTMLDivElement> & {
@@ -23,8 +23,6 @@ export default function Reveal({
   ...props
 }: RevealProps) {
   const elementRef = useRef<HTMLDivElement>(null);
-  const [motionReady, setMotionReady] = useState(false);
-  const [visible, setVisible] = useState(true);
 
   useEffect(() => {
     const element = elementRef.current;
@@ -38,22 +36,32 @@ export default function Reveal({
       motionPreference.matches ||
       typeof IntersectionObserver === "undefined"
     ) {
-      setMotionReady(false);
-      setVisible(true);
       return;
     }
 
-    setMotionReady(true);
-    setVisible(false);
+    let observer: IntersectionObserver | undefined;
 
-    const observer = new IntersectionObserver(
+    const revealImmediately = () => {
+      element.dataset.motionReady = "false";
+      element.dataset.motionVisible = "true";
+      observer?.disconnect();
+    };
+
+    const handleMotionPreferenceChange = () => {
+      if (motionPreference.matches) revealImmediately();
+    };
+
+    element.dataset.motionReady = "true";
+    element.dataset.motionVisible = "false";
+
+    observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry?.isIntersecting) return;
 
-        setVisible(true);
-        observer.unobserve(entry.target);
-        observer.disconnect();
+        element.dataset.motionVisible = "true";
+        observer?.unobserve(entry.target);
+        observer?.disconnect();
       },
       {
         root: null,
@@ -62,9 +70,19 @@ export default function Reveal({
       },
     );
 
+    motionPreference.addEventListener(
+      "change",
+      handleMotionPreferenceChange,
+    );
     observer.observe(element);
 
-    return () => observer.disconnect();
+    return () => {
+      motionPreference.removeEventListener(
+        "change",
+        handleMotionPreferenceChange,
+      );
+      observer?.disconnect();
+    };
   }, []);
 
   const delay = Math.max(0, Math.min(240, Math.round(delayMs)));
@@ -78,8 +96,8 @@ export default function Reveal({
       {...props}
       ref={elementRef}
       className={`motion-reveal ${className}`.trim()}
-      data-motion-ready={motionReady ? "true" : "false"}
-      data-motion-visible={visible ? "true" : "false"}
+      data-motion-ready="false"
+      data-motion-visible="true"
       style={revealStyle}
     >
       {children}
