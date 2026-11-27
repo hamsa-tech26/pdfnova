@@ -81,7 +81,8 @@
       "test/task283-exif-eight-orientation-matrix": false,
       "fix/task284-image-decoded-pixel-limit": false,
       "test/task285-image-fallback-path": false,
-      "fix/task286-stale-image-upload-race": false
+      "fix/task286-stale-image-upload-race": false,
+      "fix/task287-stale-pdf-selection-race": false
     }
   }
 }
