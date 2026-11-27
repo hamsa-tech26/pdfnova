@@ -31,7 +31,7 @@ export default function MotionShowcase() {
   const [activeFile, setActiveFile] = useState("brief");
   const [notice, setNotice] = useState("Choose a sample document to preview its workspace state.");
 
-  const selected = sampleFiles.find((file) => file.id === activeFile) ?? sampleFiles[0];
+  const selectedName = sampleFiles.find((file) => file.id === activeFile)?.name ?? "Project brief.pdf";
 
   return (
     <main className="min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-10 lg:py-12">
@@ -147,7 +147,7 @@ export default function MotionShowcase() {
                   )}
 
                   <div className="mt-3 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-white/10 bg-slate-950/60 px-3 py-3">
-                    <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selected preview</p><p className="mt-1 truncate text-xs font-bold text-slate-200">{view === "recent" ? selected.name : "Illustrative version graph"}</p></div>
+                    <div className="min-w-0"><p className="text-[10px] font-bold uppercase tracking-wider text-slate-500">Selected preview</p><p className="mt-1 truncate text-xs font-bold text-slate-200">{view === "recent" ? selectedName : "Illustrative version graph"}</p></div>
                     <button type="button" onClick={() => setNotice("Download is disabled in this design-only prototype.")} className="inline-flex min-h-9 items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-xs font-bold text-slate-300 transition hover:bg-white/10"><ArrowDownToLine size={14}/> Preview action</button>
                   </div>
                   <p className="mt-3 min-h-5 text-xs text-slate-400" aria-live="polite">{notice}</p>
