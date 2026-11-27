@@ -88,6 +88,7 @@ export default function AddImageStampPdfPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const previewRequestRef = useRef(0);
   const imageUploadRequestRef = useRef(0);
+  const pdfSelectionRequestRef = useRef(0);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const draggingRef = useRef(false);
 
@@ -168,6 +169,10 @@ export default function AddImageStampPdfPage() {
     const selectedFile = event.target.files?.[0];
     event.target.value = "";
     imageUploadRequestRef.current += 1;
+    const requestId = ++pdfSelectionRequestRef.current;
+    previewRequestRef.current += 1;
+    setIsRenderingPreview(false);
+    setErrorMessage("");
     if (!selectedFile || (selectedFile.type !== "application/pdf" && !selectedFile.name.toLowerCase().endsWith(".pdf"))) {
       setErrorMessage("Please select a valid PDF file.");
       return;
@@ -178,6 +183,7 @@ export default function AddImageStampPdfPage() {
     }
     try {
       const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
+      if (requestId !== pdfSelectionRequestRef.current) return;
       const count = pdf.getPageCount();
       setFile(selectedFile);
       setPageCount(count);
@@ -190,6 +196,7 @@ export default function AddImageStampPdfPage() {
       void renderSelectedPreview(selectedFile, 1);
       toast.success("PDF ready for image or stamp placement.");
     } catch {
+      if (requestId !== pdfSelectionRequestRef.current) return;
       setFile(null);
       setErrorMessage("Unable to open this PDF. It may be damaged or password-protected.");
     }
@@ -226,6 +233,7 @@ export default function AddImageStampPdfPage() {
 
   function startAgain() {
     previewRequestRef.current += 1;
+    pdfSelectionRequestRef.current += 1;
     imageUploadRequestRef.current += 1;
     setFile(null);
     setPageCount(0);

@@ -1,0 +1,59 @@
+name: Task 287 Stale PDF Selection Race and Latest File Wins
+on:
+  push:
+    branches: [fix/task287-stale-pdf-selection-race]
+    paths:
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task287-stale-pdf-selection-race.local.mjs"
+      - "playwright.task287-stale-pdf-selection-race.config.mjs"
+      - ".github/workflows/task287-stale-pdf-selection-race.yml"
+      - "vercel.json"
+  pull_request:
+    branches: [fix/task286-stale-image-upload-race]
+    paths:
+      - "app/(workspace)/add-image-stamp-pdf/page.tsx"
+      - "app/(workspace)/sign-pdf/page.tsx"
+      - "e2e/task287-stale-pdf-selection-race.local.mjs"
+      - "playwright.task287-stale-pdf-selection-race.config.mjs"
+      - ".github/workflows/task287-stale-pdf-selection-race.yml"
+      - "vercel.json"
+permissions:
+  contents: read
+concurrency:
+  group: task287-stale-pdf-selection-${{ github.event.pull_request.head.ref || github.ref_name }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 55
+    strategy:
+      fail-fast: false
+      matrix:
+        browser: [chromium, webkit]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: npm ci --no-audit --no-fund
+      - run: npm install --no-save @playwright/test@1.56.1
+      - run: python -m pip install --disable-pip-version-check PyMuPDF==1.26.6
+      - run: npm run lint
+      - run: npx tsc --noEmit
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: 1
+      - run: npx playwright install --with-deps ${{ matrix.browser }}
+      - name: Verify latest-PDF-wins and stale-PDF invalidation
+        run: npx playwright test --config=playwright.task287-stale-pdf-selection-race.config.mjs
+        env:
+          TASK287_BROWSER: ${{ matrix.browser }}
+          NEXT_TELEMETRY_DISABLED: 1
