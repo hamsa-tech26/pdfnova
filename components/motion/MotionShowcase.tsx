@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import {
   ArrowDownToLine,
   ArrowRight,
@@ -36,12 +37,12 @@ export default function MotionShowcase() {
     <main className="min-h-screen overflow-hidden bg-slate-950 px-4 py-8 text-white sm:px-6 lg:px-10 lg:py-12">
       <div className="mx-auto max-w-7xl">
         <header className="flex flex-wrap items-center justify-between gap-4">
-          <a href="/" className="flex items-center gap-3 font-extrabold tracking-tight">
+          <Link href="/" className="flex items-center gap-3 font-extrabold tracking-tight">
             <span className="flex h-10 w-10 items-center justify-center rounded-2xl bg-blue-500 text-white">
               <Files size={21} aria-hidden="true" />
             </span>
             Kukureku <span className="font-medium text-slate-400">/ Motion Lab</span>
-          </a>
+          </Link>
           <span className="rounded-full border border-amber-300/30 bg-amber-300/10 px-3 py-1.5 text-xs font-bold text-amber-200">
             Design prototype · Sample data only
           </span>
@@ -63,9 +64,9 @@ export default function MotionShowcase() {
               <a href="#interactive-preview" className="inline-flex min-h-12 items-center gap-2 rounded-xl bg-white px-5 py-3 font-bold text-slate-950 transition hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 Explore the prototype <ArrowRight size={17} aria-hidden="true" />
               </a>
-              <a href="/" className="inline-flex min-h-12 items-center rounded-xl border border-white/20 px-5 py-3 font-semibold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
+              <Link href="/" className="inline-flex min-h-12 items-center rounded-xl border border-white/20 px-5 py-3 font-semibold text-white transition hover:bg-white/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-white">
                 Back to Kukureku
-              </a>
+              </Link>
             </div>
             <div className="mt-9 grid grid-cols-3 gap-3 border-t border-white/10 pt-6">
               <div><p className="text-2xl font-extrabold">01</p><p className="mt-1 text-xs text-slate-400">Purposeful motion</p></div>
