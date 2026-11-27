@@ -52,7 +52,7 @@
 - `e2e/motion-system.e2e.mjs` with desktop interaction, mobile viewport, reduced-motion and no-file-upload assertions.
 - Feature branch explicitly disabled for Vercel automatic deployments in `vercel.json`.
 
-**Pending external verification:** Exact-head GitHub Validate and Browser Reliability Smoke must pass. The connected repository tools can create the draft PR and inspect check results, but this log must not claim local execution or CI success until receipts exist.
+**Exact-head verification (2026-11-27):** Browser Reliability Smoke passed on commit `79938a38f209b41db20326781508b1d983d7c164`. It installed Chromium and Chrome Stable, ran the browser reliability suite, registered tool routes and mobile baseline, and preserved a non-sensitive mobile baseline artifact. The Validate workflow passed lint, unit tests, explicit OCR/Phase 10.14 regressions, output-evidence checks, production build, TypeScript, dependency alignment, and production-dependency high/critical audit. Its final complete-tree audit remains blocked by one moderate Next.js advisory (`GHSA-vvgp-ww4w-46vf`); do not use `npm audit fix --force` without reviewing the version change.
 
 ## Safety and scope boundaries
 
@@ -60,8 +60,9 @@
 - No production source changes on `main`.
 - No merge, Vercel preview deployment, production deployment, billing change or Vercel project-setting change.
 - No change to PDF parsing, conversion, OCR, document storage, network handling, CSP, security headers or privacy model.
+- Manual preview deployment was attempted for the exact feature commit, but Vercel rejected resource creation with HTTP 402 `resource_creation_blocked` because the `pdfnova` team has an overdue balance. No deployment was created. Resolve billing in Vercel before requesting a hosted iPhone preview; do not change billing or deployment settings automatically.
 - Existing production release, Release 216 pause and Engine V4 Stable 0/20 status are preserved.
 
 ## Next release gate
 
-Open a draft PR against `main` to run the existing repository validation and browser smoke workflows on the exact feature head. Review all failures, fix only motion-initiative regressions, and keep the PR draft/unmerged until the checks are green and the separate release hold is lifted by the project owner.
+Keep PR #244 draft/unmerged. Next: (1) resolve the Vercel team overdue-balance block so a preview can be created for iPhone visual acceptance; (2) review the moderate Next.js advisory and update Next.js plus its matching ESLint config/lockfile through a reproducible install, then rerun the full checks; (3) test the hosted preview on iPhone Safari at narrow and landscape widths, with reduced-motion enabled; (4) retain the separate production release hold until all gates pass.
