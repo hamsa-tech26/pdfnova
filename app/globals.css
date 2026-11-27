@@ -35,3 +35,56 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Kukureku Motion System V1 — CSS-first, transform/opacity-only primitives. */
+:root {
+  --motion-duration-instant: 100ms;
+  --motion-duration-fast: 160ms;
+  --motion-duration-standard: 240ms;
+  --motion-duration-emphasis: 360ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  --motion-ease-emphasized: cubic-bezier(0.2, 0.8, 0.2, 1);
+  --motion-distance-small: 8px;
+  --motion-distance-medium: 16px;
+}
+
+.motion-reveal {
+  transition:
+    opacity var(--motion-duration-emphasis) var(--motion-ease-emphasized) var(--motion-delay, 0ms),
+    transform var(--motion-duration-emphasis) var(--motion-ease-emphasized) var(--motion-delay, 0ms);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .motion-reveal[data-motion-ready="true"][data-motion-visible="false"] {
+    opacity: 0;
+    transform: translate3d(0, var(--motion-distance-small), 0);
+  }
+}
+
+.motion-interactive {
+  transition:
+    transform var(--motion-duration-fast) var(--motion-ease-standard),
+    box-shadow var(--motion-duration-fast) var(--motion-ease-standard),
+    border-color var(--motion-duration-fast) var(--motion-ease-standard),
+    background-color var(--motion-duration-fast) var(--motion-ease-standard);
+}
+
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .motion-interactive:hover {
+    transform: translateY(-2px);
+  }
+}
+
+.motion-pressable:active {
+  transform: scale(0.985);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .motion-reveal,
+  .motion-interactive,
+  .motion-pressable {
+    transition: none !important;
+    transform: none !important;
+  }
+}
+
