@@ -39,29 +39,23 @@ export default function Reveal({
       return;
     }
 
-    let observer: IntersectionObserver | undefined;
-
     const revealImmediately = () => {
       element.dataset.motionReady = "false";
       element.dataset.motionVisible = "true";
-      observer?.disconnect();
-    };
-
-    const handleMotionPreferenceChange = () => {
-      if (motionPreference.matches) revealImmediately();
+      observer.disconnect();
     };
 
     element.dataset.motionReady = "true";
     element.dataset.motionVisible = "false";
 
-    observer = new IntersectionObserver(
+    const observer = new IntersectionObserver(
       (entries) => {
         const entry = entries[0];
         if (!entry?.isIntersecting) return;
 
         element.dataset.motionVisible = "true";
-        observer?.unobserve(entry.target);
-        observer?.disconnect();
+        observer.unobserve(entry.target);
+        observer.disconnect();
       },
       {
         root: null,
@@ -69,6 +63,10 @@ export default function Reveal({
         threshold: 0.08,
       },
     );
+
+    const handleMotionPreferenceChange = () => {
+      if (motionPreference.matches) revealImmediately();
+    };
 
     motionPreference.addEventListener(
       "change",
