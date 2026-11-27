@@ -142,7 +142,7 @@ export default function ProgressCard({
           return (
             <div
               key={`${step.label}-${stepNumber}`}
-              className={`motion-interactive flex items-start gap-3 rounded-2xl border p-4 transition ${
+              className={`flex items-start gap-3 rounded-2xl border p-4 transition ${
                 isActive
                   ? "border-blue-200 bg-white shadow-sm dark:border-blue-900 dark:bg-slate-900"
                   : isCompleted
