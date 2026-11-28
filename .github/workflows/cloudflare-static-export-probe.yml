@@ -52,12 +52,19 @@ jobs:
         run: npm run build
         env:
           NEXT_TELEMETRY_DISABLED: 1
+      - name: Stage Cloudflare Pages response headers in the export only
+        run: |
+          mkdir -p out
+          cp hosting/cloudflare/_headers out/_headers
+          grep -Fq "X-Content-Type-Options: nosniff" out/_headers
+          grep -Fq "Content-Security-Policy:" out/_headers
       - name: Verify representative routes and browser PDF assets
         run: |
           node <<'NODE'
           const fs = require('node:fs');
           const path = require('node:path');
           const required = [
+            'out/_headers',
             'out/index.html',
             'out/compress-pdf.html',
             'out/merge-pdf.html',
