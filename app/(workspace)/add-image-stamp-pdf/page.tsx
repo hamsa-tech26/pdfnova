@@ -9,6 +9,7 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
+import { readFileAsArrayBuffer } from "@/lib/pdf/readFileAsArrayBuffer";
 import { normalizeImageOrientationDataUrl } from "@/lib/pdf/normalizeImageOrientation";
 import {
   loadPdfWithoutMetadataMutation,
@@ -22,6 +23,7 @@ import { ImagePlus, ShieldCheck, Stamp } from "lucide-react";
 import {
   ChangeEvent,
   PointerEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -89,8 +91,15 @@ export default function AddImageStampPdfPage() {
   const previewRequestRef = useRef(0);
   const imageUploadRequestRef = useRef(0);
   const pdfSelectionRequestRef = useRef(0);
+  const pdfSelectionAbortControllerRef = useRef<AbortController | null>(null);
   const dragOffsetRef = useRef({ x: 0, y: 0 });
   const draggingRef = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      pdfSelectionAbortControllerRef.current?.abort();
+    };
+  }, []);
 
   const [file, setFile] = useState<File | null>(null);
   const [pageCount, setPageCount] = useState(0);
@@ -169,6 +178,8 @@ export default function AddImageStampPdfPage() {
     const selectedFile = event.target.files?.[0];
     event.target.value = "";
     imageUploadRequestRef.current += 1;
+    pdfSelectionAbortControllerRef.current?.abort();
+    pdfSelectionAbortControllerRef.current = null;
     const requestId = ++pdfSelectionRequestRef.current;
     previewRequestRef.current += 1;
     setIsRenderingPreview(false);
@@ -181,9 +192,12 @@ export default function AddImageStampPdfPage() {
       setErrorMessage("The PDF file must not be larger than 25 MB.");
       return;
     }
+    const controller = new AbortController();
+    pdfSelectionAbortControllerRef.current = controller;
     try {
-      const pdf = await loadPdfWithoutMetadataMutation(await selectedFile.arrayBuffer());
-      if (requestId !== pdfSelectionRequestRef.current) return;
+      const bytes = await readFileAsArrayBuffer(selectedFile, controller.signal);
+      const pdf = await loadPdfWithoutMetadataMutation(bytes);
+      if (requestId !== pdfSelectionRequestRef.current || controller.signal.aborted) return;
       const count = pdf.getPageCount();
       setFile(selectedFile);
       setPageCount(count);
@@ -196,9 +210,13 @@ export default function AddImageStampPdfPage() {
       void renderSelectedPreview(selectedFile, 1);
       toast.success("PDF ready for image or stamp placement.");
     } catch {
-      if (requestId !== pdfSelectionRequestRef.current) return;
+      if (requestId !== pdfSelectionRequestRef.current || controller.signal.aborted) return;
       setFile(null);
       setErrorMessage("Unable to open this PDF. It may be damaged or password-protected.");
+    } finally {
+      if (pdfSelectionAbortControllerRef.current === controller) {
+        pdfSelectionAbortControllerRef.current = null;
+      }
     }
   }
 
@@ -233,6 +251,8 @@ export default function AddImageStampPdfPage() {
 
   function startAgain() {
     previewRequestRef.current += 1;
+    pdfSelectionAbortControllerRef.current?.abort();
+    pdfSelectionAbortControllerRef.current = null;
     pdfSelectionRequestRef.current += 1;
     imageUploadRequestRef.current += 1;
     setFile(null);
