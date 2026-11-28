@@ -10,6 +10,7 @@ import SuccessCard from "@/components/pdf/SuccessCard";
 import ToolLayout from "@/components/pdf/ToolLayout";
 import { downloadFile } from "@/lib/downloadFile";
 import { dataUrlToBytes } from "@/lib/pdf/dataUrlBytes";
+import { readFileAsArrayBuffer } from "@/lib/pdf/readFileAsArrayBuffer";
 import { normalizeImageOrientationDataUrl } from "@/lib/pdf/normalizeImageOrientation";
 import {
   loadPdfWithoutMetadataMutation,
@@ -28,6 +29,7 @@ import {
 import {
   ChangeEvent,
   PointerEvent,
+  useEffect,
   useRef,
   useState,
 } from "react";
@@ -238,6 +240,9 @@ export default function SignPdfPage() {
   const pdfSelectionRequestRef =
     useRef(0);
 
+  const pdfSelectionAbortControllerRef =
+    useRef<AbortController | null>(null);
+
   const dragOffsetRef =
     useRef({
       x: 0,
@@ -246,6 +251,12 @@ export default function SignPdfPage() {
 
   const isDraggingRef =
     useRef(false);
+
+  useEffect(() => {
+    return () => {
+      pdfSelectionAbortControllerRef.current?.abort();
+    };
+  }, []);
 
   const [file, setFile] =
     useState<File | null>(null);
@@ -443,6 +454,8 @@ export default function SignPdfPage() {
 
     event.target.value = "";
     signatureImageUploadRequestRef.current += 1;
+    pdfSelectionAbortControllerRef.current?.abort();
+    pdfSelectionAbortControllerRef.current = null;
     const requestId = ++pdfSelectionRequestRef.current;
     previewRequestRef.current += 1;
     setIsRenderingPreview(false);
@@ -476,11 +489,11 @@ export default function SignPdfPage() {
       return;
     }
 
+    const controller = new AbortController();
+    pdfSelectionAbortControllerRef.current = controller;
     try {
-      const pdf =
-        await loadPdfWithoutMetadataMutation(
-          await selectedFile.arrayBuffer(),
-        );
+      const bytes = await readFileAsArrayBuffer(selectedFile, controller.signal);
+      const pdf = await loadPdfWithoutMetadataMutation(bytes);
 
       const count =
         pdf.getPageCount();
@@ -491,7 +504,7 @@ export default function SignPdfPage() {
         );
       }
 
-      if (requestId !== pdfSelectionRequestRef.current) {
+      if (requestId !== pdfSelectionRequestRef.current || controller.signal.aborted) {
         return;
       }
 
@@ -509,7 +522,7 @@ export default function SignPdfPage() {
         `${count} ${count === 1 ? "page" : "pages"} ready for signing.`,
       );
     } catch {
-      if (requestId !== pdfSelectionRequestRef.current) {
+      if (requestId !== pdfSelectionRequestRef.current || controller.signal.aborted) {
         return;
       }
 
@@ -521,11 +534,17 @@ export default function SignPdfPage() {
       setPreview(null);
       setErrorMessage(message);
       toast.error(message);
+    } finally {
+      if (pdfSelectionAbortControllerRef.current === controller) {
+        pdfSelectionAbortControllerRef.current = null;
+      }
     }
   }
 
   function startAgain() {
     previewRequestRef.current += 1;
+    pdfSelectionAbortControllerRef.current?.abort();
+    pdfSelectionAbortControllerRef.current = null;
     pdfSelectionRequestRef.current += 1;
     setIsRenderingPreview(false);
     setFile(null);
