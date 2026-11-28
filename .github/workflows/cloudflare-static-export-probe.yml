@@ -39,7 +39,7 @@ jobs:
           if (source.includes('output: "export"')) {
             throw new Error('Static export is already configured; refusing to alter the probe target.');
           }
-          fs.writeFileSync(path, source.replace(marker, marker + '\\n  output: "export",'));
+          fs.writeFileSync(path, source.replace(marker, marker + '\n  output: "export",'));
           NODE
       - name: Build the full application as a static export
         run: npm run build
