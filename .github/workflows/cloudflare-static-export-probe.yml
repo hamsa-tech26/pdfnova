@@ -40,6 +40,13 @@ jobs:
             throw new Error('Static export is already configured; refusing to alter the probe target.');
           }
           fs.writeFileSync(path, source.replace(marker, marker + '\n  output: "export",'));
+          for (const metadataPath of ['app/apple-icon.tsx', 'app/opengraph-image.tsx']) {
+            if (!fs.existsSync(metadataPath)) continue;
+            const metadataSource = fs.readFileSync(metadataPath, 'utf8');
+            if (!metadataSource.includes('export const dynamic = "force-static"')) {
+              fs.appendFileSync(metadataPath, '\nexport const dynamic = "force-static";\n');
+            }
+          }
           NODE
       - name: Build the full application as a static export
         run: npm run build
