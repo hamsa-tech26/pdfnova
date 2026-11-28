@@ -62,7 +62,6 @@ jobs:
             'out/compress-pdf.html',
             'out/merge-pdf.html',
             'out/engine-inspector.html',
-            'out/guides/index.html',
             'out/privacy.html',
             'out/terms.html',
             'out/qpdf/qpdf.js',
@@ -72,6 +71,8 @@ jobs:
             'out/sitemap.xml'
           ];
           const missing = required.filter(file => !fs.existsSync(path.resolve(file)));
+          const guidesLandingExists = ['out/guides.html', 'out/guides/index.html'].some(file => fs.existsSync(path.resolve(file)));
+          if (!guidesLandingExists) missing.push('out/guides.html or out/guides/index.html');
           if (missing.length) {
             console.error('Static export is missing required outputs:', missing.join(', '));
             process.exit(1);
