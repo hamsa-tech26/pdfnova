@@ -1,6 +1,6 @@
 # Zero-Cost Hosting Assessment — Cloudflare
 
-**Status:** Read-only audit complete; compatibility experiment not yet run.  
+**Status:** Read-only audit complete; CI static-export build and representative-output verification passed. Cloudflare preview deployment and browser acceptance remain pending.  
 **Audited production baseline:** `main` at `4d41cdf36c2319f59ec8b5c35d4a999799010802`  
 **Scope:** Hosting feasibility only. No production, DNS, Vercel, billing, privacy, PDF-engine, or application behaviour changes.
 
@@ -10,12 +10,12 @@ Cloudflare is a credible $0/month hosting candidate for a controlled staging dep
 
 The repository has a large Next.js App Router surface (including the homepage, workspace tools, guides, trust and legal pages), but the audited tree contains no `app/api` route handlers, middleware, proxy, dynamic route segments, or obvious server-action directory. The root and workspace layouts are React server components. The README states that supported document processing is intended to happen locally in the browser.
 
-This architecture may be compatible with a static export, but the audit does not prove it. If static export is not compatible, Cloudflare Workers with the OpenNext adapter is the conservative first experiment. Cloudflare currently recommends vinext for new Next.js-on-Workers applications, but its documentation describes vinext as beta; it should not be adopted for production without compatibility testing.
+The complete Next.js static-export build has now passed in isolated CI. The CI-only probe patched `output: "export"` in its ephemeral checkout; no application config was changed. Eleven required output files, including representative HTML routes, qpdf JS/WASM/worker assets, robots.txt and sitemap.xml, were verified. This is strong build evidence, not proof of deployed runtime behaviour. If static hosting fails browser acceptance or a required runtime feature emerges, Cloudflare Workers with the OpenNext adapter is the conservative next experiment. Cloudflare currently recommends vinext for new Next.js-on-Workers applications, but its documentation describes vinext as beta; it should not be adopted for production without compatibility testing.
 
 ## Repository evidence
 
 - `package.json`: Next.js `16.4.2`; React `19.2.4`; client-side PDF-related dependencies include `pdf-lib`, `pdfjs-dist`, `tesseract.js`, and `qpdf-run`.
-- `next.config.ts`: security response headers are configured through `headers()`; no custom runtime configuration was found in this file.
+- `next.config.ts`: security response headers are configured through `headers()`; static hosting needs equivalent platform-level rules. A Cloudflare-specific `_headers` file is staged under `hosting/cloudflare/_headers` and copied into the CI export output, rather than placed in `public/` where it would also be exposed on other hosts.
 - `app/layout.tsx`: uses Next metadata, `next/font/google`, theme provider, toaster, and Vercel Analytics.
 - `app/page.tsx`: homepage is a server component with static metadata and structured data.
 - `app/(workspace)/layout.tsx`: workspace shell is a server component.
@@ -28,7 +28,7 @@ This architecture may be compatible with a static export, but the audit does not
 
 ### Option A — Next.js static export to Cloudflare Pages
 
-Potentially the lowest-complexity, $0/month route if every page can be prerendered and no runtime server features are required. Do not enable `output: "export"` until a CI experiment proves that the complete app builds and every route is emitted. Static export may expose hidden dynamic dependencies or assumptions.
+Potentially the lowest-complexity, $0/month route if every page can be prerendered and no runtime server features are required. The isolated CI experiment now proves the complete app builds as static output and representative routes/assets are emitted. A Cloudflare-specific response-header file is prepared separately. Static export may still expose runtime or browser assumptions, so it is not production-ready until deployed preview and end-to-end acceptance pass.
 
 ### Option B — Cloudflare Workers with OpenNext
 
@@ -48,7 +48,7 @@ Cloudflare Workers Free is listed at $0/month with 100,000 requests/day and 10 m
 2. PDF.js, qpdf WASM, Tesseract workers and all other worker assets load correctly from production-like paths and MIME types.
 3. Upload, processing, download, print, drag/drop, workspace persistence, backup/restore, Magic Drop and cross-tool handoff remain browser-local and functional.
 4. Large PDFs do not trigger host request-body or CPU constraints because document bytes should not be sent to the host.
-5. Security headers from `next.config.ts` are reproduced on the candidate platform.
+5. Security headers from `next.config.ts` are reproduced by the Cloudflare-specific `_headers` file and verified on live preview responses.
 6. Canonical URLs, metadata, structured data, sitemap, robots, redirects and 404 behaviour remain correct.
 7. Analytics is intentionally handled; `@vercel/analytics/next` must not be assumed to provide useful telemetry on Cloudflare without verification.
 8. No new paid resources, Workers Paid plan, Cloudflare Images, R2, D1, or other billable services are introduced.
@@ -57,9 +57,9 @@ Cloudflare Workers Free is listed at $0/month with 100,000 requests/day and 10 m
 
 - [x] Read-only audit of production baseline and repository tree.
 - [x] Create an isolated hosting-audit branch and record findings.
-- [ ] Add a CI-only static-export compatibility experiment (no production config change).
-- [ ] If static export fails, test OpenNext on a separate branch with a disposable `workers.dev` preview only.
-- [ ] Run full route, browser, privacy/network, PDF worker and mobile acceptance checks.
+- [x] Add a CI-only static-export compatibility experiment (no production config change); build and 11 output-file checks passed in run 46124434557.
+- [ ] If static export fails browser acceptance or runtime requirements emerge, test OpenNext on a separate branch with a disposable `workers.dev` preview only.
+- [ ] Run full route, browser, privacy/network, PDF worker and mobile acceptance checks against a deployed preview.
 - [ ] Compare actual free-tier limits and operating behaviour.
 - [ ] Present evidence and a cutover/rollback plan for explicit approval.
 
