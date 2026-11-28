@@ -39,7 +39,7 @@ jobs:
           if (source.includes('output: "export"')) {
             throw new Error('Static export is already configured; refusing to alter the probe target.');
           }
-          fs.writeFileSync(path, source.replace(marker, marker + '\n  output: "export",'));
+          fs.writeFileSync(path, source.replace(marker, marker + String.fromCharCode(10) + '  output: "export",'));
           for (const metadataPath of ['app/apple-icon.tsx', 'app/opengraph-image.tsx', 'app/manifest.ts', 'app/robots.ts', 'app/sitemap.ts']) {
             if (!fs.existsSync(metadataPath)) continue;
             const metadataSource = fs.readFileSync(metadataPath, 'utf8');
